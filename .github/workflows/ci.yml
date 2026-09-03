@@ -10,15 +10,6 @@ jobs:
   build-and-test:
     runs-on: ubuntu-latest
 
-    # Tests need a real replica-set MongoDB (booking creation uses multi-document
-    # transactions) — a single-node replica set is the smallest configuration
-    # that supports that, matching what this project's local dev setup uses.
-    services:
-      mongodb:
-        image: mongo:7
-        ports:
-          - 27017:27017
-
     env:
       # Isolated from any real database — this is the same test-only URI
       # pattern vitest.config.ts enforces locally, pointed at the ephemeral
@@ -30,23 +21,38 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # No explicit version: pnpm/action-setup reads the exact version from
+      # package.json's own "packageManager" field (pnpm@10.14.0) instead --
+      # specifying both here AND there is a documented conflict that fails
+      # the action outright (confirmed: this is what broke the first real
+      # CI run against this repo, before this fix).
       - uses: pnpm/action-setup@v4
-        with:
-          version: 10.14.0
 
       - uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: pnpm
 
-      - name: Initialize MongoDB as a single-node replica set
+      - name: Start MongoDB as a single-node replica set
+        # Deliberately NOT a GitHub Actions "services:" container: that
+        # mechanism has no way to pass --replSet to mongod's own entrypoint
+        # (services.options only adds docker-create flags like --health-cmd,
+        # it can't override CMD), and rs.initiate() fails outright on a
+        # mongod that wasn't started with --replSet. Started manually here
+        # instead, with full control over the command line — the same
+        # config this project's local dev/README "MongoDB setup" already
+        # requires, just containerized.
         run: |
-          sudo apt-get update && sudo apt-get install -y mongodb-clients || true
+          docker run -d --name mongo --network host mongo:7 --replSet rs0 --bind_ip_all
           for i in $(seq 1 30); do
-            mongosh --host localhost:27017 --eval "db.adminCommand('ping')" && break
+            docker exec mongo mongosh --eval "db.adminCommand('ping')" && break
             sleep 1
           done
-          mongosh --host localhost:27017 --eval "rs.initiate()"
+          docker exec mongo mongosh --eval "rs.initiate()"
+          for i in $(seq 1 30); do
+            docker exec mongo mongosh --quiet --eval "rs.status().myState" | grep -q '^1$' && break
+            sleep 1
+          done
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -91,11 +97,6 @@ jobs:
   e2e:
     runs-on: ubuntu-latest
     needs: build-and-test
-    services:
-      mongodb:
-        image: mongo:7
-        ports:
-          - 27017:27017
     env:
       MONGODB_URI: mongodb://localhost:27017/yes_hotels_e2e
       NODE_ENV: development
@@ -104,19 +105,22 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
-        with:
-          version: 10.14.0
       - uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: pnpm
-      - name: Initialize MongoDB as a single-node replica set
+      - name: Start MongoDB as a single-node replica set
         run: |
+          docker run -d --name mongo --network host mongo:7 --replSet rs0 --bind_ip_all
           for i in $(seq 1 30); do
-            mongosh --host localhost:27017 --eval "db.adminCommand('ping')" && break
+            docker exec mongo mongosh --eval "db.adminCommand('ping')" && break
             sleep 1
           done
-          mongosh --host localhost:27017 --eval "rs.initiate()"
+          docker exec mongo mongosh --eval "rs.initiate()"
+          for i in $(seq 1 30); do
+            docker exec mongo mongosh --quiet --eval "rs.status().myState" | grep -q '^1$' && break
+            sleep 1
+          done
       - run: pnpm install --frozen-lockfile
       - run: npx playwright install --with-deps chromium
       - name: Seed demo data
