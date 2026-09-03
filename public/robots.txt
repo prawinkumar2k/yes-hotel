@@ -1,0 +1,17 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /staff
+Disallow: /customer
+Disallow: /login
+Disallow: /register
+Disallow: /forgot-password
+Disallow: /reset-password
+Disallow: /booking
+Disallow: /api
+
+# /sitemap.xml is served dynamically by the Express app (server/src/routes/sitemap.routes.ts),
+# generated from the live database (real room category pages included, not
+# a stale static file) — not a static file in this public/ directory.
+# Add "Sitemap: https://<production-domain>/sitemap.xml" once the production
+# domain is known — the Sitemap directive requires an absolute URL.
