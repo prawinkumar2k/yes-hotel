@@ -4,6 +4,21 @@ import { useAuth } from "../../context/AuthContext";
 import { useToast } from "@/components/ui/use-toast";
 import { GoldButton } from "@/components/hotel/HotelButtons";
 
+// Demo/seed accounts (see server/src/scripts/seed.ts) — shown only outside
+// production so a real deployment never advertises working credentials.
+// Every role lands on a genuinely different part of the app: ADMIN/MANAGER/
+// RECEPTIONIST go to /admin/dashboard (with role-scoped sidebar sections),
+// HOUSEKEEPING and MAINTENANCE go to their own dedicated staff views, and
+// CUSTOMER goes to the customer portal — these are not the same page.
+const DEMO_ACCOUNTS: { role: string; email: string; password: string; note: string }[] = [
+  { role: "Admin", email: "admin@yeshotels.com", password: "Admin@123", note: "Full admin panel — every module" },
+  { role: "Manager", email: "manager@yeshotels.com", password: "Manager@123", note: "Admin panel minus Settings/Content" },
+  { role: "Receptionist", email: "reception@yeshotels.com", password: "Reception@123", note: "Bookings, check-in/out, calendar" },
+  { role: "Housekeeping", email: "housekeeping@yeshotels.com", password: "House@123", note: "Dedicated housekeeping view only" },
+  { role: "Maintenance", email: "maintenance@yeshotels.com", password: "Main@123", note: "Dedicated maintenance view only" },
+  { role: "Customer", email: "customer@yeshotels.com", password: "Customer@123", note: "Customer portal — bookings, profile" },
+];
+
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -98,6 +113,33 @@ export default function LoginPage() {
             Register here
           </Link>
         </p>
+
+        {!import.meta.env.PROD && (
+          <div className="mt-8 border-t border-hotel-black/10 pt-6">
+            <p className="text-center text-xs font-semibold uppercase tracking-widest text-hotel-black/50 mb-3">
+              Demo Accounts (dev only)
+            </p>
+            <div className="space-y-1.5">
+              {DEMO_ACCOUNTS.map((acc) => (
+                <button
+                  key={acc.email}
+                  type="button"
+                  onClick={() => {
+                    setEmail(acc.email);
+                    setPassword(acc.password);
+                  }}
+                  className="w-full flex items-center justify-between gap-2 border border-hotel-black/10 px-3 py-2 text-left text-xs hover:border-hotel-gold hover:bg-hotel-ivory transition-colors"
+                >
+                  <span>
+                    <span className="font-semibold text-hotel-black">{acc.role}</span>
+                    <span className="block text-hotel-black/50">{acc.note}</span>
+                  </span>
+                  <span className="shrink-0 text-hotel-gold-text">Fill</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
