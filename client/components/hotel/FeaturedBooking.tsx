@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ShieldCheck, Zap, BadgePercent } from "lucide-react";
+import { format, addDays } from "date-fns";
 import Reveal from "./Reveal";
 import SectionLabel from "./SectionLabel";
 import { GoldButton } from "./HotelButtons";
@@ -46,6 +47,16 @@ export default function FeaturedBooking() {
     navigate(`/search?${params.toString()}`);
   };
 
+  // Same real bug found and fixed on SearchPage.tsx/BookingBar.tsx: setting
+  // check-in on/after the already-picked check-out left check-out stale
+  // and invalid. Closed at this source too.
+  function handleCheckInChange(value: string) {
+    setCheckIn(value);
+    if (checkOut && value && checkOut <= value) {
+      setCheckOut(format(addDays(new Date(value), 1), "yyyy-MM-dd"));
+    }
+  }
+
   return (
     <section
       id="booking"
@@ -71,10 +82,10 @@ export default function FeaturedBooking() {
         <Reveal delay={150} className="bg-hotel-charcoal p-8 sm:p-10">
           <div className="grid grid-cols-1 gap-x-8 sm:grid-cols-2">
             <FormField label="Check-In Date" htmlFor="featured-checkin">
-              <input id="featured-checkin" type="date" value={checkIn} onChange={(e) => setCheckIn(e.target.value)} className={inputClasses} />
+              <input id="featured-checkin" type="date" min={format(new Date(), "yyyy-MM-dd")} value={checkIn} onChange={(e) => handleCheckInChange(e.target.value)} className={inputClasses} />
             </FormField>
             <FormField label="Check-Out Date" htmlFor="featured-checkout">
-              <input id="featured-checkout" type="date" value={checkOut} onChange={(e) => setCheckOut(e.target.value)} className={inputClasses} />
+              <input id="featured-checkout" type="date" min={format(addDays(new Date(checkIn || Date.now()), 1), "yyyy-MM-dd")} value={checkOut} onChange={(e) => setCheckOut(e.target.value)} className={inputClasses} />
             </FormField>
             <FormField label="Number of Adults" htmlFor="featured-adults">
               <input

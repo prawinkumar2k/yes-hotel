@@ -18,7 +18,24 @@ export default function SearchPage() {
   const [adults, setAdults] = useState(parseInt(searchParams.get("adults") || "1"));
   const [children, setChildren] = useState(parseInt(searchParams.get("children") || "0"));
 
-  const { data: availableRooms, isLoading, isError } = useQuery({
+  // A genuinely reproduced bug: changing check-in to a date on/after the
+  // already-selected check-out left check-out stale and invalid (e.g.
+  // checkIn=2026-09-09, checkOut=2026-09-01) — the date input's `min`
+  // attribute only constrains the native picker going forward, it does not
+  // retroactively fix an already-set value once check-in moves past it.
+  // That invalid pair was then submitted straight to the API, which
+  // correctly rejected it with a 400 the UI only ever showed as a generic
+  // "Failed to load availability" with no explanation.
+  const isValidRange = checkIn && checkOut && checkOut > checkIn;
+
+  function handleCheckInChange(value: string) {
+    setCheckIn(value);
+    if (checkOut && checkOut <= value) {
+      setCheckOut(format(addDays(new Date(value), 1), "yyyy-MM-dd"));
+    }
+  }
+
+  const { data: availableRooms, isLoading, isError, error } = useQuery({
     queryKey: ["availability", checkIn, checkOut, adults, children],
     queryFn: async () => {
       const res = await fetch(`/api/bookings/availability?checkIn=${checkIn}&checkOut=${checkOut}&adults=${adults}&children=${children}`);
@@ -26,11 +43,12 @@ export default function SearchPage() {
       if (!json.success) throw new Error(json.message);
       return json.data;
     },
-    enabled: !!(checkIn && checkOut),
+    enabled: !!isValidRange,
   });
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isValidRange) return;
     setSearchParams({ checkIn, checkOut, adults: String(adults), children: String(children) });
   };
 
@@ -51,7 +69,7 @@ export default function SearchPage() {
               <label htmlFor="search-checkin" className="block text-xs uppercase tracking-widest text-hotel-black/60 mb-2">Check In</label>
               <div className="relative">
                 <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-hotel-black/60" size={16} />
-                <input id="search-checkin" type="date" required min={format(new Date(), "yyyy-MM-dd")} value={checkIn} onChange={e => setCheckIn(e.target.value)}
+                <input id="search-checkin" type="date" required min={format(new Date(), "yyyy-MM-dd")} value={checkIn} onChange={e => handleCheckInChange(e.target.value)}
                   className="w-full bg-transparent border-b border-hotel-black/20 py-2 pl-10 focus:outline-none focus:border-hotel-gold text-sm" />
               </div>
             </div>
@@ -90,12 +108,18 @@ export default function SearchPage() {
 
         {/* Results */}
         <div>
-          {isLoading ? (
+          {!isValidRange ? (
+            <div className="text-center py-12 text-hotel-black/60">
+              Check-out must be after check-in — pick a later check-out date.
+            </div>
+          ) : isLoading ? (
             <div className="space-y-6">
               {[1,2].map(i => <div key={i} className="h-64 bg-hotel-black/5 animate-pulse" />)}
             </div>
           ) : isError ? (
-            <div className="text-center py-12 text-red-500">Failed to load availability. Please try again.</div>
+            <div className="text-center py-12 text-red-500">
+              {error instanceof Error ? error.message : "Failed to load availability. Please try again."}
+            </div>
           ) : availableRooms?.length === 0 ? (
             <div className="text-center py-24 bg-hotel-white border border-hotel-black/10">
               <p className="font-serif text-2xl text-hotel-black mb-2">No Rooms Available</p>

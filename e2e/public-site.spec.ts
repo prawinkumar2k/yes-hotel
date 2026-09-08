@@ -112,3 +112,29 @@ test("FAQ and Contact nav links route to their standalone pages even from the ho
   await page.waitForURL("**/faq", { timeout: 5000 });
   expect(new URL(page.url()).pathname).toBe("/faq");
 });
+
+// Regression test for a real, reported bug: setting check-out to an early
+// date and then check-in to a LATER date left check-out stale and before
+// check-in — the invalid pair was submitted straight to the API, which
+// correctly rejected it with a 400 the UI only ever showed as a generic,
+// unexplained "Failed to load availability" error.
+test("changing check-in past an already-selected check-out auto-corrects check-out, never submits an invalid date range", async ({ page }) => {
+  await page.goto("/search", { waitUntil: "networkidle" });
+
+  await page.fill("#search-checkout", "2026-09-05");
+  await page.fill("#search-checkin", "2026-09-09");
+
+  const failed400s: string[] = [];
+  page.on("response", (res) => {
+    if (res.url().includes("/api/bookings/availability") && res.status() === 400) {
+      failed400s.push(res.url());
+    }
+  });
+  await page.waitForTimeout(500);
+
+  const checkInVal = await page.locator("#search-checkin").inputValue();
+  const checkOutVal = await page.locator("#search-checkout").inputValue();
+  expect(checkOutVal > checkInVal).toBe(true);
+  expect(failed400s).toEqual([]);
+  await expect(page.locator("text=Failed to load availability")).toHaveCount(0);
+});

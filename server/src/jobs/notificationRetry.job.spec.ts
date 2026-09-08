@@ -2,7 +2,7 @@ import mongoose from "mongoose";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { registerNotificationJobHandlers } from "./notificationRetry.job";
 import { processNextJob, enqueueJob, _clearHandlers } from "../services/job-queue.service";
-import { JobStatus } from "../models/Job";
+import { Job, JobStatus } from "../models/Job";
 import { NotificationLog, NotificationType, NotificationStatus } from "../models/NotificationLog";
 import * as notificationService from "../services/notification.service";
 
@@ -20,6 +20,17 @@ afterAll(async () => {
 
 beforeEach(async () => {
   await NotificationLog.deleteMany({ subject: /^retry-spec/ });
+  // This job type ("notification.email_retry") isn't test-namespaced the
+  // way job-queue.service.spec.ts's "jq-spec.*" jobs are — it's the real
+  // production type name. Without cleaning it here, a job left PENDING by
+  // an earlier `pnpm test` run against this same persistent local test DB
+  // sits there indefinitely and gets claimed by processNextJob() ahead of
+  // the job THIS test just created (claims oldest-due-first, and a stale
+  // job's nextAttemptAt is always in the past) — confirmed as the actual
+  // cause of a real, reproduced test failure (expected DEAD_LETTER after
+  // one attempt, got PENDING — a leftover job with a different maxAttempts
+  // was claimed instead of this test's own).
+  await Job.deleteMany({ type: "notification.email_retry" });
   _clearHandlers();
   registerNotificationJobHandlers();
 });

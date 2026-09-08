@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { CalendarDays, ChevronDown, Users2, BedDouble } from "lucide-react";
+import { format, addDays } from "date-fns";
 import { GoldButton } from "./HotelButtons";
 
 const ROOM_TYPES = ["Standard Room", "Deluxe Room", "Executive Room"];
@@ -51,14 +52,26 @@ export default function BookingBar() {
     navigate(`/search?${params.toString()}`);
   };
 
+  // Setting check-in to a date on/after the already-picked check-out left
+  // check-out stale and invalid — the same real bug found and fixed on
+  // SearchPage.tsx, closed at this source too so an invalid pair can't even
+  // be submitted from the homepage widget in the first place.
+  function handleCheckInChange(value: string) {
+    setCheckIn(value);
+    if (checkOut && value && checkOut <= value) {
+      setCheckOut(format(addDays(new Date(value), 1), "yyyy-MM-dd"));
+    }
+  }
+
   return (
     <div className="flex flex-col rounded-sm bg-hotel-ivory shadow-[0_20px_60px_rgba(0,0,0,0.35)] sm:flex-row sm:items-stretch">
       <Field icon={<CalendarDays size={18} />} label="Check-In">
         <input
           type="date"
           aria-label="Check-in date"
+          min={format(new Date(), "yyyy-MM-dd")}
           value={checkIn}
-          onChange={(e) => setCheckIn(e.target.value)}
+          onChange={(e) => handleCheckInChange(e.target.value)}
           className="w-full bg-transparent text-sm font-medium text-hotel-black outline-none [color-scheme:light]"
         />
       </Field>
@@ -67,6 +80,7 @@ export default function BookingBar() {
         <input
           type="date"
           aria-label="Check-out date"
+          min={format(addDays(new Date(checkIn || Date.now()), 1), "yyyy-MM-dd")}
           value={checkOut}
           onChange={(e) => setCheckOut(e.target.value)}
           className="w-full bg-transparent text-sm font-medium text-hotel-black outline-none [color-scheme:light]"
