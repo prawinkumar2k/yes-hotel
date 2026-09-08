@@ -74,3 +74,41 @@ test("reduced motion is respected — reveal elements are visible without JS-dri
   expect(Number(opacity)).toBe(1);
   await context.close();
 });
+
+// Regression test for a real bug: the header nav's links were bare
+// `href="#section"` hash anchors regardless of which page you were on.
+// That only ever worked by accident on the homepage (for the 4 links with
+// a matching section id there) and did nothing — no navigation, no
+// scroll — on every other page. 20/20 passing E2E tests never caught it
+// because nothing asserted that clicking a nav link actually landed
+// somewhere. This does.
+test("clicking each header nav link from an interior page actually navigates to that page", async ({ page }) => {
+  const expectations: { label: string; expectedPath: string }[] = [
+    { label: "Home", expectedPath: "/" },
+    { label: "About Us", expectedPath: "/about" },
+    { label: "Gallery", expectedPath: "/gallery" },
+    { label: "FAQ", expectedPath: "/faq" },
+    { label: "Contact", expectedPath: "/contact" },
+  ];
+
+  for (const { label, expectedPath } of expectations) {
+    await page.goto("/rooms", { waitUntil: "networkidle" });
+    await page.locator("header nav a", { hasText: label }).first().click();
+    await page.waitForURL(`**${expectedPath}`, { timeout: 5000 });
+    expect(new URL(page.url()).pathname).toBe(expectedPath);
+  }
+});
+
+test("the header's Book Your Stay button navigates to /search from an interior page, not a dead #booking hash", async ({ page }) => {
+  await page.goto("/gallery", { waitUntil: "networkidle" });
+  await page.locator("header a", { hasText: "Book Your Stay" }).first().click();
+  await page.waitForURL("**/search", { timeout: 5000 });
+  expect(new URL(page.url()).pathname).toBe("/search");
+});
+
+test("FAQ and Contact nav links route to their standalone pages even from the homepage (no homepage section exists for either)", async ({ page }) => {
+  await page.goto("/", { waitUntil: "networkidle" });
+  await page.locator("header nav a", { hasText: "FAQ" }).first().click();
+  await page.waitForURL("**/faq", { timeout: 5000 });
+  expect(new URL(page.url()).pathname).toBe("/faq");
+});
