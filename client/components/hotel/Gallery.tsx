@@ -1,9 +1,11 @@
 import { useState } from "react";
+import { motion } from "framer-motion";
 import { X } from "lucide-react";
 import Reveal from "./Reveal";
 import SectionLabel from "./SectionLabel";
 import { TextLink } from "./HotelButtons";
 import { useGallery } from "@/hooks/usePublicData";
+import { useReducedMotion } from "@/hooks/useReducedMotion";
 
 const FALLBACK_IMAGES = [
   {
@@ -51,6 +53,7 @@ const FALLBACK_IMAGES = [
 export default function Gallery() {
   const [active, setActive] = useState<number | null>(null);
   const { data } = useGallery({ limit: 8 });
+  const reducedMotion = useReducedMotion();
 
   const IMAGES = data?.length
     ? data.map((img: any, i: number) => ({
@@ -74,10 +77,13 @@ export default function Gallery() {
 
         <div className="mt-16 grid grid-cols-2 gap-4 sm:grid-cols-4 sm:[grid-auto-rows:180px]">
           {IMAGES.map((image, i) => (
-            <Reveal
+            <motion.div
               key={image.title}
-              delay={(i % 4) * 90}
               className={`group relative cursor-pointer overflow-hidden ${image.span}`}
+              initial={reducedMotion ? false : { opacity: 0, scale: 0.9, y: 28 }}
+              whileInView={{ opacity: 1, scale: 1, y: 0 }}
+              viewport={{ once: true, margin: "-60px" }}
+              transition={{ duration: 0.65, delay: (i % 4) * 0.08, ease: [0.22, 1, 0.36, 1] }}
             >
               <button
                 type="button"
@@ -95,7 +101,7 @@ export default function Gallery() {
                   </span>
                 </div>
               </button>
-            </Reveal>
+            </motion.div>
           ))}
         </div>
 

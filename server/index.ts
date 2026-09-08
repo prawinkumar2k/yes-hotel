@@ -116,6 +116,11 @@ export function createServer() {
         styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
         fontSrc: ["'self'", "https://fonts.gstatic.com"],
         imgSrc: ["'self'", "data:", "blob:", "https://res.cloudinary.com", "https://images.unsplash.com"],
+        // The homepage hero background video (Hero.tsx) is hosted on
+        // Pixabay's CDN. Without an explicit media-src, CSP falls back to
+        // default-src 'self' and silently blocks the video (no console
+        // error a typical user would notice — it just never plays).
+        mediaSrc: ["'self'", "https://cdn.pixabay.com"],
         connectSrc: isProduction
           ? ["'self'", ...RAZORPAY_ORIGINS]
           : ["'self'", ...RAZORPAY_ORIGINS, "ws:", "wss:"],

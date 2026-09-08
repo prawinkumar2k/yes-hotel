@@ -1,7 +1,10 @@
+import { useRef } from "react";
+import { motion, useScroll, useTransform } from "framer-motion";
 import Reveal from "./Reveal";
 import SectionLabel from "./SectionLabel";
 import { TextLink } from "./HotelButtons";
 import { useContent } from "@/hooks/usePublicData";
+import { useReducedMotion } from "@/hooks/useReducedMotion";
 
 const FALLBACK = {
   title: "A place that feels\nwonderfully away.",
@@ -19,6 +22,17 @@ export default function About() {
   const titleLines = (content.title ?? FALLBACK.title).split("\n");
   const paragraphs = (content.description ?? FALLBACK.description).split("\n\n");
   const [mainImage, detailImage] = content.images?.length ? content.images : FALLBACK.images;
+
+  // Real scroll-parallax (framer-motion was installed but never actually
+  // used anywhere in this codebase until now) — the main image moves at a
+  // different rate than the page scroll, clipped by the image's own
+  // overflow-hidden wrapper so it never causes horizontal/vertical overflow
+  // of the section itself. Disabled under prefers-reduced-motion, same as
+  // every other animation in this app.
+  const imageWrapRef = useRef<HTMLDivElement>(null);
+  const reducedMotion = useReducedMotion();
+  const { scrollYProgress } = useScroll({ target: imageWrapRef, offset: ["start end", "end start"] });
+  const parallaxY = useTransform(scrollYProgress, [0, 1], reducedMotion ? ["0%", "0%"] : ["-8%", "8%"]);
 
   return (
     <section
@@ -52,11 +66,12 @@ export default function About() {
 
       <Reveal delay={200} className="container mt-16 lg:mt-24">
         <div className="relative mx-auto max-w-5xl">
-          <div className="aspect-[16/9] w-full overflow-hidden">
-            <img
+          <div ref={imageWrapRef} className="aspect-[16/9] w-full overflow-hidden">
+            <motion.img
               src={mainImage}
               alt="YES Hotels lounge interior"
-              className="h-full w-full object-cover"
+              className="h-full w-full scale-125 object-cover will-change-transform"
+              style={{ y: parallaxY }}
             />
           </div>
           {detailImage && (

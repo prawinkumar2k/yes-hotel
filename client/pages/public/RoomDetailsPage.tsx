@@ -1,9 +1,15 @@
+import { lazy, Suspense } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useParams, Link } from "react-router-dom";
 import Navbar from "@/components/hotel/Navbar";
 import { GoldButton } from "@/components/hotel/HotelButtons";
 import { Users, Bed, Wind, CheckCircle2, Wifi, Tv, Coffee } from "lucide-react";
 import { usePageMeta } from "@/hooks/usePageMeta";
+
+// Code-split: three.js + fiber + drei add real weight to the bundle, and a
+// 3D scene is only relevant on this one page — no reason for every other
+// route's initial load to pay for it.
+const RoomShowcase3D = lazy(() => import("@/components/hotel/RoomShowcase3D"));
 
 export default function RoomDetailsPage() {
   const { slug } = useParams();
@@ -75,6 +81,19 @@ export default function RoomDetailsPage() {
                   <span className="text-xs uppercase tracking-widest text-hotel-black/60">Climate Control</span>
                 </div>
               </div>
+            </div>
+
+            <div>
+              <h2 className="font-serif text-3xl text-hotel-black mb-6">Explore in 3D</h2>
+              <Suspense
+                fallback={
+                  <div className="flex aspect-[16/10] w-full items-center justify-center border border-hotel-black/10 bg-hotel-ivory text-sm text-hotel-black/40">
+                    Loading 3D preview…
+                  </div>
+                }
+              >
+                <RoomShowcase3D />
+              </Suspense>
             </div>
 
             <div>
