@@ -151,7 +151,7 @@ export async function reserveInventoryDays(params: {
         $set: { capacity },
         $inc: { reservedCount: 1 },
       },
-      { new: true, session }
+      { returnDocument: "after", session }
     );
 
     if (!reservation) {

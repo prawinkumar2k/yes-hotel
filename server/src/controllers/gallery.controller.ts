@@ -100,7 +100,7 @@ export const uploadGalleryImage = async (req: MulterRequest, res: Response) => {
 export const updateGalleryImage = async (req: Request, res: Response) => {
   try {
     const data = updateGallerySchema.parse(req.body);
-    const gallery = await Gallery.findByIdAndUpdate(req.params.id, data, { new: true });
+    const gallery = await Gallery.findByIdAndUpdate(req.params.id, data, { returnDocument: "after" });
     
     if (!gallery) return res.status(404).json({ success: false, message: "Image not found" });
 

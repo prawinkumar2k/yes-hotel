@@ -43,7 +43,7 @@ export const createTestimonial = async (req: Request, res: Response) => {
 export const updateTestimonial = async (req: Request, res: Response) => {
   try {
     const data = testimonialSchema.partial().parse(req.body);
-    const testimonial = await Testimonial.findByIdAndUpdate(req.params.id, data, { new: true });
+    const testimonial = await Testimonial.findByIdAndUpdate(req.params.id, data, { returnDocument: "after" });
     if (!testimonial) return res.status(404).json({ success: false, message: "Testimonial not found" });
 
     await createAuditLog({ req, action: "testimonial.updated", resourceType: "Testimonial", resourceId: testimonial._id.toString() });

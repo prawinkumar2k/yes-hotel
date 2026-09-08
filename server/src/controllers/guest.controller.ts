@@ -84,7 +84,7 @@ export const updateGuest = async (req: Request, res: Response) => {
     const payload: any = { ...data };
     if (data.dateOfBirth) payload.dateOfBirth = new Date(data.dateOfBirth);
     
-    const guest = await Guest.findByIdAndUpdate(req.params.id, payload, { new: true });
+    const guest = await Guest.findByIdAndUpdate(req.params.id, payload, { returnDocument: "after" });
     if (!guest) return res.status(404).json({ success: false, message: "Guest not found" });
     
     return res.status(200).json({ success: true, data: guest });

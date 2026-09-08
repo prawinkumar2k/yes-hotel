@@ -59,7 +59,7 @@ export const updateContent = async (req: Request, res: Response) => {
       const existing = await WebsiteContent.findOne({ key: data.key, _id: { $ne: req.params.id } });
       if (existing) return res.status(400).json({ success: false, message: "Content key already exists" });
     }
-    const content = await WebsiteContent.findByIdAndUpdate(req.params.id, data, { new: true });
+    const content = await WebsiteContent.findByIdAndUpdate(req.params.id, data, { returnDocument: "after" });
     if (!content) return res.status(404).json({ success: false, message: "Content not found" });
 
     await createAuditLog({ req, action: "content.updated", resourceType: "WebsiteContent", resourceId: content._id.toString(), metadata: { key: content.key } });

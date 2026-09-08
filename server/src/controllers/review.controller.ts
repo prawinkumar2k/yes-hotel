@@ -79,7 +79,7 @@ export const moderateReview = async (req: Request, res: Response) => {
     if (!Object.values(ReviewStatus).includes(status)) {
       return res.status(400).json({ success: false, message: "Invalid status" });
     }
-    const review = await Review.findByIdAndUpdate(req.params.id, { status }, { new: true });
+    const review = await Review.findByIdAndUpdate(req.params.id, { status }, { returnDocument: "after" });
     if (!review) return res.status(404).json({ success: false, message: "Review not found" });
 
     await createAuditLog({

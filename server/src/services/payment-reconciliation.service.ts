@@ -96,7 +96,7 @@ export async function finalizePaymentSuccess(
   const booking = await Booking.findByIdAndUpdate(
     bookingId,
     { paymentStatus: PaymentStatus.PAID, status: BookingStatus.CONFIRMED },
-    { new: true }
+    { returnDocument: "after" }
   );
   if (!booking) return { alreadyProcessed: false, bookingNotFound: true, booking: null };
 

@@ -36,7 +36,7 @@ export const updateHousekeepingTask = async (req: Request, res: Response) => {
     const task = await HousekeepingTask.findByIdAndUpdate(
       req.params.id,
       { ...data, ...(data.status === HousekeepingStatus.INSPECTED && { completedAt: new Date() }) },
-      { new: true }
+      { returnDocument: "after" }
     ).populate("room", "roomNumber floor");
 
     if (!task) return res.status(404).json({ success: false, message: "Task not found" });

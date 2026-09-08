@@ -100,7 +100,7 @@ export async function redeemCouponForBooking(bookingId: string): Promise<boolean
       $or: [{ usageLimit: { $exists: false } }, { usageLimit: null }, { $expr: { $lt: ["$timesUsed", "$usageLimit"] } }],
     },
     update,
-    { new: true }
+    { returnDocument: "after" }
   );
 
   if (!coupon) return false;

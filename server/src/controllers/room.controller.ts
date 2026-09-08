@@ -43,7 +43,7 @@ export const updateRoomStatus = async (req: Request, res: Response) => {
     const room = await Room.findByIdAndUpdate(
       req.params.id,
       { status },
-      { new: true }
+      { returnDocument: "after" }
     ).populate("category", "name slug");
     if (!room) return res.status(404).json({ success: false, message: "Room not found" });
 

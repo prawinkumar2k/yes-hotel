@@ -81,7 +81,7 @@ export const updateCategory = async (req: Request, res: Response) => {
       }
     }
 
-    const category = await RoomCategory.findByIdAndUpdate(req.params.id, data, { new: true });
+    const category = await RoomCategory.findByIdAndUpdate(req.params.id, data, { returnDocument: "after" });
     if (!category) return res.status(404).json({ success: false, message: "Category not found" });
 
     await createAuditLog({
@@ -110,7 +110,7 @@ export const deleteCategory = async (req: Request, res: Response) => {
 
     if (activeBookings) {
       // Soft deactivate
-      const category = await RoomCategory.findByIdAndUpdate(req.params.id, { isActive: false }, { new: true });
+      const category = await RoomCategory.findByIdAndUpdate(req.params.id, { isActive: false }, { returnDocument: "after" });
 
       await createAuditLog({
         req,

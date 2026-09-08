@@ -84,7 +84,7 @@ export const updateMaintenanceTicket = async (req: Request, res: Response) => {
     const ticket = await MaintenanceTicket.findByIdAndUpdate(
       req.params.id,
       { ...data, ...(data.status === MaintenanceStatus.RESOLVED && { resolvedAt: new Date() }) },
-      { new: true }
+      { returnDocument: "after" }
     ).populate("room", "roomNumber");
 
     if (!ticket) return res.status(404).json({ success: false, message: "Ticket not found" });

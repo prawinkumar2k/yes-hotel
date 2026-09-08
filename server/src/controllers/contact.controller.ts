@@ -50,7 +50,7 @@ export const updateContactStatus = async (req: Request, res: Response) => {
     if (!Object.values(ContactStatus).includes(status)) {
       return res.status(400).json({ success: false, message: "Invalid status value" });
     }
-    const msg = await ContactMessage.findByIdAndUpdate(req.params.id, { status }, { new: true });
+    const msg = await ContactMessage.findByIdAndUpdate(req.params.id, { status }, { returnDocument: "after" });
     if (!msg) return res.status(404).json({ success: false, message: "Message not found" });
     return res.status(200).json({ success: true, data: msg });
   } catch (error: any) {

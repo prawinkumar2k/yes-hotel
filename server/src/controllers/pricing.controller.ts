@@ -56,7 +56,7 @@ export const updatePricingRule = async (req: Request, res: Response) => {
         startDate: data.startDate ? new Date(data.startDate) : undefined,
         endDate: data.endDate ? new Date(data.endDate) : undefined,
     };
-    const rule = await PricingRule.findByIdAndUpdate(req.params.id, payload, { new: true });
+    const rule = await PricingRule.findByIdAndUpdate(req.params.id, payload, { returnDocument: "after" });
     if (!rule) return res.status(404).json({ success: false, message: "Rule not found" });
 
     await createAuditLog({

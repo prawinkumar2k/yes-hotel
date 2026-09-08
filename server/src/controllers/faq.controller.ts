@@ -41,7 +41,7 @@ export const createFAQ = async (req: Request, res: Response) => {
 export const updateFAQ = async (req: Request, res: Response) => {
   try {
     const data = faqSchema.partial().parse(req.body);
-    const faq = await FAQ.findByIdAndUpdate(req.params.id, data, { new: true });
+    const faq = await FAQ.findByIdAndUpdate(req.params.id, data, { returnDocument: "after" });
     if (!faq) return res.status(404).json({ success: false, message: "FAQ not found" });
 
     await createAuditLog({ req, action: "faq.updated", resourceType: "FAQ", resourceId: faq._id.toString() });

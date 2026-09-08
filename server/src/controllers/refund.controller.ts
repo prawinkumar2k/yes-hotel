@@ -138,7 +138,7 @@ export const initiateRefund = async (req: Request, res: Response) => {
         refundedAmount: { $lte: payment.amount - data.amount },
       },
       { $inc: { refundedAmount: data.amount } },
-      { new: true }
+      { returnDocument: "after" }
     );
 
     if (!claimedPayment) {

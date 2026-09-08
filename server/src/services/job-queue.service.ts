@@ -60,7 +60,7 @@ export async function processNextJob(): Promise<JobStatus | null> {
   const claimed = await Job.findOneAndUpdate(
     { status: JobStatus.PENDING, nextAttemptAt: { $lte: new Date() } },
     { $set: { status: JobStatus.PROCESSING } },
-    { sort: { nextAttemptAt: 1 }, new: true }
+    { sort: { nextAttemptAt: 1 }, returnDocument: "after" }
   );
   if (!claimed) return null;
 

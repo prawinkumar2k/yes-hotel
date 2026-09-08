@@ -58,7 +58,7 @@ export const createCoupon = async (req: Request, res: Response) => {
 export const updateCoupon = async (req: Request, res: Response) => {
   try {
     const data = couponSchema.parse(req.body);
-    const coupon = await Coupon.findByIdAndUpdate(req.params.id, data, { new: true });
+    const coupon = await Coupon.findByIdAndUpdate(req.params.id, data, { returnDocument: "after" });
     if (!coupon) return res.status(404).json({ success: false, message: "Coupon not found" });
 
     await createAuditLog({
