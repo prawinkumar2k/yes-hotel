@@ -1,9 +1,11 @@
 import { useState, type ChangeEvent, type FormEvent } from "react";
+import { motion } from "framer-motion";
 import Navbar from "@/components/hotel/Navbar";
 import { GoldButton } from "@/components/hotel/HotelButtons";
 import { Mail, Phone, MapPin, Loader2, CheckCircle2, Clock3 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { usePageMeta } from "@/hooks/usePageMeta";
+import { useReducedMotion } from "@/hooks/useReducedMotion";
 
 type ContactFormState = {
   name: string;
@@ -38,6 +40,7 @@ const contactCards = [
 
 export default function ContactPage() {
   usePageMeta("Contact Us", "Get in touch with YES Hotels for reservations, inquiries, and support.");
+  const reducedMotion = useReducedMotion();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
@@ -97,7 +100,11 @@ export default function ContactPage() {
 
       <main className="mx-auto max-w-6xl px-6 py-12 lg:py-20">
         <div className="grid gap-10 lg:grid-cols-[1.05fr_0.95fr]">
-          <section>
+          <motion.section
+            initial={reducedMotion ? false : { opacity: 0, x: -30 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+          >
             <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-hotel-gold-text">
               Contact
             </p>
@@ -111,9 +118,14 @@ export default function ContactPage() {
             </p>
 
             <div className="mt-12 grid gap-5 sm:grid-cols-2">
-              {contactCards.map(({ icon: Icon, title, lines }) => (
-                <div
+              {contactCards.map(({ icon: Icon, title, lines }, i) => (
+                <motion.div
                   key={title}
+                  initial={reducedMotion ? false : { opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.5, delay: i * 0.08, ease: [0.22, 1, 0.36, 1] }}
+                  whileHover={reducedMotion ? undefined : { y: -4 }}
                   className="border border-hotel-black/10 bg-hotel-white p-6 shadow-sm"
                 >
                   <Icon size={22} className="text-hotel-gold" />
@@ -125,12 +137,16 @@ export default function ContactPage() {
                       <p key={line}>{line}</p>
                     ))}
                   </div>
-                </div>
+                </motion.div>
               ))}
             </div>
-          </section>
+          </motion.section>
 
-          <section className="bg-hotel-white border border-hotel-black/10 p-6 shadow-sm md:p-8">
+          <motion.section
+            initial={reducedMotion ? false : { opacity: 0, x: 30 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.7, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
+            className="bg-hotel-white border border-hotel-black/10 p-6 shadow-sm md:p-8">
             <div className="flex items-start gap-4">
               <div className="rounded-full bg-hotel-gold/15 p-3">
                 <CheckCircle2 className="text-hotel-gold" size={20} />
@@ -242,7 +258,7 @@ export default function ContactPage() {
                 )}
               </GoldButton>
             </form>
-          </section>
+          </motion.section>
         </div>
       </main>
     </div>

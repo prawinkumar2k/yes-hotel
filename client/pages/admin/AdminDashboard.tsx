@@ -1,13 +1,16 @@
 import { useAuth } from "../../context/AuthContext";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
+import { motion } from "framer-motion";
 import { CalendarDays, Loader2 } from "lucide-react";
 import AdminLayout from "@/components/admin/AdminLayout";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
+import { useReducedMotion } from "@/hooks/useReducedMotion";
 
 export default function AdminDashboard() {
   const { user } = useAuth();
+  const reducedMotion = useReducedMotion();
 
   const { data: stats } = useQuery({
     queryKey: ["adminStats"],
@@ -48,11 +51,18 @@ export default function AdminDashboard() {
     <AdminLayout title="Dashboard">
       {/* Metrics */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-8">
-        {METRIC_CARDS.map(({ label, value, color }) => (
-          <div key={label} className={`bg-white border-l-4 ${color} rounded-r p-5 shadow-sm`}>
+        {METRIC_CARDS.map(({ label, value, color }, i) => (
+          <motion.div
+            key={label}
+            initial={reducedMotion ? false : { opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, delay: i * 0.05, ease: [0.22, 1, 0.36, 1] }}
+            whileHover={reducedMotion ? undefined : { y: -3 }}
+            className={`bg-white border-l-4 ${color} rounded-r p-5 shadow-sm`}
+          >
             <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">{label}</p>
             <p className="text-2xl font-bold text-gray-800">{value}</p>
-          </div>
+          </motion.div>
         ))}
       </div>
 

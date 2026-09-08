@@ -1,13 +1,16 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { motion } from "framer-motion";
 import Navbar from "@/components/hotel/Navbar";
 import { GoldButton } from "@/components/hotel/HotelButtons";
 import { Calendar, Users } from "lucide-react";
 import { format, addDays } from "date-fns";
+import { useReducedMotion } from "@/hooks/useReducedMotion";
 
 export default function SearchPage() {
   const [searchParams, setSearchParams] = useSearchParams();
+  const reducedMotion = useReducedMotion();
   const navigate = useNavigate();
   
   const [checkIn, setCheckIn] = useState(searchParams.get("checkIn") || format(new Date(), "yyyy-MM-dd"));
@@ -103,8 +106,14 @@ export default function SearchPage() {
               <p className="text-sm tracking-widest uppercase text-hotel-black/60 font-semibold mb-6">
                 {availableRooms?.length} Room{availableRooms?.length > 1 ? 's' : ''} Available
               </p>
-              {availableRooms?.map((room: any) => (
-                <div key={room._id} className="bg-hotel-white border border-hotel-black/10 overflow-hidden flex flex-col md:flex-row group">
+              {availableRooms?.map((room: any, i: number) => (
+                <motion.div
+                  key={room._id}
+                  initial={reducedMotion ? false : { opacity: 0, y: 24 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: Math.min(i, 6) * 0.08, ease: [0.22, 1, 0.36, 1] }}
+                  className="bg-hotel-white border border-hotel-black/10 overflow-hidden flex flex-col md:flex-row group"
+                >
                   <div className="w-full md:w-2/5 h-64 md:h-auto overflow-hidden">
                     <img src={room.images?.[0] || "/placeholder.svg"}
                       alt={room.name} 
@@ -142,7 +151,7 @@ export default function SearchPage() {
                       </button>
                     </div>
                   </div>
-                </div>
+                </motion.div>
               ))}
             </div>
           )}

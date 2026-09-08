@@ -1,8 +1,10 @@
 import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import Navbar from "@/components/hotel/Navbar";
 import { useGallery } from "@/hooks/usePublicData";
 import { Loader2, ImageOff } from "lucide-react";
 import { usePageMeta } from "@/hooks/usePageMeta";
+import { useReducedMotion } from "@/hooks/useReducedMotion";
 
 const CATEGORIES = [
   { value: "", label: "All" },
@@ -18,6 +20,7 @@ export default function GalleryPage() {
   usePageMeta("Gallery", "A visual tour of YES Hotels — our rooms, dining, amenities, and exteriors.");
   const [activeCategory, setActiveCategory] = useState("");
   const [lightboxImg, setLightboxImg] = useState<string | null>(null);
+  const reducedMotion = useReducedMotion();
 
   const { data: images, isLoading, isError } = useGallery({
     category: activeCategory || undefined,
@@ -75,9 +78,13 @@ export default function GalleryPage() {
 
         {!isLoading && !isError && images && images.length > 0 && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {images.map((img: any) => (
-              <div
+            {images.map((img: any, i: number) => (
+              <motion.div
                 key={img._id}
+                initial={reducedMotion ? false : { opacity: 0, scale: 0.92, y: 20 }}
+                whileInView={{ opacity: 1, scale: 1, y: 0 }}
+                viewport={{ once: true, margin: "-60px" }}
+                transition={{ duration: 0.5, delay: Math.min(i % 9, 9) * 0.05, ease: [0.22, 1, 0.36, 1] }}
                 className="group relative overflow-hidden bg-hotel-black aspect-square cursor-pointer"
                 onClick={() => setLightboxImg(img.imageUrl)}
               >
@@ -93,32 +100,41 @@ export default function GalleryPage() {
                     <p className="text-white font-medium">{img.title}</p>
                   </div>
                 )}
-              </div>
+              </motion.div>
             ))}
           </div>
         )}
       </div>
 
       {/* Lightbox */}
-      {lightboxImg && (
-        <div
-          className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4"
-          onClick={() => setLightboxImg(null)}
-        >
-          <img
-            src={lightboxImg}
-            alt="Gallery"
-            className="max-w-full max-h-[90vh] rounded-lg shadow-2xl object-contain"
-            onClick={(e) => e.stopPropagation()}
-          />
-          <button
-            className="absolute top-4 right-4 text-white text-4xl font-bold hover:text-hotel-gold"
+      <AnimatePresence>
+        {lightboxImg && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4"
             onClick={() => setLightboxImg(null)}
           >
-            ×
-          </button>
-        </div>
-      )}
+            <motion.img
+              initial={reducedMotion ? false : { scale: 0.94, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+              src={lightboxImg}
+              alt="Gallery"
+              className="max-w-full max-h-[90vh] rounded-lg shadow-2xl object-contain"
+              onClick={(e) => e.stopPropagation()}
+            />
+            <button
+              className="absolute top-4 right-4 text-white text-4xl font-bold hover:text-hotel-gold"
+              onClick={() => setLightboxImg(null)}
+            >
+              ×
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

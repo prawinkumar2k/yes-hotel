@@ -1,7 +1,9 @@
 import { useAuth } from "../../context/AuthContext";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "react-router-dom";
+import { motion } from "framer-motion";
 import { CalendarDays, BedDouble, CreditCard, LogOut, User, ChevronRight } from "lucide-react";
+import { useReducedMotion } from "@/hooks/useReducedMotion";
 
 const STATUS_COLORS: Record<string, string> = {
   PENDING: "bg-yellow-100 text-yellow-800",
@@ -14,6 +16,7 @@ const STATUS_COLORS: Record<string, string> = {
 export default function CustomerDashboard() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const reducedMotion = useReducedMotion();
 
   const { data: bookings, isLoading } = useQuery({
     queryKey: ["myBookings"],
@@ -59,14 +62,21 @@ export default function CustomerDashboard() {
             { label: "Upcoming Stays", value: upcoming.length, icon: CalendarDays, color: "text-hotel-gold" },
             { label: "Total Bookings", value: bookings?.length ?? 0, icon: BedDouble, color: "text-hotel-black" },
             { label: "Past Stays", value: past.length, icon: CreditCard, color: "text-hotel-black/60" },
-          ].map(({ label, value, icon: Icon, color }) => (
-            <div key={label} className="bg-hotel-white border border-hotel-black/10 p-6 flex items-center gap-4">
+          ].map(({ label, value, icon: Icon, color }, i) => (
+            <motion.div
+              key={label}
+              initial={reducedMotion ? false : { opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, delay: i * 0.08, ease: [0.22, 1, 0.36, 1] }}
+              whileHover={reducedMotion ? undefined : { y: -3 }}
+              className="bg-hotel-white border border-hotel-black/10 p-6 flex items-center gap-4"
+            >
               <Icon size={28} className={color} />
               <div>
                 <p className="text-2xl font-serif text-hotel-black">{value}</p>
                 <p className="text-sm text-hotel-black/60">{label}</p>
               </div>
-            </div>
+            </motion.div>
           ))}
         </div>
 
