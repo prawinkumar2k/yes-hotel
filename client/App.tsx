@@ -11,6 +11,7 @@ import SmoothScroll from "./components/hotel/SmoothScroll";
 import ScrollProgress from "./components/hotel/ScrollProgress";
 import CursorFollower from "./components/hotel/CursorFollower";
 import RoomHoverPreview from "./components/hotel/RoomHoverPreview";
+import PageTransitionOverlay from "./components/hotel/PageTransitionOverlay";
 
 // Eager loads
 import Index from "./pages/Index";
@@ -99,6 +100,7 @@ function App() {
             <ScrollProgress />
             <CursorFollower />
             <RoomHoverPreview />
+            <PageTransitionOverlay />
             <Suspense fallback={<PageLoader />}>
               <Routes>
                 {/* PUBLIC ROUTES */}
