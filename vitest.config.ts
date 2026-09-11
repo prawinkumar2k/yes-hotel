@@ -1,5 +1,13 @@
 import { defineConfig } from "vitest/config";
 import path from "node:path";
+import dotenv from "dotenv";
+
+// Optional, gitignored, machine-local override — lets a single developer's
+// machine point TEST_MONGODB_URI somewhere other than the default without
+// touching this shared file (which every other machine and CI still use
+// unchanged, since the file simply won't exist for them). See .env.example
+// for when/why this is needed.
+dotenv.config({ path: path.resolve(__dirname, ".env.test.local"), quiet: true });
 
 // Isolated from the development database on purpose: a failed test used to
 // leak data into the real dev DB (confirmed during a manual QA pass — 28+

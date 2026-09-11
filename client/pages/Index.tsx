@@ -4,7 +4,7 @@ import About from "@/components/hotel/About";
 import Stats from "@/components/hotel/Stats";
 import Rooms from "@/components/hotel/Rooms";
 import YesExperience from "@/components/hotel/YesExperience";
-import Amenities from "@/components/hotel/Amenities";
+import HotelStory from "@/components/hotel/HotelStory";
 import WhyChooseUs from "@/components/hotel/WhyChooseUs";
 import Gallery from "@/components/hotel/Gallery";
 import Testimonials from "@/components/hotel/Testimonials";
@@ -23,7 +23,7 @@ export default function Index() {
         <Rooms />
         <YesExperience />
         <WhyChooseUs />
-        <Amenities />
+        <HotelStory />
         <Gallery />
         <Testimonials />
         <FeaturedBooking />
