@@ -3,6 +3,7 @@ import Hero from "@/components/hotel/Hero";
 import About from "@/components/hotel/About";
 import Stats from "@/components/hotel/Stats";
 import Rooms from "@/components/hotel/Rooms";
+import YesExperience from "@/components/hotel/YesExperience";
 import Amenities from "@/components/hotel/Amenities";
 import WhyChooseUs from "@/components/hotel/WhyChooseUs";
 import Gallery from "@/components/hotel/Gallery";
@@ -20,6 +21,7 @@ export default function Index() {
         <About />
         <Stats />
         <Rooms />
+        <YesExperience />
         <WhyChooseUs />
         <Amenities />
         <Gallery />

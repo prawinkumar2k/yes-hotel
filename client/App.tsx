@@ -7,6 +7,9 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "./context/AuthContext";
 import ProtectedRoute from "./components/common/ProtectedRoute";
 import AdminLayout from "./components/admin/AdminLayout";
+import SmoothScroll from "./components/hotel/SmoothScroll";
+import ScrollProgress from "./components/hotel/ScrollProgress";
+import CursorFollower from "./components/hotel/CursorFollower";
 
 // Eager loads
 import Index from "./pages/Index";
@@ -91,6 +94,9 @@ function App() {
         <TooltipProvider>
           <Toaster />
           <BrowserRouter>
+            <SmoothScroll />
+            <ScrollProgress />
+            <CursorFollower />
             <Suspense fallback={<PageLoader />}>
               <Routes>
                 {/* PUBLIC ROUTES */}

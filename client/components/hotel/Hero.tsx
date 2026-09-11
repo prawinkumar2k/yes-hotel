@@ -82,12 +82,12 @@ export default function Hero() {
 
         <Reveal delay={650}>
           <div className="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:items-start">
-            <Magnetic>
+            <Magnetic cursor="EXPLORE">
               <OutlineButton href="#rooms" light>
                 Explore Rooms
               </OutlineButton>
             </Magnetic>
-            <Magnetic>
+            <Magnetic cursor="BOOK">
               <GoldButton href="#booking">Book Your Stay &rarr;</GoldButton>
             </Magnetic>
           </div>

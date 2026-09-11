@@ -10,7 +10,16 @@ import { useReducedMotion } from "@/hooks/useReducedMotion";
  * (strength default 0.35, capped travel) — "luxury automobile," not
  * "gaming website."
  */
-export default function Magnetic({ children, strength = 0.35 }: { children: ReactNode; strength?: number }) {
+export default function Magnetic({
+  children,
+  strength = 0.35,
+  cursor,
+}: {
+  children: ReactNode;
+  strength?: number;
+  /** Label shown by CursorFollower.tsx while hovering (e.g. "BOOK") — omit for none. */
+  cursor?: string;
+}) {
   const ref = useRef<HTMLDivElement>(null);
   const reducedMotion = useReducedMotion();
 
@@ -32,6 +41,7 @@ export default function Magnetic({ children, strength = 0.35 }: { children: Reac
       ref={ref}
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
+      data-cursor={cursor}
       className="inline-block will-change-transform"
     >
       {children}

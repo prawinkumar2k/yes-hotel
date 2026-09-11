@@ -88,6 +88,7 @@ export default function Gallery() {
               <button
                 type="button"
                 onClick={() => setActive(i)}
+                data-cursor="VIEW"
                 className="block h-full w-full"
               >
                 <img

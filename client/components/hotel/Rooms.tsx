@@ -86,6 +86,7 @@ function RoomRow({ room, index, reducedMotion }: { room: any; index: number; red
           an editorial-catalogue convention rather than a card badge. */}
       <Link
         to={`/rooms/${room.slug}`}
+        data-cursor="EXPLORE"
         className="group relative block aspect-[4/5] w-full overflow-hidden lg:aspect-[16/11] lg:w-[65%]"
       >
         <img
