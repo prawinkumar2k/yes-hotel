@@ -31,6 +31,15 @@ for (const page of PUBLIC_PAGES) {
 for (const page of PUBLIC_PAGES) {
   test(`accessibility scan: ${page}`, async ({ page: pw }) => {
     await pw.goto(page, { waitUntil: "networkidle" });
+    // "networkidle" only waits for network activity to quiet down, not for
+    // the CSS entrance transitions (.reveal — 0.9s, some delayed up to
+    // 650ms) that fade page content in. Scanning immediately after
+    // networkidle can catch an element mid-fade at partial opacity, which
+    // axe legitimately (but misleadingly) reports as a color-contrast
+    // violation — a scan artifact, not a real defect a user would ever
+    // perceive. Wait for the longest entrance transition to fully settle
+    // before measuring.
+    await pw.waitForTimeout(1800);
     const results = await new AxeBuilder({ page: pw })
       .withTags(["wcag2a", "wcag2aa"])
       .analyze();
