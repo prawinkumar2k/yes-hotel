@@ -10,6 +10,7 @@ import AdminLayout from "./components/admin/AdminLayout";
 import SmoothScroll from "./components/hotel/SmoothScroll";
 import ScrollProgress from "./components/hotel/ScrollProgress";
 import CursorFollower from "./components/hotel/CursorFollower";
+import RoomHoverPreview from "./components/hotel/RoomHoverPreview";
 
 // Eager loads
 import Index from "./pages/Index";
@@ -97,6 +98,7 @@ function App() {
             <SmoothScroll />
             <ScrollProgress />
             <CursorFollower />
+            <RoomHoverPreview />
             <Suspense fallback={<PageLoader />}>
               <Routes>
                 {/* PUBLIC ROUTES */}

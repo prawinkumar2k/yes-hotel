@@ -25,15 +25,20 @@ const NAV_LINKS: { label: string; hash?: string; route: string }[] = [
 ];
 
 export default function Navbar({ transparent = true }: { transparent?: boolean } = {}) {
-  const [scrolled, setScrolled] = useState(false);
+  // Three real scroll states, not a binary toggle: transparent at the very
+  // top of a hero page, a condensed solid bar once scrolling begins, and a
+  // more refined floating/blurred state once scrolled well past the hero —
+  // each with its own height, blur and logo scale, all cross-faded via the
+  // existing transition-all rather than snapping between two looks.
+  const [scrollY, setScrollY] = useState(0);
   const [open, setOpen] = useState(false);
   const location = useLocation();
   const onHomepage = location.pathname === "/";
 
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 24);
+    const onScroll = () => setScrollY(window.scrollY);
     onScroll();
-    window.addEventListener("scroll", onScroll);
+    window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
@@ -53,7 +58,9 @@ export default function Navbar({ transparent = true }: { transparent?: boolean }
   // WCAG contrast (as low as 1.07:1) — not a hero-image edge case, the
   // default state on every one of those pages. `transparent={false}` opts
   // into the always-solid dark bar those pages actually need.
-  const solid = !transparent || scrolled;
+  const condensed = !transparent || scrollY > 24;
+  const floating = scrollY > 220;
+  const solid = condensed;
 
   const navClasses =
     "gold-underline text-xs font-medium uppercase tracking-[0.18em] text-hotel-white/85 transition-colors hover:text-hotel-white";
@@ -82,24 +89,32 @@ export default function Navbar({ transparent = true }: { transparent?: boolean }
   return (
     <header
       className={cn(
-        "fixed inset-x-0 top-0 z-50 transition-all duration-500",
-        solid
-          ? "bg-hotel-black/95 py-4 shadow-[0_4px_30px_rgba(0,0,0,0.4)] backdrop-blur-sm"
-          : "bg-transparent py-6",
+        "fixed inset-x-0 top-0 z-50 transition-all duration-500 ease-out",
+        floating
+          ? "bg-hotel-black/75 py-3 shadow-[0_8px_40px_rgba(0,0,0,0.5)] backdrop-blur-md"
+          : solid
+            ? "bg-hotel-black/95 py-4 shadow-[0_4px_30px_rgba(0,0,0,0.4)] backdrop-blur-sm"
+            : "bg-transparent py-6",
       )}
     >
       <div className="container flex items-center justify-between">
         {onHomepage ? (
           <a
             href="#home"
-            className="font-serif text-xl sm:text-2xl font-semibold tracking-[0.08em] text-hotel-white"
+            className={cn(
+              "font-serif text-xl sm:text-2xl font-semibold tracking-[0.08em] text-hotel-white transition-transform duration-500 ease-out",
+              condensed && "scale-[0.92]",
+            )}
           >
             YES <span className="text-hotel-gold">HOTELS</span>
           </a>
         ) : (
           <Link
             to="/"
-            className="font-serif text-xl sm:text-2xl font-semibold tracking-[0.08em] text-hotel-white"
+            className={cn(
+              "font-serif text-xl sm:text-2xl font-semibold tracking-[0.08em] text-hotel-white transition-transform duration-500 ease-out",
+              condensed && "scale-[0.92]",
+            )}
           >
             YES <span className="text-hotel-gold">HOTELS</span>
           </Link>

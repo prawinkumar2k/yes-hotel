@@ -132,6 +132,7 @@ function RoomRow({ room, index, reducedMotion }: { room: any; index: number; red
             <Magnetic strength={0.25}>
               <Link
                 to={`/rooms/${room.slug}`}
+                data-preview-image={room.images?.[0]}
                 className="border border-hotel-black/20 px-5 py-3 text-[11px] font-semibold uppercase tracking-widest text-hotel-black transition-colors hover:border-hotel-gold"
               >
                 Details
