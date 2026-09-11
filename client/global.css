@@ -148,6 +148,18 @@
     }
   }
 
+  /* Slow, controlled Ken Burns drift for hero/full-bleed background media —
+     never applied when Hero.tsx detects prefers-reduced-motion (it renders
+     a static <img> instead in that case), so no separate media-query
+     override is needed here. */
+  @keyframes hero-kenburns {
+    0% { transform: scale(1); }
+    100% { transform: scale(1.08); }
+  }
+  .animate-hero-kenburns {
+    animation: hero-kenburns 20s ease-out forwards;
+  }
+
   .gold-underline {
     position: relative;
   }

@@ -2,6 +2,12 @@ import mongoose from "mongoose";
 
 export const connectDB = async () => {
   try {
+    // NOTE: directConnection=true was tried here and reverted — it broke
+    // multi-document transactions outright ("This MongoDB deployment does
+    // not support retryable writes"), which booking-safety.service.ts
+    // depends on for correctness. The plain connection string below (no
+    // directConnection) is what actually works against this project's
+    // local single-node replica set and must stay this way.
     const mongoURI = process.env.MONGODB_URI || "mongodb://localhost:27017/yes_hotels";
     const conn = await mongoose.connect(mongoURI, {
       maxPoolSize: 20,

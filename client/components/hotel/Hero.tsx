@@ -1,5 +1,7 @@
 import Reveal from "./Reveal";
 import SectionLabel from "./SectionLabel";
+import SplitReveal from "./SplitReveal";
+import Magnetic from "./Magnetic";
 import { GoldButton, OutlineButton } from "./HotelButtons";
 import BookingBar from "./BookingBar";
 import { useContent } from "@/hooks/usePublicData";
@@ -33,6 +35,10 @@ export default function Hero() {
       id="home"
       className="relative flex min-h-[100vh] flex-col justify-end overflow-hidden bg-hotel-black"
     >
+      {/* Slow, controlled Ken Burns drift (1.0 -> 1.08 over 20s) — "luxury
+          automobile commercial" motion, not a jarring zoom. A CSS animation
+          (not JS/GSAP) since it's a single continuous background effect
+          with no interaction to coordinate. */}
       {reducedMotion ? (
         <img
           src={heroImage}
@@ -41,7 +47,7 @@ export default function Hero() {
         />
       ) : (
         <video
-          className="absolute inset-0 h-full w-full object-cover"
+          className="absolute inset-0 h-full w-full object-cover animate-hero-kenburns"
           src={HERO_VIDEO_URL}
           poster={heroImage}
           autoPlay
@@ -62,29 +68,28 @@ export default function Hero() {
           </SectionLabel>
         </Reveal>
 
-        <Reveal delay={100}>
-          <h1 className="mt-6 max-w-3xl text-center font-serif text-5xl leading-[1.08] text-hotel-white sm:text-left sm:text-6xl md:text-7xl lg:text-[5.5rem]">
-            {titleLines.map((line: string, i: number) => (
-              <span key={i}>
-                {line}
-                {i < titleLines.length - 1 && <br />}
-              </span>
-            ))}
-          </h1>
-        </Reveal>
+        <h1 className="mt-6 max-w-4xl text-center font-serif text-6xl leading-[1.03] text-hotel-white sm:text-left sm:text-7xl md:text-8xl lg:text-[7rem]">
+          {titleLines.map((line: string, i: number) => (
+            <SplitReveal key={i} as="span" text={line} delay={150 + i * 220} className="block" />
+          ))}
+        </h1>
 
-        <Reveal delay={200}>
-          <p className="mx-auto mt-6 max-w-md text-center text-base text-hotel-white/75 sm:mx-0 sm:text-left">
+        <Reveal delay={550}>
+          <p className="mx-auto mt-8 max-w-md text-center text-base text-hotel-white/75 sm:mx-0 sm:text-left">
             {content.subtitle ?? FALLBACK.subtitle}
           </p>
         </Reveal>
 
-        <Reveal delay={300}>
+        <Reveal delay={650}>
           <div className="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:items-start">
-            <OutlineButton href="#rooms" light>
-              Explore Rooms
-            </OutlineButton>
-            <GoldButton href="#booking">Book Your Stay &rarr;</GoldButton>
+            <Magnetic>
+              <OutlineButton href="#rooms" light>
+                Explore Rooms
+              </OutlineButton>
+            </Magnetic>
+            <Magnetic>
+              <GoldButton href="#booking">Book Your Stay &rarr;</GoldButton>
+            </Magnetic>
           </div>
         </Reveal>
       </div>
