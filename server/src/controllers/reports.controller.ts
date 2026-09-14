@@ -398,3 +398,94 @@ export const getExecutiveSummary = async (_req: Request, res: Response) => {
     return res.status(500).json({ success: false, message: error.message });
   }
 };
+
+/**
+ * GET /api/reports/in-house-list
+ * Replicates the physical "Guest In-House List" logbook structure.
+ */
+export const getInHouseList = async (_req: Request, res: Response) => {
+  try {
+    const activeBookings = await Booking.find({ status: BookingStatus.CHECKED_IN })
+      .populate("assignedRoom", "roomNumber")
+      .populate("company", "name")
+      .lean();
+
+    const data = await Promise.all(
+      activeBookings.map(async (booking) => {
+        // Aggregate folio details (Extra Bed, Food Bill, Advance, Payments)
+        const folioLines = booking.folio ? await FolioLine.find({ folio: booking.folio }).lean() : [];
+        
+        let extraBedCount = 0;
+        let foodBill = 0;
+        let advance = 0;
+        let settled = 0;
+        const paymentModes = new Set<string>();
+        let balance = 0;
+
+        folioLines.forEach((line) => {
+          if (line.lineType === FolioLineType.EXTRA_BED && line.direction === FolioLineDirection.DEBIT) {
+            extraBedCount++;
+          } else if (line.lineType === FolioLineType.RESTAURANT && line.direction === FolioLineDirection.DEBIT) {
+            foodBill += line.amount;
+          } else if (line.lineType === FolioLineType.ADVANCE_ADJUSTMENT && line.direction === FolioLineDirection.CREDIT) {
+            advance += line.amount;
+          } else if (line.lineType === FolioLineType.PAYMENT && line.direction === FolioLineDirection.CREDIT) {
+            settled += line.amount;
+            if (line.notes) paymentModes.add(line.notes.split(" ")[0]); // Assuming notes starts with method e.g. "CASH payment"
+          }
+
+          if (line.direction === FolioLineDirection.DEBIT) balance += line.amount;
+          else if (line.direction === FolioLineDirection.CREDIT) balance -= line.amount;
+        });
+
+        // Also check Payments directly for settled and payment modes if needed, but FolioLine is source of truth for the folio
+        const payments = await Payment.find({ booking: booking._id }).lean();
+        payments.forEach(p => {
+            paymentModes.add(p.method);
+        });
+
+        let advanceTotal = 0;
+        const advances = await AdvancePayment.find({ booking: booking._id }).lean();
+        advances.forEach(a => advanceTotal += a.amount);
+        advance = Math.max(advance, advanceTotal); // Just in case it's not adjusted yet
+
+        // Calculate nights
+        const checkin = new Date(booking.checkInDate);
+        const checkout = new Date(booking.checkOutDate);
+        const nights = Math.max(1, Math.round((checkout.getTime() - checkin.getTime()) / (1000 * 60 * 60 * 24)));
+
+        // Tariff = Base Room Charge per night (approx)
+        const tariff = booking.totalAmount / nights;
+
+        return {
+          _id: booking._id,
+          grcNo: booking.bookingReference,
+          roomNo: (booking.assignedRoom as any)?.roomNumber || "Unassigned",
+          guestName: `${booking.guestDetails.firstName} ${booking.guestDetails.lastName}`.trim(),
+          companyGroup: (booking.company as any)?.name || booking.groupId?.toString() || booking.source,
+          adults: booking.adults || 1,
+          childKids: booking.children || 0,
+          tariff: Math.round(tariff),
+          plan: booking.ratePlan || "EP",
+          extraBed: extraBedCount,
+          foodBill: Math.round(foodBill),
+          checkedIn: booking.checkInDate,
+          checkOut: booking.checkOutDate,
+          nights,
+          advance: Math.round(advance),
+          balance: Math.round(balance),
+          settled: Math.round(settled),
+          paymentMode: Array.from(paymentModes).join(", ") || "-",
+        };
+      })
+    );
+
+    // Sort by Room Number
+    data.sort((a, b) => a.roomNo.localeCompare(b.roomNo, undefined, { numeric: true }));
+
+    return res.json({ success: true, data });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+

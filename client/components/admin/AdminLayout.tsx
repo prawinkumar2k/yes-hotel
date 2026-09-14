@@ -47,6 +47,7 @@ const NAV_ITEMS = [
   { label: "Contact Messages", to: "/admin/contact-messages", icon: Mail, roles: ["ADMIN", "MANAGER"] },
   { label: "Complaints", to: "/admin/complaints", icon: AlertCircle, roles: ["ADMIN", "MANAGER"] },
   { label: "Reports", to: "/admin/reports", icon: BarChart3, roles: ["ADMIN", "MANAGER"] },
+  { label: "In-House List (Logbook)", to: "/admin/in-house-list", icon: FileText, roles: ["ADMIN", "MANAGER", "RECEPTIONIST"] },
   { label: "Night Audit", to: "/admin/night-audit", icon: Moon, roles: ["ADMIN", "MANAGER"] },
   { label: "Corporate Accounts", to: "/admin/corporate-accounts", icon: Building2, roles: ["ADMIN", "MANAGER"] },
   { label: "Group Bookings", to: "/admin/group-bookings", icon: Users, roles: ["ADMIN", "MANAGER", "RECEPTIONIST"] },

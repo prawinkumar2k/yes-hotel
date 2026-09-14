@@ -9,6 +9,7 @@ import {
   getDepartmentPL,
   getOccupancyHeatmap,
   getExecutiveSummary,
+  getInHouseList,
 } from "../controllers/reports.controller";
 
 const router = Router();
@@ -18,6 +19,8 @@ router.get("/sales", protect, authorize(...MANAGER_ROLES), getSalesReport);
 router.get("/room-stay", protect, authorize(...MANAGER_ROLES), getRoomStayReport);
 router.get("/gst", protect, authorize(...MANAGER_ROLES), getGstReport);
 router.get("/advances", protect, authorize(...MANAGER_ROLES), getAdvanceReport);
+router.get("/in-house-list", protect, authorize(...MANAGER_ROLES, "RECEPTIONIST"), getInHouseList);
+
 // Phase 24 – Advanced Analytics
 router.get("/revenue-trend", protect, authorize(...MANAGER_ROLES), getRevenueTrend);
 router.get("/department-pl", protect, authorize(...MANAGER_ROLES), getDepartmentPL);

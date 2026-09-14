@@ -77,6 +77,7 @@ const AdminComplaints = lazy(() => import("./pages/admin/AdminComplaints"));
 const AdminExecutiveDashboard = lazy(() => import("./pages/admin/AdminExecutiveDashboard"));
 const AdminMultiProperty = lazy(() => import("./pages/admin/AdminMultiProperty"));
 const MobileHousekeeping = lazy(() => import("./pages/staff/MobileHousekeeping"));
+const AdminInHouseList = lazy(() => import("./pages/admin/AdminInHouseList"));
 
 
 
@@ -183,6 +184,7 @@ function App() {
                 <Route path="/admin/contact-messages" element={<ProtectedRoute roles={["ADMIN","MANAGER"]}><AdminLayout title="Contact Messages"><AdminContactMessages /></AdminLayout></ProtectedRoute>} />
                 <Route path="/admin/complaints" element={<ProtectedRoute roles={["ADMIN","MANAGER"]}><AdminLayout title="Complaints & Service Recovery"><AdminComplaints /></AdminLayout></ProtectedRoute>} />
                 <Route path="/admin/reports" element={<ProtectedRoute roles={["ADMIN","MANAGER"]}><AdminLayout title="Reports"><AdminReports /></AdminLayout></ProtectedRoute>} />
+                <Route path="/admin/in-house-list" element={<ProtectedRoute roles={["ADMIN","MANAGER","RECEPTIONIST"]}><AdminLayout title="In-House Guest List"><AdminInHouseList /></AdminLayout></ProtectedRoute>} />
                 <Route path="/admin/executive" element={<ProtectedRoute roles={["ADMIN","MANAGER"]}><AdminLayout title="Executive Command Center"><AdminExecutiveDashboard /></AdminLayout></ProtectedRoute>} />
                 <Route path="/admin/multi-property" element={<ProtectedRoute roles={["ADMIN","MANAGER"]}><AdminLayout title="Multi-Property & OTA Channel Manager"><AdminMultiProperty /></AdminLayout></ProtectedRoute>} />
                 <Route path="/admin/night-audit" element={<ProtectedRoute roles={["ADMIN","MANAGER"]}><AdminLayout title="Automated Night Audit & Business Date Engine"><AdminNightAudit /></AdminLayout></ProtectedRoute>} />
