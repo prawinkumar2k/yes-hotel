@@ -34,6 +34,18 @@ import publicRoutes from "./src/routes/public.routes";
 import auditLogRoutes from "./src/routes/auditLog.routes";
 import webhookRoutes from "./src/routes/webhook.routes";
 import sitemapRoutes from "./src/routes/sitemap.routes";
+import roomRackRoutes from "./src/routes/room-rack.routes";
+import frontDeskRoutes from "./src/routes/front-desk.routes";
+import advanceRoutes from "./src/routes/advance.routes";
+import folioRoutes from "./src/routes/folio.routes";
+import nightAuditRoutes from "./src/routes/night-audit.routes";
+import reportsRoutes from "./src/routes/reports.routes";
+import cashierShiftRoutes from "./src/routes/cashier-shift.routes";
+import ratePlanRoutes from "./src/routes/rate-plan.routes";
+import corporateAccountRoutes from "./src/routes/corporate-account.routes";
+import posRoutes from "./src/routes/pos.routes";
+import groupBookingRoutes from "./src/routes/group-booking.routes";
+import inspectionRoutes from "./src/routes/inspection.routes";
 import { getJwtSecret } from "./src/config/jwt";
 
 // Guards against createServer() being called more than once in the same
@@ -225,6 +237,19 @@ export function createServer() {
   app.use("/api/public", publicRoutes);
   app.use("/api/audit-logs", auditLogRoutes);
   app.use("/api/webhooks", webhookRoutes);
+  // ── NEW HMS ROUTES ──
+  app.use("/api/room-rack", roomRackRoutes);
+  app.use("/api/front-desk", frontDeskRoutes);
+  app.use("/api/advances", advanceRoutes);
+  app.use("/api/folios", folioRoutes);
+  app.use("/api/night-audit", nightAuditRoutes);
+  app.use("/api/reports", reportsRoutes);
+  app.use("/api/cashier-shifts", cashierShiftRoutes);
+  app.use("/api/rate-plans", ratePlanRoutes);
+  app.use("/api/corporate-accounts", corporateAccountRoutes);
+  app.use("/api/pos", posRoutes);
+  app.use("/api/group-bookings", groupBookingRoutes);
+  app.use("/api/inspections", inspectionRoutes);
 
   // Example API routes
   app.get("/api/ping", (_req, res) => {

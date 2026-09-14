@@ -25,10 +25,12 @@ export class IllegalBookingTransitionError extends Error {
  */
 const LEGAL_TRANSITIONS: Record<BookingStatus, BookingStatus[]> = {
   [BookingStatus.PENDING]: [BookingStatus.CONFIRMED, BookingStatus.CANCELLED],
-  [BookingStatus.CONFIRMED]: [BookingStatus.CHECKED_IN, BookingStatus.CANCELLED],
+  [BookingStatus.CONFIRMED]: [BookingStatus.CHECKED_IN, BookingStatus.CANCELLED, BookingStatus.NO_SHOW],
   [BookingStatus.CHECKED_IN]: [BookingStatus.CHECKED_OUT],
   [BookingStatus.CHECKED_OUT]: [],
   [BookingStatus.CANCELLED]: [],
+  // NO_SHOW is terminal — once marked, the stay is over
+  [BookingStatus.NO_SHOW]: [],
 };
 
 export function isLegalBookingTransition(from: BookingStatus, to: BookingStatus): boolean {

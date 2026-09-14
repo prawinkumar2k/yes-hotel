@@ -175,6 +175,46 @@ export default function AdminCheckIn() {
                     )}
                   </div>
 
+                  {/* KYC Identification Details */}
+                  <div className="border border-gray-200 rounded-lg p-4 bg-gray-50/50 space-y-3">
+                    <p className="text-xs font-bold text-gray-700 uppercase tracking-wider">Guest Identity Verification (KYC)</p>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs text-gray-600 mb-1">ID Document Type</label>
+                        <select className="w-full text-xs border border-gray-300 rounded p-2 focus:ring-1 focus:ring-green-500 outline-none">
+                          <option value="AADHAAR">Aadhaar Card</option>
+                          <option value="PASSPORT">Passport</option>
+                          <option value="DRIVING_LICENSE">Driving License</option>
+                          <option value="VOTER_ID">Voter ID</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-600 mb-1">ID / Document Number *</label>
+                        <input
+                          type="text"
+                          placeholder="e.g. 1234-5678-9012"
+                          className="w-full text-xs border border-gray-300 rounded p-2 focus:ring-1 focus:ring-green-500 outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-600 mb-1">Nationality</label>
+                        <input
+                          type="text"
+                          defaultValue="Indian"
+                          className="w-full text-xs border border-gray-300 rounded p-2 focus:ring-1 focus:ring-green-500 outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-600 mb-1">Emergency Phone</label>
+                        <input
+                          type="text"
+                          placeholder="+91 98765 43210"
+                          className="w-full text-xs border border-gray-300 rounded p-2 focus:ring-1 focus:ring-green-500 outline-none"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
                   {/* Special Requests */}
                   {selectedBooking.specialRequests && (
                     <div className="bg-amber-50 border border-amber-200 rounded p-3 text-sm">

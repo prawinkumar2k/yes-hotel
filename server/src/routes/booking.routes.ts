@@ -2,7 +2,8 @@ import { Router } from "express";
 import { protect, authorize, optionalProtect } from "../middleware/auth.middleware";
 import { UserRole } from "../models/User";
 import {
-  checkAvailability, createBooking, getMyBookings, getMyBookingById, getMyBookingInvoice, checkIn, checkOut
+  checkAvailability, createBooking, getMyBookings, getMyBookingById, getMyBookingInvoice, checkIn, checkOut,
+  getCheckoutPreview, checkExtensionConflict, extendStay
 } from "../controllers/booking.controller";
 import { cancelBooking } from "../controllers/cancellation.controller";
 import { confirmDemoBooking } from "../controllers/payment.controller";
@@ -34,6 +35,11 @@ router.post("/:id/cancel", protect, cancelBooking);
 
 // Check-in / Check-out (admin/receptionist)
 router.post("/:id/check-in", protect, authorize(...ADMIN_ROLES), checkIn);
+router.get("/:id/checkout-preview", protect, authorize(...ADMIN_ROLES), getCheckoutPreview);
 router.post("/:id/check-out", protect, authorize(...ADMIN_ROLES), checkOut);
+
+// Stay Extension
+router.post("/:id/extension-check", protect, authorize(...ADMIN_ROLES), checkExtensionConflict);
+router.post("/:id/extend", protect, authorize(...ADMIN_ROLES), extendStay);
 
 export default router;

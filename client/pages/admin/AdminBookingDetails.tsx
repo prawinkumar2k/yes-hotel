@@ -248,6 +248,227 @@ export default function AdminBookingDetails() {
            </div>
         </div>
       </div>
+
+      {/* Folio Ledger Section */}
+      <FolioSection bookingId={id as string} userToken={user?.token} />
     </div>
   );
 }
+
+function FolioSection({ bookingId, userToken }: { bookingId: string; userToken?: string }) {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [showPostModal, setShowPostModal] = useState(false);
+  const [lineType, setLineType] = useState("ROOM_CHARGE");
+  const [description, setDescription] = useState("");
+  const [amount, setAmount] = useState("");
+  const [applyTax, setApplyTax] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+
+  const { data, isLoading } = useQuery({
+    queryKey: ["folio", bookingId],
+    queryFn: () => apiFetch(`/api/folios/booking/${bookingId}`, userToken),
+    enabled: !!bookingId,
+  });
+
+  const folioData = data?.data;
+  const folio = folioData?.folio;
+  const lines = folioData?.lines || [];
+
+  const handlePostCharge = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!folio) return;
+    setSubmitting(true);
+    try {
+      const res = await apiFetch(`/api/folios/${folio._id}/charges`, userToken, "POST", {
+        lineType,
+        description,
+        amount: parseFloat(amount),
+        applyTax,
+      });
+      if (res.success) {
+        toast({ title: "Charge Posted", description: res.message });
+        setShowPostModal(false);
+        setDescription("");
+        setAmount("");
+        queryClient.invalidateQueries({ queryKey: ["folio", bookingId] });
+      } else {
+        toast({ title: "Error Posting Charge", description: res.message, variant: "destructive" });
+      }
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  if (isLoading) return <div className="p-4 text-center text-xs text-gray-500">Loading Folio Ledger...</div>;
+  if (!folio) {
+    return (
+      <div className="bg-white rounded-lg p-6 border border-gray-200 text-center space-y-2">
+        <p className="text-gray-700 font-medium">No active folio ledger for this stay yet.</p>
+        <p className="text-xs text-gray-500">Folios are automatically created upon guest check-in.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-white rounded-lg border border-gray-200 overflow-hidden shadow-sm space-y-4 p-6">
+      <div className="flex items-center justify-between border-b pb-4">
+        <div>
+          <h3 className="text-lg font-serif font-bold text-gray-900 flex items-center gap-2">
+            Stay Folio Ledger <span className="text-xs font-mono bg-purple-100 text-purple-800 px-2 py-0.5 rounded font-sans">{folio.status}</span>
+          </h3>
+          <p className="text-xs text-gray-500 mt-0.5">Append-only financial audit trail for this reservation stay.</p>
+        </div>
+        {folio.status === "OPEN" && (
+          <button
+            onClick={() => setShowPostModal(true)}
+            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold shadow-sm transition"
+          >
+            + Post Charge to Folio
+          </button>
+        )}
+      </div>
+
+      {/* Live Financial Totals */}
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 bg-gray-50 p-4 rounded-xl text-center text-xs font-medium">
+        <div>
+          <span className="text-gray-500 block">Total Charges</span>
+          <span className="text-sm font-bold text-gray-900">₹{folio.totalCharges || 0}</span>
+        </div>
+        <div>
+          <span className="text-gray-500 block">CGST + SGST</span>
+          <span className="text-sm font-bold text-gray-900">₹{folio.totalTax || 0}</span>
+        </div>
+        <div>
+          <span className="text-gray-500 block">Advances Adjusted</span>
+          <span className="text-sm font-bold text-amber-700">₹{folio.totalAdvanceAdjusted || 0}</span>
+        </div>
+        <div>
+          <span className="text-gray-500 block">Payments Received</span>
+          <span className="text-sm font-bold text-emerald-700">₹{folio.totalPaid || 0}</span>
+        </div>
+        <div>
+          <span className="text-gray-500 block">Current Balance</span>
+          <span className={`text-sm font-bold ${folio.balance > 0 ? "text-red-600" : "text-emerald-700"}`}>
+            ₹{folio.balance}
+          </span>
+        </div>
+      </div>
+
+      {/* Folio Line Items Table */}
+      <div className="overflow-x-auto">
+        <table className="w-full text-left text-xs">
+          <thead className="bg-gray-100 text-gray-700 uppercase font-semibold">
+            <tr>
+              <th className="p-2.5 rounded-l">Date & Time</th>
+              <th className="p-2.5">Line Type</th>
+              <th className="p-2.5">Description</th>
+              <th className="p-2.5 text-right">Debit (Charge)</th>
+              <th className="p-2.5 text-right rounded-r">Credit (Paid)</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-100">
+            {lines.length === 0 ? (
+              <tr><td colSpan={5} className="p-4 text-center text-gray-400">No folio transactions recorded.</td></tr>
+            ) : (
+              lines.map((l: any) => (
+                <tr key={l._id} className="hover:bg-gray-50">
+                  <td className="p-2.5 text-gray-500 font-mono">{format(new Date(l.date), "MMM dd, hh:mm a")}</td>
+                  <td className="p-2.5 font-bold text-gray-700">{l.lineType}</td>
+                  <td className="p-2.5 text-gray-900 font-medium">{l.description}</td>
+                  <td className="p-2.5 text-right font-semibold text-red-600">
+                    {l.direction === "DEBIT" ? `₹${l.amount}` : "—"}
+                  </td>
+                  <td className="p-2.5 text-right font-semibold text-emerald-600">
+                    {l.direction === "CREDIT" ? `₹${l.amount}` : "—"}
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Post Charge Modal */}
+      {showPostModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <form onSubmit={handlePostCharge} className="bg-white rounded-xl max-w-md w-full p-6 space-y-4 shadow-xl border">
+            <h4 className="font-bold text-gray-900 text-base border-b pb-2">Post Charge / Service Fee to Folio</h4>
+            
+            <div>
+              <label className="block text-xs font-semibold text-gray-700 mb-1">Line Category</label>
+              <select
+                value={lineType}
+                onChange={(e) => setLineType(e.target.value)}
+                className="w-full text-xs border rounded p-2 focus:ring-1 focus:ring-indigo-500"
+              >
+                <option value="ROOM_CHARGE font-mono">ROOM_CHARGE — Nightly Tariff</option>
+                <option value="RESTAURANT">RESTAURANT — Room Service / KOT</option>
+                <option value="LAUNDRY">LAUNDRY — Express Laundry Service</option>
+                <option value="MINIBAR">MINIBAR — Minibar Refreshments</option>
+                <option value="ADDON">ADDON — Spa / Activity / Tour</option>
+                <option value="DISCOUNT">DISCOUNT — Managerial Discount</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-gray-700 mb-1">Description *</label>
+              <input
+                type="text"
+                required
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="e.g., Breakfast Buffet / Laundry 2 shirts"
+                className="w-full text-xs border rounded p-2 focus:ring-1 focus:ring-indigo-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-gray-700 mb-1">Amount (₹) *</label>
+              <input
+                type="number"
+                step="0.01"
+                required
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                placeholder="e.g. 750"
+                className="w-full text-xs border rounded p-2 focus:ring-1 focus:ring-indigo-500"
+              />
+            </div>
+
+            <div className="flex items-center gap-2 pt-1">
+              <input
+                type="checkbox"
+                id="taxChk"
+                checked={applyTax}
+                onChange={(e) => setApplyTax(e.target.checked)}
+                className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+              />
+              <label htmlFor="taxChk" className="text-xs text-gray-700">Auto-calculate CGST + SGST (9% + 9%) split</label>
+            </div>
+
+            <div className="flex gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowPostModal(false)}
+                className="flex-1 py-2 border rounded text-xs text-gray-700 hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={submitting}
+                className="flex-1 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-xs font-bold disabled:opacity-50"
+              >
+                {submitting ? "Posting..." : "Confirm & Post"}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+    </div>
+  );
+}
+

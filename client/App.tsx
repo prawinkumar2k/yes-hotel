@@ -36,10 +36,13 @@ const GalleryPage = lazy(() => import("./pages/public/GalleryPage"));
 const LegalPage = lazy(() => import("./pages/public/LegalPage"));
 
 const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
+const AdminFrontDesk = lazy(() => import("./pages/admin/AdminFrontDesk"));
+const AdminRoomRack = lazy(() => import("./pages/admin/AdminRoomRack"));
 const AdminBookings = lazy(() => import("./pages/admin/AdminBookings"));
 const AdminBookingDetails = lazy(() => import("./pages/admin/AdminBookingDetails"));
 const AdminRooms = lazy(() => import("./pages/admin/AdminRooms"));
 const AdminRoomCategories = lazy(() => import("./pages/admin/AdminRoomCategories"));
+const AdminRatePlans = lazy(() => import("./pages/admin/AdminRatePlans"));
 const AdminPricing = lazy(() => import("./pages/admin/AdminPricing"));
 const AdminHousekeeping = lazy(() => import("./pages/admin/AdminHousekeeping"));
 const AdminMaintenance = lazy(() => import("./pages/admin/AdminMaintenance"));
@@ -51,6 +54,8 @@ const AdminTestimonials = lazy(() => import("./pages/admin/AdminTestimonials"));
 const AdminContent = lazy(() => import("./pages/admin/AdminContent"));
 const AdminGuests = lazy(() => import("./pages/admin/AdminGuests"));
 const AdminPayments = lazy(() => import("./pages/admin/AdminPayments"));
+const AdminAdvances = lazy(() => import("./pages/admin/AdminAdvances"));
+const AdminCashierShifts = lazy(() => import("./pages/admin/AdminCashierShifts"));
 const AdminRefunds = lazy(() => import("./pages/admin/AdminRefunds"));
 const AdminCoupons = lazy(() => import("./pages/admin/AdminCoupons"));
 const AdminStaff = lazy(() => import("./pages/admin/AdminStaff"));
@@ -60,6 +65,10 @@ const AdminContactMessages = lazy(() => import("./pages/admin/AdminContactMessag
 const AdminReviews = lazy(() => import("./pages/admin/AdminReviews"));
 const AdminAuditLogs = lazy(() => import("./pages/admin/AdminAuditLogs"));
 const AdminReports = lazy(() => import("./pages/admin/AdminReports"));
+const AdminNightAudit = lazy(() => import("./pages/admin/AdminNightAudit"));
+const AdminCorporateAccounts = lazy(() => import("./pages/admin/AdminCorporateAccounts"));
+const AdminPOS = lazy(() => import("./pages/admin/AdminPOS"));
+const AdminGroupBookings = lazy(() => import("./pages/admin/AdminGroupBookings"));
 
 const CustomerDashboard = lazy(() => import("./pages/customer/CustomerDashboard"));
 const CustomerBookings = lazy(() => import("./pages/customer/CustomerBookings"));
@@ -136,6 +145,8 @@ function App() {
 
                 {/* ADMIN ROUTES */}
                 <Route path="/admin/dashboard" element={<ProtectedRoute roles={ADMIN_ROLES}><AdminDashboard /></ProtectedRoute>} />
+                <Route path="/admin/front-desk" element={<ProtectedRoute roles={ADMIN_ROLES}><AdminLayout title="Front Desk Command Center"><AdminFrontDesk /></AdminLayout></ProtectedRoute>} />
+                <Route path="/admin/room-rack" element={<ProtectedRoute roles={ADMIN_ROLES}><AdminLayout title="Visual Room Rack"><AdminRoomRack /></AdminLayout></ProtectedRoute>} />
                 <Route path="/admin/bookings" element={<ProtectedRoute roles={ADMIN_ROLES}><AdminLayout title="Bookings"><AdminBookings /></AdminLayout></ProtectedRoute>} />
                 <Route path="/admin/bookings/:id" element={<ProtectedRoute roles={ADMIN_ROLES}><AdminLayout title="Booking Details"><AdminBookingDetails /></AdminLayout></ProtectedRoute>} />
                 <Route path="/admin/calendar" element={<ProtectedRoute roles={ADMIN_ROLES}><AdminLayout title="Calendar"><AdminCalendar /></AdminLayout></ProtectedRoute>} />
@@ -143,9 +154,12 @@ function App() {
                 <Route path="/admin/check-out" element={<ProtectedRoute roles={ADMIN_ROLES}><AdminLayout title="Check-Out"><AdminCheckOut /></AdminLayout></ProtectedRoute>} />
                 <Route path="/admin/rooms" element={<ProtectedRoute roles={ADMIN_ROLES}><AdminLayout title="Rooms"><AdminRooms /></AdminLayout></ProtectedRoute>} />
                 <Route path="/admin/room-categories" element={<ProtectedRoute roles={["ADMIN","MANAGER"]}><AdminLayout title="Room Categories"><AdminRoomCategories /></AdminLayout></ProtectedRoute>} />
+                <Route path="/admin/rate-plans" element={<ProtectedRoute roles={["ADMIN","MANAGER"]}><AdminLayout title="Dynamic Rate Plans & Meal Packages"><AdminRatePlans /></AdminLayout></ProtectedRoute>} />
                 <Route path="/admin/pricing" element={<ProtectedRoute roles={["ADMIN","MANAGER"]}><AdminLayout title="Pricing"><AdminPricing /></AdminLayout></ProtectedRoute>} />
                 <Route path="/admin/guests" element={<ProtectedRoute roles={ADMIN_ROLES}><AdminLayout title="Guests"><AdminGuests /></AdminLayout></ProtectedRoute>} />
                 <Route path="/admin/payments" element={<ProtectedRoute roles={["ADMIN","MANAGER"]}><AdminLayout title="Payments"><AdminPayments /></AdminLayout></ProtectedRoute>} />
+                <Route path="/admin/advances" element={<ProtectedRoute roles={ADMIN_ROLES}><AdminLayout title="Advance Payments Ledger"><AdminAdvances /></AdminLayout></ProtectedRoute>} />
+                <Route path="/admin/cashier-shifts" element={<ProtectedRoute roles={ADMIN_ROLES}><AdminLayout title="Cashier Shift & Drawer Reconciliation"><AdminCashierShifts /></AdminLayout></ProtectedRoute>} />
                 <Route path="/admin/refunds" element={<ProtectedRoute roles={["ADMIN","MANAGER"]}><AdminLayout title="Refunds"><AdminRefunds /></AdminLayout></ProtectedRoute>} />
                 <Route path="/admin/coupons" element={<ProtectedRoute roles={["ADMIN","MANAGER"]}><AdminLayout title="Coupons"><AdminCoupons /></AdminLayout></ProtectedRoute>} />
                 <Route path="/admin/housekeeping" element={<ProtectedRoute roles={STAFF_ROLES}><AdminLayout title="Housekeeping"><AdminHousekeeping /></AdminLayout></ProtectedRoute>} />
@@ -158,9 +172,13 @@ function App() {
                 <Route path="/admin/reviews" element={<ProtectedRoute roles={["ADMIN","MANAGER"]}><AdminLayout title="Reviews"><AdminReviews /></AdminLayout></ProtectedRoute>} />
                 <Route path="/admin/contact-messages" element={<ProtectedRoute roles={["ADMIN","MANAGER"]}><AdminLayout title="Contact Messages"><AdminContactMessages /></AdminLayout></ProtectedRoute>} />
                 <Route path="/admin/reports" element={<ProtectedRoute roles={["ADMIN","MANAGER"]}><AdminLayout title="Reports"><AdminReports /></AdminLayout></ProtectedRoute>} />
+                <Route path="/admin/night-audit" element={<ProtectedRoute roles={["ADMIN","MANAGER"]}><AdminLayout title="Automated Night Audit & Business Date Engine"><AdminNightAudit /></AdminLayout></ProtectedRoute>} />
                 <Route path="/admin/analytics" element={<Navigate to="/admin/reports" replace />} />
                 <Route path="/admin/settings" element={<ProtectedRoute roles={["ADMIN"]}><AdminLayout title="Settings"><AdminSettings /></AdminLayout></ProtectedRoute>} />
                 <Route path="/admin/audit-logs" element={<ProtectedRoute roles={["ADMIN","MANAGER"]}><AdminLayout title="Audit Logs"><AdminAuditLogs /></AdminLayout></ProtectedRoute>} />
+                <Route path="/admin/corporate-accounts" element={<ProtectedRoute roles={["ADMIN","MANAGER"]}><AdminLayout title="Corporate Accounts & B2B Billing"><AdminCorporateAccounts /></AdminLayout></ProtectedRoute>} />
+                <Route path="/admin/pos" element={<ProtectedRoute roles={["ADMIN","MANAGER","RECEPTIONIST"]}><AdminLayout title="Restaurant POS & Kitchen Display System"><AdminPOS /></AdminLayout></ProtectedRoute>} />
+                <Route path="/admin/group-bookings" element={<ProtectedRoute roles={["ADMIN","MANAGER","RECEPTIONIST"]}><AdminLayout title="Group Bookings — MICE & Events"><AdminGroupBookings /></AdminLayout></ProtectedRoute>} />
 
                 {/* STAFF ROUTES */}
                 <Route path="/staff/housekeeping" element={<ProtectedRoute roles={["HOUSEKEEPING","ADMIN","MANAGER"]}><AdminLayout title="Housekeeping"><AdminHousekeeping /></AdminLayout></ProtectedRoute>} />

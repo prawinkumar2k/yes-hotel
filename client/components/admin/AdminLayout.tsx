@@ -4,7 +4,7 @@ import { useAuth } from "../../context/AuthContext";
 import {
   LayoutDashboard, CalendarDays, BedDouble, Users, CreditCard,
   BarChart3, Settings, Home, Wrench, LogOut, MenuIcon, X, Mail,
-  Image, HelpCircle, MessageSquare, FileText, Star, Ticket, RotateCcw, ScrollText,
+  Image, HelpCircle, MessageSquare, FileText, Star, Ticket, RotateCcw, ScrollText, Moon, DollarSign, Tag, Building2, UtensilsCrossed,
 } from "lucide-react";
 
 const ADMIN_ROLES = ["ADMIN", "MANAGER", "RECEPTIONIST"];
@@ -12,15 +12,20 @@ const STAFF_ROLES = ["ADMIN", "MANAGER", "RECEPTIONIST", "HOUSEKEEPING", "MAINTE
 
 const NAV_ITEMS = [
   { label: "Dashboard", to: "/admin/dashboard", icon: LayoutDashboard, roles: ADMIN_ROLES },
+  { label: "Front Desk", to: "/admin/front-desk", icon: Home, roles: ADMIN_ROLES },
+  { label: "Room Rack", to: "/admin/room-rack", icon: BedDouble, roles: ADMIN_ROLES },
   { label: "Bookings", to: "/admin/bookings", icon: CalendarDays, roles: ADMIN_ROLES },
   { label: "Calendar", to: "/admin/calendar", icon: CalendarDays, roles: ADMIN_ROLES },
   { label: "Check-In", to: "/admin/check-in", icon: Home, roles: ADMIN_ROLES },
   { label: "Check-Out", to: "/admin/check-out", icon: LogOut, roles: ADMIN_ROLES },
   { label: "Rooms", to: "/admin/rooms", icon: BedDouble, roles: ADMIN_ROLES },
   { label: "Room Categories", to: "/admin/room-categories", icon: BedDouble, roles: ["ADMIN", "MANAGER"] },
+  { label: "Rate Plans", to: "/admin/rate-plans", icon: Tag, roles: ["ADMIN", "MANAGER"] },
   { label: "Pricing", to: "/admin/pricing", icon: CreditCard, roles: ["ADMIN", "MANAGER"] },
   { label: "Guests", to: "/admin/guests", icon: Users, roles: ADMIN_ROLES },
   { label: "Payments", to: "/admin/payments", icon: CreditCard, roles: ["ADMIN", "MANAGER"] },
+  { label: "Advance Payments", to: "/admin/advances", icon: CreditCard, roles: ["ADMIN", "MANAGER", "RECEPTIONIST"] },
+  { label: "Cashier Shifts", to: "/admin/cashier-shifts", icon: DollarSign, roles: ["ADMIN", "MANAGER", "RECEPTIONIST"] },
   { label: "Refunds", to: "/admin/refunds", icon: RotateCcw, roles: ["ADMIN", "MANAGER"] },
   { label: "Coupons", to: "/admin/coupons", icon: Ticket, roles: ["ADMIN", "MANAGER"] },
   { label: "Housekeeping", to: "/admin/housekeeping", icon: Home, roles: STAFF_ROLES },
@@ -33,6 +38,10 @@ const NAV_ITEMS = [
   { label: "Content", to: "/admin/content", icon: FileText, roles: ["ADMIN"] },
   { label: "Contact Messages", to: "/admin/contact-messages", icon: Mail, roles: ["ADMIN", "MANAGER"] },
   { label: "Reports", to: "/admin/reports", icon: BarChart3, roles: ["ADMIN", "MANAGER"] },
+  { label: "Night Audit", to: "/admin/night-audit", icon: Moon, roles: ["ADMIN", "MANAGER"] },
+  { label: "Corporate Accounts", to: "/admin/corporate-accounts", icon: Building2, roles: ["ADMIN", "MANAGER"] },
+  { label: "Group Bookings", to: "/admin/group-bookings", icon: Users, roles: ["ADMIN", "MANAGER", "RECEPTIONIST"] },
+  { label: "Restaurant POS", to: "/admin/pos", icon: UtensilsCrossed, roles: ["ADMIN", "MANAGER", "RECEPTIONIST"] },
   { label: "Audit Logs", to: "/admin/audit-logs", icon: ScrollText, roles: ["ADMIN", "MANAGER"] },
   { label: "Settings", to: "/admin/settings", icon: Settings, roles: ["ADMIN"] },
 ];

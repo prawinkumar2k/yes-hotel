@@ -1,10 +1,10 @@
 import { Request, Response } from "express";
 import mongoose from "mongoose";
-import { Booking, BookingStatus } from "../models/Booking";
-import { Room, RoomStatus } from "../models/Room";
+import { Booking, BookingStatus, PaymentStatus } from "../models/Booking";
+import { Room, RoomStatus, OccupancyStatus, HousekeepingRoomStatus, SellStatus } from "../models/Room";
 import { RoomCategory } from "../models/RoomCategory";
 import { Payment } from "../models/Payment";
-import { HousekeepingTask, HousekeepingStatus } from "../models/HousekeepingTask";
+import { HousekeepingTask, HousekeepingStatus, HousekeepingPriority, HousekeepingTaskType } from "../models/HousekeepingTask";
 import { validateAndCalculateCoupon } from "../services/coupon.service";
 import { calculateBookingTotals } from "../services/pricing.service";
 import { logger } from "../services/logger.service";
@@ -14,8 +14,15 @@ import { createAuditLog } from "../services/audit.service";
 import crypto from "crypto";
 import { z } from "zod";
 import { BookingIdempotency, BookingIdempotencyStatus } from "../models/BookingIdempotency";
-import { BookingConflictError, buildBookingRequestHash, reserveInventoryDays } from "../services/booking-safety.service";
+import { BookingConflictError, buildBookingRequestHash, reserveInventoryDays, buildStayDates } from "../services/booking-safety.service";
 import { assertGuestNotBlocked, GuestBlockedError, syncGuestOnBookingCreated } from "../services/guest.service";
+import { Folio, FolioStatus } from "../models/Folio";
+import { FolioLine, FolioLineType } from "../models/FolioLine";
+import { createFolio, postCharge, finalizeFolio, settleFolio, calculateTaxBreakdown, recomputeFolioBalance } from "../services/folio.service";
+import { AdvancePayment, AdvancePaymentStatus } from "../models/AdvancePayment";
+import { adjustAdvance } from "../services/advance.service";
+import { BookingEvent, BookingEventType } from "../models/BookingEvent";
+import { BookingInventoryDay } from "../models/BookingInventoryDay";
 
 const guestDetailsSchema = z.object({
   firstName: z.string().trim().min(1, "Guest first name is required"),
@@ -468,22 +475,34 @@ export const checkIn = async (req: Request, res: Response) => {
     const booking = await Booking.findById(req.params.id);
     if (!booking) return res.status(404).json({ success: false, message: "Booking not found" });
 
-    // Validate the room can actually receive a NEW guest BEFORE touching the
-    // booking at all — previously check-in never looked at the room's
-    // status, so a receptionist could check a guest into a room that was
-    // under MAINTENANCE or already OCCUPIED by someone else. This is
-    // deliberately a stricter, explicit rule ("must be AVAILABLE") rather
-    // than the generic isLegalRoomTransition(current, OCCUPIED) check —
-    // MAINTENANCE -> OCCUPIED is legal in the transition table because
-    // resolving a maintenance ticket must be able to restore a room's PRIOR
-    // occupancy, but that is a different operation from checking a brand
-    // new guest into a room that merely happens to allow that transition.
     const targetRoom = await Room.findById(roomId);
     if (!targetRoom) return res.status(404).json({ success: false, message: "Room not found" });
+
+    // Validate legacy status
     if (targetRoom.status !== RoomStatus.AVAILABLE) {
       return res.status(400).json({
         success: false,
         message: `Room ${targetRoom.roomNumber} is currently ${targetRoom.status} and cannot be checked into`,
+      });
+    }
+
+    // Validate Sell Status (must not be OUT_OF_ORDER, BLOCKED, OUT_OF_SERVICE)
+    if (targetRoom.sellStatus && targetRoom.sellStatus !== SellStatus.SELLABLE) {
+      return res.status(400).json({
+        success: false,
+        message: `Room ${targetRoom.roomNumber} is ${targetRoom.sellStatus} and cannot be checked into`,
+      });
+    }
+
+    // Validate Housekeeping Status (must be CLEAN or READY)
+    if (
+      targetRoom.housekeepingStatus &&
+      targetRoom.housekeepingStatus !== HousekeepingRoomStatus.CLEAN &&
+      targetRoom.housekeepingStatus !== HousekeepingRoomStatus.READY
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: `Room ${targetRoom.roomNumber} is ${targetRoom.housekeepingStatus}. It must be CLEAN or READY before guest check-in.`,
       });
     }
 
@@ -501,48 +520,599 @@ export const checkIn = async (req: Request, res: Response) => {
     }
 
     booking.assignedRoom = roomId;
-    await booking.save();
+    booking.checkedInAt = new Date();
+    booking.checkedInBy = (req as any).user?.id ? new mongoose.Types.ObjectId((req as any).user.id) : undefined;
 
-    await transitionRoomStatus(roomId, RoomStatus.OCCUPIED, {
+    // Room state update
+    targetRoom.status = RoomStatus.OCCUPIED;
+    targetRoom.occupancyStatus = OccupancyStatus.OCCUPIED;
+    targetRoom.currentBooking = booking._id as mongoose.Types.ObjectId;
+    await targetRoom.save();
+
+    await createAuditLog({
       req,
       action: "room.occupied",
-      metadata: { bookingId: booking._id.toString(), bookingReference: booking.bookingReference },
+      resourceType: "Room",
+      resourceId: targetRoom._id.toString(),
+      metadata: { bookingId: booking._id.toString(), bookingReference: booking.bookingReference, roomNumber: targetRoom.roomNumber },
     });
 
-    return res.status(200).json({ success: true, message: "Checked in successfully", data: booking });
+    // ── FOLIO INITIALIZATION ──
+    let folio: any = await Folio.findOne({ booking: booking._id, status: FolioStatus.OPEN });
+    if (!folio) {
+      folio = await createFolio(
+        {
+          bookingId: booking._id.toString(),
+          guestId: (booking.customer || (req as any).user?.id || targetRoom._id).toString(),
+          roomId: targetRoom._id.toString(),
+          checkInDate: booking.checkInDate,
+          checkOutDate: booking.checkOutDate,
+        },
+        { req }
+      );
+
+      // Post initial room tariff
+      const nights = Math.max(1, Math.ceil((new Date(booking.checkOutDate).getTime() - new Date(booking.checkInDate).getTime()) / (1000 * 60 * 60 * 24)));
+      const baseTariff = Math.max(0, (booking.totalAmount || 0) - (booking.taxAmount || 0));
+
+      if (baseTariff > 0) {
+        await postCharge(
+          {
+            folioId: folio._id.toString(),
+            bookingId: booking._id.toString(),
+            lineType: FolioLineType.ROOM_CHARGE,
+            description: `Room Tariff (${nights} night${nights > 1 ? "s" : ""}) — Room ${targetRoom.roomNumber}`,
+            amount: baseTariff,
+            date: new Date(),
+            postedBy: (req as any).user?.id || "FRONT_DESK",
+          },
+          { req }
+        );
+
+        // Post GST lines
+        const tax = await calculateTaxBreakdown(baseTariff);
+        if (tax.cgst > 0) {
+          await postCharge(
+            {
+              folioId: folio._id.toString(),
+              bookingId: booking._id.toString(),
+              lineType: FolioLineType.TAX_CGST,
+              description: "CGST (9%)",
+              amount: tax.cgst,
+              date: new Date(),
+              postedBy: "SYSTEM_TAX",
+            },
+            { req }
+          );
+        }
+        if (tax.sgst > 0) {
+          await postCharge(
+            {
+              folioId: folio._id.toString(),
+              bookingId: booking._id.toString(),
+              lineType: FolioLineType.TAX_SGST,
+              description: "SGST (9%)",
+              amount: tax.sgst,
+              date: new Date(),
+              postedBy: "SYSTEM_TAX",
+            },
+            { req }
+          );
+        }
+        if (tax.igst > 0) {
+          await postCharge(
+            {
+              folioId: folio._id.toString(),
+              bookingId: booking._id.toString(),
+              lineType: FolioLineType.TAX_IGST,
+              description: "IGST (18%)",
+              amount: tax.igst,
+              date: new Date(),
+              postedBy: "SYSTEM_TAX",
+            },
+            { req }
+          );
+        }
+      }
+
+      // If prepayment was made upon online booking, credit to Folio
+      if (booking.paidAmount > 0) {
+        await postCharge(
+          {
+            folioId: folio._id.toString(),
+            bookingId: booking._id.toString(),
+            lineType: FolioLineType.PAYMENT,
+            description: "Prepayment received online",
+            amount: booking.paidAmount,
+            date: new Date(),
+            postedBy: "SYSTEM_PAYMENT",
+            notes: "Razorpay / Online payment credited to folio",
+          },
+          { req }
+        );
+      }
+    }
+
+    booking.folio = folio._id as mongoose.Types.ObjectId;
+    await booking.save();
+
+    // Record booking event
+    await BookingEvent.create({
+      booking: booking._id,
+      eventType: BookingEventType.CHECKED_IN,
+      description: `Guest checked in to Room ${targetRoom.roomNumber}. Folio opened.`,
+      performedBy: (req as any).user?.id,
+      performedByRole: (req as any).user?.role,
+      roomId: targetRoom._id.toString(),
+    }).catch(() => undefined);
+
+    return res.status(200).json({
+      success: true,
+      message: `Checked in successfully to Room ${targetRoom.roomNumber}`,
+      data: booking,
+      folio,
+    });
   } catch (error: any) {
     return res.status(500).json({ success: false, message: error.message });
   }
 };
 
-// Admin Check-Out
+/**
+ * GET /api/bookings/:id/checkout-preview
+ * Returns comprehensive breakdown of charges, tax, advances, and balance due for checkout.
+ */
+export const getCheckoutPreview = async (req: Request, res: Response) => {
+  try {
+    const booking = await Booking.findById(req.params.id)
+      .populate("assignedRoom", "roomNumber floor category")
+      .populate("roomCategory", "name basePrice")
+      .lean();
+
+    if (!booking) return res.status(404).json({ success: false, message: "Booking not found" });
+
+    // Find open or finalized folio
+    let folio = await Folio.findOne({
+      booking: booking._id,
+      status: { $in: [FolioStatus.OPEN, FolioStatus.FINALIZED] },
+    }).lean();
+
+    let lines: any[] = [];
+    if (folio) {
+      lines = await FolioLine.find({ folio: folio._id }).sort({ date: 1, postedAt: 1 }).lean();
+    }
+
+    // Find any unadjusted or active advances linked to guest or booking
+    const advances = await AdvancePayment.find({
+      $or: [
+        { booking: booking._id },
+        ...(booking.customer ? [{ guest: booking.customer }] : []),
+      ],
+      remainingBalance: { $gt: 0 },
+      status: { $in: [AdvancePaymentStatus.RECEIVED, AdvancePaymentStatus.PARTIALLY_ADJUSTED] },
+    }).lean();
+
+    const totalAdvanceAvailable = advances.reduce((s, a) => s + a.remainingBalance, 0);
+    const balance = folio ? folio.balance : 0;
+
+    return res.json({
+      success: true,
+      data: {
+        booking,
+        folio: folio || null,
+        lines,
+        availableAdvances: advances,
+        totalAdvanceAvailable,
+        summary: {
+          totalCharges: folio?.totalCharges || 0,
+          totalTax: folio?.totalTax || 0,
+          cgst: folio?.cgst || 0,
+          sgst: folio?.sgst || 0,
+          igst: folio?.igst || 0,
+          totalDiscounts: folio?.totalDiscounts || 0,
+          totalPaid: folio?.totalPaid || 0,
+          totalAdvanceAdjusted: folio?.totalAdvanceAdjusted || 0,
+          currentBalance: balance,
+          balanceDue: Math.max(0, balance),
+          refundDue: balance < 0 ? Math.abs(balance) : 0,
+        },
+      },
+    });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// Admin Check-Out 2.0 (Full Folio, Advance Reconciliation & GST Invoicing)
 export const checkOut = async (req: Request, res: Response) => {
   try {
     const booking = await Booking.findById(req.params.id);
     if (!booking) return res.status(404).json({ success: false, message: "Booking not found" });
 
-    try {
-      await transitionBookingStatus(booking, BookingStatus.CHECKED_OUT, { req, action: "booking.checked_out" });
-    } catch (error) {
-      if (error instanceof IllegalBookingTransitionError) {
-        return res.status(400).json({ success: false, message: "Guest must be checked in to check out" });
+    const actorId = (req as any).user?.id || (req as any).user?._id;
+
+    if (booking.status !== BookingStatus.CHECKED_IN) {
+      return res.status(400).json({
+        success: false,
+        message: `Booking is in ${booking.status} state. Guest must be CHECKED_IN to checkout.`,
+      });
+    }
+
+    const {
+      advanceAdjustmentAmount,
+      advancePaymentId,
+      paymentAmount,
+      paymentMethod = "CASH",
+      refundAmount,
+      forceBypassBalance = false,
+      notes,
+    } = req.body || {};
+
+    let folio: any = await Folio.findOne({
+      booking: booking._id,
+      status: { $in: [FolioStatus.OPEN, FolioStatus.FINALIZED] },
+    });
+
+    // 1. Process Advance Adjustment if specified
+    if (advanceAdjustmentAmount && advanceAdjustmentAmount > 0 && folio) {
+      if (advancePaymentId) {
+        await adjustAdvance(
+          {
+            advancePaymentId,
+            folioId: folio._id.toString(),
+            bookingId: booking._id.toString(),
+            amount: Number(advanceAdjustmentAmount),
+            performedBy: actorId?.toString() || "CHECKOUT",
+            reason: notes || "Checkout settlement from advance",
+          },
+          { req }
+        );
+      } else {
+        const adv = await AdvancePayment.findOne({
+          $or: [{ booking: booking._id }, ...(booking.customer ? [{ guest: booking.customer }] : [])],
+          remainingBalance: { $gte: Number(advanceAdjustmentAmount) },
+          status: { $in: [AdvancePaymentStatus.RECEIVED, AdvancePaymentStatus.PARTIALLY_ADJUSTED] },
+        });
+        if (adv) {
+          await adjustAdvance(
+            {
+              advancePaymentId: adv._id.toString(),
+              folioId: folio._id.toString(),
+              bookingId: booking._id.toString(),
+              amount: Number(advanceAdjustmentAmount),
+              performedBy: actorId?.toString() || "CHECKOUT",
+              reason: notes || "Checkout settlement from advance",
+            },
+            { req }
+          );
+        }
       }
-      throw error;
+      folio = await Folio.findById(folio._id);
+    }
+
+    // 2. Process final Payment if specified
+    if (paymentAmount && Number(paymentAmount) > 0 && folio) {
+      await postCharge(
+        {
+          folioId: folio._id.toString(),
+          bookingId: booking._id.toString(),
+          lineType: FolioLineType.PAYMENT,
+          description: `Checkout Payment (${paymentMethod})`,
+          amount: Number(paymentAmount),
+          date: new Date(),
+          postedBy: actorId?.toString() || "CHECKOUT",
+          notes: notes || `Settled via ${paymentMethod} at checkout`,
+        },
+        { req }
+      );
+      booking.paidAmount = (booking.paidAmount || 0) + Number(paymentAmount);
+      folio = await Folio.findById(folio._id);
+    }
+
+    // 3. Process Refund if specified
+    if (refundAmount && Number(refundAmount) > 0 && folio) {
+      await postCharge(
+        {
+          folioId: folio._id.toString(),
+          bookingId: booking._id.toString(),
+          lineType: FolioLineType.REFUND,
+          description: "Checkout Refund",
+          amount: Number(refundAmount),
+          date: new Date(),
+          postedBy: actorId?.toString() || "CHECKOUT",
+          notes: notes || "Excess balance refunded at checkout",
+        },
+        { req }
+      );
+      folio = await Folio.findById(folio._id);
+    }
+
+    // 4. Financial Invariant Check: Verify Folio Balance is settled
+    if (folio) {
+      const balanceCheck = await recomputeFolioBalance(folio._id.toString());
+      if (Math.abs(balanceCheck.balance) > 1 && !forceBypassBalance) {
+        return res.status(400).json({
+          success: false,
+          message: `Cannot checkout: Outstanding folio balance of ₹${balanceCheck.balance.toFixed(2)}. Settle balance with payment, advance adjustment, or refund.`,
+          balance: balanceCheck.balance,
+        });
+      }
+
+      // Finalize and Settle Folio
+      if (folio.status === FolioStatus.OPEN) {
+        await finalizeFolio(folio._id.toString(), { req });
+      }
+      folio = await settleFolio(folio._id.toString(), { req, closedBy: actorId?.toString() || "FRONT_DESK" });
+    }
+
+    // 5. Transition booking status
+    await transitionBookingStatus(booking, BookingStatus.CHECKED_OUT, {
+      req,
+      action: "booking.checked_out",
+      metadata: { invoiceNumber: folio?.invoiceNumber },
+    });
+
+    booking.checkedOutAt = new Date();
+    booking.checkedOutBy = actorId ? new mongoose.Types.ObjectId(actorId) : undefined;
+    if (folio && folio.balance <= 1) {
+      booking.paymentStatus = PaymentStatus.PAID;
     }
     await booking.save();
 
-    // Mark room as dirty → generate housekeeping task
+    // 6. Hard Room State Machine: Room becomes DIRTY, occupancy VACANT
     if (booking.assignedRoom) {
-      await transitionRoomStatus(booking.assignedRoom.toString(), RoomStatus.CLEANING, {
-        req,
-        action: "room.needs_cleaning",
-        metadata: { bookingId: booking._id.toString(), bookingReference: booking.bookingReference },
-      }).catch(() => undefined); // room may legitimately already be in a non-OCCUPIED state; don't block checkout on it
-      await HousekeepingTask.create({ room: booking.assignedRoom, status: HousekeepingStatus.DIRTY });
+      const room = await Room.findById(booking.assignedRoom);
+      if (room) {
+        room.status = RoomStatus.CLEANING;
+        room.occupancyStatus = OccupancyStatus.VACANT;
+        room.housekeepingStatus = HousekeepingRoomStatus.DIRTY;
+        room.currentBooking = undefined;
+        await room.save();
+
+        await createAuditLog({
+          req,
+          action: "room.vacated_dirty",
+          resourceType: "Room",
+          resourceId: room._id.toString(),
+          metadata: { roomNumber: room.roomNumber, bookingId: booking._id.toString() },
+        });
+
+        // Housekeeping task generation
+        await HousekeepingTask.create({
+          room: room._id,
+          status: HousekeepingStatus.DIRTY,
+          priority: HousekeepingPriority.HIGH,
+          taskType: HousekeepingTaskType.CHECKOUT_CLEAN,
+          notes: `Checkout turnover for ${booking.guestDetails?.firstName} ${booking.guestDetails?.lastName} (${booking.bookingReference})`,
+        });
+      }
     }
 
-    return res.status(200).json({ success: true, message: "Checked out successfully", data: booking });
+
+    // Record booking event
+    await BookingEvent.create({
+      booking: booking._id,
+      eventType: BookingEventType.CHECKED_OUT,
+      description: `Checked out successfully. Invoice generated: ${folio?.invoiceNumber || "N/A"}`,
+      performedBy: actorId,
+      performedByRole: (req as any).user?.role,
+      roomId: booking.assignedRoom?.toString(),
+    }).catch(() => undefined);
+
+    return res.status(200).json({
+      success: true,
+      message: `Checked out successfully. Invoice generated: ${folio?.invoiceNumber || "N/A"}`,
+      data: booking,
+      invoiceNumber: folio?.invoiceNumber,
+      folio,
+    });
   } catch (error: any) {
     return res.status(500).json({ success: false, message: error.message });
   }
 };
+
+/**
+ * POST /api/bookings/:id/extension-check
+ * Checks if extending stay to newCheckOutDate creates an availability conflict.
+ */
+export const checkExtensionConflict = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { newCheckOutDate } = req.body;
+
+    const booking = await Booking.findById(id).populate("roomCategory");
+    if (!booking) return res.status(404).json({ success: false, message: "Booking not found" });
+
+    const currentCheckOut = new Date(booking.checkOutDate);
+    const targetCheckOut = new Date(newCheckOutDate);
+
+    if (targetCheckOut <= currentCheckOut) {
+      return res.status(400).json({
+        success: false,
+        message: "New check-out date must be after current check-out date",
+      });
+    }
+
+    // Check for conflicting bookings in the extension window
+    const conflicts = await Booking.find({
+      _id: { $ne: booking._id },
+      roomCategory: (booking.roomCategory as any)._id || booking.roomCategory,
+      status: { $in: [BookingStatus.CONFIRMED, BookingStatus.CHECKED_IN, BookingStatus.PENDING] },
+      checkInDate: { $lt: targetCheckOut },
+      checkOutDate: { $gt: currentCheckOut },
+    }).lean();
+
+    const additionalNights = Math.ceil((targetCheckOut.getTime() - currentCheckOut.getTime()) / (1000 * 60 * 60 * 24));
+    const basePrice = (booking.roomCategory as any)?.basePrice || 0;
+    const additionalTariff = basePrice * additionalNights;
+    const tax = await calculateTaxBreakdown(additionalTariff);
+    const additionalTotal = tax.totalWithTax;
+    const additionalTax = tax.totalTax;
+
+    const isConflict = conflicts.length > 0 && booking.assignedRoom
+      ? conflicts.some((c) => c.assignedRoom?.toString() === booking.assignedRoom?.toString())
+      : false;
+
+    return res.json({
+      success: true,
+      data: {
+        available: !isConflict,
+        additionalNights,
+        additionalTariff,
+        additionalTax,
+        additionalTotal,
+        newCheckOutDate: targetCheckOut,
+        conflictsCount: conflicts.length,
+      },
+    });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+/**
+ * POST /api/bookings/:id/extend
+ * Executes stay extension, reserves inventory days, posts folio charges, updates reservation date.
+ */
+export const extendStay = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { newCheckOutDate, notes } = req.body;
+    const actorId = (req as any).user?.id || (req as any).user?._id;
+
+    const booking = await Booking.findById(id).populate("roomCategory");
+    if (!booking) return res.status(404).json({ success: false, message: "Booking not found" });
+
+    const currentCheckOut = new Date(booking.checkOutDate);
+    const targetCheckOut = new Date(newCheckOutDate);
+
+    if (targetCheckOut <= currentCheckOut) {
+      return res.status(400).json({
+        success: false,
+        message: "New check-out date must be after current check-out date",
+      });
+    }
+
+    const additionalNights = Math.ceil((targetCheckOut.getTime() - currentCheckOut.getTime()) / (1000 * 60 * 60 * 24));
+    const basePrice = (booking.roomCategory as any)?.basePrice || 0;
+    const additionalTariff = basePrice * additionalNights;
+    const tax = await calculateTaxBreakdown(additionalTariff);
+    const additionalTotal = tax.totalWithTax;
+    const additionalTax = tax.totalTax;
+
+    // ── INVENTORY SAFETY: Reserve inventory days for extension ──
+    const categoryId = (booking.roomCategory as any)._id || booking.roomCategory;
+    const extStayDates = buildStayDates(currentCheckOut, targetCheckOut);
+    const capacity = await Room.countDocuments({
+      category: categoryId,
+      status: { $nin: [RoomStatus.MAINTENANCE, RoomStatus.OUT_OF_SERVICE] },
+    });
+
+    for (const stayDate of extStayDates) {
+      const reservation = await BookingInventoryDay.findOneAndUpdate(
+        {
+          roomCategory: categoryId,
+          stayDate,
+          reservedCount: { $lt: capacity },
+        },
+        {
+          $set: { capacity },
+          $inc: { reservedCount: 1 },
+        },
+        { returnDocument: "after" }
+      );
+      if (!reservation) {
+        return res.status(409).json({
+          success: false,
+          message: `Cannot extend stay: Capacity exhausted for date ${stayDate.toLocaleDateString()}`,
+        });
+      }
+    }
+
+    booking.checkOutDate = targetCheckOut;
+    booking.totalAmount += additionalTotal;
+    booking.taxAmount += additionalTax;
+    if (tax.cgst > 0) booking.cgstAmount = (booking.cgstAmount || 0) + tax.cgst;
+    if (tax.sgst > 0) booking.sgstAmount = (booking.sgstAmount || 0) + tax.sgst;
+    await booking.save();
+
+    // ── FOLIO UPDATE: Post extension room charge and tax lines ──
+    const folio = await Folio.findOne({ booking: booking._id, status: FolioStatus.OPEN });
+    if (folio) {
+      await postCharge(
+        {
+          folioId: folio._id.toString(),
+          bookingId: booking._id.toString(),
+          lineType: FolioLineType.ROOM_CHARGE,
+          description: `Stay Extension (${additionalNights} extra night${additionalNights > 1 ? "s" : ""})`,
+          amount: additionalTariff,
+          date: new Date(),
+          postedBy: actorId?.toString() || "FRONT_DESK",
+          notes: notes || `Extended check-out to ${targetCheckOut.toLocaleDateString()}`,
+        },
+        { req }
+      );
+      if (tax.cgst > 0) {
+        await postCharge(
+          {
+            folioId: folio._id.toString(),
+            bookingId: booking._id.toString(),
+            lineType: FolioLineType.TAX_CGST,
+            description: "CGST on Stay Extension (9%)",
+            amount: tax.cgst,
+            date: new Date(),
+            postedBy: "SYSTEM_TAX",
+          },
+          { req }
+        );
+      }
+      if (tax.sgst > 0) {
+        await postCharge(
+          {
+            folioId: folio._id.toString(),
+            bookingId: booking._id.toString(),
+            lineType: FolioLineType.TAX_SGST,
+            description: "SGST on Stay Extension (9%)",
+            amount: tax.sgst,
+            date: new Date(),
+            postedBy: "SYSTEM_TAX",
+          },
+          { req }
+        );
+      }
+    }
+
+    // ── AUDIT & BOOKING EVENT ──
+    await BookingEvent.create({
+      booking: booking._id,
+      eventType: BookingEventType.DATES_CHANGED,
+      description: `Stay extended by ${additionalNights} night(s) to ${targetCheckOut.toLocaleDateString()}. Added ₹${additionalTotal} to folio.`,
+      performedBy: actorId,
+      performedByRole: (req as any).user?.role,
+      previousValue: { checkOutDate: currentCheckOut },
+      newValue: { checkOutDate: targetCheckOut, additionalTotal },
+    }).catch(() => undefined);
+
+    await createAuditLog({
+      req,
+      action: "booking.stay_extended",
+      resourceType: "Booking",
+      resourceId: booking._id.toString(),
+      metadata: {
+        previousCheckOut: currentCheckOut,
+        newCheckOut: targetCheckOut,
+        additionalNights,
+        additionalTotal,
+      },
+    });
+
+    return res.json({
+      success: true,
+      message: `Stay extended by ${additionalNights} night(s) until ${targetCheckOut.toLocaleDateString()}`,
+      data: booking,
+    });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+

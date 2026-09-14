@@ -1,9 +1,8 @@
 import { Request, Response } from "express";
 import { z } from "zod";
 import { HousekeepingTask, HousekeepingStatus, HousekeepingPriority } from "../models/HousekeepingTask";
-import { RoomStatus } from "../models/Room";
+import { Room, HousekeepingRoomStatus } from "../models/Room";
 import { createAuditLog } from "../services/audit.service";
-import { transitionRoomStatus } from "../services/room-state.service";
 
 const updateTaskSchema = z.object({
   status: z.nativeEnum(HousekeepingStatus).optional(),
@@ -41,18 +40,26 @@ export const updateHousekeepingTask = async (req: Request, res: Response) => {
 
     if (!task) return res.status(404).json({ success: false, message: "Task not found" });
 
-    // When cleaned and inspected, make room available — but only if the
-    // room is actually still CLEANING. If a maintenance issue was
-    // discovered and the room was moved to MAINTENANCE in the meantime,
-    // this must NOT silently overwrite that back to AVAILABLE; it's caught
-    // (not thrown) because a stale housekeeping task shouldn't block the
-    // inspection itself from being recorded.
-    if (data.status === HousekeepingStatus.INSPECTED && task.room) {
-      await transitionRoomStatus((task.room as any)._id.toString(), RoomStatus.AVAILABLE, {
-        req,
-        action: "room.cleaned_and_available",
-        metadata: { housekeepingTaskId: task._id.toString() },
-      }).catch(() => undefined);
+    // Operational lifecycle update for room:
+    // Housekeeping tasks drive the physical state; inspection and authorized release make it sellable.
+    if (task.room) {
+      const roomId = (task.room as any)._id.toString();
+      if (data.status === HousekeepingStatus.CLEANING) {
+        await Room.findByIdAndUpdate(roomId, {
+          housekeepingStatus: HousekeepingRoomStatus.CLEANING,
+          lastCleanedAt: new Date(),
+        }).catch(() => undefined);
+      } else if (data.status === HousekeepingStatus.CLEAN || data.status === HousekeepingStatus.CLEANING_COMPLETED) {
+        await Room.findByIdAndUpdate(roomId, {
+          housekeepingStatus: HousekeepingRoomStatus.CLEANING_COMPLETED,
+          lastCleanedAt: new Date(),
+        }).catch(() => undefined);
+      } else if (data.status === HousekeepingStatus.INSPECTED) {
+        await Room.findByIdAndUpdate(roomId, {
+          housekeepingStatus: HousekeepingRoomStatus.WAITING_FOR_RELEASE,
+          lastInspectedAt: new Date(),
+        }).catch(() => undefined);
+      }
     }
 
     await createAuditLog({
