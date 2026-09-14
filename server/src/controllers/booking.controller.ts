@@ -481,10 +481,14 @@ export const getMyBookingInvoice = async (req: Request, res: Response) => {
   }
 };
 
+// Sentinel thrown inside the checkIn transaction for an illegal status
+// transition, distinguishing a 400 business-rule rejection from a 500.
+class IllegalCheckInTransitionError extends Error {}
+
 // Admin Check-In
 export const checkIn = async (req: Request, res: Response) => {
   try {
-    const { roomId } = req.body;
+    const { roomId, idType, idNumber, nationality, emergencyPhone } = req.body;
     const booking = await Booking.findById(req.params.id);
     if (!booking) return res.status(404).json({ success: false, message: "Booking not found" });
 
@@ -519,29 +523,163 @@ export const checkIn = async (req: Request, res: Response) => {
       });
     }
 
+    // Everything below (room -> OCCUPIED, booking -> CHECKED_IN, folio
+    // creation, room-tariff + tax posting) must land together. Previously
+    // the room was saved as OCCUPIED first and the booking's own
+    // CHECKED_IN save happened last, after folio/tax posting — so a
+    // mid-sequence failure (e.g. postCharge throwing) left the room stuck
+    // OCCUPIED with a currentBooking pointer while the booking itself was
+    // never actually saved as CHECKED_IN: an orphaned room no one could
+    // check out of. Reproduced live and confirmed during this audit.
+    let folio: any = null;
+    const session = await mongoose.startSession();
     try {
-      await transitionBookingStatus(booking, BookingStatus.CHECKED_IN, {
-        req,
-        action: "booking.checked_in",
-        metadata: { roomId },
+      await session.withTransaction(async () => {
+        try {
+          await transitionBookingStatus(booking, BookingStatus.CHECKED_IN, {
+            req,
+            action: "booking.checked_in",
+            metadata: { roomId },
+          });
+        } catch (error) {
+          if (error instanceof IllegalBookingTransitionError) {
+            throw new IllegalCheckInTransitionError();
+          }
+          throw error;
+        }
+
+        booking.assignedRoom = roomId;
+        booking.checkedInAt = new Date();
+        booking.checkedInBy = (req as any).user?.id ? new mongoose.Types.ObjectId((req as any).user.id) : undefined;
+
+        // KYC capture at check-in. Previously collected by the frontend
+        // form but never wired to any state or sent to this endpoint at
+        // all — filled in, then silently discarded on submit.
+        if (idType) booking.guestDetails.idType = idType;
+        if (idNumber) booking.guestDetails.idNumber = idNumber;
+        if (nationality) booking.guestDetails.nationality = nationality;
+        if (emergencyPhone) booking.guestDetails.emergencyPhone = emergencyPhone;
+
+        // Room state update
+        targetRoom.status = RoomStatus.OCCUPIED;
+        targetRoom.occupancyStatus = OccupancyStatus.OCCUPIED;
+        targetRoom.currentBooking = booking._id as mongoose.Types.ObjectId;
+        await targetRoom.save({ session });
+
+        // ── FOLIO INITIALIZATION ──
+        folio = await Folio.findOne({ booking: booking._id, status: FolioStatus.OPEN }).session(session);
+        if (!folio) {
+          folio = await createFolio(
+            {
+              bookingId: booking._id.toString(),
+              guestId: (booking.customer || (req as any).user?.id || targetRoom._id).toString(),
+              roomId: targetRoom._id.toString(),
+              checkInDate: booking.checkInDate,
+              checkOutDate: booking.checkOutDate,
+            },
+            { req, session }
+          );
+
+          // Post initial room tariff
+          const nights = Math.max(1, Math.ceil((new Date(booking.checkOutDate).getTime() - new Date(booking.checkInDate).getTime()) / (1000 * 60 * 60 * 24)));
+          const baseTariff = Math.max(0, (booking.totalAmount || 0) - (booking.taxAmount || 0));
+
+          if (baseTariff > 0) {
+            await postCharge(
+              {
+                folioId: folio._id.toString(),
+                bookingId: booking._id.toString(),
+                lineType: FolioLineType.ROOM_CHARGE,
+                description: `Room Tariff (${nights} night${nights > 1 ? "s" : ""}) — Room ${targetRoom.roomNumber}`,
+                amount: baseTariff,
+                date: new Date(),
+                postedBy: (req as any).user?.id || "FRONT_DESK",
+              },
+              { req, session }
+            );
+
+            // Post GST lines — split the tax the guest was already quoted
+            // and charged at booking time (booking.taxAmount, computed by
+            // pricing.service.ts's room-rate GST slab: 12% at/under ₹7500
+            // per night, 18% above), NOT a freshly recomputed flat-rate
+            // amount. calculateTaxBreakdown() ignores the slab and always
+            // applies HotelSettings' flat cgst/sgst rate (default 9%+9% =
+            // 18%), which silently overcharges every stay booked under the
+            // ₹7500 slab (18% posted to the folio vs the 12% actually
+            // quoted/paid) — the resulting mismatch then correctly trips
+            // the checkout balance-invariant check and blocks checkout
+            // entirely. Reproduced live during this audit: a ₹3500/night
+            // room showed a ₹210 phantom outstanding balance at checkout
+            // (630 posted vs 420 quoted, on a ₹3500 taxable amount).
+            // CGST and SGST are always equal for a single intrastate
+            // property, so an even split reconstructs the correct
+            // breakdown without re-deriving the rate.
+            const bookingTax = Math.max(0, booking.taxAmount || 0);
+            const cgst = Math.round((bookingTax / 2) * 100) / 100;
+            const sgst = Math.round((bookingTax - cgst) * 100) / 100;
+            if (cgst > 0) {
+              await postCharge(
+                {
+                  folioId: folio._id.toString(),
+                  bookingId: booking._id.toString(),
+                  lineType: FolioLineType.TAX_CGST,
+                  description: "CGST",
+                  amount: cgst,
+                  date: new Date(),
+                  postedBy: "SYSTEM_TAX",
+                },
+                { req, session }
+              );
+            }
+            if (sgst > 0) {
+              await postCharge(
+                {
+                  folioId: folio._id.toString(),
+                  bookingId: booking._id.toString(),
+                  lineType: FolioLineType.TAX_SGST,
+                  description: "SGST",
+                  amount: sgst,
+                  date: new Date(),
+                  postedBy: "SYSTEM_TAX",
+                },
+                { req, session }
+              );
+            }
+          }
+
+          // If prepayment was made upon online booking, credit to Folio
+          if (booking.paidAmount > 0) {
+            await postCharge(
+              {
+                folioId: folio._id.toString(),
+                bookingId: booking._id.toString(),
+                lineType: FolioLineType.PAYMENT,
+                description: "Prepayment received online",
+                amount: booking.paidAmount,
+                date: new Date(),
+                postedBy: "SYSTEM_PAYMENT",
+                notes: "Razorpay / Online payment credited to folio",
+              },
+              { req, session }
+            );
+          }
+        }
+
+        booking.folio = folio._id as mongoose.Types.ObjectId;
+        await booking.save({ session });
       });
-    } catch (error) {
-      if (error instanceof IllegalBookingTransitionError) {
+    } catch (error: any) {
+      if (error instanceof IllegalCheckInTransitionError) {
         return res.status(400).json({ success: false, message: "Booking must be CONFIRMED before check-in" });
       }
-      throw error;
+      return res.status(500).json({ success: false, message: error.message });
+    } finally {
+      await session.endSession();
     }
 
-    booking.assignedRoom = roomId;
-    booking.checkedInAt = new Date();
-    booking.checkedInBy = (req as any).user?.id ? new mongoose.Types.ObjectId((req as any).user.id) : undefined;
-
-    // Room state update
-    targetRoom.status = RoomStatus.OCCUPIED;
-    targetRoom.occupancyStatus = OccupancyStatus.OCCUPIED;
-    targetRoom.currentBooking = booking._id as mongoose.Types.ObjectId;
-    await targetRoom.save();
-
+    // Audit logging + booking event are deliberately outside the
+    // transaction (same convention as createBooking/checkOut): a logging
+    // failure must never roll back a check-in that otherwise succeeded.
     await createAuditLog({
       req,
       action: "room.occupied",
@@ -550,106 +688,6 @@ export const checkIn = async (req: Request, res: Response) => {
       metadata: { bookingId: booking._id.toString(), bookingReference: booking.bookingReference, roomNumber: targetRoom.roomNumber },
     });
 
-    // ── FOLIO INITIALIZATION ──
-    let folio: any = await Folio.findOne({ booking: booking._id, status: FolioStatus.OPEN });
-    if (!folio) {
-      folio = await createFolio(
-        {
-          bookingId: booking._id.toString(),
-          guestId: (booking.customer || (req as any).user?.id || targetRoom._id).toString(),
-          roomId: targetRoom._id.toString(),
-          checkInDate: booking.checkInDate,
-          checkOutDate: booking.checkOutDate,
-        },
-        { req }
-      );
-
-      // Post initial room tariff
-      const nights = Math.max(1, Math.ceil((new Date(booking.checkOutDate).getTime() - new Date(booking.checkInDate).getTime()) / (1000 * 60 * 60 * 24)));
-      const baseTariff = Math.max(0, (booking.totalAmount || 0) - (booking.taxAmount || 0));
-
-      if (baseTariff > 0) {
-        await postCharge(
-          {
-            folioId: folio._id.toString(),
-            bookingId: booking._id.toString(),
-            lineType: FolioLineType.ROOM_CHARGE,
-            description: `Room Tariff (${nights} night${nights > 1 ? "s" : ""}) — Room ${targetRoom.roomNumber}`,
-            amount: baseTariff,
-            date: new Date(),
-            postedBy: (req as any).user?.id || "FRONT_DESK",
-          },
-          { req }
-        );
-
-        // Post GST lines
-        const tax = await calculateTaxBreakdown(baseTariff);
-        if (tax.cgst > 0) {
-          await postCharge(
-            {
-              folioId: folio._id.toString(),
-              bookingId: booking._id.toString(),
-              lineType: FolioLineType.TAX_CGST,
-              description: "CGST (9%)",
-              amount: tax.cgst,
-              date: new Date(),
-              postedBy: "SYSTEM_TAX",
-            },
-            { req }
-          );
-        }
-        if (tax.sgst > 0) {
-          await postCharge(
-            {
-              folioId: folio._id.toString(),
-              bookingId: booking._id.toString(),
-              lineType: FolioLineType.TAX_SGST,
-              description: "SGST (9%)",
-              amount: tax.sgst,
-              date: new Date(),
-              postedBy: "SYSTEM_TAX",
-            },
-            { req }
-          );
-        }
-        if (tax.igst > 0) {
-          await postCharge(
-            {
-              folioId: folio._id.toString(),
-              bookingId: booking._id.toString(),
-              lineType: FolioLineType.TAX_IGST,
-              description: "IGST (18%)",
-              amount: tax.igst,
-              date: new Date(),
-              postedBy: "SYSTEM_TAX",
-            },
-            { req }
-          );
-        }
-      }
-
-      // If prepayment was made upon online booking, credit to Folio
-      if (booking.paidAmount > 0) {
-        await postCharge(
-          {
-            folioId: folio._id.toString(),
-            bookingId: booking._id.toString(),
-            lineType: FolioLineType.PAYMENT,
-            description: "Prepayment received online",
-            amount: booking.paidAmount,
-            date: new Date(),
-            postedBy: "SYSTEM_PAYMENT",
-            notes: "Razorpay / Online payment credited to folio",
-          },
-          { req }
-        );
-      }
-    }
-
-    booking.folio = folio._id as mongoose.Types.ObjectId;
-    await booking.save();
-
-    // Record booking event
     await BookingEvent.create({
       booking: booking._id,
       eventType: BookingEventType.CHECKED_IN,
@@ -736,191 +774,227 @@ export const getCheckoutPreview = async (req: Request, res: Response) => {
 };
 
 // Admin Check-Out 2.0 (Full Folio, Advance Reconciliation & GST Invoicing)
+// Sentinel thrown inside the checkOut transaction to abort it for a business
+// rule (outstanding balance), as opposed to an infrastructure failure — lets
+// the outer catch tell the two apart and return 400 instead of 500.
+class CheckoutBalanceError extends Error {
+  constructor(public readonly balance: number) {
+    super(`Cannot checkout: Outstanding folio balance of ₹${balance.toFixed(2)}. Settle balance with payment, advance adjustment, or refund.`);
+  }
+}
+
 export const checkOut = async (req: Request, res: Response) => {
-  try {
-    const booking = await Booking.findById(req.params.id);
-    if (!booking) return res.status(404).json({ success: false, message: "Booking not found" });
+ try {
+  const booking = await Booking.findById(req.params.id);
+  if (!booking) return res.status(404).json({ success: false, message: "Booking not found" });
 
-    const actorId = (req as any).user?.id || (req as any).user?._id;
+  const actorId = (req as any).user?.id || (req as any).user?._id;
 
-    if (booking.status !== BookingStatus.CHECKED_IN) {
-      return res.status(400).json({
-        success: false,
-        message: `Booking is in ${booking.status} state. Guest must be CHECKED_IN to checkout.`,
-      });
-    }
-
-    const {
-      advanceAdjustmentAmount,
-      advancePaymentId,
-      paymentAmount,
-      paymentMethod = "CASH",
-      refundAmount,
-      forceBypassBalance = false,
-      notes,
-    } = req.body || {};
-
-    let folio: any = await Folio.findOne({
-      booking: booking._id,
-      status: { $in: [FolioStatus.OPEN, FolioStatus.FINALIZED] },
+  if (booking.status !== BookingStatus.CHECKED_IN) {
+    return res.status(400).json({
+      success: false,
+      message: `Booking is in ${booking.status} state. Guest must be CHECKED_IN to checkout.`,
     });
+  }
 
-    // 1. Process Advance Adjustment if specified
-    if (advanceAdjustmentAmount && advanceAdjustmentAmount > 0 && folio) {
-      if (advancePaymentId) {
-        await adjustAdvance(
-          {
-            advancePaymentId,
-            folioId: folio._id.toString(),
-            bookingId: booking._id.toString(),
-            amount: Number(advanceAdjustmentAmount),
-            performedBy: actorId?.toString() || "CHECKOUT",
-            reason: notes || "Checkout settlement from advance",
-          },
-          { req }
-        );
-      } else {
-        const adv = await AdvancePayment.findOne({
-          $or: [{ booking: booking._id }, ...(booking.customer ? [{ guest: booking.customer }] : [])],
-          remainingBalance: { $gte: Number(advanceAdjustmentAmount) },
-          status: { $in: [AdvancePaymentStatus.RECEIVED, AdvancePaymentStatus.PARTIALLY_ADJUSTED] },
-        });
-        if (adv) {
+  const {
+    advanceAdjustmentAmount,
+    advancePaymentId,
+    paymentAmount,
+    paymentMethod = "CASH",
+    refundAmount,
+    forceBypassBalance = false,
+    notes,
+  } = req.body || {};
+
+  // Everything below mutates the folio, the booking, and the room together.
+  // Without a transaction, a crash or thrown error partway through (e.g.
+  // after the folio is SETTLED but before the room is marked DIRTY) leaves
+  // an invoiced folio attached to a booking that never left CHECKED_IN and
+  // a room that never re-enters housekeeping — exactly the kind of
+  // cross-module inconsistency createBooking's transaction already guards
+  // against on the booking-creation side.
+  let folio: any = null;
+  let roomNumber: string | undefined;
+  const session = await mongoose.startSession();
+  try {
+    await session.withTransaction(async () => {
+      folio = await Folio.findOne({
+        booking: booking._id,
+        status: { $in: [FolioStatus.OPEN, FolioStatus.FINALIZED] },
+      }).session(session);
+
+      // 1. Process Advance Adjustment if specified
+      if (advanceAdjustmentAmount && advanceAdjustmentAmount > 0 && folio) {
+        if (advancePaymentId) {
           await adjustAdvance(
             {
-              advancePaymentId: adv._id.toString(),
+              advancePaymentId,
               folioId: folio._id.toString(),
               bookingId: booking._id.toString(),
               amount: Number(advanceAdjustmentAmount),
               performedBy: actorId?.toString() || "CHECKOUT",
               reason: notes || "Checkout settlement from advance",
             },
-            { req }
+            { req, session }
+          );
+        } else {
+          const adv = await AdvancePayment.findOne({
+            $or: [{ booking: booking._id }, ...(booking.customer ? [{ guest: booking.customer }] : [])],
+            remainingBalance: { $gte: Number(advanceAdjustmentAmount) },
+            status: { $in: [AdvancePaymentStatus.RECEIVED, AdvancePaymentStatus.PARTIALLY_ADJUSTED] },
+          }).session(session);
+          if (adv) {
+            await adjustAdvance(
+              {
+                advancePaymentId: adv._id.toString(),
+                folioId: folio._id.toString(),
+                bookingId: booking._id.toString(),
+                amount: Number(advanceAdjustmentAmount),
+                performedBy: actorId?.toString() || "CHECKOUT",
+                reason: notes || "Checkout settlement from advance",
+              },
+              { req, session }
+            );
+          }
+        }
+        folio = await Folio.findById(folio._id).session(session);
+      }
+
+      // 2. Process final Payment if specified
+      if (paymentAmount && Number(paymentAmount) > 0 && folio) {
+        await postCharge(
+          {
+            folioId: folio._id.toString(),
+            bookingId: booking._id.toString(),
+            lineType: FolioLineType.PAYMENT,
+            description: `Checkout Payment (${paymentMethod})`,
+            amount: Number(paymentAmount),
+            date: new Date(),
+            postedBy: actorId?.toString() || "CHECKOUT",
+            notes: notes || `Settled via ${paymentMethod} at checkout`,
+          },
+          { req, session }
+        );
+        booking.paidAmount = (booking.paidAmount || 0) + Number(paymentAmount);
+        folio = await Folio.findById(folio._id).session(session);
+      }
+
+      // 3. Process Refund if specified
+      if (refundAmount && Number(refundAmount) > 0 && folio) {
+        await postCharge(
+          {
+            folioId: folio._id.toString(),
+            bookingId: booking._id.toString(),
+            lineType: FolioLineType.REFUND,
+            description: "Checkout Refund",
+            amount: Number(refundAmount),
+            date: new Date(),
+            postedBy: actorId?.toString() || "CHECKOUT",
+            notes: notes || "Excess balance refunded at checkout",
+          },
+          { req, session }
+        );
+        folio = await Folio.findById(folio._id).session(session);
+      }
+
+      // 4. Financial Invariant Check: Verify Folio Balance is settled
+      if (folio) {
+        const balanceCheck = await recomputeFolioBalance(folio._id.toString(), { session });
+        if (Math.abs(balanceCheck.balance) > 1 && !forceBypassBalance) {
+          throw new CheckoutBalanceError(balanceCheck.balance);
+        }
+
+        // Finalize and Settle Folio
+        if (folio.status === FolioStatus.OPEN) {
+          await finalizeFolio(folio._id.toString(), { req, session });
+        }
+        folio = await settleFolio(folio._id.toString(), { req, session, closedBy: actorId?.toString() || "FRONT_DESK" });
+      }
+
+      // 5. Transition booking status
+      await transitionBookingStatus(booking, BookingStatus.CHECKED_OUT, {
+        req,
+        action: "booking.checked_out",
+        metadata: { invoiceNumber: folio?.invoiceNumber },
+      });
+
+      booking.checkedOutAt = new Date();
+      booking.checkedOutBy = actorId ? new mongoose.Types.ObjectId(actorId) : undefined;
+      if (folio && folio.balance <= 1) {
+        booking.paymentStatus = PaymentStatus.PAID;
+      }
+      await booking.save({ session });
+
+      // 6. Hard Room State Machine: Room becomes DIRTY, occupancy VACANT
+      if (booking.assignedRoom) {
+        const room = await Room.findById(booking.assignedRoom).session(session);
+        if (room) {
+          room.status = RoomStatus.CLEANING;
+          room.occupancyStatus = OccupancyStatus.VACANT;
+          room.housekeepingStatus = HousekeepingRoomStatus.DIRTY;
+          room.currentBooking = undefined;
+          await room.save({ session });
+          roomNumber = room.roomNumber;
+
+          // Housekeeping task generation
+          await HousekeepingTask.create(
+            [
+              {
+                room: room._id,
+                status: HousekeepingStatus.DIRTY,
+                priority: HousekeepingPriority.HIGH,
+                taskType: HousekeepingTaskType.CHECKOUT_CLEAN,
+                notes: `Checkout turnover for ${booking.guestDetails?.firstName} ${booking.guestDetails?.lastName} (${booking.bookingReference})`,
+              },
+            ],
+            { session }
           );
         }
       }
-      folio = await Folio.findById(folio._id);
-    }
-
-    // 2. Process final Payment if specified
-    if (paymentAmount && Number(paymentAmount) > 0 && folio) {
-      await postCharge(
-        {
-          folioId: folio._id.toString(),
-          bookingId: booking._id.toString(),
-          lineType: FolioLineType.PAYMENT,
-          description: `Checkout Payment (${paymentMethod})`,
-          amount: Number(paymentAmount),
-          date: new Date(),
-          postedBy: actorId?.toString() || "CHECKOUT",
-          notes: notes || `Settled via ${paymentMethod} at checkout`,
-        },
-        { req }
-      );
-      booking.paidAmount = (booking.paidAmount || 0) + Number(paymentAmount);
-      folio = await Folio.findById(folio._id);
-    }
-
-    // 3. Process Refund if specified
-    if (refundAmount && Number(refundAmount) > 0 && folio) {
-      await postCharge(
-        {
-          folioId: folio._id.toString(),
-          bookingId: booking._id.toString(),
-          lineType: FolioLineType.REFUND,
-          description: "Checkout Refund",
-          amount: Number(refundAmount),
-          date: new Date(),
-          postedBy: actorId?.toString() || "CHECKOUT",
-          notes: notes || "Excess balance refunded at checkout",
-        },
-        { req }
-      );
-      folio = await Folio.findById(folio._id);
-    }
-
-    // 4. Financial Invariant Check: Verify Folio Balance is settled
-    if (folio) {
-      const balanceCheck = await recomputeFolioBalance(folio._id.toString());
-      if (Math.abs(balanceCheck.balance) > 1 && !forceBypassBalance) {
-        return res.status(400).json({
-          success: false,
-          message: `Cannot checkout: Outstanding folio balance of ₹${balanceCheck.balance.toFixed(2)}. Settle balance with payment, advance adjustment, or refund.`,
-          balance: balanceCheck.balance,
-        });
-      }
-
-      // Finalize and Settle Folio
-      if (folio.status === FolioStatus.OPEN) {
-        await finalizeFolio(folio._id.toString(), { req });
-      }
-      folio = await settleFolio(folio._id.toString(), { req, closedBy: actorId?.toString() || "FRONT_DESK" });
-    }
-
-    // 5. Transition booking status
-    await transitionBookingStatus(booking, BookingStatus.CHECKED_OUT, {
-      req,
-      action: "booking.checked_out",
-      metadata: { invoiceNumber: folio?.invoiceNumber },
-    });
-
-    booking.checkedOutAt = new Date();
-    booking.checkedOutBy = actorId ? new mongoose.Types.ObjectId(actorId) : undefined;
-    if (folio && folio.balance <= 1) {
-      booking.paymentStatus = PaymentStatus.PAID;
-    }
-    await booking.save();
-
-    // 6. Hard Room State Machine: Room becomes DIRTY, occupancy VACANT
-    if (booking.assignedRoom) {
-      const room = await Room.findById(booking.assignedRoom);
-      if (room) {
-        room.status = RoomStatus.CLEANING;
-        room.occupancyStatus = OccupancyStatus.VACANT;
-        room.housekeepingStatus = HousekeepingRoomStatus.DIRTY;
-        room.currentBooking = undefined;
-        await room.save();
-
-        await createAuditLog({
-          req,
-          action: "room.vacated_dirty",
-          resourceType: "Room",
-          resourceId: room._id.toString(),
-          metadata: { roomNumber: room.roomNumber, bookingId: booking._id.toString() },
-        });
-
-        // Housekeeping task generation
-        await HousekeepingTask.create({
-          room: room._id,
-          status: HousekeepingStatus.DIRTY,
-          priority: HousekeepingPriority.HIGH,
-          taskType: HousekeepingTaskType.CHECKOUT_CLEAN,
-          notes: `Checkout turnover for ${booking.guestDetails?.firstName} ${booking.guestDetails?.lastName} (${booking.bookingReference})`,
-        });
-      }
-    }
-
-
-    // Record booking event
-    await BookingEvent.create({
-      booking: booking._id,
-      eventType: BookingEventType.CHECKED_OUT,
-      description: `Checked out successfully. Invoice generated: ${folio?.invoiceNumber || "N/A"}`,
-      performedBy: actorId,
-      performedByRole: (req as any).user?.role,
-      roomId: booking.assignedRoom?.toString(),
-    }).catch(() => undefined);
-
-    return res.status(200).json({
-      success: true,
-      message: `Checked out successfully. Invoice generated: ${folio?.invoiceNumber || "N/A"}`,
-      data: booking,
-      invoiceNumber: folio?.invoiceNumber,
-      folio,
     });
   } catch (error: any) {
+    if (error instanceof CheckoutBalanceError) {
+      return res.status(400).json({ success: false, message: error.message, balance: error.balance });
+    }
     return res.status(500).json({ success: false, message: error.message });
+  } finally {
+    await session.endSession();
   }
+
+  // Audit logging is deliberately outside the transaction (same convention
+  // as createBooking): a logging failure must never roll back a checkout
+  // that otherwise succeeded.
+  if (roomNumber && booking.assignedRoom) {
+    await createAuditLog({
+      req,
+      action: "room.vacated_dirty",
+      resourceType: "Room",
+      resourceId: booking.assignedRoom.toString(),
+      metadata: { roomNumber, bookingId: booking._id.toString() },
+    });
+  }
+
+  // Record booking event
+  await BookingEvent.create({
+    booking: booking._id,
+    eventType: BookingEventType.CHECKED_OUT,
+    description: `Checked out successfully. Invoice generated: ${folio?.invoiceNumber || "N/A"}`,
+    performedBy: actorId,
+    performedByRole: (req as any).user?.role,
+    roomId: booking.assignedRoom?.toString(),
+  }).catch(() => undefined);
+
+  return res.status(200).json({
+    success: true,
+    message: `Checked out successfully. Invoice generated: ${folio?.invoiceNumber || "N/A"}`,
+    data: booking,
+    invoiceNumber: folio?.invoiceNumber,
+    folio,
+  });
+ } catch (error: any) {
+   return res.status(500).json({ success: false, message: error.message });
+ }
 };
 
 /**

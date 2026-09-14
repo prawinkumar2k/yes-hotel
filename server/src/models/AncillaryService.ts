@@ -44,4 +44,4 @@ const AncillaryServiceSchema: Schema = new Schema(
   { timestamps: true }
 );
 
-export const AncillaryService = mongoose.model<IAncillaryService>("AncillaryService", AncillaryServiceSchema);
+export const AncillaryService = (mongoose.models.AncillaryService as mongoose.Model<IAncillaryService>) || mongoose.model<IAncillaryService>("AncillaryService", AncillaryServiceSchema);

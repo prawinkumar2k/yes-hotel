@@ -92,4 +92,4 @@ AdvancePaymentSchema.index({ status: 1, createdAt: -1 });
 // Dashboard: today's advances
 AdvancePaymentSchema.index({ receivedAt: -1 });
 
-export const AdvancePayment = mongoose.model<IAdvancePayment>("AdvancePayment", AdvancePaymentSchema);
+export const AdvancePayment = (mongoose.models.AdvancePayment as mongoose.Model<IAdvancePayment>) || mongoose.model<IAdvancePayment>("AdvancePayment", AdvancePaymentSchema);

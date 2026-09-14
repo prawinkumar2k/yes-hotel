@@ -23,7 +23,7 @@ export default function MobileHousekeeping() {
   }, []);
 
   const { data: assignments = [], isLoading } = useQuery({
-    queryKey: ["housekeeping-assignments", user?.id],
+    queryKey: ["housekeeping-assignments", user?._id],
     queryFn: async () => {
       // In a real implementation this might fetch assignments specific to the user.
       // For now we get all rooms that need cleaning or inspection.

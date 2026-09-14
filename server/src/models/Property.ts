@@ -49,4 +49,4 @@ const PropertySchema = new Schema<IProperty>(
   { timestamps: true }
 );
 
-export const Property = mongoose.model<IProperty>("Property", PropertySchema);
+export const Property = (mongoose.models.Property as mongoose.Model<IProperty>) || mongoose.model<IProperty>("Property", PropertySchema);

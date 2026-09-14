@@ -84,4 +84,4 @@ GroupBookingSchema.pre("save", function (this: IGroupBooking, next: () => void) 
   next();
 });
 
-export const GroupBooking = mongoose.model<IGroupBooking>("GroupBooking", GroupBookingSchema);
+export const GroupBooking = (mongoose.models.GroupBooking as mongoose.Model<IGroupBooking>) || mongoose.model<IGroupBooking>("GroupBooking", GroupBookingSchema);

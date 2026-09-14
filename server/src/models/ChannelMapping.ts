@@ -42,4 +42,4 @@ const ChannelMappingSchema = new Schema<IChannelMapping>(
 // Compound unique: one mapping per property+category+channel combination
 ChannelMappingSchema.index({ propertyId: 1, roomCategoryId: 1, channel: 1 }, { unique: true });
 
-export const ChannelMapping = mongoose.model<IChannelMapping>("ChannelMapping", ChannelMappingSchema);
+export const ChannelMapping = (mongoose.models.ChannelMapping as mongoose.Model<IChannelMapping>) || mongoose.model<IChannelMapping>("ChannelMapping", ChannelMappingSchema);

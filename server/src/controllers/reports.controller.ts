@@ -8,27 +8,87 @@ import { Complaint } from "../models/Complaint";
 import { Payment } from "../models/Payment";
 
 /**
- * GET /api/admin/reports/overview
- * Overview stats for admin reports dashboard.
+ * GET /api/admin/reports/overview?dateFrom&dateTo
+ * Overview stats for the admin Reports page (client/pages/admin/AdminReports.tsx).
+ *
+ * Rewritten from a stub that ignored dateFrom/dateTo entirely and returned
+ * only {totalBookings, checkedInBookings, totalRooms, totalAdvanceHeld} —
+ * the frontend has always expected revenue/adr/revPAR/occupancyRate/
+ * cancellationRate/categoryPerformance/range, none of which the stub
+ * provided, so this page has been throwing a runtime TypeError
+ * (`Cannot read properties of undefined (reading 'toLocaleString')`) on
+ * every load. Confirmed live during this audit.
+ *
+ * "Bookings in range" = bookings whose stay starts (checkInDate) in
+ * [dateFrom, dateTo] — the standard "arrivals for period" framing for this
+ * kind of dashboard. Revenue/ADR/RevPAR exclude CANCELLED bookings.
  */
-export const getReportsOverview = async (_req: Request, res: Response) => {
+export const getReportsOverview = async (req: Request, res: Response) => {
   try {
-    const [totalBookings, checkedInBookings, totalRooms, advances] = await Promise.all([
-      Booking.countDocuments(),
-      Booking.countDocuments({ status: BookingStatus.CHECKED_IN }),
+    const now = new Date();
+    const from = req.query.dateFrom ? new Date(req.query.dateFrom as string) : new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    const to = req.query.dateTo ? new Date(req.query.dateTo as string) : now;
+    // Make `to` inclusive of the whole day.
+    const toInclusive = new Date(to);
+    toInclusive.setHours(23, 59, 59, 999);
+
+    const rangeMatch = { checkInDate: { $gte: from, $lte: toInclusive } };
+    const daysInRange = Math.max(1, Math.ceil((toInclusive.getTime() - from.getTime()) / (24 * 60 * 60 * 1000)));
+
+    const [totalRooms, summaryAgg, categoryPerformanceRaw] = await Promise.all([
       Room.countDocuments(),
-      AdvancePayment.find().lean(),
+      Booking.aggregate([
+        { $match: rangeMatch },
+        {
+          $group: {
+            _id: null,
+            bookingsInRange: { $sum: 1 },
+            cancelledCount: { $sum: { $cond: [{ $eq: ["$status", BookingStatus.CANCELLED] }, 1, 0] } },
+            paidBookingsCount: { $sum: { $cond: [{ $eq: ["$paymentStatus", "PAID"] }, 1, 0] } },
+            revenue: { $sum: { $cond: [{ $ne: ["$status", BookingStatus.CANCELLED] }, "$totalAmount", 0] } },
+            roomNights: {
+              $sum: {
+                $cond: [
+                  { $ne: ["$status", BookingStatus.CANCELLED] },
+                  { $divide: [{ $subtract: ["$checkOutDate", "$checkInDate"] }, 1000 * 60 * 60 * 24] },
+                  0,
+                ],
+              },
+            },
+          },
+        },
+      ]),
+      Booking.aggregate([
+        { $match: { ...rangeMatch, status: { $ne: BookingStatus.CANCELLED } } },
+        { $group: { _id: "$roomCategory", bookingsCount: { $sum: 1 }, revenue: { $sum: "$totalAmount" } } },
+        { $lookup: { from: "roomcategories", localField: "_id", foreignField: "_id", as: "category" } },
+        { $unwind: "$category" },
+        { $project: { _id: "$category._id", name: "$category.name", basePrice: "$category.basePrice", bookingsCount: 1, revenue: 1 } },
+        { $sort: { revenue: -1 } },
+      ]),
     ]);
 
-    const totalAdvanceHeld = advances.reduce((sum, a) => sum + (a.remainingBalance || 0), 0);
+    const summary = summaryAgg[0] || { bookingsInRange: 0, cancelledCount: 0, paidBookingsCount: 0, revenue: 0, roomNights: 0 };
+    const revenue = Math.round(summary.revenue * 100) / 100;
+    const roomNights = Math.round(summary.roomNights * 100) / 100;
+    const occupancyRate = totalRooms > 0 ? Math.round((roomNights / (totalRooms * daysInRange)) * 10000) / 100 : 0;
+    const adr = roomNights > 0 ? Math.round((revenue / roomNights) * 100) / 100 : 0;
+    const revPAR = totalRooms > 0 ? Math.round((revenue / (totalRooms * daysInRange)) * 100) / 100 : 0;
+    const cancellationRate = summary.bookingsInRange > 0 ? Math.round((summary.cancelledCount / summary.bookingsInRange) * 10000) / 100 : 0;
 
     return res.json({
       success: true,
       data: {
-        totalBookings,
-        checkedInBookings,
+        revenue,
+        paidBookingsCount: summary.paidBookingsCount,
+        bookingsInRange: summary.bookingsInRange,
+        cancellationRate,
+        occupancyRate,
+        adr,
+        revPAR,
         totalRooms,
-        totalAdvanceHeld,
+        categoryPerformance: categoryPerformanceRaw,
+        range: { from: from.toISOString(), to: toInclusive.toISOString() },
       },
     });
   } catch (error: any) {

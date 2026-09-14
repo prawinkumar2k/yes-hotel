@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Users, Plus, RefreshCw, Search, Calendar, BedDouble, ChevronDown, ChevronUp, Loader2, CheckCircle, Clock, IndianRupee, TrendingUp, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { getStoredAuthToken } from "@/lib/authStorage";
 
 type GroupStatus = "ENQUIRY" | "TENTATIVE" | "CONFIRMED" | "CHECKED_IN" | "CHECKED_OUT" | "CANCELLED";
 
@@ -52,7 +53,7 @@ const EMPTY_FORM = {
 };
 
 const getAuthHeaders = () => {
-  const token = localStorage.getItem("token") || localStorage.getItem("auth_token");
+  const token = getStoredAuthToken();
   return {
     "Content-Type": "application/json",
     ...(token ? { Authorization: `Bearer ${token}` } : {}),

@@ -43,4 +43,4 @@ const StockTransactionSchema: Schema = new Schema(
   { timestamps: true }
 );
 
-export const StockTransaction = mongoose.model<IStockTransaction>("StockTransaction", StockTransactionSchema);
+export const StockTransaction = (mongoose.models.StockTransaction as mongoose.Model<IStockTransaction>) || mongoose.model<IStockTransaction>("StockTransaction", StockTransactionSchema);

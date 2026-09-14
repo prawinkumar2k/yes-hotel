@@ -1,19 +1,17 @@
 import React, { useState, useEffect } from "react";
-import { CreditCard, Plus, RefreshCw, Filter, ShieldCheck, ArrowRight, DollarSign, CheckCircle2, X } from "lucide-react";
+import { CreditCard, Plus, RefreshCw, Filter, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { format } from "date-fns";
+import { api } from "@/lib/api";
 
 interface AdvanceItem {
   _id: string;
-  receiptNumber: string;
-  guestName: string;
-  guestPhone: string;
-  guestEmail?: string;
+  advanceNumber: string;
+  guest?: { _id: string; fullName: string; email: string; phone: string };
   amount: number;
-  unadjustedAmount: number;
-  adjustedAmount: number;
-  status: "HELD" | "PARTIALLY_ADJUSTED" | "FULLY_ADJUSTED" | "REFUNDED" | "VOIDED";
-  paymentMethod: string;
+  remainingBalance: number;
+  totalAdjusted: number;
+  status: "RECEIVED" | "PARTIALLY_ADJUSTED" | "FULLY_ADJUSTED" | "REFUNDED" | "VOIDED";
+  method: string;
   notes?: string;
   createdAt: string;
 }
@@ -42,16 +40,15 @@ export default function AdminAdvances() {
   const fetchAdvances = async () => {
     setLoading(true);
     try {
-      const url = filterStatus !== "ALL" ? `/api/advances?status=${filterStatus}` : "/api/advances";
-      const res = await fetch(url);
-      const json = await res.json();
-      if (json.success) {
-        setAdvances(json.data || []);
+      const url = filterStatus !== "ALL" ? `/advances?status=${filterStatus}` : "/advances";
+      const res = await api.get(url);
+      if (res.data.success) {
+        setAdvances(res.data.data || []);
       } else {
-        toast({ title: "Failed to load advances", description: json.message, variant: "destructive" });
+        toast({ title: "Failed to load advances", description: res.data.message, variant: "destructive" });
       }
     } catch (err: any) {
-      toast({ title: "Error", description: err.message, variant: "destructive" });
+      toast({ title: "Error", description: err.response?.data?.message || err.message, variant: "destructive" });
     } finally {
       setLoading(false);
     }
@@ -65,21 +62,16 @@ export default function AdminAdvances() {
     e.preventDefault();
     setSubmittingCreate(true);
     try {
-      const res = await fetch("/api/advances", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          guestName,
-          guestPhone,
-          guestEmail,
-          amount: parseFloat(amount),
-          paymentMethod,
-          notes,
-        }),
+      const res = await api.post("/advances", {
+        guestName,
+        guestPhone,
+        guestEmail,
+        amount: parseFloat(amount),
+        method: paymentMethod,
+        notes,
       });
-      const json = await res.json();
-      if (json.success) {
-        toast({ title: "Advance Payment Received", description: `Receipt ${json.data.receiptNumber} issued.` });
+      if (res.data.success) {
+        toast({ title: "Advance Payment Received", description: `Receipt ${res.data.data.advanceNumber} issued.` });
         setShowCreateModal(false);
         setGuestName("");
         setGuestPhone("");
@@ -88,10 +80,10 @@ export default function AdminAdvances() {
         setNotes("");
         fetchAdvances();
       } else {
-        toast({ title: "Failed to issue advance", description: json.message, variant: "destructive" });
+        toast({ title: "Failed to issue advance", description: res.data.message, variant: "destructive" });
       }
     } catch (err: any) {
-      toast({ title: "Error", description: err.message, variant: "destructive" });
+      toast({ title: "Error", description: err.response?.data?.message || err.message, variant: "destructive" });
     } finally {
       setSubmittingCreate(false);
     }
@@ -99,24 +91,26 @@ export default function AdminAdvances() {
 
   const handleRefundAdvance = async () => {
     if (!refundAdvance) return;
+    if (!refundReason.trim()) {
+      toast({ title: "Refund reason required", variant: "destructive" });
+      return;
+    }
     setSubmittingRefund(true);
     try {
-      const res = await fetch(`/api/advances/${refundAdvance._id}/refund`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ reason: refundReason }),
+      const res = await api.post(`/advances/${refundAdvance._id}/refund`, {
+        amount: refundAdvance.remainingBalance,
+        reason: refundReason,
       });
-      const json = await res.json();
-      if (json.success) {
-        toast({ title: "Advance Refunded", description: json.message });
+      if (res.data.success) {
+        toast({ title: "Advance Refunded", description: `${refundAdvance.advanceNumber} refunded` });
         setRefundAdvance(null);
         setRefundReason("");
         fetchAdvances();
       } else {
-        toast({ title: "Refund Failed", description: json.message, variant: "destructive" });
+        toast({ title: "Refund Failed", description: res.data.message, variant: "destructive" });
       }
     } catch (err: any) {
-      toast({ title: "Error", description: err.message, variant: "destructive" });
+      toast({ title: "Error", description: err.response?.data?.message || err.message, variant: "destructive" });
     } finally {
       setSubmittingRefund(false);
     }
@@ -124,8 +118,8 @@ export default function AdminAdvances() {
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case "HELD":
-        return <span className="bg-emerald-100 text-emerald-800 text-xs px-2.5 py-0.5 rounded-full font-bold">Held (Unadjusted)</span>;
+      case "RECEIVED":
+        return <span className="bg-emerald-100 text-emerald-800 text-xs px-2.5 py-0.5 rounded-full font-bold">Received (Unadjusted)</span>;
       case "PARTIALLY_ADJUSTED":
         return <span className="bg-amber-100 text-amber-800 text-xs px-2.5 py-0.5 rounded-full font-bold">Partially Adjusted</span>;
       case "FULLY_ADJUSTED":
@@ -176,7 +170,7 @@ export default function AdminAdvances() {
           className="text-xs border border-gray-300 rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-hotel-gold outline-none"
         >
           <option value="ALL">All Advances</option>
-          <option value="HELD">Held (Available to adjust)</option>
+          <option value="RECEIVED">Received (Available to adjust)</option>
           <option value="PARTIALLY_ADJUSTED">Partially Adjusted</option>
           <option value="FULLY_ADJUSTED">Fully Adjusted</option>
           <option value="REFUNDED">Refunded</option>
@@ -199,7 +193,7 @@ export default function AdminAdvances() {
                   <th className="p-3.5">Guest Name</th>
                   <th className="p-3.5">Phone / Contact</th>
                   <th className="p-3.5">Initial Deposit</th>
-                  <th className="p-3.5">Unadjusted Balance</th>
+                  <th className="p-3.5">Remaining Balance</th>
                   <th className="p-3.5">Method</th>
                   <th className="p-3.5">Status</th>
                   <th className="p-3.5 text-right">Actions</th>
@@ -208,15 +202,15 @@ export default function AdminAdvances() {
               <tbody className="divide-y divide-gray-100">
                 {advances.map((adv) => (
                   <tr key={adv._id} className="hover:bg-gray-50/80">
-                    <td className="p-3.5 font-mono font-bold text-gray-900">{adv.receiptNumber}</td>
-                    <td className="p-3.5 font-medium text-gray-900">{adv.guestName}</td>
-                    <td className="p-3.5 text-gray-600">{adv.guestPhone}</td>
+                    <td className="p-3.5 font-mono font-bold text-gray-900">{adv.advanceNumber}</td>
+                    <td className="p-3.5 font-medium text-gray-900">{adv.guest?.fullName || "—"}</td>
+                    <td className="p-3.5 text-gray-600">{adv.guest?.phone || "—"}</td>
                     <td className="p-3.5 font-semibold text-gray-900">₹{adv.amount}</td>
-                    <td className="p-3.5 font-bold text-emerald-700">₹{adv.unadjustedAmount}</td>
-                    <td className="p-3.5 font-mono text-gray-600">{adv.paymentMethod}</td>
+                    <td className="p-3.5 font-bold text-emerald-700">₹{adv.remainingBalance}</td>
+                    <td className="p-3.5 font-mono text-gray-600">{adv.method}</td>
                     <td className="p-3.5">{getStatusBadge(adv.status)}</td>
                     <td className="p-3.5 text-right">
-                      {adv.unadjustedAmount > 0 && adv.status !== "REFUNDED" && (
+                      {adv.remainingBalance > 0 && adv.status !== "REFUNDED" && (
                         <button
                           onClick={() => setRefundAdvance(adv)}
                           className="text-xs font-semibold text-red-600 hover:text-red-800 bg-red-50 hover:bg-red-100 px-2.5 py-1 rounded"
@@ -271,9 +265,10 @@ export default function AdminAdvances() {
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">Guest Email</label>
+                <label className="block text-xs font-semibold text-gray-700 mb-1">Guest Email *</label>
                 <input
                   type="email"
+                  required
                   value={guestEmail}
                   onChange={(e) => setGuestEmail(e.target.value)}
                   placeholder="guest@example.com"
@@ -346,21 +341,22 @@ export default function AdminAdvances() {
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-xl max-w-md w-full p-6 space-y-4 shadow-xl border">
             <div className="flex justify-between items-center border-b pb-2">
-              <h3 className="font-bold text-gray-900 text-base">Refund Advance Receipt #{refundAdvance.receiptNumber}</h3>
+              <h3 className="font-bold text-gray-900 text-base">Refund Advance Receipt #{refundAdvance.advanceNumber}</h3>
               <button onClick={() => setRefundAdvance(null)} className="text-gray-400 hover:text-gray-600">
                 <X size={18} />
               </button>
             </div>
 
             <p className="text-xs text-gray-600">
-              Refunding remaining deposit of <strong className="text-gray-900">₹{refundAdvance.unadjustedAmount}</strong> to guest{" "}
-              <strong>{refundAdvance.guestName}</strong>.
+              Refunding remaining deposit of <strong className="text-gray-900">₹{refundAdvance.remainingBalance}</strong> to guest{" "}
+              <strong>{refundAdvance.guest?.fullName || "—"}</strong>.
             </p>
 
             <div>
               <label className="block text-xs font-semibold text-gray-700 mb-1">Refund Reason *</label>
               <input
                 type="text"
+                required
                 value={refundReason}
                 onChange={(e) => setRefundReason(e.target.value)}
                 placeholder="e.g., Reservation cancellation per policy"

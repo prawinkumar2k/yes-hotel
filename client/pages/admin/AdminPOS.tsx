@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { UtensilsCrossed, Plus, RefreshCw, ChefHat, CheckCircle2, Clock, Loader2, Trash2, BedDouble, ShoppingCart, Send } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { getStoredAuthToken } from "@/lib/authStorage";
 
 const ORDER_STATUSES = ["KITCHEN_PENDING", "PREPARING", "READY", "SERVED", "BILLED", "CANCELLED"] as const;
 type OrderStatus = typeof ORDER_STATUSES[number];
@@ -30,19 +31,20 @@ const STATUS_CONFIG: Record<OrderStatus, { label: string; color: string; bg: str
   CANCELLED:       { label: "Cancelled",        color: "text-red-700",    bg: "bg-red-50",    border: "border-red-200" },
 };
 
-const MENU_ITEMS = [
-  { name: "Masala Chai", unitPrice: 60 }, { name: "Filter Coffee", unitPrice: 80 },
-  { name: "Veg Sandwich", unitPrice: 150 }, { name: "Club Sandwich", unitPrice: 250 },
-  { name: "Butter Naan", unitPrice: 60 }, { name: "Dal Makhani", unitPrice: 220 },
-  { name: "Paneer Tikka", unitPrice: 350 }, { name: "Chicken Biryani", unitPrice: 420 },
-  { name: "Veg Biryani", unitPrice: 280 }, { name: "Cold Coffee", unitPrice: 180 },
-  { name: "Fresh Lime Soda", unitPrice: 100 }, { name: "Chocolate Brownie", unitPrice: 200 },
-];
+interface MenuItem {
+  _id: string;
+  name: string;
+  category: string;
+  price: number;
+  taxRatePercent: number;
+  foodType: string;
+  isAvailable: boolean;
+}
 
-interface CartItem { name: string; quantity: number; unitPrice: number; specialInstructions?: string; }
+interface CartItem { menuItemId: string; name: string; quantity: number; unitPrice: number; taxRatePercent: number; specialInstructions?: string; }
 
 const getAuthHeaders = () => {
-  const token = localStorage.getItem("token") || localStorage.getItem("auth_token");
+  const token = getStoredAuthToken();
   return {
     "Content-Type": "application/json",
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -55,6 +57,8 @@ export default function AdminPOS() {
   const [loading, setLoading] = useState(true);
   const [filterStatus, setFilterStatus] = useState<OrderStatus | "ALL">("ALL");
   const [activeTab, setActiveTab] = useState<"kds" | "new">("kds");
+  const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
+  const [menuLoading, setMenuLoading] = useState(true);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [tableNum, setTableNum] = useState("");
   const [roomNum, setRoomNum] = useState("");
@@ -79,23 +83,45 @@ export default function AdminPOS() {
 
   useEffect(() => { fetchOrders(); }, [fetchOrders]);
 
-  const addToCart = (item: { name: string; unitPrice: number }) => {
+  const fetchMenu = useCallback(async () => {
+    setMenuLoading(true);
+    try {
+      const res = await fetch("/api/menu", { headers: getAuthHeaders(), credentials: "include" });
+      const data = await res.json();
+      if (data.success) setMenuItems(data.data);
+    } catch {
+      toast({ title: "Error", description: "Failed to load menu", variant: "destructive" });
+    } finally {
+      setMenuLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { fetchMenu(); }, [fetchMenu]);
+
+  const addToCart = (item: MenuItem) => {
+    if (!item.isAvailable) return;
     setCart(prev => {
-      const existing = prev.find(c => c.name === item.name);
-      if (existing) return prev.map(c => c.name === item.name ? { ...c, quantity: c.quantity + 1 } : c);
-      return [...prev, { name: item.name, quantity: 1, unitPrice: item.unitPrice }];
+      const existing = prev.find(c => c.menuItemId === item._id);
+      if (existing) return prev.map(c => c.menuItemId === item._id ? { ...c, quantity: c.quantity + 1 } : c);
+      return [...prev, { menuItemId: item._id, name: item.name, quantity: 1, unitPrice: item.price, taxRatePercent: item.taxRatePercent }];
     });
   };
 
-  const removeFromCart = (name: string) => setCart(prev => prev.filter(c => c.name !== name));
-  const updateQty = (name: string, qty: number) => {
-    if (qty <= 0) return removeFromCart(name);
-    setCart(prev => prev.map(c => c.name === name ? { ...c, quantity: qty } : c));
+  const removeFromCart = (menuItemId: string) => setCart(prev => prev.filter(c => c.menuItemId !== menuItemId));
+  const updateQty = (menuItemId: string, qty: number) => {
+    if (qty <= 0) return removeFromCart(menuItemId);
+    setCart(prev => prev.map(c => c.menuItemId === menuItemId ? { ...c, quantity: qty } : c));
   };
 
   const subtotal = cart.reduce((s, c) => s + c.quantity * c.unitPrice, 0);
-  const tax = Math.round(subtotal * 0.05);
+  // Preview only — the server re-prices and re-taxes every line from the
+  // MenuItem catalog itself and is the source of truth for the actual charge.
+  const tax = Math.round(cart.reduce((s, c) => s + c.quantity * c.unitPrice * (c.taxRatePercent / 100), 0));
   const total = subtotal + tax;
+  const menuByCategory = menuItems.reduce<Record<string, MenuItem[]>>((acc, item) => {
+    (acc[item.category] ||= []).push(item);
+    return acc;
+  }, {});
 
   const submitOrder = async () => {
     if (cart.length === 0) return toast({ title: "Empty cart", description: "Add at least one item", variant: "destructive" });
@@ -110,7 +136,7 @@ export default function AdminPOS() {
           roomNumber: roomNum || undefined,
           chargeToFolio,
           notes: orderNotes,
-          items: cart.map(c => ({ name: c.name, quantity: c.quantity, unitPrice: c.unitPrice })),
+          items: cart.map(c => ({ menuItemId: c.menuItemId, quantity: c.quantity, specialInstructions: c.specialInstructions })),
         }),
       });
       const data = await res.json();
@@ -282,18 +308,34 @@ export default function AdminPOS() {
           {/* Menu Grid */}
           <div className="lg:col-span-3">
             <p className="text-sm font-semibold text-gray-700 mb-3">Menu Items</p>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-              {MENU_ITEMS.map(item => (
-                <button
-                  key={item.name}
-                  onClick={() => addToCart(item)}
-                  className="bg-white border border-gray-200 rounded-xl p-3 text-left hover:border-orange-300 hover:shadow-sm transition-all group"
-                >
-                  <p className="text-sm font-medium text-gray-800 group-hover:text-orange-700">{item.name}</p>
-                  <p className="text-sm text-orange-600 font-bold mt-1">\u20B9{item.unitPrice}</p>
-                </button>
-              ))}
-            </div>
+            {menuLoading ? (
+              <div className="text-center py-12 text-gray-400"><Loader2 size={28} className="animate-spin mx-auto mb-2" /><p className="text-sm">Loading menu...</p></div>
+            ) : menuItems.length === 0 ? (
+              <div className="text-center py-12 text-gray-400">
+                <UtensilsCrossed size={32} className="mx-auto mb-2 opacity-30" />
+                <p className="text-sm">No menu items yet. Add items in Menu Management first.</p>
+              </div>
+            ) : (
+              Object.entries(menuByCategory).map(([category, catItems]) => (
+                <div key={category} className="mb-5">
+                  <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">{category.replace(/_/g, " ")}</p>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    {catItems.map(item => (
+                      <button
+                        key={item._id}
+                        onClick={() => addToCart(item)}
+                        disabled={!item.isAvailable}
+                        className={`bg-white border border-gray-200 rounded-xl p-3 text-left transition-all group ${item.isAvailable ? "hover:border-orange-300 hover:shadow-sm" : "opacity-40 cursor-not-allowed"}`}
+                      >
+                        <p className="text-sm font-medium text-gray-800 group-hover:text-orange-700">{item.name}</p>
+                        <p className="text-sm text-orange-600 font-bold mt-1">\u20B9{item.price}</p>
+                        {!item.isAvailable && <p className="text-[10px] text-red-500 font-semibold uppercase mt-0.5">Sold Out</p>}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ))
+            )}
           </div>
 
           {/* Cart */}
@@ -309,18 +351,18 @@ export default function AdminPOS() {
                   <p className="text-sm text-gray-400 text-center py-4">Add items from the menu</p>
                 ) : (
                   cart.map(item => (
-                    <div key={item.name} className="flex items-center gap-2">
+                    <div key={item.menuItemId} className="flex items-center gap-2">
                       <div className="flex-1">
                         <p className="text-sm text-gray-800">{item.name}</p>
                         <p className="text-xs text-orange-600">\u20B9{item.unitPrice} each</p>
                       </div>
                       <div className="flex items-center gap-1">
-                        <button onClick={() => updateQty(item.name, item.quantity - 1)} className="w-6 h-6 rounded bg-gray-100 text-gray-700 text-xs hover:bg-gray-200">-</button>
+                        <button onClick={() => updateQty(item.menuItemId, item.quantity - 1)} className="w-6 h-6 rounded bg-gray-100 text-gray-700 text-xs hover:bg-gray-200">-</button>
                         <span className="w-6 text-center text-sm font-medium">{item.quantity}</span>
-                        <button onClick={() => updateQty(item.name, item.quantity + 1)} className="w-6 h-6 rounded bg-gray-100 text-gray-700 text-xs hover:bg-gray-200">+</button>
+                        <button onClick={() => updateQty(item.menuItemId, item.quantity + 1)} className="w-6 h-6 rounded bg-gray-100 text-gray-700 text-xs hover:bg-gray-200">+</button>
                       </div>
                       <p className="text-sm font-medium text-gray-800 w-16 text-right">\u20B9{item.quantity * item.unitPrice}</p>
-                      <button onClick={() => removeFromCart(item.name)} className="text-red-400 hover:text-red-600"><Trash2 size={12} /></button>
+                      <button onClick={() => removeFromCart(item.menuItemId)} className="text-red-400 hover:text-red-600"><Trash2 size={12} /></button>
                     </div>
                   ))
                 )}
@@ -329,7 +371,7 @@ export default function AdminPOS() {
               {cart.length > 0 && (
                 <div className="px-4 py-2 border-t border-gray-100 bg-gray-50 space-y-1 text-sm">
                   <div className="flex justify-between text-gray-600"><span>Subtotal</span><span>\u20B9{subtotal}</span></div>
-                  <div className="flex justify-between text-gray-600"><span>GST (5%)</span><span>\u20B9{tax}</span></div>
+                  <div className="flex justify-between text-gray-600"><span>GST</span><span>\u20B9{tax}</span></div>
                   <div className="flex justify-between font-bold text-gray-900 text-base pt-1 border-t border-gray-200"><span>Total</span><span>\u20B9{total}</span></div>
                 </div>
               )}

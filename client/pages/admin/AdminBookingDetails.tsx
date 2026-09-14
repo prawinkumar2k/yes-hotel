@@ -183,17 +183,19 @@ export default function AdminBookingDetails() {
                 
                 {isUpdatingStatus ? (
                   <div className="space-y-3">
-                    <select 
+                    <select
                       className="w-full border-gray-300 rounded shadow-sm text-sm"
                       value={newStatus || booking.status}
                       onChange={(e) => setNewStatus(e.target.value)}
                     >
                       <option value="PENDING">PENDING</option>
                       <option value="CONFIRMED">CONFIRMED</option>
-                      <option value="CHECKED_IN">CHECKED_IN</option>
-                      <option value="CHECKED_OUT">CHECKED_OUT</option>
                       <option value="CANCELLED">CANCELLED</option>
+                      <option value="NO_SHOW">NO_SHOW</option>
                     </select>
+                    <p className="text-[11px] text-gray-400">
+                      CHECKED_IN and CHECKED_OUT can only be set via the Check In / Check Out actions above — they assign a room and settle the folio, which this quick edit can't do safely.
+                    </p>
                     <div className="flex gap-2">
                       <button onClick={() => updateStatusMutation.mutate(newStatus)} className="flex-1 bg-indigo-600 text-white text-xs py-2 rounded hover:bg-indigo-700">Update</button>
                       <button onClick={() => setIsUpdatingStatus(false)} className="flex-1 bg-gray-100 text-gray-700 text-xs py-2 rounded hover:bg-gray-200">Cancel</button>
@@ -404,7 +406,7 @@ function FolioSection({ bookingId, userToken }: { bookingId: string; userToken?:
                 onChange={(e) => setLineType(e.target.value)}
                 className="w-full text-xs border rounded p-2 focus:ring-1 focus:ring-indigo-500"
               >
-                <option value="ROOM_CHARGE font-mono">ROOM_CHARGE — Nightly Tariff</option>
+                <option value="ROOM_CHARGE">ROOM_CHARGE — Nightly Tariff</option>
                 <option value="RESTAURANT">RESTAURANT — Room Service / KOT</option>
                 <option value="LAUNDRY">LAUNDRY — Express Laundry Service</option>
                 <option value="MINIBAR">MINIBAR — Minibar Refreshments</option>

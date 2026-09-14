@@ -82,7 +82,12 @@ export interface IFolioLine extends Document {
   unitPrice?: number;
   date: Date;              // the business date this charge applies to
   postedAt: Date;          // when this line was actually created in the system
-  postedBy: mongoose.Types.ObjectId;
+  // A user's ObjectId as a string when an authenticated actor posted the
+  // charge, or a system sentinel ("SYSTEM_TAX", "CHECKOUT", "POS_SYSTEM",
+  // etc.) for automated postings with no human actor. Every postCharge
+  // caller already passes one of these two shapes — this field must accept
+  // both, so it's a plain string, not a User ObjectId ref.
+  postedBy: string;
 
   // Optional links
   advancePaymentId?: mongoose.Types.ObjectId;  // if ADVANCE_ADJUSTMENT
@@ -108,7 +113,7 @@ const FolioLineSchema = new Schema<IFolioLine>(
     unitPrice: { type: Number },
     date: { type: Date, required: true },
     postedAt: { type: Date, required: true, default: Date.now },
-    postedBy: { type: Schema.Types.ObjectId, ref: "User", required: true },
+    postedBy: { type: String, required: true },
     advancePaymentId: { type: Schema.Types.ObjectId, ref: "AdvancePayment" },
     paymentId: { type: Schema.Types.ObjectId, ref: "Payment" },
     refundId: { type: Schema.Types.ObjectId, ref: "Refund" },
@@ -133,6 +138,5 @@ FolioLineSchema.index({ folio: 1, createdAt: -1 });
 // Phase 24/26 Analytics & Night Audit indexes
 FolioLineSchema.index({ direction: 1, createdAt: -1 });
 FolioLineSchema.index({ lineType: 1, direction: 1, createdAt: -1 });
-FolioLineSchema.index({ businessDate: 1, lineType: 1 });
 
-export const FolioLine = mongoose.model<IFolioLine>("FolioLine", FolioLineSchema);
+export const FolioLine = (mongoose.models.FolioLine as mongoose.Model<IFolioLine>) || mongoose.model<IFolioLine>("FolioLine", FolioLineSchema);

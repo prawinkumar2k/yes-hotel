@@ -5,7 +5,8 @@ import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { Badge } from "../../components/ui/badge";
 import { format } from "date-fns";
-import { 
+import { api } from "@/lib/api";
+import {
   AlertCircle,
   Search,
   MessageSquare,
@@ -21,21 +22,15 @@ export default function AdminComplaints() {
     queryKey: ["complaints", statusFilter],
     queryFn: async () => {
       const qs = statusFilter !== "ALL" ? `?status=${statusFilter}` : "";
-      const res = await fetch(`/api/complaints${qs}`);
-      if (!res.ok) throw new Error("Failed to fetch complaints");
-      return res.json();
+      const res = await api.get(`/complaints${qs}`);
+      return res.data;
     }
   });
 
   const resolveMutation = useMutation({
     mutationFn: async (id: string) => {
-      const res = await fetch(`/api/complaints/${id}/status`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "RESOLVED", resolutionNotes: "Resolved by Admin" }),
-      });
-      if (!res.ok) throw new Error("Failed to resolve complaint");
-      return res.json();
+      const res = await api.patch(`/complaints/${id}/status`, { status: "RESOLVED", resolutionNotes: "Resolved by Admin" });
+      return res.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["complaints"] });

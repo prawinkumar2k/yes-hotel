@@ -25,6 +25,10 @@ export default function AdminCheckIn() {
   const [search, setSearch] = useState("");
   const [selectedBooking, setSelectedBooking] = useState<any>(null);
   const [selectedRoomId, setSelectedRoomId] = useState("");
+  const [idType, setIdType] = useState("AADHAAR");
+  const [idNumber, setIdNumber] = useState("");
+  const [nationality, setNationality] = useState("Indian");
+  const [emergencyPhone, setEmergencyPhone] = useState("");
 
   // Bookings confirmed and arriving today or overdue
   const { data: bookingsData, isLoading } = useQuery({
@@ -45,12 +49,22 @@ export default function AdminCheckIn() {
 
   const checkInMutation = useMutation({
     mutationFn: ({ id, roomId }: { id: string; roomId: string }) =>
-      apiFetch(`/api/bookings/${id}/check-in`, user?.token, "POST", { roomId }),
+      apiFetch(`/api/bookings/${id}/check-in`, user?.token, "POST", {
+        roomId,
+        idType,
+        idNumber: idNumber || undefined,
+        nationality: nationality || undefined,
+        emergencyPhone: emergencyPhone || undefined,
+      }),
     onSuccess: (data) => {
       if (data.success) {
         toast({ title: "✅ Checked In", description: `Booking ${selectedBooking?.bookingReference} successfully checked in.` });
         setSelectedBooking(null);
         setSelectedRoomId("");
+        setIdType("AADHAAR");
+        setIdNumber("");
+        setNationality("Indian");
+        setEmergencyPhone("");
         queryClient.invalidateQueries({ queryKey: ["checkInBookings"] });
         queryClient.invalidateQueries({ queryKey: ["availableRooms"] });
       } else {
@@ -165,12 +179,12 @@ export default function AdminCheckIn() {
                     >
                       <option value="">— Select an available room —</option>
                       {(roomsData?.data ?? [])
-                        .filter((r: any) => r.status === "AVAILABLE" && r.category === selectedBooking.roomCategory?._id)
+                        .filter((r: any) => r.status === "AVAILABLE" && r.category?._id === selectedBooking.roomCategory?._id)
                         .map((r: any) => (
                           <option key={r._id} value={r._id}>Room {r.roomNumber} — Floor {r.floor}</option>
                         ))}
                     </select>
-                    {roomsData?.data?.filter((r: any) => r.status === "AVAILABLE" && r.category === selectedBooking.roomCategory?._id).length === 0 && (
+                    {roomsData?.data?.filter((r: any) => r.status === "AVAILABLE" && r.category?._id === selectedBooking.roomCategory?._id).length === 0 && (
                       <p className="text-xs text-amber-600 mt-2">⚠️ No available rooms in this category. Check room inventory.</p>
                     )}
                   </div>
@@ -181,7 +195,11 @@ export default function AdminCheckIn() {
                     <div className="grid grid-cols-2 gap-3">
                       <div>
                         <label className="block text-xs text-gray-600 mb-1">ID Document Type</label>
-                        <select className="w-full text-xs border border-gray-300 rounded p-2 focus:ring-1 focus:ring-green-500 outline-none">
+                        <select
+                          value={idType}
+                          onChange={e => setIdType(e.target.value)}
+                          className="w-full text-xs border border-gray-300 rounded p-2 focus:ring-1 focus:ring-green-500 outline-none"
+                        >
                           <option value="AADHAAR">Aadhaar Card</option>
                           <option value="PASSPORT">Passport</option>
                           <option value="DRIVING_LICENSE">Driving License</option>
@@ -192,6 +210,8 @@ export default function AdminCheckIn() {
                         <label className="block text-xs text-gray-600 mb-1">ID / Document Number *</label>
                         <input
                           type="text"
+                          value={idNumber}
+                          onChange={e => setIdNumber(e.target.value)}
                           placeholder="e.g. 1234-5678-9012"
                           className="w-full text-xs border border-gray-300 rounded p-2 focus:ring-1 focus:ring-green-500 outline-none"
                         />
@@ -200,7 +220,8 @@ export default function AdminCheckIn() {
                         <label className="block text-xs text-gray-600 mb-1">Nationality</label>
                         <input
                           type="text"
-                          defaultValue="Indian"
+                          value={nationality}
+                          onChange={e => setNationality(e.target.value)}
                           className="w-full text-xs border border-gray-300 rounded p-2 focus:ring-1 focus:ring-green-500 outline-none"
                         />
                       </div>
@@ -208,6 +229,8 @@ export default function AdminCheckIn() {
                         <label className="block text-xs text-gray-600 mb-1">Emergency Phone</label>
                         <input
                           type="text"
+                          value={emergencyPhone}
+                          onChange={e => setEmergencyPhone(e.target.value)}
                           placeholder="+91 98765 43210"
                           className="w-full text-xs border border-gray-300 rounded p-2 focus:ring-1 focus:ring-green-500 outline-none"
                         />

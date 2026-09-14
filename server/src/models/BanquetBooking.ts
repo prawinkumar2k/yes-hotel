@@ -14,7 +14,7 @@ export interface IBanquetBooking extends Document {
   eventName: string;
   clientName: string;
   clientPhone: string;
-  clientEmail: string;
+  clientEmail?: string;
   hallName: string; // e.g. "Grand Ball Room", "Emerald Convention Hall"
   eventDate: Date;
   startTime: string;
@@ -37,7 +37,7 @@ const BanquetBookingSchema: Schema = new Schema(
     eventName: { type: String, required: true, trim: true },
     clientName: { type: String, required: true, trim: true },
     clientPhone: { type: String, required: true, trim: true },
-    clientEmail: { type: String, required: true, trim: true },
+    clientEmail: { type: String, trim: true },
     hallName: { type: String, required: true, default: "Grand Ball Room" },
     eventDate: { type: Date, required: true },
     startTime: { type: String, default: "10:00 AM" },
@@ -54,4 +54,4 @@ const BanquetBookingSchema: Schema = new Schema(
   { timestamps: true }
 );
 
-export const BanquetBooking = mongoose.model<IBanquetBooking>("BanquetBooking", BanquetBookingSchema);
+export const BanquetBooking = (mongoose.models.BanquetBooking as mongoose.Model<IBanquetBooking>) || mongoose.model<IBanquetBooking>("BanquetBooking", BanquetBookingSchema);

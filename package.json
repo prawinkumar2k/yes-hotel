@@ -6,6 +6,8 @@
     "node": ">=20"
   },
   "scripts": {
+    "predev": "node scripts/start-mongo-dev.mjs",
+    "mongo:dev": "node scripts/start-mongo-dev.mjs",
     "dev": "vite",
     "build": "npm run build:client && npm run build:server",
     "build:client": "vite build",

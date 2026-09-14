@@ -5,6 +5,7 @@ import { postCharge } from "../services/folio.service";
 import { FolioLineType } from "../models/FolioLine";
 import { createAuditLog } from "../services/audit.service";
 import { Room } from "../models/Room";
+import { MenuItem } from "../models/MenuItem";
 
 /**
  * GET /api/pos/orders
@@ -35,23 +36,46 @@ export const createPosOrder = async (req: Request, res: Response) => {
       return res.status(400).json({ success: false, message: "Order must contain at least one item" });
     }
 
+    // Re-price every line server-side from the MenuItem catalog. A client
+    // can specify WHICH item and HOW MANY, never the price — the same
+    // "never trust client-sent tax" principle already applied to GST
+    // elsewhere in this codebase (folio.service.ts calculateTaxBreakdown).
+    // Before this, createPosOrder took item.name/item.unitPrice directly
+    // from the request body with no server-side check at all.
+    const menuItemIds = items.map((item: any) => item.menuItemId).filter(Boolean);
+    if (menuItemIds.length !== items.length) {
+      return res.status(400).json({ success: false, message: "Every order line must reference a menuItemId" });
+    }
+
+    const menuItems = await MenuItem.find({ _id: { $in: menuItemIds } }).lean();
+    const menuItemById = new Map(menuItems.map((m) => [m._id.toString(), m]));
+
     let subtotal = 0;
+    let taxAmount = 0;
     const formattedItems = items.map((item: any) => {
-      const q = Number(item.quantity) || 1;
-      const p = Number(item.unitPrice) || 0;
-      const tot = q * p;
+      const menuItem = menuItemById.get(String(item.menuItemId));
+      if (!menuItem) throw new Error(`Menu item ${item.menuItemId} not found`);
+      if (!menuItem.isActive || !menuItem.isAvailable) {
+        throw new Error(`"${menuItem.name}" is currently unavailable`);
+      }
+
+      const q = Math.max(1, Number(item.quantity) || 1);
+      const tot = q * menuItem.price;
       subtotal += tot;
+      taxAmount += tot * (menuItem.taxRatePercent / 100);
+
       return {
-        name: item.name,
+        menuItem: menuItem._id,
+        name: menuItem.name,
         quantity: q,
-        unitPrice: p,
+        unitPrice: menuItem.price,
         totalPrice: tot,
         specialInstructions: item.specialInstructions,
       };
     });
 
-    const taxAmount = Math.round(subtotal * 0.05); // 5% Restaurant GST
-    const grandTotal = subtotal + taxAmount;
+    taxAmount = Math.round(taxAmount * 100) / 100;
+    const grandTotal = Math.round((subtotal + taxAmount) * 100) / 100;
     const kotNumber = `KOT-${Date.now()}`;
 
     let folioId: string | undefined = undefined;

@@ -51,7 +51,7 @@ const InspectionTemplateSchema = new Schema<IInspectionTemplate>(
 
 InspectionTemplateSchema.index({ isDefault: 1 });
 
-export const InspectionTemplate = mongoose.model<IInspectionTemplate>("InspectionTemplate", InspectionTemplateSchema);
+export const InspectionTemplate = (mongoose.models.InspectionTemplate as mongoose.Model<IInspectionTemplate>) || mongoose.model<IInspectionTemplate>("InspectionTemplate", InspectionTemplateSchema);
 
 
 /**
@@ -140,4 +140,4 @@ const InspectionResultSchema = new Schema<IInspectionResult>(
 InspectionResultSchema.index({ room: 1, inspectedAt: -1 });
 InspectionResultSchema.index({ housekeepingTask: 1 });
 
-export const InspectionResult = mongoose.model<IInspectionResult>("InspectionResult", InspectionResultSchema);
+export const InspectionResult = (mongoose.models.InspectionResult as mongoose.Model<IInspectionResult>) || mongoose.model<IInspectionResult>("InspectionResult", InspectionResultSchema);

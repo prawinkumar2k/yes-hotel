@@ -2,10 +2,11 @@ import React, { useState, useEffect } from "react";
 import { DollarSign, Plus, RefreshCw, Lock, CheckCircle2, AlertTriangle, Clock, ShieldCheck, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
+import { getStoredAuthToken } from "@/lib/authStorage";
 
 const getAuthHeaders = () => ({
   "Content-Type": "application/json",
-  Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
+  Authorization: `Bearer ${getStoredAuthToken()}`,
 });
 
 interface CashierShiftItem {

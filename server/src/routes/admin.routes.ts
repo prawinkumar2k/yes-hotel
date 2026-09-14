@@ -39,13 +39,18 @@ router.get("/bookings/:id", protect, authorize(...ADMIN_ROLES), getAdminBookingB
 router.patch("/bookings/:id/status", protect, authorize(...ADMIN_ROLES), updateBookingStatus);
 router.get("/calendar", protect, authorize(...ADMIN_ROLES), getAdminCalendar);
 
-// Housekeeping
-router.get("/housekeeping", protect, authorize(UserRole.ADMIN, UserRole.MANAGER, UserRole.HOUSEKEEPING, UserRole.RECEPTIONIST), getHousekeepingTasks);
+// Housekeeping — MAINTENANCE staff also need visibility (a room they're
+// servicing may be mid-clean), matching the admin sidebar's nav.roles for
+// this page, which already includes MAINTENANCE.
+router.get("/housekeeping", protect, authorize(UserRole.ADMIN, UserRole.MANAGER, UserRole.HOUSEKEEPING, UserRole.RECEPTIONIST, UserRole.MAINTENANCE), getHousekeepingTasks);
 router.patch("/housekeeping/:id", protect, authorize(UserRole.ADMIN, UserRole.MANAGER, UserRole.HOUSEKEEPING), updateHousekeepingTask);
 
-// Maintenance
-router.get("/maintenance", protect, authorize(UserRole.ADMIN, UserRole.MANAGER, UserRole.MAINTENANCE, UserRole.RECEPTIONIST), getMaintenanceTickets);
-router.post("/maintenance", protect, authorize(UserRole.ADMIN, UserRole.MANAGER), createMaintenanceTicket);
+// Maintenance — HOUSEKEEPING staff routinely discover and report issues
+// while cleaning (a standard hotel workflow), so they can both view and
+// create tickets, matching the admin sidebar's nav.roles for this page,
+// which already includes HOUSEKEEPING.
+router.get("/maintenance", protect, authorize(UserRole.ADMIN, UserRole.MANAGER, UserRole.MAINTENANCE, UserRole.RECEPTIONIST, UserRole.HOUSEKEEPING), getMaintenanceTickets);
+router.post("/maintenance", protect, authorize(UserRole.ADMIN, UserRole.MANAGER, UserRole.HOUSEKEEPING), createMaintenanceTicket);
 router.patch("/maintenance/:id", protect, authorize(UserRole.ADMIN, UserRole.MANAGER, UserRole.MAINTENANCE), updateMaintenanceTicket);
 
 // Contact Messages

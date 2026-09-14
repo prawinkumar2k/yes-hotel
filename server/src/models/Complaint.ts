@@ -43,4 +43,4 @@ const ComplaintSchema = new Schema<IComplaint>(
   { timestamps: true }
 );
 
-export const Complaint = mongoose.model<IComplaint>("Complaint", ComplaintSchema);
+export const Complaint = (mongoose.models.Complaint as mongoose.Model<IComplaint>) || mongoose.model<IComplaint>("Complaint", ComplaintSchema);

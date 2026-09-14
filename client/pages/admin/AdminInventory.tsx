@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Package, Plus, RefreshCw, AlertTriangle, ArrowUpRight, ArrowDownLeft, Layers, Search, Filter } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { getStoredAuthToken } from "@/lib/authStorage";
 
 interface InventoryItem {
   _id: string;
@@ -27,7 +28,7 @@ interface Transaction {
 }
 
 const getAuthHeaders = () => {
-  const token = localStorage.getItem("token") || localStorage.getItem("auth_token");
+  const token = getStoredAuthToken();
   return {
     "Content-Type": "application/json",
     ...(token ? { Authorization: `Bearer ${token}` } : {}),

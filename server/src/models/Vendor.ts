@@ -33,4 +33,4 @@ const VendorSchema: Schema = new Schema(
   { timestamps: true }
 );
 
-export const Vendor = mongoose.model<IVendor>("Vendor", VendorSchema);
+export const Vendor = (mongoose.models.Vendor as mongoose.Model<IVendor>) || mongoose.model<IVendor>("Vendor", VendorSchema);

@@ -30,4 +30,4 @@ const RatePlanSchema = new Schema<IRatePlan>(
   { timestamps: true }
 );
 
-export const RatePlan = mongoose.model<IRatePlan>("RatePlan", RatePlanSchema);
+export const RatePlan = (mongoose.models.RatePlan as mongoose.Model<IRatePlan>) || mongoose.model<IRatePlan>("RatePlan", RatePlanSchema);

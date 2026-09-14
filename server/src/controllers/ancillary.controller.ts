@@ -15,36 +15,7 @@ export const getAncillaryServices = async (req: Request, res: Response) => {
     const filter: Record<string, any> = {};
     if (category) filter.category = category;
 
-    let services = await AncillaryService.find(filter).sort({ createdAt: -1 }).lean();
-
-    if (services.length === 0 && !category) {
-      services = await AncillaryService.insertMany([
-        {
-          serviceNumber: "SVC-SPA-01",
-          category: ServiceCategory.SPA,
-          serviceName: "Aroma Therapy Massage 60 Min",
-          guestName: "Ananya Sharma",
-          roomNumber: "102",
-          amount: 2500,
-          taxAmount: 450,
-          totalAmount: 2950,
-          isChargedToFolio: true,
-          performedBy: "Dr. Maya (Therapist)",
-        },
-        {
-          serviceNumber: "SVC-TRP-01",
-          category: ServiceCategory.TRANSPORT,
-          serviceName: "Airport Pickup Drop (Sedan)",
-          guestName: "Rahul Verma",
-          roomNumber: "204",
-          amount: 1800,
-          taxAmount: 0,
-          totalAmount: 1800,
-          isChargedToFolio: true,
-          performedBy: "Ramesh (Driver)",
-        },
-      ]);
-    }
+    const services = await AncillaryService.find(filter).sort({ createdAt: -1 }).lean();
 
     return res.json({ success: true, data: services });
   } catch (error: any) {

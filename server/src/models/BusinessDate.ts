@@ -97,4 +97,4 @@ BusinessDateSchema.index({ isCurrentDate: 1 }, { unique: true, sparse: true });
 BusinessDateSchema.index({ date: 1 });
 BusinessDateSchema.index({ state: 1 });
 
-export const BusinessDate = mongoose.model<IBusinessDate>("BusinessDate", BusinessDateSchema);
+export const BusinessDate = (mongoose.models.BusinessDate as mongoose.Model<IBusinessDate>) || mongoose.model<IBusinessDate>("BusinessDate", BusinessDateSchema);

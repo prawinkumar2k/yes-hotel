@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { ShoppingBag, Plus, RefreshCw, CheckCircle, Clock, FileText, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { getStoredAuthToken } from "@/lib/authStorage";
 
 interface PurchaseOrder {
   _id: string;
@@ -16,7 +17,7 @@ interface Vendor { _id: string; name: string; }
 interface InventoryItem { _id: string; name: string; unitCost: number; }
 
 const getAuthHeaders = () => {
-  const token = localStorage.getItem("token") || localStorage.getItem("auth_token");
+  const token = getStoredAuthToken();
   return {
     "Content-Type": "application/json",
     ...(token ? { Authorization: `Bearer ${token}` } : {}),

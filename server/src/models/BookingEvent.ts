@@ -85,4 +85,4 @@ const BookingEventSchema = new Schema<IBookingEvent>(
 BookingEventSchema.index({ booking: 1, performedAt: -1 });
 BookingEventSchema.index({ eventType: 1, performedAt: -1 });
 
-export const BookingEvent = mongoose.model<IBookingEvent>("BookingEvent", BookingEventSchema);
+export const BookingEvent = (mongoose.models.BookingEvent as mongoose.Model<IBookingEvent>) || mongoose.model<IBookingEvent>("BookingEvent", BookingEventSchema);

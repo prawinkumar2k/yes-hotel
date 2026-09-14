@@ -69,6 +69,9 @@ const AdminReports = lazy(() => import("./pages/admin/AdminReports"));
 const AdminNightAudit = lazy(() => import("./pages/admin/AdminNightAudit"));
 const AdminCorporateAccounts = lazy(() => import("./pages/admin/AdminCorporateAccounts"));
 const AdminPOS = lazy(() => import("./pages/admin/AdminPOS"));
+const AdminMenu = lazy(() => import("./pages/admin/AdminMenu"));
+const AdminBanquets = lazy(() => import("./pages/admin/AdminBanquets"));
+const AdminAncillary = lazy(() => import("./pages/admin/AdminAncillary"));
 const AdminGroupBookings = lazy(() => import("./pages/admin/AdminGroupBookings"));
 const AdminInventory = lazy(() => import("./pages/admin/AdminInventory"));
 const AdminVendors = lazy(() => import("./pages/admin/AdminVendors"));
@@ -196,6 +199,9 @@ function App() {
                 <Route path="/admin/audit-logs" element={<ProtectedRoute roles={["ADMIN","MANAGER"]}><AdminLayout title="Audit Logs"><AdminAuditLogs /></AdminLayout></ProtectedRoute>} />
                 <Route path="/admin/corporate-accounts" element={<ProtectedRoute roles={["ADMIN","MANAGER"]}><AdminLayout title="Corporate Accounts & B2B Billing"><AdminCorporateAccounts /></AdminLayout></ProtectedRoute>} />
                 <Route path="/admin/pos" element={<ProtectedRoute roles={["ADMIN","MANAGER","RECEPTIONIST"]}><AdminLayout title="Restaurant POS & Kitchen Display System"><AdminPOS /></AdminLayout></ProtectedRoute>} />
+                <Route path="/admin/menu" element={<ProtectedRoute roles={["ADMIN","MANAGER"]}><AdminLayout title="Menu Management"><AdminMenu /></AdminLayout></ProtectedRoute>} />
+                <Route path="/admin/banquets" element={<ProtectedRoute roles={["ADMIN","MANAGER","RECEPTIONIST"]}><AdminLayout title="Banquets & Events"><AdminBanquets /></AdminLayout></ProtectedRoute>} />
+                <Route path="/admin/ancillary" element={<ProtectedRoute roles={["ADMIN","MANAGER","RECEPTIONIST"]}><AdminLayout title="Ancillary Services"><AdminAncillary /></AdminLayout></ProtectedRoute>} />
                 <Route path="/admin/group-bookings" element={<ProtectedRoute roles={["ADMIN","MANAGER","RECEPTIONIST"]}><AdminLayout title="Group Bookings — MICE & Events"><AdminGroupBookings /></AdminLayout></ProtectedRoute>} />
                 <Route path="/admin/inventory" element={<ProtectedRoute roles={["ADMIN","MANAGER","HOUSEKEEPING"]}><AdminLayout title="Inventory & Store Management"><AdminInventory /></AdminLayout></ProtectedRoute>} />
                 <Route path="/admin/vendors" element={<ProtectedRoute roles={["ADMIN","MANAGER"]}><AdminLayout title="Vendor & Supplier Directory"><AdminVendors /></AdminLayout></ProtectedRoute>} />

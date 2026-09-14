@@ -107,7 +107,7 @@ export interface AdjustAdvanceParams {
  */
 export async function adjustAdvance(
   params: AdjustAdvanceParams,
-  opts: { req?: Request }
+  opts: { req?: Request; session?: mongoose.ClientSession }
 ): Promise<{ adjustment: InstanceType<typeof AdvanceAdjustment>; remainingBalance: number }> {
   if (params.amount <= 0) throw new Error("Adjustment amount must be positive");
 
@@ -126,11 +126,12 @@ export async function adjustAdvance(
     {
       $inc: { remainingBalance: -params.amount, totalAdjusted: params.amount },
     },
-    { returnDocument: "after" }
+    { returnDocument: "after", session: opts.session }
   );
 
   if (!advance) {
-    const existing = await AdvancePayment.findById(params.advancePaymentId).lean();
+    const existingQuery = AdvancePayment.findById(params.advancePaymentId);
+    const existing = await (opts.session ? existingQuery.session(opts.session) : existingQuery).lean();
     if (!existing) throw new Error("Advance payment not found");
     if (existing.remainingBalance < params.amount) {
       throw new Error(
@@ -147,20 +148,25 @@ export async function adjustAdvance(
       ? AdvancePaymentStatus.FULLY_ADJUSTED
       : AdvancePaymentStatus.PARTIALLY_ADJUSTED;
 
-  await AdvancePayment.findByIdAndUpdate(advance._id, { status: newStatus });
+  await AdvancePayment.findByIdAndUpdate(advance._id, { status: newStatus }, { session: opts.session });
 
   // Create adjustment record
-  const adjustment = await AdvanceAdjustment.create({
-    advancePayment: advance._id,
-    folio: params.folioId,
-    booking: params.bookingId,
-    type: AdvanceAdjustmentType.ADJUSTMENT,
-    status: AdvanceAdjustmentStatus.COMPLETED,
-    amount: params.amount,
-    performedBy: params.performedBy,
-    performedAt: new Date(),
-    reason: params.reason,
-  });
+  const [adjustment] = await AdvanceAdjustment.create(
+    [
+      {
+        advancePayment: advance._id,
+        folio: params.folioId,
+        booking: params.bookingId,
+        type: AdvanceAdjustmentType.ADJUSTMENT,
+        status: AdvanceAdjustmentStatus.COMPLETED,
+        amount: params.amount,
+        performedBy: params.performedBy,
+        performedAt: new Date(),
+        reason: params.reason,
+      },
+    ],
+    { session: opts.session }
+  );
 
   // Post credit to folio
   const { line } = await postCharge(
@@ -179,7 +185,7 @@ export async function adjustAdvance(
   );
 
   // Link folioLine back to adjustment
-  await AdvanceAdjustment.findByIdAndUpdate(adjustment._id, { folioLine: line._id });
+  await AdvanceAdjustment.findByIdAndUpdate(adjustment._id, { folioLine: line._id }, { session: opts.session });
 
   await createAuditLog({
     req: opts.req,

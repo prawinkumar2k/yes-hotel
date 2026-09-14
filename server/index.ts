@@ -55,6 +55,8 @@ import banquetRoutes from "./src/routes/banquet.routes";
 import ancillaryRoutes from "./src/routes/ancillary.routes";
 import complaintRoutes from "./src/routes/complaint.routes";
 import propertyRoutes from "./src/routes/property.routes";
+import housekeepingRoutes from "./src/routes/housekeeping.routes";
+import menuRoutes from "./src/routes/menu.routes";
 import { getJwtSecret } from "./src/config/jwt";
 
 
@@ -152,6 +154,15 @@ export function createServer() {
         objectSrc: ["'none'"],
         baseUri: ["'self'"],
         formAction: ["'self'"],
+        // Helmet's CSP defaults include upgrade-insecure-requests, which
+        // makes the browser rewrite every http:// subresource request
+        // (Vite's client, main.tsx, favicon, ...) to https:// even when the
+        // page itself was loaded over plain HTTP. The dev server only
+        // speaks HTTP, so that upgrade fails outright
+        // (net::ERR_SSL_PROTOCOL_ERROR) and the browser also blocks the
+        // resulting scheme mismatch as an unsafe frame load. Only meaningful
+        // once this app is actually served over HTTPS in production.
+        upgradeInsecureRequests: isProduction ? [] : null,
       },
     },
     // COOP/OAC only need to be off in dev (they warn on non-HTTPS
@@ -271,6 +282,8 @@ export function createServer() {
   app.use("/api/ancillary", ancillaryRoutes);
   app.use("/api/complaints", complaintRoutes);
   app.use("/api/properties", propertyRoutes);
+  app.use("/api/housekeeping", housekeepingRoutes);
+  app.use("/api/menu", menuRoutes);
 
 
   // Example API routes

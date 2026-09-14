@@ -7,35 +7,7 @@ import { createAuditLog } from "../services/audit.service";
  */
 export const getCorporateAccounts = async (_req: Request, res: Response) => {
   try {
-    let accounts = await CorporateAccount.find().sort({ companyName: 1 }).lean();
-
-    if (accounts.length === 0) {
-      await CorporateAccount.insertMany([
-        {
-          companyName: "Tata Consultancy Services (TCS)",
-          companyCode: "TCS",
-          gstNumber: "27AAACT2727Q1ZB",
-          contactPerson: "Amit Sharma",
-          contactEmail: "admin@tcs.com",
-          contactPhone: "+91 98200 11223",
-          creditLimit: 500000,
-          currentOutstanding: 125000,
-          discountPercentage: 20,
-        },
-        {
-          companyName: "Infosys Technologies Ltd",
-          companyCode: "INFY",
-          gstNumber: "29AAACI1122P1ZA",
-          contactPerson: "Priya Nair",
-          contactEmail: "travel@infosys.com",
-          contactPhone: "+91 98450 33445",
-          creditLimit: 300000,
-          currentOutstanding: 45000,
-          discountPercentage: 15,
-        },
-      ]);
-      accounts = await CorporateAccount.find().sort({ companyName: 1 }).lean();
-    }
+    const accounts = await CorporateAccount.find().sort({ companyName: 1 }).lean();
 
     return res.json({ success: true, data: accounts });
   } catch (error: any) {

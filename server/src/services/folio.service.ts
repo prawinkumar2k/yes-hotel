@@ -138,9 +138,11 @@ export interface PostChargeParams {
  */
 export async function postCharge(
   params: PostChargeParams,
-  opts: { req?: Request }
+  opts: { req?: Request; session?: mongoose.ClientSession }
 ): Promise<{ line: InstanceType<typeof FolioLine>; folio: IFolio }> {
-  const folio = await Folio.findById(params.folioId);
+  const folio = opts.session
+    ? await Folio.findById(params.folioId).session(opts.session)
+    : await Folio.findById(params.folioId);
   if (!folio) throw new Error(`Folio ${params.folioId} not found`);
 
   if (folio.status === FolioStatus.CLOSED || folio.status === FolioStatus.VOIDED) {
@@ -153,24 +155,29 @@ export async function postCharge(
   const direction = LINE_TYPE_DIRECTION[params.lineType];
   if (!direction) throw new Error(`Unknown line type: ${params.lineType}`);
 
-  const line = await FolioLine.create({
-    folio: params.folioId,
-    booking: params.bookingId,
-    lineType: params.lineType,
-    direction,
-    description: params.description,
-    amount: Math.round(params.amount * 100) / 100, // 2 decimal places
-    quantity: params.quantity ?? 1,
-    unitPrice: params.unitPrice,
-    date: params.date,
-    postedAt: new Date(),
-    postedBy: params.postedBy,
-    businessDate: params.businessDate,
-    notes: params.notes,
-    paymentId: params.paymentId,
-    advancePaymentId: params.advancePaymentId,
-    reversedLineId: params.reversedLineId,
-  });
+  const [line] = await FolioLine.create(
+    [
+      {
+        folio: params.folioId,
+        booking: params.bookingId,
+        lineType: params.lineType,
+        direction,
+        description: params.description,
+        amount: Math.round(params.amount * 100) / 100, // 2 decimal places
+        quantity: params.quantity ?? 1,
+        unitPrice: params.unitPrice,
+        date: params.date,
+        postedAt: new Date(),
+        postedBy: params.postedBy,
+        businessDate: params.businessDate,
+        notes: params.notes,
+        paymentId: params.paymentId,
+        advancePaymentId: params.advancePaymentId,
+        reversedLineId: params.reversedLineId,
+      },
+    ],
+    { session: opts.session }
+  );
 
   // ── UPDATE FOLIO RUNNING TOTALS ──
   const amt = line.amount;
@@ -212,7 +219,7 @@ export async function postCharge(
   folio.balance = folio.totalCharges + folio.totalTax - folio.totalDiscounts - folio.totalPaid - folio.totalAdvanceAdjusted;
   folio.balance = Math.round(folio.balance * 100) / 100;
 
-  await folio.save();
+  await folio.save({ session: opts.session });
 
   await createAuditLog({
     req: opts.req,
@@ -243,16 +250,18 @@ export async function postCharge(
  */
 export async function finalizeFolio(
   folioId: string,
-  opts: { req?: Request; allowNegativeBalance?: boolean }
+  opts: { req?: Request; allowNegativeBalance?: boolean; session?: mongoose.ClientSession }
 ): Promise<IFolio> {
-  const folio = await Folio.findById(folioId);
+  const folio = opts.session
+    ? await Folio.findById(folioId).session(opts.session)
+    : await Folio.findById(folioId);
   if (!folio) throw new Error(`Folio ${folioId} not found`);
   if (folio.status !== FolioStatus.OPEN) {
     throw new Error(`Folio is ${folio.status} — cannot finalize`);
   }
 
   folio.status = FolioStatus.FINALIZED;
-  await folio.save();
+  await folio.save({ session: opts.session });
 
   await createAuditLog({
     req: opts.req,
@@ -270,12 +279,15 @@ export async function finalizeFolio(
  */
 export async function settleFolio(
   folioId: string,
-  opts: { req?: Request; closedBy: string }
+  opts: { req?: Request; closedBy: string; session?: mongoose.ClientSession }
 ): Promise<IFolio> {
-  const folio = await Folio.findById(folioId);
+  const folio = opts.session
+    ? await Folio.findById(folioId).session(opts.session)
+    : await Folio.findById(folioId);
   if (!folio) throw new Error(`Folio ${folioId} not found`);
 
-  const settings = await HotelSettings.findOne().sort({ updatedAt: -1 }).lean();
+  const settingsQuery = HotelSettings.findOne().sort({ updatedAt: -1 });
+  const settings = await (opts.session ? settingsQuery.session(opts.session) : settingsQuery).lean();
   const prefix = settings?.invoicePrefix ?? "INV";
   const invoiceNumber = `${prefix}-${Date.now()}`;
 
@@ -284,7 +296,7 @@ export async function settleFolio(
   folio.invoiceGeneratedAt = new Date();
   folio.closedAt = new Date();
   folio.closedBy = new mongoose.Types.ObjectId(opts.closedBy);
-  await folio.save();
+  await folio.save({ session: opts.session });
 
   await createAuditLog({
     req: opts.req,
@@ -302,7 +314,10 @@ export async function settleFolio(
  * Used for integrity checks and reconciliation — the running totals on the
  * Folio document are convenient but the FolioLine sum is authoritative.
  */
-export async function recomputeFolioBalance(folioId: string): Promise<{
+export async function recomputeFolioBalance(
+  folioId: string,
+  opts: { session?: mongoose.ClientSession } = {}
+): Promise<{
   totalCharges: number;
   totalTax: number;
   totalDiscounts: number;
@@ -313,7 +328,8 @@ export async function recomputeFolioBalance(folioId: string): Promise<{
   sgst: number;
   igst: number;
 }> {
-  const lines = await FolioLine.find({ folio: folioId }).lean();
+  const linesQuery = FolioLine.find({ folio: folioId });
+  const lines = await (opts.session ? linesQuery.session(opts.session) : linesQuery).lean();
 
   let totalCharges = 0;
   let totalTax = 0;

@@ -3,6 +3,7 @@ import { Booking, BookingStatus, PaymentStatus } from "../models/Booking";
 import { Room, RoomStatus } from "../models/Room";
 import { RoomCategory } from "../models/RoomCategory";
 import { createAuditLog } from "../services/audit.service";
+import { transitionBookingStatus, IllegalBookingTransitionError } from "../services/booking-state.service";
 
 export const getAdminStats = async (req: Request, res: Response) => {
   try {
@@ -111,23 +112,48 @@ export const getAdminBookingById = async (req: Request, res: Response) => {
   }
 };
 
+// This generic quick-edit endpoint only ever performed a raw
+// findByIdAndUpdate — it completely bypassed the validated state machine
+// (transitionBookingStatus) that every other transition path in this
+// codebase goes through, including the specific fix documented in
+// booking-state.service.ts making CHECKED_IN -> CANCELLED illegal
+// everywhere. Through this endpoint an admin could set ANY status
+// (CHECKED_OUT back to CHECKED_IN, PENDING straight to CHECKED_IN skipping
+// room assignment and folio creation entirely, etc.) with zero checks.
+// CHECKED_IN and CHECKED_OUT are excluded here on top of the legality
+// check because those transitions have mandatory side effects (room
+// assignment + folio creation; folio settlement + room release to
+// housekeeping) that only the dedicated /check-in and /check-out
+// endpoints perform — this quick-edit must not be usable to reach either
+// status without them.
+const BOOKING_STATUS_QUICK_EDIT_BLOCKED = new Set([BookingStatus.CHECKED_IN, BookingStatus.CHECKED_OUT]);
+
 export const updateBookingStatus = async (req: Request, res: Response) => {
   try {
-    const { status } = req.body;
-    const booking = await Booking.findByIdAndUpdate(
-      req.params.id,
-      { status },
-      { returnDocument: "after" }
-    );
+    const { status } = req.body as { status: BookingStatus };
+    if (BOOKING_STATUS_QUICK_EDIT_BLOCKED.has(status)) {
+      return res.status(400).json({
+        success: false,
+        message: `Use the dedicated check-in/check-out flow to move a booking to ${status} — this cannot be set directly.`,
+      });
+    }
+
+    const booking = await Booking.findById(req.params.id);
     if (!booking) return res.status(404).json({ success: false, message: "Booking not found" });
 
-    await createAuditLog({
-      req,
-      action: "booking.status_changed",
-      resourceType: "Booking",
-      resourceId: booking._id.toString(),
-      metadata: { bookingReference: booking.bookingReference, status },
-    });
+    try {
+      await transitionBookingStatus(booking, status, {
+        req,
+        action: "booking.status_changed",
+        metadata: { bookingReference: booking.bookingReference },
+      });
+    } catch (error) {
+      if (error instanceof IllegalBookingTransitionError) {
+        return res.status(400).json({ success: false, message: error.message });
+      }
+      throw error;
+    }
+    await booking.save();
 
     return res.status(200).json({ success: true, data: booking });
   } catch (error: any) {

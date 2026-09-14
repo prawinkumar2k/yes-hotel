@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Building2, Plus, Search, RefreshCw, CheckCircle, XCircle, CreditCard, TrendingUp, AlertTriangle, ChevronDown, ChevronUp, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { getStoredAuthToken } from "@/lib/authStorage";
 
 interface CorporateAccount {
   _id: string;
@@ -31,7 +32,7 @@ const EMPTY_FORM = {
 };
 
 const getAuthHeaders = () => {
-  const token = localStorage.getItem("token") || localStorage.getItem("auth_token");
+  const token = getStoredAuthToken();
   return {
     "Content-Type": "application/json",
     ...(token ? { Authorization: `Bearer ${token}` } : {}),

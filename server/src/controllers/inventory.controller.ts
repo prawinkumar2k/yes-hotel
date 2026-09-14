@@ -15,17 +15,6 @@ export const getInventoryItems = async (req: Request, res: Response) => {
 
     let items = await InventoryItem.find(filter).sort({ name: 1 }).lean();
 
-    if (items.length === 0 && !category) {
-      // Seed default inventory items
-      items = await InventoryItem.insertMany([
-        { itemCode: "SKU-MILK-01", name: "Fresh Milk (Toned)", category: ItemCategory.FOOD_INGREDIENT, unit: "L", minStockLevel: 20, currentStock: 50, unitCost: 60, storeLocation: "Kitchen" },
-        { itemCode: "SKU-RICE-01", name: "Basmati Rice Grade A", category: ItemCategory.FOOD_INGREDIENT, unit: "kg", minStockLevel: 50, currentStock: 120, unitCost: 110, storeLocation: "Main Store" },
-        { itemCode: "SKU-TOWEL-01", name: "Luxury Bath Towel (White)", category: ItemCategory.LINEN, unit: "pcs", minStockLevel: 30, currentStock: 80, unitCost: 450, storeLocation: "Housekeeping" },
-        { itemCode: "SKU-SOAP-01", name: "Herbal Guest Soap 25g", category: ItemCategory.GUEST_AMENITY, unit: "pcs", minStockLevel: 100, currentStock: 350, unitCost: 12, storeLocation: "Housekeeping" },
-        { itemCode: "SKU-CLEAN-01", name: "Disinfectant Surface Cleaner", category: ItemCategory.CLEANING_SUPPLY, unit: "L", minStockLevel: 15, currentStock: 8, unitCost: 180, storeLocation: "Housekeeping" },
-      ]);
-    }
-
     if (lowStock === "true") {
       items = items.filter(item => item.currentStock <= item.minStockLevel);
     }

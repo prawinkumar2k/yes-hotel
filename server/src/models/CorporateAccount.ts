@@ -31,4 +31,4 @@ const CorporateAccountSchema = new Schema<ICorporateAccount>(
   { timestamps: true }
 );
 
-export const CorporateAccount = mongoose.model<ICorporateAccount>("CorporateAccount", CorporateAccountSchema);
+export const CorporateAccount = (mongoose.models.CorporateAccount as mongoose.Model<ICorporateAccount>) || mongoose.model<ICorporateAccount>("CorporateAccount", CorporateAccountSchema);

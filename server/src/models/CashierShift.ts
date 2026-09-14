@@ -43,4 +43,4 @@ const CashierShiftSchema = new Schema<ICashierShift>(
   { timestamps: true }
 );
 
-export const CashierShift = mongoose.model<ICashierShift>("CashierShift", CashierShiftSchema);
+export const CashierShift = (mongoose.models.CashierShift as mongoose.Model<ICashierShift>) || mongoose.model<ICashierShift>("CashierShift", CashierShiftSchema);

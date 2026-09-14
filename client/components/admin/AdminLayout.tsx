@@ -5,7 +5,8 @@ import {
   LayoutDashboard, CalendarDays, BedDouble, Users, CreditCard,
   BarChart3, Settings, Home, Wrench, LogOut, MenuIcon, X, Mail,
   Image, HelpCircle, MessageSquare, FileText, Star, Ticket, RotateCcw, ScrollText, Moon, DollarSign, Tag, Building2, UtensilsCrossed,
-  Package, Truck, ShoppingBag, Landmark, AlertCircle, Monitor, Globe
+  Package, Truck, ShoppingBag, Landmark, AlertCircle, Monitor, Globe,
+  PartyPopper, Sparkles
 } from "lucide-react";
 
 const ADMIN_ROLES = ["ADMIN", "MANAGER", "RECEPTIONIST"];
@@ -52,6 +53,9 @@ const NAV_ITEMS = [
   { label: "Corporate Accounts", to: "/admin/corporate-accounts", icon: Building2, roles: ["ADMIN", "MANAGER"] },
   { label: "Group Bookings", to: "/admin/group-bookings", icon: Users, roles: ["ADMIN", "MANAGER", "RECEPTIONIST"] },
   { label: "Restaurant POS", to: "/admin/pos", icon: UtensilsCrossed, roles: ["ADMIN", "MANAGER", "RECEPTIONIST"] },
+  { label: "Menu Management", to: "/admin/menu", icon: UtensilsCrossed, roles: ["ADMIN", "MANAGER"] },
+  { label: "Banquets & Events", to: "/admin/banquets", icon: PartyPopper, roles: ["ADMIN", "MANAGER", "RECEPTIONIST"] },
+  { label: "Ancillary Services", to: "/admin/ancillary", icon: Sparkles, roles: ["ADMIN", "MANAGER", "RECEPTIONIST"] },
   { label: "Audit Logs", to: "/admin/audit-logs", icon: ScrollText, roles: ["ADMIN", "MANAGER"] },
   { label: "Settings", to: "/admin/settings", icon: Settings, roles: ["ADMIN"] },
 ];

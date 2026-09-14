@@ -11,42 +11,7 @@ export const getBanquetBookings = async (req: Request, res: Response) => {
     const filter: Record<string, any> = {};
     if (status) filter.status = status;
 
-    let banquets = await BanquetBooking.find(filter).sort({ eventDate: 1 }).lean();
-
-    if (banquets.length === 0) {
-      banquets = await BanquetBooking.insertMany([
-        {
-          bookingNumber: "BNQ-2026-001",
-          eventName: "Infosys Annual Leadership Summit",
-          clientName: "Priya Nair",
-          clientPhone: "+91 98450 33445",
-          clientEmail: "travel@infosys.com",
-          hallName: "Grand Ball Room",
-          eventDate: new Date(Date.now() + 86400000 * 5),
-          expectedPax: 120,
-          menuPackage: "Executive Corporate CP Buffet",
-          ratePerPax: 1500,
-          totalEstimatedAmount: 180000,
-          advancePaid: 50000,
-          status: BanquetStatus.CONFIRMED,
-        },
-        {
-          bookingNumber: "BNQ-2026-002",
-          eventName: "Kapoor & Sharma Wedding Reception",
-          clientName: "Rajesh Kapoor",
-          clientPhone: "+91 98200 44556",
-          clientEmail: "rajesh@kapoor.com",
-          hallName: "Emerald Convention Lawn",
-          eventDate: new Date(Date.now() + 86400000 * 12),
-          expectedPax: 300,
-          menuPackage: "Royal Wedding Feast",
-          ratePerPax: 2200,
-          totalEstimatedAmount: 660000,
-          advancePaid: 200000,
-          status: BanquetStatus.CONFIRMED,
-        },
-      ]);
-    }
+    const banquets = await BanquetBooking.find(filter).sort({ eventDate: 1 }).lean();
 
     return res.json({ success: true, data: banquets });
   } catch (error: any) {
@@ -75,7 +40,7 @@ export const createBanquetBooking = async (req: Request, res: Response) => {
       eventName,
       clientName,
       clientPhone,
-      clientEmail: clientEmail || "client@banquet.com",
+      clientEmail,
       hallName: hallName || "Grand Ball Room",
       eventDate: new Date(eventDate),
       expectedPax: pax,
@@ -83,7 +48,7 @@ export const createBanquetBooking = async (req: Request, res: Response) => {
       ratePerPax: rate,
       totalEstimatedAmount,
       advancePaid: Number(advancePaid) || 0,
-      status: BanquetStatus.CONFIRMED,
+      status: BanquetStatus.INQUIRY,
       notes,
     });
 

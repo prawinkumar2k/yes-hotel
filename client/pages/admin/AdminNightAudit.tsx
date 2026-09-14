@@ -2,10 +2,11 @@ import React, { useState, useEffect } from "react";
 import { Moon, RefreshCw, CheckCircle2, AlertTriangle, Play, Calendar, ShieldCheck, Users, BedDouble } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
+import { getStoredAuthToken } from "@/lib/authStorage";
 
 const getAuthHeaders = () => ({
   "Content-Type": "application/json",
-  Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
+  Authorization: `Bearer ${getStoredAuthToken()}`,
 });
 
 interface AuditStatusData {

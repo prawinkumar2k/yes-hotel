@@ -7,15 +7,7 @@ import { createAuditLog } from "../services/audit.service";
  */
 export const getVendors = async (_req: Request, res: Response) => {
   try {
-    let vendors = await Vendor.find().sort({ name: 1 }).lean();
-
-    if (vendors.length === 0) {
-      vendors = await Vendor.insertMany([
-        { vendorCode: "VEN-DAIRY-01", name: "Amul Fresh Dairy Co.", gstin: "24AAACA0000A1Z5", contactPerson: "Ramesh Patel", email: "orders@amuldairy.com", phone: "+91 98980 11223", paymentTerms: "Net 15", rating: 5 },
-        { vendorCode: "VEN-PRODUCE-01", name: "Metro Wholesale Fresh", gstin: "27AAACM1122R1ZP", contactPerson: "Suresh Kumar", email: "b2b@metrowholesale.in", phone: "+91 98210 55443", paymentTerms: "COD", rating: 4 },
-        { vendorCode: "VEN-LINEN-01", name: "Bombay Textile Mill Ltd", gstin: "27AAACB9988C1Z2", contactPerson: "Vikram Mehta", email: "institutional@bombaymill.com", phone: "+91 98700 88990", paymentTerms: "Net 30", rating: 5 },
-      ]);
-    }
+    const vendors = await Vendor.find().sort({ name: 1 }).lean();
 
     return res.json({ success: true, data: vendors });
   } catch (error: any) {

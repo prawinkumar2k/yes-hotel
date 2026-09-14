@@ -59,6 +59,7 @@ export interface IBooking extends Document {
     idType?: string;         // e.g. "AADHAAR", "PASSPORT", "DRIVING_LICENSE"
     idNumber?: string;
     nationality?: string;
+    emergencyPhone?: string;
     address?: string;
     city?: string;
     state?: string;
@@ -136,6 +137,7 @@ const BookingSchema = new Schema<IBooking>(
       idType: { type: String },
       idNumber: { type: String },
       nationality: { type: String },
+      emergencyPhone: { type: String },
       address: { type: String },
       city: { type: String },
       state: { type: String },

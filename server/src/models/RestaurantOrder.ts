@@ -10,7 +10,8 @@ export enum OrderStatus {
 }
 
 export interface IOrderItem {
-  name: string;
+  menuItem?: mongoose.Types.ObjectId; // reference to the MenuItem this line was priced from
+  name: string;         // snapshot at order time — menu name/price may change later
   quantity: number;
   unitPrice: number;
   totalPrice: number;
@@ -34,6 +35,7 @@ export interface IRestaurantOrder extends Document {
 }
 
 const OrderItemSchema = new Schema<IOrderItem>({
+  menuItem: { type: Schema.Types.ObjectId, ref: "MenuItem" },
   name: { type: String, required: true },
   quantity: { type: Number, required: true, min: 1 },
   unitPrice: { type: Number, required: true, min: 0 },
@@ -63,4 +65,4 @@ const RestaurantOrderSchema = new Schema<IRestaurantOrder>(
   { timestamps: true }
 );
 
-export const RestaurantOrder = mongoose.model<IRestaurantOrder>("RestaurantOrder", RestaurantOrderSchema);
+export const RestaurantOrder = (mongoose.models.RestaurantOrder as mongoose.Model<IRestaurantOrder>) || mongoose.model<IRestaurantOrder>("RestaurantOrder", RestaurantOrderSchema);

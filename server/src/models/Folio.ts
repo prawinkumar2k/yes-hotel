@@ -84,4 +84,4 @@ const FolioSchema = new Schema<IFolio>(
 FolioSchema.index({ status: 1, booking: 1 });
 FolioSchema.index({ invoiceNumber: 1 }, { sparse: true, unique: true });
 
-export const Folio = mongoose.model<IFolio>("Folio", FolioSchema);
+export const Folio = (mongoose.models.Folio as mongoose.Model<IFolio>) || mongoose.model<IFolio>("Folio", FolioSchema);

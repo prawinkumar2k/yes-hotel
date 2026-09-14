@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Landmark, RefreshCw, CheckCircle2, DollarSign, PieChart, TrendingUp, Calendar, FileSpreadsheet, Building2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { getStoredAuthToken } from "@/lib/authStorage";
 
 interface AccountingData {
   summary: {
@@ -47,7 +48,7 @@ interface AgingAccount {
 }
 
 const getAuthHeaders = () => {
-  const token = localStorage.getItem("token") || localStorage.getItem("auth_token");
+  const token = getStoredAuthToken();
   return {
     "Content-Type": "application/json",
     ...(token ? { Authorization: `Bearer ${token}` } : {}),

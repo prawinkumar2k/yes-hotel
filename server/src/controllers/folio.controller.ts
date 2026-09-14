@@ -29,8 +29,10 @@ export const getFolioByBooking = async (req: Request, res: Response) => {
       return res.status(404).json({ success: false, message: "No folio found for this booking" });
     }
 
+    // postedBy is a plain string (a user's ObjectId as a string, or a
+    // system sentinel like "SYSTEM_TAX" for automated postings) — not a
+    // User ref, so it isn't populatable.
     const lines = await FolioLine.find({ folio: folio._id })
-      .populate("postedBy", "name email role")
       .sort({ date: 1, postedAt: 1 })
       .lean();
 

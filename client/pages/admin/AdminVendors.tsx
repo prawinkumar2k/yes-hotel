@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Truck, Plus, RefreshCw, Star, CheckCircle, XCircle, Search, Mail, Phone, MapPin } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { getStoredAuthToken } from "@/lib/authStorage";
 
 interface Vendor {
   _id: string;
@@ -16,7 +17,7 @@ interface Vendor {
 }
 
 const getAuthHeaders = () => {
-  const token = localStorage.getItem("token") || localStorage.getItem("auth_token");
+  const token = getStoredAuthToken();
   return {
     "Content-Type": "application/json",
     ...(token ? { Authorization: `Bearer ${token}` } : {}),

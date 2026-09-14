@@ -57,4 +57,4 @@ const PurchaseOrderSchema: Schema = new Schema(
   { timestamps: true }
 );
 
-export const PurchaseOrder = mongoose.model<IPurchaseOrder>("PurchaseOrder", PurchaseOrderSchema);
+export const PurchaseOrder = (mongoose.models.PurchaseOrder as mongoose.Model<IPurchaseOrder>) || mongoose.model<IPurchaseOrder>("PurchaseOrder", PurchaseOrderSchema);

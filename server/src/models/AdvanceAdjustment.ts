@@ -73,4 +73,4 @@ const AdvanceAdjustmentSchema = new Schema<IAdvanceAdjustment>(
 AdvanceAdjustmentSchema.index({ booking: 1, type: 1 });
 AdvanceAdjustmentSchema.index({ folio: 1 });
 
-export const AdvanceAdjustment = mongoose.model<IAdvanceAdjustment>("AdvanceAdjustment", AdvanceAdjustmentSchema);
+export const AdvanceAdjustment = (mongoose.models.AdvanceAdjustment as mongoose.Model<IAdvanceAdjustment>) || mongoose.model<IAdvanceAdjustment>("AdvanceAdjustment", AdvanceAdjustmentSchema);

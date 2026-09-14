@@ -105,7 +105,7 @@ export const closeShift = async (req: Request, res: Response) => {
 
     // Calculate payments and advances received during shift period by this cashier
     const paymentLines = await FolioLine.find({
-      postedBy: shift.cashier,
+      postedBy: shift.cashier.toString(),
       lineType: FolioLineType.PAYMENT,
       postedAt: { $gte: shift.openedAt },
     }).populate("paymentId").lean();
