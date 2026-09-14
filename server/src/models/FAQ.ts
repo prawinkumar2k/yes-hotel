@@ -19,4 +19,4 @@ const FAQSchema = new Schema<IFAQ>(
   { timestamps: true }
 );
 
-export const FAQ = mongoose.model<IFAQ>("FAQ", FAQSchema);
+export const FAQ = (mongoose.models.FAQ as mongoose.Model<IFAQ>) || mongoose.model<IFAQ>("FAQ", FAQSchema);

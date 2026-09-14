@@ -166,4 +166,4 @@ RoomSchema.index({ status: 1, category: 1 });
 // Current booking lookup
 RoomSchema.index({ currentBooking: 1 }, { sparse: true });
 
-export const Room = mongoose.model<IRoom>("Room", RoomSchema);
+export const Room = (mongoose.models.Room as mongoose.Model<IRoom>) || mongoose.model<IRoom>("Room", RoomSchema);

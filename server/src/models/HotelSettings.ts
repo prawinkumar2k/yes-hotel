@@ -134,4 +134,4 @@ const HotelSettingsSchema = new Schema<IHotelSettings>(
   { timestamps: true }
 );
 
-export const HotelSettings = mongoose.model<IHotelSettings>("HotelSettings", HotelSettingsSchema);
+export const HotelSettings = (mongoose.models.HotelSettings as mongoose.Model<IHotelSettings>) || mongoose.model<IHotelSettings>("HotelSettings", HotelSettingsSchema);

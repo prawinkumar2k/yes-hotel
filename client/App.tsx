@@ -12,6 +12,7 @@ import ScrollProgress from "./components/hotel/ScrollProgress";
 import CursorFollower from "./components/hotel/CursorFollower";
 import RoomHoverPreview from "./components/hotel/RoomHoverPreview";
 import PageTransitionOverlay from "./components/hotel/PageTransitionOverlay";
+import Chatbot from "./components/chatbot/Chatbot";
 
 // Eager loads
 import Index from "./pages/Index";
@@ -121,6 +122,7 @@ function App() {
             <CursorFollower />
             <RoomHoverPreview />
             <PageTransitionOverlay />
+            <Chatbot />
             <Suspense fallback={<PageLoader />}>
               <Routes>
                 {/* PUBLIC ROUTES */}

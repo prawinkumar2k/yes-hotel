@@ -49,4 +49,4 @@ const MaintenanceTicketSchema = new Schema<IMaintenanceTicket>(
   { timestamps: true }
 );
 
-export const MaintenanceTicket = mongoose.model<IMaintenanceTicket>("MaintenanceTicket", MaintenanceTicketSchema);
+export const MaintenanceTicket = (mongoose.models.MaintenanceTicket as mongoose.Model<IMaintenanceTicket>) || mongoose.model<IMaintenanceTicket>("MaintenanceTicket", MaintenanceTicketSchema);

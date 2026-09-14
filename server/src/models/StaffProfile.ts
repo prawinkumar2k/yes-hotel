@@ -38,4 +38,4 @@ const StaffProfileSchema = new Schema<IStaffProfile>(
   { timestamps: true }
 );
 
-export const StaffProfile = mongoose.model<IStaffProfile>("StaffProfile", StaffProfileSchema);
+export const StaffProfile = (mongoose.models.StaffProfile as mongoose.Model<IStaffProfile>) || mongoose.model<IStaffProfile>("StaffProfile", StaffProfileSchema);

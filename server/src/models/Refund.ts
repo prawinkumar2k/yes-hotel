@@ -34,4 +34,4 @@ const RefundSchema = new Schema<IRefund>(
 RefundSchema.index({ payment: 1 });
 RefundSchema.index({ status: 1, createdAt: -1 });
 
-export const Refund = mongoose.model<IRefund>("Refund", RefundSchema);
+export const Refund = (mongoose.models.Refund as mongoose.Model<IRefund>) || mongoose.model<IRefund>("Refund", RefundSchema);

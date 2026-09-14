@@ -42,4 +42,4 @@ const CouponSchema = new Schema<ICoupon>(
   { timestamps: true }
 );
 
-export const Coupon = mongoose.model<ICoupon>("Coupon", CouponSchema);
+export const Coupon = (mongoose.models.Coupon as mongoose.Model<ICoupon>) || mongoose.model<ICoupon>("Coupon", CouponSchema);

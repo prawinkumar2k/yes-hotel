@@ -56,4 +56,4 @@ const GuestSchema = new Schema<IGuest>(
 // Indexes for searching
 GuestSchema.index({ fullName: "text", email: "text", phone: "text" });
 
-export const Guest = mongoose.model<IGuest>("Guest", GuestSchema);
+export const Guest = (mongoose.models.Guest as mongoose.Model<IGuest>) || mongoose.model<IGuest>("Guest", GuestSchema);

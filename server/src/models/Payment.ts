@@ -57,4 +57,4 @@ PaymentSchema.index({ razorpayPaymentId: 1 }, { unique: true, sparse: true });
 PaymentSchema.index({ booking: 1 });
 PaymentSchema.index({ status: 1, createdAt: -1 });
 
-export const Payment = mongoose.model<IPayment>("Payment", PaymentSchema);
+export const Payment = (mongoose.models.Payment as mongoose.Model<IPayment>) || mongoose.model<IPayment>("Payment", PaymentSchema);

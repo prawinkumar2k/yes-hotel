@@ -37,4 +37,4 @@ const BookingIdempotencySchema = new Schema<IBookingIdempotency>(
 
 BookingIdempotencySchema.index({ status: 1, createdAt: -1 });
 
-export const BookingIdempotency = mongoose.model<IBookingIdempotency>("BookingIdempotency", BookingIdempotencySchema);
+export const BookingIdempotency = (mongoose.models.BookingIdempotency as mongoose.Model<IBookingIdempotency>) || mongoose.model<IBookingIdempotency>("BookingIdempotency", BookingIdempotencySchema);

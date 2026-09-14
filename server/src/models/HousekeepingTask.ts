@@ -140,4 +140,4 @@ HousekeepingTaskSchema.index({ assignedTo: 1, status: 1 });
 // Room history
 HousekeepingTaskSchema.index({ room: 1, createdAt: -1 });
 
-export const HousekeepingTask = mongoose.model<IHousekeepingTask>("HousekeepingTask", HousekeepingTaskSchema);
+export const HousekeepingTask = (mongoose.models.HousekeepingTask as mongoose.Model<IHousekeepingTask>) || mongoose.model<IHousekeepingTask>("HousekeepingTask", HousekeepingTaskSchema);

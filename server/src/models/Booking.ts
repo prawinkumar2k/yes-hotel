@@ -224,4 +224,4 @@ BookingSchema.index({ source: 1, createdAt: -1 });
 // VIP alerts
 BookingSchema.index({ isVipGuest: 1, checkInDate: 1 }, { sparse: true });
 
-export const Booking = mongoose.model<IBooking>("Booking", BookingSchema);
+export const Booking = (mongoose.models.Booking as mongoose.Model<IBooking>) || mongoose.model<IBooking>("Booking", BookingSchema);

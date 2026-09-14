@@ -44,4 +44,4 @@ const JobSchema = new Schema<IJob>(
 JobSchema.index({ status: 1, nextAttemptAt: 1 });
 JobSchema.index({ type: 1, status: 1 });
 
-export const Job = mongoose.model<IJob>("Job", JobSchema);
+export const Job = (mongoose.models.Job as mongoose.Model<IJob>) || mongoose.model<IJob>("Job", JobSchema);

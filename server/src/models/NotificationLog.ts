@@ -5,6 +5,7 @@ export enum NotificationType {
   BOOKING_CANCELLATION = "BOOKING_CANCELLATION",
   PAYMENT_CONFIRMATION = "PAYMENT_CONFIRMATION",
   REFUND_UPDATE = "REFUND_UPDATE",
+  BOOKING_ENQUIRY = "BOOKING_ENQUIRY",
 }
 
 export enum NotificationStatus {
@@ -42,4 +43,4 @@ const NotificationLogSchema = new Schema<INotificationLog>(
 NotificationLogSchema.index({ recipientEmail: 1, createdAt: -1 });
 NotificationLogSchema.index({ bookingId: 1 });
 
-export const NotificationLog = mongoose.model<INotificationLog>("NotificationLog", NotificationLogSchema);
+export const NotificationLog = (mongoose.models.NotificationLog as mongoose.Model<INotificationLog>) || mongoose.model<INotificationLog>("NotificationLog", NotificationLogSchema);
