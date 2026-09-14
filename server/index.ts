@@ -49,7 +49,9 @@ import inspectionRoutes from "./src/routes/inspection.routes";
 import inventoryRoutes from "./src/routes/inventory.routes";
 import vendorRoutes from "./src/routes/vendor.routes";
 import procurementRoutes from "./src/routes/procurement.routes";
+import accountingRoutes from "./src/routes/accounting.routes";
 import { getJwtSecret } from "./src/config/jwt";
+
 
 
 // Guards against createServer() being called more than once in the same
@@ -257,6 +259,8 @@ export function createServer() {
   app.use("/api/inventory", inventoryRoutes);
   app.use("/api/vendors", vendorRoutes);
   app.use("/api/procurement", procurementRoutes);
+  app.use("/api/accounting", accountingRoutes);
+
 
 
   // Example API routes

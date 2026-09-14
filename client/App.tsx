@@ -72,6 +72,8 @@ const AdminGroupBookings = lazy(() => import("./pages/admin/AdminGroupBookings")
 const AdminInventory = lazy(() => import("./pages/admin/AdminInventory"));
 const AdminVendors = lazy(() => import("./pages/admin/AdminVendors"));
 const AdminProcurement = lazy(() => import("./pages/admin/AdminProcurement"));
+const AdminAccounting = lazy(() => import("./pages/admin/AdminAccounting"));
+
 
 
 const CustomerDashboard = lazy(() => import("./pages/customer/CustomerDashboard"));
@@ -186,6 +188,8 @@ function App() {
                 <Route path="/admin/inventory" element={<ProtectedRoute roles={["ADMIN","MANAGER","HOUSEKEEPING"]}><AdminLayout title="Inventory & Store Management"><AdminInventory /></AdminLayout></ProtectedRoute>} />
                 <Route path="/admin/vendors" element={<ProtectedRoute roles={["ADMIN","MANAGER"]}><AdminLayout title="Vendor & Supplier Directory"><AdminVendors /></AdminLayout></ProtectedRoute>} />
                 <Route path="/admin/procurement" element={<ProtectedRoute roles={["ADMIN","MANAGER"]}><AdminLayout title="Procurement & Purchase Orders"><AdminProcurement /></AdminLayout></ProtectedRoute>} />
+                <Route path="/admin/accounting" element={<ProtectedRoute roles={["ADMIN","MANAGER"]}><AdminLayout title="General Ledger & Accounting Foundation"><AdminAccounting /></AdminLayout></ProtectedRoute>} />
+
 
 
                 {/* STAFF ROUTES */}
