@@ -2,8 +2,8 @@ import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, ChevronRight, X } from "lucide-react";
 import Navbar from "@/components/hotel/Navbar";
-import { useGallery } from "@/hooks/usePublicData";
-import { Loader2, ImageOff } from "lucide-react";
+import { ImageOff } from "lucide-react";
+import { LOCAL_GALLERY_IMAGES } from "@/lib/gallery";
 import { usePageMeta } from "@/hooks/usePageMeta";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 
@@ -37,10 +37,9 @@ export default function GalleryPage() {
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const reducedMotion = useReducedMotion();
 
-  const { data: images, isLoading, isError } = useGallery({
-    category: activeCategory || undefined,
-    limit: 100
-  });
+  const images = activeCategory
+    ? LOCAL_GALLERY_IMAGES.filter((image) => image.category === activeCategory)
+    : LOCAL_GALLERY_IMAGES;
 
   useEffect(() => {
     if (activeIndex === null || !images?.length) return;
@@ -84,31 +83,18 @@ export default function GalleryPage() {
         </div>
 
         {/* Gallery Grid */}
-        {isLoading && (
-          <div className="flex justify-center py-20">
-            <Loader2 className="w-10 h-10 animate-spin text-hotel-gold" />
-          </div>
-        )}
-
-        {isError && (
-          <div className="text-center py-20">
-            <ImageOff className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-            <p className="text-gray-500">Gallery temporarily unavailable. Please try again later.</p>
-          </div>
-        )}
-
-        {!isLoading && !isError && images?.length === 0 && (
+        {images.length === 0 && (
           <div className="text-center py-20">
             <ImageOff className="w-12 h-12 text-gray-400 mx-auto mb-4" />
             <p className="text-gray-500">No images in this category yet.</p>
           </div>
         )}
 
-        {!isLoading && !isError && images && images.length > 0 && (
+        {images.length > 0 && (
           <div className="grid grid-cols-1 gap-6 md:grid-cols-3 md:[grid-auto-rows:220px]">
             {images.map((img: any, i: number) => (
               <motion.div
-                key={img._id}
+                key={img.id}
                 initial={reducedMotion ? false : { opacity: 0, scale: 0.92, y: 20 }}
                 whileInView={{ opacity: 1, scale: 1, y: 0 }}
                 viewport={{ once: true, margin: "-60px" }}
@@ -118,9 +104,9 @@ export default function GalleryPage() {
               >
                 <div className="absolute inset-0 bg-hotel-black/20 group-hover:bg-transparent transition-colors duration-500 z-10" />
                 <motion.img
-                  layoutId={reducedMotion ? undefined : `gallerypage-image-${img._id}`}
-                  src={img.imageUrl}
-                  alt={img.altText}
+                  layoutId={reducedMotion ? undefined : `gallerypage-image-${img.id}`}
+                  src={img.src}
+                  alt={img.title}
                   className="w-full h-full min-h-[220px] object-cover group-hover:scale-105 transition-transform duration-700"
                   loading="lazy"
                 />
@@ -180,8 +166,8 @@ export default function GalleryPage() {
             </button>
 
             <motion.img
-              layoutId={reducedMotion ? undefined : `gallerypage-image-${activeImage._id}`}
-              src={activeImage.imageUrl}
+              layoutId={reducedMotion ? undefined : `gallerypage-image-${activeImage.id}`}
+              src={activeImage.src}
               alt="Gallery"
               className="max-w-full max-h-[90vh] shadow-2xl object-contain"
               onClick={(e) => e.stopPropagation()}
