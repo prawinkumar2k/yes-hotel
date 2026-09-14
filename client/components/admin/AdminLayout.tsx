@@ -5,7 +5,7 @@ import {
   LayoutDashboard, CalendarDays, BedDouble, Users, CreditCard,
   BarChart3, Settings, Home, Wrench, LogOut, MenuIcon, X, Mail,
   Image, HelpCircle, MessageSquare, FileText, Star, Ticket, RotateCcw, ScrollText, Moon, DollarSign, Tag, Building2, UtensilsCrossed,
-  Package, Truck, ShoppingBag, Landmark, AlertCircle, Monitor
+  Package, Truck, ShoppingBag, Landmark, AlertCircle, Monitor, Globe
 } from "lucide-react";
 
 const ADMIN_ROLES = ["ADMIN", "MANAGER", "RECEPTIONIST"];
@@ -36,6 +36,7 @@ const NAV_ITEMS = [
   { label: "Procurement", to: "/admin/procurement", icon: ShoppingBag, roles: ["ADMIN", "MANAGER"] },
   { label: "Accounting GL", to: "/admin/accounting", icon: Landmark, roles: ["ADMIN", "MANAGER"] },
   { label: "Executive Dashboard", to: "/admin/executive", icon: Monitor, roles: ["ADMIN", "MANAGER"] },
+  { label: "Multi-Property & OTA", to: "/admin/multi-property", icon: Globe, roles: ["ADMIN"] },
 
   { label: "Staff", to: "/admin/staff", icon: Users, roles: ["ADMIN", "MANAGER"] },
   { label: "Gallery", to: "/admin/gallery", icon: Image, roles: ["ADMIN", "MANAGER"] },

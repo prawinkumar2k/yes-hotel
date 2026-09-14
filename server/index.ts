@@ -53,6 +53,7 @@ import accountingRoutes from "./src/routes/accounting.routes";
 import banquetRoutes from "./src/routes/banquet.routes";
 import ancillaryRoutes from "./src/routes/ancillary.routes";
 import complaintRoutes from "./src/routes/complaint.routes";
+import propertyRoutes from "./src/routes/property.routes";
 import { getJwtSecret } from "./src/config/jwt";
 
 
@@ -267,6 +268,7 @@ export function createServer() {
   app.use("/api/banquets", banquetRoutes);
   app.use("/api/ancillary", ancillaryRoutes);
   app.use("/api/complaints", complaintRoutes);
+  app.use("/api/properties", propertyRoutes);
 
 
   // Example API routes
