@@ -50,7 +50,10 @@ import inventoryRoutes from "./src/routes/inventory.routes";
 import vendorRoutes from "./src/routes/vendor.routes";
 import procurementRoutes from "./src/routes/procurement.routes";
 import accountingRoutes from "./src/routes/accounting.routes";
+import banquetRoutes from "./src/routes/banquet.routes";
+import ancillaryRoutes from "./src/routes/ancillary.routes";
 import { getJwtSecret } from "./src/config/jwt";
+
 
 
 
@@ -260,7 +263,8 @@ export function createServer() {
   app.use("/api/vendors", vendorRoutes);
   app.use("/api/procurement", procurementRoutes);
   app.use("/api/accounting", accountingRoutes);
-
+  app.use("/api/banquets", banquetRoutes);
+  app.use("/api/ancillary", ancillaryRoutes);
 
 
   // Example API routes
