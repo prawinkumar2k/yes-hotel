@@ -13,25 +13,37 @@ export default function SearchPage() {
   const reducedMotion = useReducedMotion();
   const navigate = useNavigate();
   
-  const [checkIn, setCheckIn] = useState(searchParams.get("checkIn") || format(new Date(), "yyyy-MM-dd"));
+  const today = format(new Date(), "yyyy-MM-dd");
+  const [checkIn, setCheckIn] = useState(searchParams.get("checkIn") || today);
   const [checkOut, setCheckOut] = useState(searchParams.get("checkOut") || format(addDays(new Date(), 1), "yyyy-MM-dd"));
   const [adults, setAdults] = useState(parseInt(searchParams.get("adults") || "1"));
   const [children, setChildren] = useState(parseInt(searchParams.get("children") || "0"));
 
-  // A genuinely reproduced bug: changing check-in to a date on/after the
-  // already-selected check-out left check-out stale and invalid (e.g.
-  // checkIn=2026-09-09, checkOut=2026-09-01) — the date input's `min`
-  // attribute only constrains the native picker going forward, it does not
-  // retroactively fix an already-set value once check-in moves past it.
-  // That invalid pair was then submitted straight to the API, which
-  // correctly rejected it with a 400 the UI only ever showed as a generic
-  // "Failed to load availability" with no explanation.
-  const isValidRange = checkIn && checkOut && checkOut > checkIn;
+  // Two genuinely reproduced bugs, both caught by e2e/public-site.spec.ts's
+  // "auto-corrects check-out" regression test:
+  //
+  // 1. Changing check-in to a date on/after the already-selected check-out
+  //    left check-out stale and invalid (e.g. checkIn=2026-09-09,
+  //    checkOut=2026-09-01) — the date input's `min` attribute only
+  //    constrains the native picker going forward, it does not
+  //    retroactively fix an already-set value once check-in moves past it.
+  //    (handleCheckInChange below already corrected this half.)
+  //
+  // 2. isValidRange never checked check-in against `today`, only against
+  //    check-out. The `min` attribute on the check-in input is meant to
+  //    enforce that, but `min` is a UI hint, not a validation guarantee —
+  //    it doesn't reject a value already typed/filled in. So a past check-in
+  //    paired with a validly-later check-out still satisfied isValidRange,
+  //    and the query fired with a past date the backend correctly rejects
+  //    with a 400 — surfaced to the guest as an unexplained
+  //    "Failed to load availability".
+  const isValidRange = checkIn && checkOut && checkOut > checkIn && checkIn >= today;
 
   function handleCheckInChange(value: string) {
-    setCheckIn(value);
-    if (checkOut && checkOut <= value) {
-      setCheckOut(format(addDays(new Date(value), 1), "yyyy-MM-dd"));
+    const clamped = value < today ? today : value;
+    setCheckIn(clamped);
+    if (checkOut && checkOut <= clamped) {
+      setCheckOut(format(addDays(new Date(clamped), 1), "yyyy-MM-dd"));
     }
   }
 
