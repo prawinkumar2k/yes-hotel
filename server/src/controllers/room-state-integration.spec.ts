@@ -8,6 +8,15 @@ import { MaintenanceTicket, MaintenanceStatus } from "../models/MaintenanceTicke
 
 const TEST_DB_URI = process.env.MONGODB_URI || "mongodb://127.0.0.1:27017/yes_hotels_test";
 
+// A real user.id is always a Mongo ObjectId string in production (from the
+// JWT payload) — checkIn casts it via `new mongoose.Types.ObjectId(...)`
+// for booking.checkedInBy. The literal "staff1" this fixture used to pass
+// isn't a valid ObjectId and threw a BSONError the moment a test actually
+// reached that line (the "allows check-in..." case below, which returns
+// 200 rather than an earlier 400) — a test-fixture bug, not a product bug,
+// since the real app never receives a non-ObjectId user id.
+const STAFF_USER_ID = new mongoose.Types.ObjectId().toString();
+
 function mockRes() {
   const res: any = {};
   res.statusCode = 200;
@@ -74,7 +83,7 @@ describe("check-in respects room status (previously unchecked entirely)", () => 
 
     const res = mockRes();
     await checkIn(
-      { params: { id: booking._id.toString() }, body: { roomId: room._id.toString() }, user: { id: "staff1", role: "ADMIN" } } as any,
+      { params: { id: booking._id.toString() }, body: { roomId: room._id.toString() }, user: { id: STAFF_USER_ID, role: "ADMIN" } } as any,
       res
     );
 
@@ -91,7 +100,7 @@ describe("check-in respects room status (previously unchecked entirely)", () => 
 
     const res = mockRes();
     await checkIn(
-      { params: { id: booking._id.toString() }, body: { roomId: room._id.toString() }, user: { id: "staff1", role: "ADMIN" } } as any,
+      { params: { id: booking._id.toString() }, body: { roomId: room._id.toString() }, user: { id: STAFF_USER_ID, role: "ADMIN" } } as any,
       res
     );
 
@@ -104,7 +113,7 @@ describe("check-in respects room status (previously unchecked entirely)", () => 
 
     const res = mockRes();
     await checkIn(
-      { params: { id: booking._id.toString() }, body: { roomId: room._id.toString() }, user: { id: "staff1", role: "ADMIN" } } as any,
+      { params: { id: booking._id.toString() }, body: { roomId: room._id.toString() }, user: { id: STAFF_USER_ID, role: "ADMIN" } } as any,
       res
     );
 
@@ -124,7 +133,7 @@ describe("maintenance ticket resolution restores the room's actual prior state (
     await createMaintenanceTicket(
       {
         body: { roomId: room._id.toString(), issueTitle: "room-state-test AC broken" },
-        user: { id: "staff1", role: "MAINTENANCE" },
+        user: { id: STAFF_USER_ID, role: "MAINTENANCE" },
       } as any,
       createRes
     );
@@ -136,7 +145,7 @@ describe("maintenance ticket resolution restores the room's actual prior state (
     const ticketId = createRes.body.data._id.toString();
     const resolveRes = mockRes();
     await updateMaintenanceTicket(
-      { params: { id: ticketId }, body: { status: MaintenanceStatus.RESOLVED }, user: { id: "staff1", role: "MAINTENANCE" } } as any,
+      { params: { id: ticketId }, body: { status: MaintenanceStatus.RESOLVED }, user: { id: STAFF_USER_ID, role: "MAINTENANCE" } } as any,
       resolveRes
     );
     expect(resolveRes.statusCode).toBe(200);
@@ -152,14 +161,14 @@ describe("maintenance ticket resolution restores the room's actual prior state (
 
     const createRes = mockRes();
     await createMaintenanceTicket(
-      { body: { roomId: room._id.toString(), issueTitle: "room-state-test leaky faucet" }, user: { id: "staff1", role: "MAINTENANCE" } } as any,
+      { body: { roomId: room._id.toString(), issueTitle: "room-state-test leaky faucet" }, user: { id: STAFF_USER_ID, role: "MAINTENANCE" } } as any,
       createRes
     );
     const ticketId = createRes.body.data._id.toString();
 
     const resolveRes = mockRes();
     await updateMaintenanceTicket(
-      { params: { id: ticketId }, body: { status: MaintenanceStatus.RESOLVED }, user: { id: "staff1", role: "MAINTENANCE" } } as any,
+      { params: { id: ticketId }, body: { status: MaintenanceStatus.RESOLVED }, user: { id: STAFF_USER_ID, role: "MAINTENANCE" } } as any,
       resolveRes
     );
 
