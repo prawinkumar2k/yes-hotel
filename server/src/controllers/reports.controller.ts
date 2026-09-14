@@ -3,6 +3,9 @@ import { FolioLine, FolioLineType, FolioLineDirection } from "../models/FolioLin
 import { Booking, BookingStatus } from "../models/Booking";
 import { Room } from "../models/Room";
 import { AdvancePayment } from "../models/AdvancePayment";
+import { RestaurantOrder } from "../models/RestaurantOrder";
+import { Complaint } from "../models/Complaint";
+import { Payment } from "../models/Payment";
 
 /**
  * GET /api/admin/reports/overview
@@ -196,6 +199,199 @@ export const getAdvanceReport = async (_req: Request, res: Response) => {
         totalUnadjustedHeld: Math.round(totalHeld * 100) / 100,
         totalAdjusted: Math.round(totalAdjusted * 100) / 100,
         totalRefunded: Math.round(totalRefunded * 100) / 100,
+      },
+    });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+/**
+ * GET /api/reports/revenue-trend
+ * Daily revenue totals for the past N days (default 30).
+ */
+export const getRevenueTrend = async (req: Request, res: Response) => {
+  try {
+    const days = parseInt((req.query.days as string) || "30");
+    const since = new Date();
+    since.setDate(since.getDate() - days);
+
+    const pipeline: any[] = [
+      { $match: { direction: FolioLineDirection.DEBIT, createdAt: { $gte: since } } },
+      {
+        $group: {
+          _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
+          revenue: { $sum: "$amount" },
+          transactions: { $sum: 1 },
+        },
+      },
+      { $sort: { _id: 1 } },
+    ];
+
+    const rows = await FolioLine.aggregate(pipeline);
+
+    // Fill missing dates with 0
+    const map: Record<string, { revenue: number; transactions: number }> = {};
+    for (const r of rows) map[r._id] = { revenue: Math.round(r.revenue), transactions: r.transactions };
+
+    const trend: { date: string; revenue: number; transactions: number }[] = [];
+    for (let i = days - 1; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      const key = d.toISOString().slice(0, 10);
+      trend.push({ date: key, ...(map[key] || { revenue: 0, transactions: 0 }) });
+    }
+
+    return res.json({ success: true, data: trend });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+/**
+ * GET /api/reports/department-pl
+ * Revenue breakdown by department/line-type for P&L view.
+ */
+export const getDepartmentPL = async (req: Request, res: Response) => {
+  try {
+    const { startDate, endDate } = req.query;
+    const query: any = { direction: FolioLineDirection.DEBIT };
+    if (startDate || endDate) {
+      query.createdAt = {};
+      if (startDate) query.createdAt.$gte = new Date(startDate as string);
+      if (endDate) query.createdAt.$lte = new Date(endDate as string);
+    }
+
+    const pipeline: any[] = [
+      { $match: query },
+      { $group: { _id: "$lineType", total: { $sum: "$amount" }, count: { $sum: 1 } } },
+      { $sort: { total: -1 } },
+    ];
+
+    const rows = await FolioLine.aggregate(pipeline);
+
+    // Also get POS revenue separately
+    const posQuery: any = { status: { $in: ["CLOSED", "SERVED"] } };
+    if (startDate || endDate) {
+      posQuery.createdAt = {};
+      if (startDate) posQuery.createdAt.$gte = new Date(startDate as string);
+      if (endDate) posQuery.createdAt.$lte = new Date(endDate as string);
+    }
+    const posOrders = await RestaurantOrder.aggregate([
+      { $match: posQuery },
+      { $group: { _id: null, total: { $sum: "$totalAmount" }, count: { $sum: 1 } } },
+    ]);
+
+    const departments = rows.map((r) => ({
+      department: r._id,
+      revenue: Math.round(r.total * 100) / 100,
+      transactions: r.count,
+    }));
+
+    return res.json({
+      success: true,
+      data: {
+        byLineType: departments,
+        posRevenue: posOrders[0]?.total ? Math.round(posOrders[0].total * 100) / 100 : 0,
+        posOrderCount: posOrders[0]?.count || 0,
+      },
+    });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+/**
+ * GET /api/reports/occupancy-heatmap
+ * Per-day occupancy count for the past 30 days.
+ */
+export const getOccupancyHeatmap = async (_req: Request, res: Response) => {
+  try {
+    const totalRooms = await Room.countDocuments();
+    const since = new Date();
+    since.setDate(since.getDate() - 30);
+
+    const bookings = await Booking.find({
+      status: { $in: [BookingStatus.CHECKED_IN, BookingStatus.CHECKED_OUT] },
+      checkInDate: { $gte: since },
+    }).lean();
+
+    const map: Record<string, number> = {};
+    for (const b of bookings) {
+      const checkin = new Date(b.checkInDate);
+      const checkout = new Date(b.checkOutDate);
+      for (let d = new Date(checkin); d < checkout; d.setDate(d.getDate() + 1)) {
+        const key = d.toISOString().slice(0, 10);
+        map[key] = (map[key] || 0) + 1;
+      }
+    }
+
+    const heatmap = Object.entries(map).map(([date, occupied]) => ({
+      date,
+      occupied,
+      occupancyPct: totalRooms > 0 ? Math.round((occupied / totalRooms) * 100) : 0,
+    })).sort((a, b) => a.date.localeCompare(b.date));
+
+    return res.json({ success: true, data: { totalRooms, heatmap } });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+/**
+ * GET /api/reports/executive-summary
+ * Single aggregated KPI snapshot for the executive command center.
+ */
+export const getExecutiveSummary = async (_req: Request, res: Response) => {
+  try {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+
+    const [
+      totalRooms,
+      inHouseCount,
+      totalBookingsToday,
+      monthlyRevRows,
+      openComplaints,
+      paymentsToday,
+    ] = await Promise.all([
+      Room.countDocuments(),
+      Booking.countDocuments({ status: BookingStatus.CHECKED_IN }),
+      Booking.countDocuments({ createdAt: { $gte: today } }),
+      FolioLine.aggregate([
+        { $match: { direction: FolioLineDirection.DEBIT, createdAt: { $gte: monthStart } } },
+        { $group: { _id: null, total: { $sum: "$amount" } } },
+      ]),
+      Complaint.countDocuments({ status: { $in: ["OPEN", "IN_PROGRESS"] } }),
+      Payment.aggregate([
+        { $match: { createdAt: { $gte: today } } },
+        { $group: { _id: null, total: { $sum: "$amount" }, count: { $sum: 1 } } },
+      ]),
+    ]);
+
+    const monthlyRevenue = monthlyRevRows[0]?.total || 0;
+    const occupancyPct = totalRooms > 0 ? Math.round((inHouseCount / totalRooms) * 100) : 0;
+
+    // Checked-in bookings for ADR calc
+    const inHouseBookings = await Booking.find({ status: BookingStatus.CHECKED_IN }).lean();
+    const inHouseRevenue = inHouseBookings.reduce((s, b) => s + (b.totalAmount || 0), 0);
+    const adr = inHouseCount > 0 ? Math.round(inHouseRevenue / inHouseCount) : 0;
+    const revpar = totalRooms > 0 ? Math.round(inHouseRevenue / totalRooms) : 0;
+
+    return res.json({
+      success: true,
+      data: {
+        occupancyPct,
+        inHouseCount,
+        totalRooms,
+        adr,
+        revpar,
+        monthlyRevenue: Math.round(monthlyRevenue),
+        totalBookingsToday,
+        openComplaints,
+        paymentsToday: paymentsToday[0]?.total ? Math.round(paymentsToday[0].total) : 0,
+        paymentsTodayCount: paymentsToday[0]?.count || 0,
       },
     });
   } catch (error: any) {

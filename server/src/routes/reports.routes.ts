@@ -5,6 +5,10 @@ import {
   getRoomStayReport,
   getGstReport,
   getAdvanceReport,
+  getRevenueTrend,
+  getDepartmentPL,
+  getOccupancyHeatmap,
+  getExecutiveSummary,
 } from "../controllers/reports.controller";
 
 const router = Router();
@@ -14,5 +18,10 @@ router.get("/sales", protect, authorize(...MANAGER_ROLES), getSalesReport);
 router.get("/room-stay", protect, authorize(...MANAGER_ROLES), getRoomStayReport);
 router.get("/gst", protect, authorize(...MANAGER_ROLES), getGstReport);
 router.get("/advances", protect, authorize(...MANAGER_ROLES), getAdvanceReport);
+// Phase 24 – Advanced Analytics
+router.get("/revenue-trend", protect, authorize(...MANAGER_ROLES), getRevenueTrend);
+router.get("/department-pl", protect, authorize(...MANAGER_ROLES), getDepartmentPL);
+router.get("/occupancy-heatmap", protect, authorize(...MANAGER_ROLES), getOccupancyHeatmap);
+router.get("/executive-summary", protect, authorize(...MANAGER_ROLES), getExecutiveSummary);
 
 export default router;
