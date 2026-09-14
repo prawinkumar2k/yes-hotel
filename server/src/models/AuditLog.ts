@@ -47,4 +47,4 @@ AuditLogSchema.index({ action: 1 });
 AuditLogSchema.index({ resourceType: 1, resourceId: 1 });
 AuditLogSchema.index({ createdAt: -1 });
 
-export const AuditLog = mongoose.model<IAuditLog>("AuditLog", AuditLogSchema);
+export const AuditLog = (mongoose.models.AuditLog as mongoose.Model<IAuditLog>) || mongoose.model<IAuditLog>("AuditLog", AuditLogSchema);

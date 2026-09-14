@@ -30,4 +30,4 @@ const WebhookEventSchema = new Schema<IWebhookEvent>(
 
 WebhookEventSchema.index({ provider: 1, eventId: 1 }, { unique: true });
 
-export const WebhookEvent = mongoose.model<IWebhookEvent>("WebhookEvent", WebhookEventSchema);
+export const WebhookEvent = (mongoose.models.WebhookEvent as mongoose.Model<IWebhookEvent>) || mongoose.model<IWebhookEvent>("WebhookEvent", WebhookEventSchema);

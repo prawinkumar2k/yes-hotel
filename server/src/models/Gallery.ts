@@ -40,4 +40,4 @@ const GallerySchema = new Schema<IGallery>(
   { timestamps: true }
 );
 
-export const Gallery = mongoose.model<IGallery>("Gallery", GallerySchema);
+export const Gallery = (mongoose.models.Gallery as mongoose.Model<IGallery>) || mongoose.model<IGallery>("Gallery", GallerySchema);

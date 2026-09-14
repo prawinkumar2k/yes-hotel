@@ -23,4 +23,4 @@ const TestimonialSchema = new Schema<ITestimonial>(
   { timestamps: true }
 );
 
-export const Testimonial = mongoose.model<ITestimonial>("Testimonial", TestimonialSchema);
+export const Testimonial = (mongoose.models.Testimonial as mongoose.Model<ITestimonial>) || mongoose.model<ITestimonial>("Testimonial", TestimonialSchema);

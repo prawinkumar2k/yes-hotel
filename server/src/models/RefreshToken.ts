@@ -31,4 +31,4 @@ const RefreshTokenSchema = new Schema<IRefreshToken>(
 RefreshTokenSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 RefreshTokenSchema.index({ user: 1 });
 
-export const RefreshToken = mongoose.model<IRefreshToken>("RefreshToken", RefreshTokenSchema);
+export const RefreshToken = (mongoose.models.RefreshToken as mongoose.Model<IRefreshToken>) || mongoose.model<IRefreshToken>("RefreshToken", RefreshTokenSchema);

@@ -41,4 +41,4 @@ const RoomCategorySchema = new Schema<IRoomCategory>(
   { timestamps: true }
 );
 
-export const RoomCategory = mongoose.model<IRoomCategory>("RoomCategory", RoomCategorySchema);
+export const RoomCategory = (mongoose.models.RoomCategory as mongoose.Model<IRoomCategory>) || mongoose.model<IRoomCategory>("RoomCategory", RoomCategorySchema);

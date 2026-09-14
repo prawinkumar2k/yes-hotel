@@ -25,6 +25,10 @@ export const connectDB = async () => {
     });
   } catch (error) {
     console.error("Error connecting to MongoDB:", error);
-    process.exit(1);
+    // Keep the Vite development server available so the public UI can still
+    // be developed while MongoDB is offline. Production must fail closed.
+    if (process.env.NODE_ENV === "production") {
+      process.exit(1);
+    }
   }
 };

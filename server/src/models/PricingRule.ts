@@ -35,4 +35,4 @@ const PricingRuleSchema = new Schema<IPricingRule>(
   { timestamps: true }
 );
 
-export const PricingRule = mongoose.model<IPricingRule>("PricingRule", PricingRuleSchema);
+export const PricingRule = (mongoose.models.PricingRule as mongoose.Model<IPricingRule>) || mongoose.model<IPricingRule>("PricingRule", PricingRuleSchema);

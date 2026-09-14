@@ -36,4 +36,4 @@ const HousekeepingTaskSchema = new Schema<IHousekeepingTask>(
   { timestamps: true }
 );
 
-export const HousekeepingTask = mongoose.model<IHousekeepingTask>("HousekeepingTask", HousekeepingTaskSchema);
+export const HousekeepingTask = (mongoose.models.HousekeepingTask as mongoose.Model<IHousekeepingTask>) || mongoose.model<IHousekeepingTask>("HousekeepingTask", HousekeepingTaskSchema);

@@ -43,7 +43,8 @@ function getIdempotencyKey(req: Request) {
 // Real availability engine
 export const checkAvailability = async (req: Request, res: Response) => {
   try {
-    const { checkIn, checkOut, adults = 1, children = 0 } = req.query;
+    const source = req.method === "POST" ? req.body : req.query;
+    const { checkIn, checkOut, adults = 1, children = 0, rooms = 1 } = source;
 
     if (!checkIn || !checkOut) {
       return res.status(400).json({ success: false, message: "checkIn and checkOut dates are required" });
@@ -52,6 +53,17 @@ export const checkAvailability = async (req: Request, res: Response) => {
     const checkInDate = new Date(checkIn as string);
     const checkOutDate = new Date(checkOut as string);
 
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    if (Number.isNaN(checkInDate.getTime()) || Number.isNaN(checkOutDate.getTime())) {
+      return res.status(400).json({ success: false, message: "Valid check-in and check-out dates are required" });
+    }
+    if (checkInDate < today) {
+      return res.status(400).json({ success: false, message: "Check-in date cannot be in the past" });
+    }
+    if (Number(adults) < 1 || Number(children) < 0 || Number(rooms) < 1) {
+      return res.status(400).json({ success: false, message: "Guest and room counts are invalid" });
+    }
     if (checkInDate >= checkOutDate) {
       return res.status(400).json({ success: false, message: "Check-out must be after check-in" });
     }
@@ -88,13 +100,14 @@ export const checkAvailability = async (req: Request, res: Response) => {
       const bookedCount = bookedCountByCategory[catId] || 0;
       const availableCount = totalRooms - bookedCount;
 
-      if (availableCount > 0) {
+      if (availableCount >= Number(rooms)) {
         const nights = Math.ceil((checkOutDate.getTime() - checkInDate.getTime()) / (1000 * 60 * 60 * 24));
         available.push({
           ...cat.toObject(),
           availableCount,
           nights,
-          totalPrice: cat.basePrice * nights,
+          totalPrice: cat.basePrice * nights * Number(rooms),
+          pricePerNight: cat.basePrice,
         });
       }
     }

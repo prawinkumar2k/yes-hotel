@@ -13,6 +13,7 @@ const ADMIN_ROLES = [UserRole.ADMIN, UserRole.MANAGER, UserRole.RECEPTIONIST];
 
 // Public availability
 router.get("/availability", checkAvailability);
+router.post("/availability", checkAvailability);
 
 // Create booking (public or logged-in customer)
 router.post("/", optionalProtect, createBooking);

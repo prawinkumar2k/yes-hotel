@@ -78,4 +78,4 @@ BookingSchema.index({ customer: 1, createdAt: -1 });
 // Supports admin/reporting queries filtered or grouped by category.
 BookingSchema.index({ roomCategory: 1 });
 
-export const Booking = mongoose.model<IBooking>("Booking", BookingSchema);
+export const Booking = (mongoose.models.Booking as mongoose.Model<IBooking>) || mongoose.model<IBooking>("Booking", BookingSchema);

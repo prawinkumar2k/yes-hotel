@@ -17,6 +17,7 @@ import { handleDemo } from "./routes/demo";
 import authRoutes from "./src/routes/auth.routes";
 import roomRoutes from "./src/routes/room.routes";
 import bookingRoutes from "./src/routes/booking.routes";
+import bookingEnquiryRoutes from "./src/routes/bookingEnquiry.routes";
 import adminRoutes from "./src/routes/admin.routes";
 import paymentRoutes from "./src/routes/payment.routes";
 import contactRoutes from "./src/routes/contact.routes";
@@ -209,6 +210,7 @@ export function createServer() {
   app.use("/api/auth", authRoutes);
   app.use("/api/rooms", roomRoutes);
   app.use("/api/bookings", bookingRoutes);
+  app.use("/api/booking-enquiry", bookingEnquiryRoutes);
   app.use("/api/admin", adminRoutes);
   app.use("/api/payments", paymentRoutes);
   app.use("/api/contact", contactRoutes);

@@ -43,6 +43,22 @@ See `.env.example` for the full list. Notes on each:
 | `EMAIL_USER` / `EMAIL_PASS` | No | Without these, notifications (booking confirmation, cancellation, refund) are logged to the server console and to the `NotificationLog` collection instead of actually being sent — never silently claimed as delivered |
 | `EMAIL_SERVICE` | No | Nodemailer service name, defaults to `gmail` |
 | `CLIENT_URL` | No | Used for CORS and for building links (e.g. password reset) — set to your real deployed frontend URL in production |
+| `VITE_BOOKING_URL` | No | Public URL opened by the concierge after a successful enquiry; defaults to `/search` |
+| `VITE_HOTEL_PHONE` / `VITE_HOTEL_WHATSAPP` / `VITE_HOTEL_EMAIL` / `VITE_HOTEL_ADDRESS` | No | Verified contact details shown by the concierge; leave blank until confirmed |
+| `BOOKING_ENQUIRY_RECIPIENTS` | No | Server-only comma-separated fallback emails. Enquiries are also sent to active ADMIN, MANAGER, and RECEPTIONIST user accounts automatically. |
+
+## AI Concierge
+
+The public site includes a modular YES Hotels concierge in `client/components/chatbot/`. It does not use Chatbase and does not process payments. The flow calls live inventory, collects an enquiry, and then redirects to the existing booking/payment page.
+
+API contracts:
+
+- `POST /api/bookings/availability` checks MongoDB inventory. Payload: `checkIn`, `checkOut`, `adults`, `children`, and `rooms`. Availability and rates are never generated in the browser.
+- `POST /api/booking-enquiry` validates and stores the enquiry in the `BookingEnquiry` collection. It is rate-limited and returns success only after persistence succeeds.
+
+To connect a real inventory provider, replace the implementation behind `client/services/availabilityService.ts` or update the server availability controller. Keep the response contract (`name`, `pricePerNight`, `availableCount`, `nights`, and `_id`) stable so the UI does not need to change. To connect hotel management delivery, add CRM/email notification handling after `BookingEnquiry.create()` in `server/src/controllers/bookingEnquiry.controller.ts`; the client should continue to receive only the generic enquiry result.
+
+For local testing, configure MongoDB and run `pnpm seed`, then `pnpm dev`. Open the public site, select **Check Room Availability**, use dates and guest counts, choose a room returned by the live API, complete the guest details, review the enquiry summary, and submit it. With no room inventory or an unavailable database, the concierge shows the honest unavailable/error state rather than demo data. `pnpm typecheck`, `pnpm test`, and `pnpm build` are the release checks.
 
 ## Test Database Isolation
 

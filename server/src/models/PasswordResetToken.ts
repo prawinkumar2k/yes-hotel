@@ -21,4 +21,4 @@ const PasswordResetTokenSchema = new Schema<IPasswordResetToken>(
 // Auto-expire documents after TTL
 PasswordResetTokenSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 
-export const PasswordResetToken = mongoose.model<IPasswordResetToken>("PasswordResetToken", PasswordResetTokenSchema);
+export const PasswordResetToken = (mongoose.models.PasswordResetToken as mongoose.Model<IPasswordResetToken>) || mongoose.model<IPasswordResetToken>("PasswordResetToken", PasswordResetTokenSchema);

@@ -29,4 +29,4 @@ const ReviewSchema = new Schema<IReview>(
   { timestamps: true }
 );
 
-export const Review = mongoose.model<IReview>("Review", ReviewSchema);
+export const Review = (mongoose.models.Review as mongoose.Model<IReview>) || mongoose.model<IReview>("Review", ReviewSchema);

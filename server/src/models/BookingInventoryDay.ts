@@ -20,4 +20,4 @@ const BookingInventoryDaySchema = new Schema<IBookingInventoryDay>(
 BookingInventoryDaySchema.index({ roomCategory: 1, stayDate: 1 }, { unique: true });
 BookingInventoryDaySchema.index({ stayDate: 1 });
 
-export const BookingInventoryDay = mongoose.model<IBookingInventoryDay>("BookingInventoryDay", BookingInventoryDaySchema);
+export const BookingInventoryDay = (mongoose.models.BookingInventoryDay as mongoose.Model<IBookingInventoryDay>) || mongoose.model<IBookingInventoryDay>("BookingInventoryDay", BookingInventoryDaySchema);
