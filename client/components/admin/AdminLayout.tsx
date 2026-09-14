@@ -5,6 +5,7 @@ import {
   LayoutDashboard, CalendarDays, BedDouble, Users, CreditCard,
   BarChart3, Settings, Home, Wrench, LogOut, MenuIcon, X, Mail,
   Image, HelpCircle, MessageSquare, FileText, Star, Ticket, RotateCcw, ScrollText, Moon, DollarSign, Tag, Building2, UtensilsCrossed,
+  Package, Truck, ShoppingBag,
 } from "lucide-react";
 
 const ADMIN_ROLES = ["ADMIN", "MANAGER", "RECEPTIONIST"];
@@ -30,6 +31,9 @@ const NAV_ITEMS = [
   { label: "Coupons", to: "/admin/coupons", icon: Ticket, roles: ["ADMIN", "MANAGER"] },
   { label: "Housekeeping", to: "/admin/housekeeping", icon: Home, roles: STAFF_ROLES },
   { label: "Maintenance", to: "/admin/maintenance", icon: Wrench, roles: STAFF_ROLES },
+  { label: "Inventory", to: "/admin/inventory", icon: Package, roles: ["ADMIN", "MANAGER", "HOUSEKEEPING"] },
+  { label: "Vendors", to: "/admin/vendors", icon: Truck, roles: ["ADMIN", "MANAGER"] },
+  { label: "Procurement", to: "/admin/procurement", icon: ShoppingBag, roles: ["ADMIN", "MANAGER"] },
   { label: "Staff", to: "/admin/staff", icon: Users, roles: ["ADMIN", "MANAGER"] },
   { label: "Gallery", to: "/admin/gallery", icon: Image, roles: ["ADMIN", "MANAGER"] },
   { label: "FAQs", to: "/admin/faqs", icon: HelpCircle, roles: ["ADMIN", "MANAGER"] },
@@ -45,6 +49,7 @@ const NAV_ITEMS = [
   { label: "Audit Logs", to: "/admin/audit-logs", icon: ScrollText, roles: ["ADMIN", "MANAGER"] },
   { label: "Settings", to: "/admin/settings", icon: Settings, roles: ["ADMIN"] },
 ];
+
 
 export default function AdminLayout({ children, title }: { children: ReactNode; title?: string }) {
   const { user, logout } = useAuth();

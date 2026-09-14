@@ -46,7 +46,11 @@ import corporateAccountRoutes from "./src/routes/corporate-account.routes";
 import posRoutes from "./src/routes/pos.routes";
 import groupBookingRoutes from "./src/routes/group-booking.routes";
 import inspectionRoutes from "./src/routes/inspection.routes";
+import inventoryRoutes from "./src/routes/inventory.routes";
+import vendorRoutes from "./src/routes/vendor.routes";
+import procurementRoutes from "./src/routes/procurement.routes";
 import { getJwtSecret } from "./src/config/jwt";
+
 
 // Guards against createServer() being called more than once in the same
 // process (Vite's dev middleware plugin, or repeated test imports) from
@@ -250,6 +254,10 @@ export function createServer() {
   app.use("/api/pos", posRoutes);
   app.use("/api/group-bookings", groupBookingRoutes);
   app.use("/api/inspections", inspectionRoutes);
+  app.use("/api/inventory", inventoryRoutes);
+  app.use("/api/vendors", vendorRoutes);
+  app.use("/api/procurement", procurementRoutes);
+
 
   // Example API routes
   app.get("/api/ping", (_req, res) => {

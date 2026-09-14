@@ -69,6 +69,10 @@ const AdminNightAudit = lazy(() => import("./pages/admin/AdminNightAudit"));
 const AdminCorporateAccounts = lazy(() => import("./pages/admin/AdminCorporateAccounts"));
 const AdminPOS = lazy(() => import("./pages/admin/AdminPOS"));
 const AdminGroupBookings = lazy(() => import("./pages/admin/AdminGroupBookings"));
+const AdminInventory = lazy(() => import("./pages/admin/AdminInventory"));
+const AdminVendors = lazy(() => import("./pages/admin/AdminVendors"));
+const AdminProcurement = lazy(() => import("./pages/admin/AdminProcurement"));
+
 
 const CustomerDashboard = lazy(() => import("./pages/customer/CustomerDashboard"));
 const CustomerBookings = lazy(() => import("./pages/customer/CustomerBookings"));
@@ -179,6 +183,10 @@ function App() {
                 <Route path="/admin/corporate-accounts" element={<ProtectedRoute roles={["ADMIN","MANAGER"]}><AdminLayout title="Corporate Accounts & B2B Billing"><AdminCorporateAccounts /></AdminLayout></ProtectedRoute>} />
                 <Route path="/admin/pos" element={<ProtectedRoute roles={["ADMIN","MANAGER","RECEPTIONIST"]}><AdminLayout title="Restaurant POS & Kitchen Display System"><AdminPOS /></AdminLayout></ProtectedRoute>} />
                 <Route path="/admin/group-bookings" element={<ProtectedRoute roles={["ADMIN","MANAGER","RECEPTIONIST"]}><AdminLayout title="Group Bookings — MICE & Events"><AdminGroupBookings /></AdminLayout></ProtectedRoute>} />
+                <Route path="/admin/inventory" element={<ProtectedRoute roles={["ADMIN","MANAGER","HOUSEKEEPING"]}><AdminLayout title="Inventory & Store Management"><AdminInventory /></AdminLayout></ProtectedRoute>} />
+                <Route path="/admin/vendors" element={<ProtectedRoute roles={["ADMIN","MANAGER"]}><AdminLayout title="Vendor & Supplier Directory"><AdminVendors /></AdminLayout></ProtectedRoute>} />
+                <Route path="/admin/procurement" element={<ProtectedRoute roles={["ADMIN","MANAGER"]}><AdminLayout title="Procurement & Purchase Orders"><AdminProcurement /></AdminLayout></ProtectedRoute>} />
+
 
                 {/* STAFF ROUTES */}
                 <Route path="/staff/housekeeping" element={<ProtectedRoute roles={["HOUSEKEEPING","ADMIN","MANAGER"]}><AdminLayout title="Housekeeping"><AdminHousekeeping /></AdminLayout></ProtectedRoute>} />
