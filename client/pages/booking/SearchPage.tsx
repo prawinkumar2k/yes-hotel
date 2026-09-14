@@ -59,11 +59,11 @@ export default function SearchPage() {
   return (
     <div className="min-h-screen bg-hotel-ivory pt-24">
       <Navbar transparent={false} />
-      <div className="max-w-5xl mx-auto px-6 py-12">
-        <h1 className="font-serif text-4xl text-hotel-black mb-8 text-center">Find Your Stay</h1>
+      <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6 sm:py-12">
+        <h1 className="mb-8 text-center font-serif text-3xl text-hotel-black sm:text-4xl">Find Your Stay</h1>
         
         {/* Search Bar */}
-        <div className="bg-hotel-white border border-hotel-black/10 p-6 shadow-sm mb-12">
+        <div className="mb-10 border border-hotel-black/10 bg-hotel-white p-4 shadow-sm sm:mb-12 sm:p-6">
           <form onSubmit={handleSearch} className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
             <div className="md:col-span-1">
               <label htmlFor="search-checkin" className="block text-xs uppercase tracking-widest text-hotel-black/60 mb-2">Check In</label>
@@ -143,12 +143,12 @@ export default function SearchPage() {
                       alt={room.name} 
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
                   </div>
-                  <div className="p-8 w-full md:w-3/5 flex flex-col justify-between">
+                  <div className="flex w-full flex-col justify-between p-4 sm:p-8 md:w-3/5">
                     <div>
-                      <div className="flex justify-between items-start mb-2">
-                        <h3 className="font-serif text-2xl text-hotel-black">{room.name}</h3>
-                        <div className="text-right">
-                          <p className="font-serif text-xl text-hotel-gold-text">₹{room.basePrice}</p>
+                      <div className="mb-2 flex flex-col items-start gap-2 sm:flex-row sm:items-start sm:justify-between">
+                        <h3 className="font-serif text-xl text-hotel-black sm:text-2xl">{room.name}</h3>
+                        <div className="text-left sm:text-right">
+                          <p className="font-serif text-lg text-hotel-gold-text sm:text-xl">₹{room.basePrice}</p>
                           <p className="text-[10px] uppercase tracking-widest text-hotel-black/60">Per Night</p>
                         </div>
                       </div>
@@ -165,12 +165,12 @@ export default function SearchPage() {
                       </div>
                     </div>
                     
-                    <div className="flex items-center justify-between border-t border-hotel-black/10 pt-6 mt-4">
+                    <div className="mt-4 flex flex-col items-start gap-4 border-t border-hotel-black/10 pt-6 sm:flex-row sm:items-center sm:justify-between">
                       <div>
                         <p className="text-sm text-hotel-black/60">Total for {room.nights} night{room.nights > 1 ? 's' : ''}</p>
                         <p className="font-serif text-lg font-medium text-hotel-black">₹{room.totalPrice}</p>
                       </div>
-                      <button onClick={() => proceedToBooking(room._id)} className="bg-hotel-black text-hotel-white px-8 py-3 text-sm font-medium tracking-widest uppercase hover:bg-hotel-gold transition-colors">
+                      <button onClick={() => proceedToBooking(room._id)} className="w-full bg-hotel-black px-6 py-3 text-sm font-medium uppercase tracking-widest text-hotel-white transition-colors hover:bg-hotel-gold sm:w-auto sm:px-8">
                         Select Room
                       </button>
                     </div>

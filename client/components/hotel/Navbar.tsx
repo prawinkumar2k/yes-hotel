@@ -91,10 +91,10 @@ export default function Navbar({ transparent = true }: { transparent?: boolean }
       className={cn(
         "fixed inset-x-0 top-0 z-50 transition-all duration-500 ease-out",
         floating
-          ? "bg-hotel-black/75 py-3 shadow-[0_8px_40px_rgba(0,0,0,0.5)] backdrop-blur-md"
+          ? "bg-hotel-black/75 py-2 sm:py-3 shadow-[0_8px_40px_rgba(0,0,0,0.5)] backdrop-blur-md"
           : solid
-            ? "bg-hotel-black/95 py-4 shadow-[0_4px_30px_rgba(0,0,0,0.4)] backdrop-blur-sm"
-            : "bg-transparent py-6",
+            ? "bg-hotel-black/95 py-3 sm:py-4 shadow-[0_4px_30px_rgba(0,0,0,0.4)] backdrop-blur-sm"
+            : "bg-transparent py-4 sm:py-6",
       )}
     >
       <div className="container flex items-center justify-between">
@@ -148,7 +148,7 @@ export default function Navbar({ transparent = true }: { transparent?: boolean }
 
       <div
         className={cn(
-          "fixed inset-x-0 top-[64px] z-40 flex flex-col gap-1 bg-hotel-black/98 px-6 pb-8 pt-4 backdrop-blur-sm transition-all duration-300 lg:hidden",
+          "fixed inset-x-0 top-[60px] z-40 flex flex-col gap-1 bg-hotel-black/98 px-4 pb-6 pt-3 backdrop-blur-sm transition-all duration-300 sm:top-[76px] sm:px-6 sm:pb-8 sm:pt-4 lg:hidden",
           open
             ? "visible translate-y-0 opacity-100"
             : "invisible -translate-y-4 opacity-0",

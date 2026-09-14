@@ -112,19 +112,19 @@ export default function AdminLayout({ children, title }: { children: ReactNode; 
 
       {/* Main */}
       <div className="flex-1 flex flex-col min-w-0">
-        <header className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+        <header className="bg-white border-b border-gray-200 px-3 py-3 sm:px-6 sm:py-4 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <button onClick={() => setSidebarOpen(true)} className="lg:hidden text-gray-500">
               <MenuIcon size={20} />
             </button>
-            {title && <h1 className="font-semibold text-gray-800 text-lg">{title}</h1>}
+            {title && <h1 className="font-semibold text-gray-800 text-base sm:text-lg truncate">{title}</h1>}
           </div>
-          <div className="text-sm text-gray-500">
+          <div className="max-w-[45vw] truncate text-right text-xs text-gray-500 sm:max-w-none sm:text-sm">
             {user?.firstName} {user?.lastName} · <span className="text-hotel-gold font-medium">{user?.role}</span>
           </div>
         </header>
 
-        <main className="flex-1 p-6 overflow-y-auto">{children}</main>
+        <main className="admin-content min-w-0 flex-1 overflow-auto p-3 sm:p-6">{children}</main>
       </div>
     </div>
   );

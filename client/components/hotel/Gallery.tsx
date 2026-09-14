@@ -4,43 +4,8 @@ import { ChevronLeft, ChevronRight, X } from "lucide-react";
 import Reveal from "./Reveal";
 import SectionLabel from "./SectionLabel";
 import { TextLink } from "./HotelButtons";
-import { useGallery } from "@/hooks/usePublicData";
+import { LOCAL_GALLERY_IMAGES } from "@/lib/gallery";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
-
-const FALLBACK_IMAGES = [
-  {
-    src: "https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1200&q=80",
-    title: "Hotel Exterior",
-  },
-  {
-    src: "https://images.unsplash.com/photo-1445019980597-93fa8acb246c?auto=format&fit=crop&w=1200&q=80",
-    title: "The Lobby",
-  },
-  {
-    src: "https://images.unsplash.com/photo-1590490360182-c33d57733427?auto=format&fit=crop&w=1200&q=80",
-    title: "Deluxe Room",
-  },
-  {
-    src: "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=1200&q=80",
-    title: "Dining Area",
-  },
-  {
-    src: "https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?auto=format&fit=crop&w=1200&q=80",
-    title: "Executive Room",
-  },
-  {
-    src: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=80",
-    title: "Hotel Interior",
-  },
-  {
-    src: "https://images.unsplash.com/photo-1587985064135-0366536eab42?auto=format&fit=crop&w=1200&q=80",
-    title: "Decorative Detail",
-  },
-  {
-    src: "https://images.unsplash.com/photo-1591088398332-8a7791972843?auto=format&fit=crop&w=1200&q=80",
-    title: "Relaxation Space",
-  },
-];
 
 // A deliberately varied rhythm — one large feature tile, tall strips, a wide
 // tile, and small tiles — cycled by index. Not a repeating 3-column card
@@ -58,12 +23,8 @@ const SPAN_PATTERN = [
 
 export default function Gallery() {
   const [active, setActive] = useState<number | null>(null);
-  const { data } = useGallery({ limit: 8 });
   const reducedMotion = useReducedMotion();
-
-  const IMAGES = data?.length
-    ? data.map((img: any) => ({ src: img.imageUrl, title: img.altText || img.title }))
-    : FALLBACK_IMAGES;
+  const IMAGES = LOCAL_GALLERY_IMAGES.slice(0, 8);
 
   useEffect(() => {
     if (active === null) return;
