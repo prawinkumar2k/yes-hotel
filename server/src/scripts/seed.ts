@@ -10,7 +10,7 @@ import { Coupon, DiscountType } from "../models/Coupon";
 import { Gallery, GalleryCategory } from "../models/Gallery";
 import { WebsiteContent } from "../models/WebsiteContent";
 
-const MONGODB_URI = process.env.MONGODB_URI || "mongodb://localhost:27017/yes_hotels";
+const MONGODB_URI = process.env.MONGODB_URI || "mongodb://127.0.0.1:27017/yes_hotels";
 
 async function seed() {
   console.log("🌱 YES Hotels — Seed Script");

@@ -10,7 +10,7 @@ import {
 } from "./refreshToken.service";
 import { RefreshToken } from "../models/RefreshToken";
 
-const TEST_DB_URI = process.env.MONGODB_URI || "mongodb://localhost:27017/yes_hotels_test";
+const TEST_DB_URI = process.env.MONGODB_URI || "mongodb://127.0.0.1:27017/yes_hotels_test";
 
 describe("refresh token rotation and reuse detection", () => {
   beforeAll(async () => {

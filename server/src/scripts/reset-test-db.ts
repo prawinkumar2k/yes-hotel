@@ -5,7 +5,7 @@ import mongoose from "mongoose";
 // "_test" — it will refuse to run against anything else, specifically to
 // make it impossible for this to be pointed at the real dev/demo database
 // by accident (which is exactly how the earlier incident happened).
-const TEST_URI = process.env.TEST_MONGODB_URI || "mongodb://localhost:27017/yes_hotels_test";
+const TEST_URI = process.env.TEST_MONGODB_URI || "mongodb://127.0.0.1:27017/yes_hotels_test";
 
 async function main() {
   const dbName = new URL(TEST_URI.replace("mongodb://", "http://")).pathname.replace("/", "");

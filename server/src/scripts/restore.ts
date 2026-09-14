@@ -21,7 +21,7 @@ async function main() {
     process.exit(1);
   }
 
-  const liveUri = process.env.MONGODB_URI || "mongodb://localhost:27017/yes_hotels";
+  const liveUri = process.env.MONGODB_URI || "mongodb://127.0.0.1:27017/yes_hotels";
   const liveDbName = new URL(liveUri.replace("mongodb://", "http://").replace("mongodb+srv://", "http://")).pathname.replace("/", "");
 
   await mongoose.connect(targetUri);

@@ -8,7 +8,7 @@ import { Refund, RefundStatus } from "../models/Refund";
 import { WebhookEvent } from "../models/WebhookEvent";
 import { AuditLog } from "../models/AuditLog";
 
-const TEST_DB_URI = process.env.MONGODB_URI || "mongodb://localhost:27017/yes_hotels_test";
+const TEST_DB_URI = process.env.MONGODB_URI || "mongodb://127.0.0.1:27017/yes_hotels_test";
 const WEBHOOK_SECRET = "test_webhook_secret_value";
 
 function mockRes() {

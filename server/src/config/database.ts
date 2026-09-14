@@ -8,7 +8,7 @@ export const connectDB = async () => {
     // depends on for correctness. The plain connection string below (no
     // directConnection) is what actually works against this project's
     // local single-node replica set and must stay this way.
-    const mongoURI = process.env.MONGODB_URI || "mongodb://localhost:27017/yes_hotels";
+    const mongoURI = process.env.MONGODB_URI || "mongodb://127.0.0.1:27017/yes_hotels";
     const conn = await mongoose.connect(mongoURI, {
       maxPoolSize: 20,
       minPoolSize: 2,

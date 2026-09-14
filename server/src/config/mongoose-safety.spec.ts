@@ -3,7 +3,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { installUnscopedWriteGuard } from "./mongoose-safety";
 import { Booking, BookingStatus, PaymentStatus } from "../models/Booking";
 
-const TEST_DB_URI = process.env.MONGODB_URI || "mongodb://localhost:27017/yes_hotels_test";
+const TEST_DB_URI = process.env.MONGODB_URI || "mongodb://127.0.0.1:27017/yes_hotels_test";
 
 beforeAll(async () => {
   if (mongoose.connection.readyState === 0) {

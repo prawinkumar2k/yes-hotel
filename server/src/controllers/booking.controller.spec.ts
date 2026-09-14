@@ -12,7 +12,7 @@ import { AuditLog } from "../models/AuditLog";
 import { Guest } from "../models/Guest";
 import { Coupon, DiscountType } from "../models/Coupon";
 
-const TEST_DB_URI = process.env.MONGODB_URI || "mongodb://localhost:27017/yes_hotels";
+const TEST_DB_URI = process.env.MONGODB_URI || "mongodb://127.0.0.1:27017/yes_hotels";
 
 function mockRes() {
   const res: any = {};

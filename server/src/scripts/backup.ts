@@ -22,7 +22,7 @@ import { runBackup } from "../services/backup-restore.service";
  * Never deletes or modifies anything — read-only against the source DB.
  */
 async function main() {
-  const uri = process.env.MONGODB_URI || "mongodb://localhost:27017/yes_hotels";
+  const uri = process.env.MONGODB_URI || "mongodb://127.0.0.1:27017/yes_hotels";
   const outRoot = process.argv[2] || path.join(process.cwd(), "backups");
 
   await mongoose.connect(uri);

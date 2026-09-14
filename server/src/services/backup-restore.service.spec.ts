@@ -6,7 +6,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import { runBackup, runRestore, LiveDatabaseRestoreRefusedError } from "./backup-restore.service";
 import { Booking, BookingStatus, PaymentStatus } from "../models/Booking";
 
-const TEST_DB_URI = process.env.MONGODB_URI || "mongodb://localhost:27017/yes_hotels_test";
+const TEST_DB_URI = process.env.MONGODB_URI || "mongodb://127.0.0.1:27017/yes_hotels_test";
 let tmpDir: string;
 let restoreConn: mongoose.Connection | null = null;
 

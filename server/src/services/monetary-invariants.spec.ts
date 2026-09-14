@@ -8,7 +8,7 @@ import { Payment, PaymentMethod, PaymentTxStatus } from "../models/Payment";
 import { Refund, RefundStatus } from "../models/Refund";
 import { initiateRefund } from "../controllers/refund.controller";
 
-const TEST_DB_URI = process.env.MONGODB_URI || "mongodb://localhost:27017/yes_hotels_test";
+const TEST_DB_URI = process.env.MONGODB_URI || "mongodb://127.0.0.1:27017/yes_hotels_test";
 
 function mockRes() {
   const res: any = {};
