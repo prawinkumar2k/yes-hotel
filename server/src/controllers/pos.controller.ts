@@ -60,25 +60,35 @@ export const createPosOrder = async (req: Request, res: Response) => {
     // Room charge integration: post to live folio if roomNumber specified and chargeToFolio is true
     if (chargeToFolio && roomNumber) {
       const room = await Room.findOne({ roomNumber });
-      if (room && room.currentBooking) {
-        bookingId = room.currentBooking.toString();
-        const folio = await Folio.findOne({ booking: room.currentBooking, status: FolioStatus.OPEN });
-        if (folio) {
-          folioId = folio._id.toString();
-          await postCharge(
-            {
-              folioId,
-              bookingId,
-              lineType: FolioLineType.RESTAURANT,
-              description: `Restaurant Order ${kotNumber} (Room Service)`,
-              amount: grandTotal,
-              date: new Date(),
-              postedBy: actorId?.toString() || "POS_SYSTEM",
-            },
-            { req }
-          );
-        }
+      if (!room || !room.currentBooking) {
+        return res.status(400).json({
+          success: false,
+          message: `Cannot charge to Room ${roomNumber}: Room is not currently occupied by a checked-in guest.`,
+        });
       }
+
+      bookingId = room.currentBooking.toString();
+      const folio = await Folio.findOne({ booking: room.currentBooking, status: FolioStatus.OPEN });
+      if (!folio) {
+        return res.status(400).json({
+          success: false,
+          message: `Cannot charge to Room ${roomNumber}: Guest has no open folio available for posting.`,
+        });
+      }
+
+      folioId = folio._id.toString();
+      await postCharge(
+        {
+          folioId,
+          bookingId,
+          lineType: FolioLineType.RESTAURANT,
+          description: `Restaurant Order ${kotNumber} (Room Service)`,
+          amount: grandTotal,
+          date: new Date(),
+          postedBy: actorId?.toString() || "POS_SYSTEM",
+        },
+        { req }
+      );
     }
 
     const order = await RestaurantOrder.create({
@@ -101,7 +111,7 @@ export const createPosOrder = async (req: Request, res: Response) => {
       action: "pos.order_created",
       resourceType: "RestaurantOrder",
       resourceId: order._id.toString(),
-      metadata: { kotNumber, grandTotal, chargeToFolio },
+      metadata: { kotNumber, grandTotal, chargeToFolio, folioId },
     });
 
     return res.json({
@@ -122,8 +132,20 @@ export const updateOrderStatus = async (req: Request, res: Response) => {
     const { id } = req.params;
     const { status } = req.body;
 
+    if (!Object.values(OrderStatus).includes(status)) {
+      return res.status(400).json({ success: false, message: `Invalid order status: ${status}` });
+    }
+
     const order = await RestaurantOrder.findByIdAndUpdate(id, { status }, { new: true });
     if (!order) return res.status(404).json({ success: false, message: "Order not found" });
+
+    await createAuditLog({
+      req,
+      action: "pos.order_status_updated",
+      resourceType: "RestaurantOrder",
+      resourceId: order._id.toString(),
+      metadata: { kotNumber: order.kotNumber, newStatus: status },
+    });
 
     return res.json({
       success: true,
@@ -134,3 +156,4 @@ export const updateOrderStatus = async (req: Request, res: Response) => {
     return res.status(400).json({ success: false, message: error.message });
   }
 };
+

@@ -79,3 +79,85 @@ export const createCorporateAccount = async (req: Request, res: Response) => {
     return res.status(400).json({ success: false, message: error.message });
   }
 };
+
+/**
+ * GET /api/corporate-accounts/:id
+ */
+export const getCorporateAccountById = async (req: Request, res: Response) => {
+  try {
+    const account = await CorporateAccount.findById(req.params.id).lean();
+    if (!account) return res.status(404).json({ success: false, message: "Corporate account not found" });
+
+    const availableCredit = Math.max(0, account.creditLimit - account.currentOutstanding);
+    return res.json({ success: true, data: { ...account, availableCredit } });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+/**
+ * PUT /api/corporate-accounts/:id
+ */
+export const updateCorporateAccount = async (req: Request, res: Response) => {
+  try {
+    const { creditLimit, discountPercentage, contactPerson, contactEmail, contactPhone, isActive, notes } = req.body;
+    const account = await CorporateAccount.findById(req.params.id);
+    if (!account) return res.status(404).json({ success: false, message: "Corporate account not found" });
+
+    if (creditLimit !== undefined) account.creditLimit = Number(creditLimit);
+    if (discountPercentage !== undefined) account.discountPercentage = Number(discountPercentage);
+    if (contactPerson) account.contactPerson = contactPerson;
+    if (contactEmail) account.contactEmail = contactEmail;
+    if (contactPhone) account.contactPhone = contactPhone;
+    if (isActive !== undefined) account.isActive = Boolean(isActive);
+    if (notes !== undefined) account.notes = notes;
+
+    await account.save();
+
+    await createAuditLog({
+      req,
+      action: "corporate_account.updated",
+      resourceType: "CorporateAccount",
+      resourceId: account._id.toString(),
+      metadata: { companyCode: account.companyCode, creditLimit: account.creditLimit, discountPercentage: account.discountPercentage },
+    });
+
+    return res.json({ success: true, message: "Corporate account updated", data: account });
+  } catch (error: any) {
+    return res.status(400).json({ success: false, message: error.message });
+  }
+};
+
+/**
+ * POST /api/corporate-accounts/:id/check-credit
+ * Validates whether a proposed billing amount can be charged against corporate credit limit.
+ */
+export const checkCorporateCreditAvailability = async (req: Request, res: Response) => {
+  try {
+    const { amount = 0 } = req.body;
+    const account = await CorporateAccount.findById(req.params.id).lean();
+    if (!account) return res.status(404).json({ success: false, message: "Corporate account not found" });
+    if (!account.isActive) {
+      return res.status(400).json({ success: false, message: "Corporate account is suspended/inactive", allowed: false });
+    }
+
+    const availableCredit = account.creditLimit - account.currentOutstanding;
+    const allowed = availableCredit >= Number(amount);
+
+    return res.json({
+      success: true,
+      data: {
+        companyName: account.companyName,
+        creditLimit: account.creditLimit,
+        currentOutstanding: account.currentOutstanding,
+        availableCredit,
+        requestedAmount: Number(amount),
+        allowed,
+        discountPercentage: account.discountPercentage,
+      },
+    });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+

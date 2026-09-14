@@ -41,6 +41,14 @@ const MENU_ITEMS = [
 
 interface CartItem { name: string; quantity: number; unitPrice: number; specialInstructions?: string; }
 
+const getAuthHeaders = () => {
+  const token = localStorage.getItem("token") || localStorage.getItem("auth_token");
+  return {
+    "Content-Type": "application/json",
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
+};
+
 export default function AdminPOS() {
   const { toast } = useToast();
   const [orders, setOrders] = useState<Order[]>([]);
@@ -59,7 +67,7 @@ export default function AdminPOS() {
     setLoading(true);
     try {
       const url = filterStatus !== "ALL" ? `/api/pos/orders?status=${filterStatus}` : "/api/pos/orders";
-      const res = await fetch(url, { credentials: "include" });
+      const res = await fetch(url, { headers: getAuthHeaders(), credentials: "include" });
       const data = await res.json();
       if (data.success) setOrders(data.data);
     } catch {
@@ -95,7 +103,7 @@ export default function AdminPOS() {
     try {
       const res = await fetch("/api/pos/orders", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: getAuthHeaders(),
         credentials: "include",
         body: JSON.stringify({
           tableNumber: tableNum || undefined,
@@ -130,7 +138,7 @@ export default function AdminPOS() {
     try {
       const res = await fetch(`/api/pos/orders/${order._id}/status`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: getAuthHeaders(),
         credentials: "include",
         body: JSON.stringify({ status: next }),
       });
@@ -143,6 +151,7 @@ export default function AdminPOS() {
       setUpdatingId(null);
     }
   };
+
 
   const displayOrders = filterStatus === "ALL" ? orders : orders.filter(o => o.status === filterStatus);
   const liveKitchenOrders = orders.filter(o => ["KITCHEN_PENDING", "PREPARING", "READY"].includes(o.status));

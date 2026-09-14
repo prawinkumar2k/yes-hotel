@@ -51,6 +51,14 @@ const EMPTY_FORM = {
   totalEstimatedValue: 0, advancePaid: 0, notes: "", specialRequirements: "",
 };
 
+const getAuthHeaders = () => {
+  const token = localStorage.getItem("token") || localStorage.getItem("auth_token");
+  return {
+    "Content-Type": "application/json",
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
+};
+
 export default function AdminGroupBookings() {
   const { toast } = useToast();
   const [groups, setGroups] = useState<GroupBooking[]>([]);
@@ -69,7 +77,7 @@ export default function AdminGroupBookings() {
     setLoading(true);
     try {
       const url = filterStatus !== "ALL" ? `/api/group-bookings?status=${filterStatus}` : "/api/group-bookings";
-      const res = await fetch(url, { credentials: "include" });
+      const res = await fetch(url, { headers: getAuthHeaders(), credentials: "include" });
       const data = await res.json();
       if (data.success) setGroups(data.data);
     } catch {
@@ -87,7 +95,7 @@ export default function AdminGroupBookings() {
     try {
       const res = await fetch("/api/group-bookings", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: getAuthHeaders(),
         credentials: "include",
         body: JSON.stringify(form),
       });
@@ -108,7 +116,7 @@ export default function AdminGroupBookings() {
   const updateStatus = async (id: string, status: GroupStatus) => {
     await fetch(`/api/group-bookings/${id}/status`, {
       method: "PATCH",
-      headers: { "Content-Type": "application/json" },
+      headers: getAuthHeaders(),
       credentials: "include",
       body: JSON.stringify({ status }),
     });
@@ -121,7 +129,7 @@ export default function AdminGroupBookings() {
     try {
       const res = await fetch(`/api/group-bookings/${advanceModal.id}/advance`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: getAuthHeaders(),
         credentials: "include",
         body: JSON.stringify({ amount: Number(advanceAmt) }),
       });
@@ -136,6 +144,7 @@ export default function AdminGroupBookings() {
       setAdvanceSaving(false);
     }
   };
+
 
   const filtered = groups.filter(g =>
     g.groupName.toLowerCase().includes(search.toLowerCase()) ||

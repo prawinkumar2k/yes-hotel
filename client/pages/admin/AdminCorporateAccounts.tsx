@@ -30,6 +30,14 @@ const EMPTY_FORM = {
   notes: "",
 };
 
+const getAuthHeaders = () => {
+  const token = localStorage.getItem("token") || localStorage.getItem("auth_token");
+  return {
+    "Content-Type": "application/json",
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
+};
+
 export default function AdminCorporateAccounts() {
   const { toast } = useToast();
   const [accounts, setAccounts] = useState<CorporateAccount[]>([]);
@@ -43,7 +51,7 @@ export default function AdminCorporateAccounts() {
   const fetchAccounts = async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/corporate-accounts", { credentials: "include" });
+      const res = await fetch("/api/corporate-accounts", { headers: getAuthHeaders(), credentials: "include" });
       const data = await res.json();
       if (data.success) setAccounts(data.data);
     } catch {
@@ -61,10 +69,11 @@ export default function AdminCorporateAccounts() {
     try {
       const res = await fetch("/api/corporate-accounts", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: getAuthHeaders(),
         credentials: "include",
         body: JSON.stringify(form),
       });
+
       const data = await res.json();
       if (data.success) {
         toast({ title: "Account Registered", description: `${form.companyName} added successfully` });
