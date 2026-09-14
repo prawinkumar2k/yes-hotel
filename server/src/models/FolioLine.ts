@@ -128,4 +128,11 @@ FolioLineSchema.index({ businessDate: 1, lineType: 1 });
 // GST reporting
 FolioLineSchema.index({ booking: 1, lineType: 1 });
 
+// ── INDEXES ──
+FolioLineSchema.index({ folio: 1, createdAt: -1 });
+// Phase 24/26 Analytics & Night Audit indexes
+FolioLineSchema.index({ direction: 1, createdAt: -1 });
+FolioLineSchema.index({ lineType: 1, direction: 1, createdAt: -1 });
+FolioLineSchema.index({ businessDate: 1, lineType: 1 });
+
 export const FolioLine = mongoose.model<IFolioLine>("FolioLine", FolioLineSchema);
