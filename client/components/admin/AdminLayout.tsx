@@ -5,7 +5,7 @@ import {
   LayoutDashboard, CalendarDays, BedDouble, Users, CreditCard,
   BarChart3, Settings, Home, Wrench, LogOut, MenuIcon, X, Mail,
   Image, HelpCircle, MessageSquare, FileText, Star, Ticket, RotateCcw, ScrollText, Moon, DollarSign, Tag, Building2, UtensilsCrossed,
-  Package, Truck, ShoppingBag, Landmark,
+  Package, Truck, ShoppingBag, Landmark, AlertCircle
 } from "lucide-react";
 
 const ADMIN_ROLES = ["ADMIN", "MANAGER", "RECEPTIONIST"];
@@ -43,6 +43,7 @@ const NAV_ITEMS = [
   { label: "Reviews", to: "/admin/reviews", icon: Star, roles: ["ADMIN", "MANAGER"] },
   { label: "Content", to: "/admin/content", icon: FileText, roles: ["ADMIN"] },
   { label: "Contact Messages", to: "/admin/contact-messages", icon: Mail, roles: ["ADMIN", "MANAGER"] },
+  { label: "Complaints", to: "/admin/complaints", icon: AlertCircle, roles: ["ADMIN", "MANAGER"] },
   { label: "Reports", to: "/admin/reports", icon: BarChart3, roles: ["ADMIN", "MANAGER"] },
   { label: "Night Audit", to: "/admin/night-audit", icon: Moon, roles: ["ADMIN", "MANAGER"] },
   { label: "Corporate Accounts", to: "/admin/corporate-accounts", icon: Building2, roles: ["ADMIN", "MANAGER"] },

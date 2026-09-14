@@ -227,6 +227,9 @@ export default function AdminGuests() {
                   <p className="text-gray-500">{viewData.guest.email} • {viewData.guest.phone}</p>
                 </div>
                 <div className="flex gap-2">
+                  <Badge className="bg-purple-100 text-purple-800 border-purple-200">
+                    {viewData.guest.loyaltyTier}
+                  </Badge>
                   {viewData.guest.isVip && <Badge variant="outline" className="bg-yellow-50 text-yellow-700">VIP</Badge>}
                   {viewData.guest.isBlocked && <Badge variant="destructive">Blocked</Badge>}
                 </div>
@@ -240,6 +243,10 @@ export default function AdminGuests() {
                 <div className="bg-gray-50 p-4 rounded-lg">
                   <p className="text-xs text-gray-500 uppercase">Total Spend</p>
                   <p className="text-xl font-bold">₹{viewData.guest.totalSpend}</p>
+                </div>
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <p className="text-xs text-gray-500 uppercase">Loyalty Points</p>
+                  <p className="text-xl font-bold text-purple-700">{viewData.guest.loyaltyPoints}</p>
                 </div>
                 <div className="bg-gray-50 p-4 rounded-lg">
                   <p className="text-xs text-gray-500 uppercase">Last Stay</p>
@@ -277,6 +284,27 @@ export default function AdminGuests() {
                   </div>
                 )}
               </div>
+
+              {viewData.complaints?.length > 0 && (
+                <div>
+                  <h3 className="font-bold mb-3 border-b pb-2">Complaints History</h3>
+                  <div className="space-y-3">
+                    {viewData.complaints.map((complaint: any) => (
+                      <div key={complaint._id} className="flex justify-between items-center border border-red-100 bg-red-50/50 p-3 rounded">
+                        <div>
+                          <div className="font-semibold">{complaint.issue}</div>
+                          <div className="text-xs text-gray-500">
+                            {format(new Date(complaint.reportedAt), 'MMM d, yyyy')} • {complaint.department}
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <Badge variant={complaint.status === "RESOLVED" ? "secondary" : "destructive"}>{complaint.status}</Badge>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </DialogContent>

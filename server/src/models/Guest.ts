@@ -21,6 +21,8 @@ export interface IGuest extends Document {
   lastStay?: Date;
   isVip: boolean;
   isBlocked: boolean;
+  loyaltyPoints: number;
+  loyaltyTier: "MEMBER" | "SILVER" | "GOLD" | "PLATINUM";
 }
 
 const GuestSchema = new Schema<IGuest>(
@@ -45,6 +47,8 @@ const GuestSchema = new Schema<IGuest>(
     lastStay: { type: Date },
     isVip: { type: Boolean, default: false },
     isBlocked: { type: Boolean, default: false },
+    loyaltyPoints: { type: Number, default: 0 },
+    loyaltyTier: { type: String, enum: ["MEMBER", "SILVER", "GOLD", "PLATINUM"], default: "MEMBER" },
   },
   { timestamps: true }
 );

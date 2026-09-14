@@ -73,6 +73,7 @@ const AdminInventory = lazy(() => import("./pages/admin/AdminInventory"));
 const AdminVendors = lazy(() => import("./pages/admin/AdminVendors"));
 const AdminProcurement = lazy(() => import("./pages/admin/AdminProcurement"));
 const AdminAccounting = lazy(() => import("./pages/admin/AdminAccounting"));
+const AdminComplaints = lazy(() => import("./pages/admin/AdminComplaints"));
 
 
 
@@ -177,6 +178,7 @@ function App() {
                 <Route path="/admin/testimonials" element={<ProtectedRoute roles={["ADMIN","MANAGER"]}><AdminLayout title="Testimonials"><AdminTestimonials /></AdminLayout></ProtectedRoute>} />
                 <Route path="/admin/reviews" element={<ProtectedRoute roles={["ADMIN","MANAGER"]}><AdminLayout title="Reviews"><AdminReviews /></AdminLayout></ProtectedRoute>} />
                 <Route path="/admin/contact-messages" element={<ProtectedRoute roles={["ADMIN","MANAGER"]}><AdminLayout title="Contact Messages"><AdminContactMessages /></AdminLayout></ProtectedRoute>} />
+                <Route path="/admin/complaints" element={<ProtectedRoute roles={["ADMIN","MANAGER"]}><AdminLayout title="Complaints & Service Recovery"><AdminComplaints /></AdminLayout></ProtectedRoute>} />
                 <Route path="/admin/reports" element={<ProtectedRoute roles={["ADMIN","MANAGER"]}><AdminLayout title="Reports"><AdminReports /></AdminLayout></ProtectedRoute>} />
                 <Route path="/admin/night-audit" element={<ProtectedRoute roles={["ADMIN","MANAGER"]}><AdminLayout title="Automated Night Audit & Business Date Engine"><AdminNightAudit /></AdminLayout></ProtectedRoute>} />
                 <Route path="/admin/analytics" element={<Navigate to="/admin/reports" replace />} />

@@ -1,6 +1,8 @@
 import { Request, Response } from "express";
 import { Guest } from "../models/Guest";
 import { Booking } from "../models/Booking";
+import { Complaint } from "../models/Complaint";
+import { LoyaltyTransaction } from "../models/LoyaltyTransaction";
 import { z } from "zod";
 
 const updateGuestSchema = z.object({
@@ -67,9 +69,19 @@ export const getGuestById = async (req: Request, res: Response) => {
       .sort({ createdAt: -1 })
       .limit(10);
 
+    // Fetch complaints
+    const complaints = await Complaint.find({ guestId: guest._id })
+      .sort({ createdAt: -1 })
+      .limit(10);
+
+    // Fetch loyalty transactions
+    const loyaltyTransactions = await LoyaltyTransaction.find({ guestId: guest._id })
+      .sort({ createdAt: -1 })
+      .limit(10);
+
     return res.status(200).json({ 
       success: true, 
-      data: { guest, bookings } 
+      data: { guest, bookings, complaints, loyaltyTransactions } 
     });
   } catch (error: any) {
     return res.status(500).json({ success: false, message: error.message });
