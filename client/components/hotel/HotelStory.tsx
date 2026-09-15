@@ -1,121 +1,88 @@
-import { useEffect, useRef } from "react";
-import { gsap, ScrollTrigger } from "@/lib/gsap";
-import { useReducedMotion } from "@/hooks/useReducedMotion";
+import React from "react";
+import { Sparkles, ArrowUpRight } from "lucide-react";
+import { Link } from "react-router-dom";
 
-const PANELS = [
-  {
-    kicker: "The Hotel",
-    title: "More than\na stay.",
-    copy: "Every detail, from the architecture to the last cup of coffee, is considered on purpose.",
-    image: "https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1600&q=80",
-  },
-  {
-    kicker: "01 — Architecture",
-    title: "Built around\nlight.",
-    copy: "Open floor plans and floor-to-ceiling glass keep every space connected to the sky outside.",
-    image: "https://images.unsplash.com/photo-1445019980597-93fa8acb246c?auto=format&fit=crop&w=1600&q=80",
-  },
-  {
-    kicker: "02 — Dining",
-    title: "Spaces for\nthe table.",
-    copy: "Dining rooms designed for lingering — meals, meetings, and the conversations in between.",
-    image: "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=1600&q=80",
-  },
-  {
-    kicker: "03 — Wellness",
-    title: "Room to\nslow down.",
-    copy: "Quiet corners and unhurried mornings — comfort built into the pace of the place, not just the amenities.",
-    image: "https://images.unsplash.com/photo-1591088398332-8a7791972843?auto=format&fit=crop&w=1600&q=80",
-  },
-  {
-    kicker: "04 — Rooms",
-    title: "Comfort,\nconsidered.",
-    copy: "Thoughtfully appointed rooms designed for deep rest, whatever brought you here.",
-    image: "https://images.unsplash.com/photo-1590490360182-c33d57733427?auto=format&fit=crop&w=1600&q=80",
-  },
-  {
-    kicker: "05 — Experiences",
-    title: "Warm\nhospitality.",
-    copy: "Attentive service that feels personal — and a reservation experience as seamless as the stay itself.",
-    image: "https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?auto=format&fit=crop&w=1600&q=80",
-  },
-];
-
-/**
- * Vertical scroll drives horizontal movement across full-bleed editorial
- * panels — replaces the previous 6-item icon grid. A real GSAP horizontal
- * pan (track translateX scrubbed to scroll progress) while the section is
- * pinned, not six cards in a row. Falls back to a plain vertical stack
- * under prefers-reduced-motion.
- */
 export default function HotelStory() {
-  const sectionRef = useRef<HTMLDivElement>(null);
-  const trackRef = useRef<HTMLDivElement>(null);
-  const reducedMotion = useReducedMotion();
-
-  useEffect(() => {
-    if (reducedMotion || !sectionRef.current || !trackRef.current) return;
-
-    const ctx = gsap.context(() => {
-      const track = trackRef.current!;
-      const getScrollAmount = () => track.scrollWidth - window.innerWidth;
-
-      const tween = gsap.to(track, {
-        x: () => -getScrollAmount(),
-        ease: "none",
-        scrollTrigger: {
-          trigger: sectionRef.current,
-          start: "top top",
-          end: () => `+=${getScrollAmount()}`,
-          scrub: 1,
-          pin: true,
-          invalidateOnRefresh: true,
-        },
-      });
-
-      return () => tween.scrollTrigger?.kill();
-    }, sectionRef);
-
-    return () => ctx.revert();
-  }, [reducedMotion]);
-
-  if (reducedMotion) {
-    return (
-      <section className="bg-hotel-black py-24 sm:py-32">
-        <div className="space-y-1">
-          {PANELS.map((p) => (
-            <div key={p.kicker} className="grid grid-cols-1 items-center gap-8 px-6 py-16 lg:grid-cols-2 lg:px-16">
-              <img src={p.image} alt={p.kicker} className="aspect-[4/3] w-full object-cover" />
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.3em] text-hotel-gold">{p.kicker}</p>
-                <h3 className="mt-4 whitespace-pre-line font-serif text-4xl leading-[1.05] text-hotel-white sm:text-5xl">
-                  {p.title}
-                </h3>
-                <p className="mt-5 max-w-md text-base text-hotel-white/70">{p.copy}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
-    );
-  }
-
   return (
-    <section ref={sectionRef} className="relative h-screen overflow-hidden bg-hotel-black">
-      <div ref={trackRef} className="flex h-full w-max">
-        {PANELS.map((p) => (
-          <div key={p.kicker} className="relative flex h-full w-screen shrink-0 items-center overflow-hidden">
-            <img src={p.image} alt={p.kicker} className="absolute inset-0 h-full w-full object-cover" />
-            <div className="absolute inset-0 bg-gradient-to-r from-hotel-black/80 via-hotel-black/30 to-hotel-black/10" />
-            <div className="relative z-10 max-w-xl px-8 sm:px-16">
-              <p className="text-xs font-semibold uppercase tracking-[0.35em] text-hotel-gold">{p.kicker}</p>
-              <h3 className="mt-6 whitespace-pre-line font-serif text-5xl leading-[1.02] text-hotel-white sm:text-7xl">
-                {p.title}
-              </h3>
-              <p className="mt-6 max-w-sm text-base text-hotel-white/70 sm:text-lg">{p.copy}</p>
+    <section id="about" className="relative py-28 bg-[#0b0b0b] text-white overflow-hidden">
+      {/* Background Subtle Atmosphere Haze */}
+      <div className="absolute inset-0 bg-radial-vignette opacity-50 pointer-events-none" />
+
+      <div className="container mx-auto px-4 md:px-8 max-w-[1400px] relative z-10 space-y-20">
+        {/* Section Header */}
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-[#262930] pb-8">
+          <div className="space-y-3">
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#c9a227]/10 border border-[#c9a227]/30 text-[#e5c76b] text-xs font-mono font-bold tracking-widest uppercase">
+              <Sparkles size={13} className="text-[#c9a227]" /> EDITORIAL ARCHITECTURE & PHILOSOPHY
+            </div>
+            <h2 className="font-serif text-4xl sm:text-6xl text-white font-normal leading-tight">
+              A Place to <span className="text-[#c9a227] italic font-serif">Pause</span> & <span className="font-bold">Reconnect</span>.
+            </h2>
+          </div>
+
+          <p className="max-w-md text-xs sm:text-sm text-gray-400 font-light leading-relaxed">
+            YES HOTELS is designed as a sanctuary where time moves at your pace. Every line of marble, light axis, and custom amenity is tailored for your calm.
+          </p>
+        </div>
+
+        {/* Asymmetric Composition Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+          {/* Main 70% Viewport Image Container with Clip-Path */}
+          <div className="lg:col-span-7 relative group">
+            <div className="relative rounded-3xl overflow-hidden border border-[#262930] shadow-2xl aspect-[16/10]">
+              <img
+                src="https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1800&q=80"
+                alt="YES HOTELS Architectural Pool at Dusk"
+                className="w-full h-full object-cover filter brightness-90 group-hover:scale-105 transition-transform duration-700"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-[#0b0b0b] via-transparent to-transparent" />
+            </div>
+
+            {/* Overlapping Circular Crop Detail Card */}
+            <div className="absolute -bottom-8 -right-4 sm:-right-8 w-44 sm:w-56 h-44 sm:h-56 rounded-full border-4 border-[#0b0b0b] shadow-2xl overflow-hidden hidden sm:block group-hover:scale-110 transition-transform duration-500">
+              <img
+                src="https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?auto=format&fit=crop&w=800&q=80"
+                alt="Luxury Suite Balcony Detail"
+                className="w-full h-full object-cover filter brightness-90"
+              />
             </div>
           </div>
-        ))}
+
+          {/* Overlapping Editorial Content Column */}
+          <div className="lg:col-span-5 space-y-6 lg:pl-6">
+            <span className="font-mono text-xs text-[#c9a227] tracking-[0.3em] uppercase block">
+              PHILOSOPHY 01 · TIME WELL SPENT
+            </span>
+
+            <h3 className="font-serif text-3xl sm:text-4xl text-white font-normal leading-tight">
+              Spaces Built Around <span className="italic text-[#c9a227]">Natural Light</span> & Serenity.
+            </h3>
+
+            <p className="text-xs sm:text-sm text-gray-300 font-light leading-relaxed">
+              From open floor plans that seamlessly transition into coastal gardens to floor-to-ceiling glass suites, our environments foster a deep feeling of openness.
+            </p>
+
+            <div className="pt-4 grid grid-cols-2 gap-4 border-t border-[#262930] font-mono text-xs">
+              <div>
+                <span className="text-[#c9a227] font-bold block text-lg">100%</span>
+                <span className="text-gray-400">Custom Architectural Design</span>
+              </div>
+              <div>
+                <span className="text-[#c9a227] font-bold block text-lg">24 / 7</span>
+                <span className="text-gray-400">Concierge & Butler Service</span>
+              </div>
+            </div>
+
+            <div className="pt-2">
+              <Link
+                to="/about"
+                className="inline-flex items-center gap-2 px-6 py-3 bg-[#121316] hover:bg-[#1a1d24] text-[#e5c76b] font-mono font-bold text-xs uppercase tracking-widest rounded-xl border border-[#c9a227]/40 shadow-lg transition"
+              >
+                Read Our Story <ArrowUpRight size={14} />
+              </Link>
+            </div>
+          </div>
+        </div>
       </div>
     </section>
   );

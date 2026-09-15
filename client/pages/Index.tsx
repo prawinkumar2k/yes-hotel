@@ -1,32 +1,28 @@
+import React from "react";
 import Navbar from "@/components/hotel/Navbar";
 import Hero from "@/components/hotel/Hero";
-import About from "@/components/hotel/About";
-import Stats from "@/components/hotel/Stats";
-import Rooms from "@/components/hotel/Rooms";
-import YesExperience from "@/components/hotel/YesExperience";
 import HotelStory from "@/components/hotel/HotelStory";
-import WhyChooseUs from "@/components/hotel/WhyChooseUs";
+import YesExperience from "@/components/hotel/YesExperience";
+import HorizontalStory from "@/components/hotel/HorizontalStory";
+import Rooms from "@/components/hotel/Rooms";
 import Gallery from "@/components/hotel/Gallery";
-import Testimonials from "@/components/hotel/Testimonials";
-import FeaturedBooking from "@/components/hotel/FeaturedBooking";
 import Footer from "@/components/hotel/Footer";
-
+import CursorFollower from "@/components/hotel/CursorFollower";
+import ScrollProgress from "@/components/hotel/ScrollProgress";
 
 export default function Index() {
   return (
-    <div className="min-h-screen bg-hotel-ivory">
-      <Navbar />
-      <main>
+    <div className="min-h-screen bg-[#0b0b0b] text-white selection:bg-[#c9a227] selection:text-black">
+      <ScrollProgress />
+      <CursorFollower />
+      <Navbar transparent={true} />
+      <main className="overflow-hidden">
         <Hero />
-        <About />
-        <Stats />
-        <Rooms />
-        <YesExperience />
-        <WhyChooseUs />
         <HotelStory />
+        <YesExperience />
+        <HorizontalStory />
+        <Rooms />
         <Gallery />
-        <Testimonials />
-        <FeaturedBooking />
       </main>
       <Footer />
     </div>

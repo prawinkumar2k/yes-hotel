@@ -5,17 +5,6 @@ import { useReducedMotion } from "@/hooks/useReducedMotion";
 
 const NON_PUBLIC_PREFIXES = ["/admin", "/staff", "/customer", "/login", "/register", "/forgot-password", "/reset-password"];
 
-/**
- * A small custom cursor that smoothly interpolates toward the real pointer
- * (gsap.quickTo, not 1:1 tracking — that lag is what reads as "premium"
- * rather than "a div stuck to your mouse"). Expands and shows a label when
- * hovering any element carrying `data-cursor="LABEL"` (e.g. gallery images
- * -> "VIEW", room links -> "EXPLORE", the booking CTA -> "BOOK").
- *
- * Disabled entirely — not just visually hidden, the whole effect never
- * initializes — on: any non-public route, touch/coarse-pointer devices
- * (matchMedia, not user-agent sniffing), and prefers-reduced-motion.
- */
 export default function CursorFollower() {
   const location = useLocation();
   const reducedMotion = useReducedMotion();
@@ -29,8 +18,8 @@ export default function CursorFollower() {
     if (typeof window === "undefined" || !window.matchMedia("(pointer: fine)").matches) return;
     if (!dotRef.current) return;
 
-    const xTo = gsap.quickTo(dotRef.current, "x", { duration: 0.4, ease: "power3.out" });
-    const yTo = gsap.quickTo(dotRef.current, "y", { duration: 0.4, ease: "power3.out" });
+    const xTo = gsap.quickTo(dotRef.current, "x", { duration: 0.35, ease: "power3.out" });
+    const yTo = gsap.quickTo(dotRef.current, "y", { duration: 0.35, ease: "power3.out" });
 
     const onMove = (e: MouseEvent) => {
       xTo(e.clientX);
@@ -59,15 +48,16 @@ export default function CursorFollower() {
   return (
     <div
       ref={dotRef}
-      className="pointer-events-none fixed left-0 top-0 z-[70] hidden -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full mix-blend-difference transition-[width,height,opacity] duration-300 md:flex"
+      className="pointer-events-none fixed left-0 top-0 z-[100] hidden -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full transition-[width,height,opacity,background-color] duration-300 md:flex border border-[#c9a227]/50 shadow-lg"
       style={{
-        width: label ? 72 : 10,
-        height: label ? 72 : 10,
+        width: label ? 80 : 12,
+        height: label ? 80 : 12,
         opacity: visible ? 1 : 0,
-        backgroundColor: "#ffffff",
+        backgroundColor: label ? "#c9a227" : "#e5c76b",
+        color: "#0b0b0b",
       }}
     >
-      {label && <span className="text-[9px] font-semibold uppercase tracking-widest text-hotel-black">{label}</span>}
+      {label && <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-black">{label}</span>}
     </div>
   );
 }

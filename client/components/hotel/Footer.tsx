@@ -1,112 +1,90 @@
+import React from "react";
 import { Link } from "react-router-dom";
 import { useHotelSettings } from "@/hooks/usePublicData";
+import { Sparkles, ArrowRight, BedDouble } from "lucide-react";
 
 const FALLBACK = {
-  hotelName: "YES Hotels",
+  hotelName: "YES HOTELS",
   description:
-    "A signature hospitality brand built around thoughtful rooms, warm service and moments that stay with you long after checkout.",
-  email: "hello@yeshotels.com",
-  phone: "+1 (800) YES-STAY",
-  address: "123 Grand Avenue, Prestige District, NY 10001",
-  instagramUrl: undefined as string | undefined,
-  facebookUrl: undefined as string | undefined,
-  youtubeUrl: undefined as string | undefined,
+    "A signature luxury hospitality brand crafted for spatial peace, bespoke service, and memories that stay long after checkout.",
+  email: "reservations@yeshotels.com",
+  phone: "+91 98765 43210",
+  address: "Luxury Beach Promenade, Suite 100, Goa 403001",
 };
 
 export default function Footer() {
   const { data } = useHotelSettings();
   const settings = data ?? FALLBACK;
 
-  const socials = [
-    { label: "Instagram", href: settings.instagramUrl },
-    { label: "Facebook", href: settings.facebookUrl },
-    { label: "YouTube", href: settings.youtubeUrl },
-  ].filter((s) => s.href);
-
   return (
-    <footer className="bg-hotel-black border-t border-hotel-white/10">
-      <div className="container py-20">
-        <div className="grid grid-cols-1 gap-14 sm:grid-cols-2 lg:grid-cols-4">
-          {/* Brand */}
-          <div className="lg:col-span-2">
-            <Link
-              to="/"
-              className="font-serif text-2xl font-semibold tracking-[0.08em] text-hotel-white"
-            >
-              {settings.hotelName?.split(" ")[0] ?? "YES"}{" "}
-              <span className="text-hotel-gold">
-                {settings.hotelName?.split(" ").slice(1).join(" ") || "HOTELS"}
-              </span>
-            </Link>
-            <p className="mt-5 max-w-sm text-sm leading-relaxed text-hotel-white/55">
-              {settings.description ?? FALLBACK.description}
-            </p>
-            {socials.length > 0 && (
-              <div className="mt-8 flex gap-5">
-                {socials.map((s) => (
-                  <a
-                    key={s.label}
-                    href={s.href}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-xs font-medium uppercase tracking-[0.18em] text-hotel-white/50 hover:text-hotel-gold transition-colors"
-                  >
-                    {s.label}
-                  </a>
-                ))}
-              </div>
-            )}
+    <footer className="bg-[#0b0b0b] text-white border-t border-[#262930] pt-24 pb-12 relative overflow-hidden">
+      {/* Background Vignette */}
+      <div className="absolute inset-0 bg-radial-vignette opacity-60 pointer-events-none" />
+
+      <div className="container mx-auto px-4 md:px-8 max-w-[1400px] relative z-10 space-y-20">
+        {/* Massive Film-End Typography Banner */}
+        <div className="text-center space-y-6 max-w-5xl mx-auto border-b border-[#262930] pb-20">
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#c9a227]/10 border border-[#c9a227]/30 text-[#e5c76b] text-xs font-mono font-bold tracking-widest uppercase">
+            <Sparkles size={13} className="text-[#c9a227]" /> THE END OF ORDINARY
           </div>
 
-          {/* Quick Links */}
-          <div>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-hotel-gold">
-              Explore
+          <h2 className="font-serif text-5xl sm:text-7xl md:text-8xl font-normal tracking-tight text-white leading-none">
+            SAY YES TO <br />
+            <span className="text-[#c9a227] italic font-serif">TIME WELL SPENT.</span>
+          </h2>
+
+          <div className="pt-6">
+            <Link
+              to="/search"
+              className="inline-flex items-center gap-3 px-8 py-4 bg-[#c9a227] hover:bg-[#e5c76b] text-black font-serif font-bold text-xs uppercase tracking-widest rounded-2xl shadow-2xl transition hover:scale-105"
+            >
+              Reserve Your Stay <ArrowRight size={16} />
+            </Link>
+          </div>
+        </div>
+
+        {/* Links & Information Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-12 font-mono text-xs">
+          {/* Brand Info */}
+          <div className="md:col-span-2 space-y-4">
+            <Link to="/" className="font-serif text-2xl font-bold tracking-wider text-white flex items-center gap-2">
+              <BedDouble className="text-[#c9a227]" size={20} />
+              YES <span className="text-[#c9a227] italic font-normal">HOTELS</span>
+            </Link>
+            <p className="text-gray-400 font-sans font-light text-sm max-w-md leading-relaxed">
+              {settings.description ?? FALLBACK.description}
             </p>
-            <ul className="mt-6 space-y-4">
-              {[
-                { label: "Home", to: "/" },
-                { label: "About Us", to: "/about" },
-                { label: "Rooms", to: "/rooms" },
-                { label: "Gallery", to: "/gallery" },
-                { label: "Book a Stay", to: "/search" },
-              ].map((item) => (
-                <li key={item.label}>
-                  <Link
-                    to={item.to}
-                    className="text-sm text-hotel-white/60 transition-colors hover:text-hotel-white"
-                  >
-                    {item.label}
-                  </Link>
-                </li>
-              ))}
+          </div>
+
+          {/* Quick Navigation */}
+          <div className="space-y-4">
+            <span className="text-[#c9a227] font-bold uppercase tracking-widest block">Navigation</span>
+            <ul className="space-y-2 text-gray-300 font-sans text-sm">
+              <li><Link to="/" className="hover:text-[#c9a227] transition">Home</Link></li>
+              <li><Link to="/about" className="hover:text-[#c9a227] transition">About Us</Link></li>
+              <li><Link to="/rooms" className="hover:text-[#c9a227] transition">Suites & Villas</Link></li>
+              <li><Link to="/gallery" className="hover:text-[#c9a227] transition">Visual Gallery</Link></li>
+              <li><Link to="/contact" className="hover:text-[#c9a227] transition">Contact Concierge</Link></li>
             </ul>
           </div>
 
-          {/* Contact */}
-          <div>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-hotel-gold">
-              Contact
-            </p>
-            <ul className="mt-6 space-y-4 text-sm text-hotel-white/60">
+          {/* Contact Details */}
+          <div className="space-y-4">
+            <span className="text-[#c9a227] font-bold uppercase tracking-widest block">Concierge Desk</span>
+            <ul className="space-y-2 text-gray-300 font-sans text-sm">
               <li>{settings.email ?? FALLBACK.email}</li>
               <li>{settings.phone ?? FALLBACK.phone}</li>
-              <li className="leading-relaxed">{settings.address ?? FALLBACK.address}</li>
+              <li className="text-gray-400 text-xs">{settings.address ?? FALLBACK.address}</li>
             </ul>
           </div>
         </div>
 
-        <div className="mt-16 flex flex-col items-center justify-between gap-4 border-t border-hotel-white/10 pt-10 sm:flex-row">
-          <p className="text-xs text-hotel-white/50">
-            © {new Date().getFullYear()} {settings.hotelName ?? FALLBACK.hotelName}. All rights reserved.
-          </p>
-          <div className="flex gap-8">
-            <Link to="/privacy-policy" className="text-xs text-hotel-white/50 hover:text-hotel-white/80 transition-colors">
-              Privacy Policy
-            </Link>
-            <Link to="/terms-and-conditions" className="text-xs text-hotel-white/50 hover:text-hotel-white/80 transition-colors">
-              Terms of Service
-            </Link>
+        {/* Copyright Bar */}
+        <div className="border-t border-[#262930] pt-8 flex flex-col sm:flex-row items-center justify-between text-xs font-mono text-gray-500 gap-4">
+          <p>© {new Date().getFullYear()} YES HOTELS LUXURY SUITES. All rights reserved.</p>
+          <div className="flex gap-6">
+            <Link to="/privacy-policy" className="hover:text-gray-300 transition">Privacy Policy</Link>
+            <Link to="/terms-and-conditions" className="hover:text-gray-300 transition">Terms of Service</Link>
           </div>
         </div>
       </div>

@@ -1,20 +1,8 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Menu, X } from "lucide-react";
+import { Menu, X, Sparkles, BedDouble } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { GoldButton } from "./HotelButtons";
 
-// `hash` sections only exist on the homepage (see client/pages/Index.tsx —
-// Hero=#home, About=#about, Rooms=#rooms, Gallery=#gallery). FAQ and
-// Contact have NEVER had homepage sections at all; they only exist as their
-// own standalone pages. Previously every link here was a bare `href="#x"`
-// regardless of which page you were on — that only ever worked by accident
-// on the homepage for the 4 links that happen to have a matching id, and
-// did nothing on every other page (clicking "Gallery" from /rooms just
-// appended "#gallery" to the URL with nothing to scroll to). Fixed by
-// making every link location-aware: an in-page hash scroll on the homepage
-// where the section actually exists, a real route navigation everywhere
-// else (and for FAQ/Contact, always a route navigation, homepage included).
 const NAV_LINKS: { label: string; hash?: string; route: string }[] = [
   { label: "Home", hash: "home", route: "/" },
   { label: "About Us", hash: "about", route: "/about" },
@@ -25,11 +13,6 @@ const NAV_LINKS: { label: string; hash?: string; route: string }[] = [
 ];
 
 export default function Navbar({ transparent = true }: { transparent?: boolean } = {}) {
-  // Three real scroll states, not a binary toggle: transparent at the very
-  // top of a hero page, a condensed solid bar once scrolling begins, and a
-  // more refined floating/blurred state once scrolled well past the hero —
-  // each with its own height, blur and logo scale, all cross-faded via the
-  // existing transition-all rather than snapping between two looks.
   const [scrollY, setScrollY] = useState(0);
   const [open, setOpen] = useState(false);
   const location = useLocation();
@@ -49,23 +32,8 @@ export default function Navbar({ transparent = true }: { transparent?: boolean }
     };
   }, [open]);
 
-  // `transparent` (default true) is only correct on pages that render a
-  // dark, full-bleed hero image directly under the nav (currently just the
-  // homepage) — the unscrolled bg-transparent + white-text look depends on
-  // that dark backdrop for contrast. Every interior page (Rooms, Gallery,
-  // FAQ, Contact, Search, booking flow, etc.) has a light page background
-  // instead, so white nav text at scrollY=0 was real, measured, failing
-  // WCAG contrast (as low as 1.07:1) — not a hero-image edge case, the
-  // default state on every one of those pages. `transparent={false}` opts
-  // into the always-solid dark bar those pages actually need.
-  const condensed = !transparent || scrollY > 24;
-  const floating = scrollY > 220;
-  const solid = condensed;
-
-  const navClasses =
-    "gold-underline text-xs font-medium uppercase tracking-[0.18em] text-hotel-white/85 transition-colors hover:text-hotel-white";
-  const mobileNavClasses =
-    "border-b border-hotel-white/10 py-4 text-sm font-medium uppercase tracking-[0.18em] text-hotel-white/90";
+  const scrolled = scrollY > 30;
+  const floating = scrollY > 200;
 
   function renderLink(link: (typeof NAV_LINKS)[number], className: string, onClick?: () => void) {
     if (onHomepage && link.hash) {
@@ -82,89 +50,86 @@ export default function Navbar({ transparent = true }: { transparent?: boolean }
     );
   }
 
-  const bookButtonClasses = cn(
-    "inline-flex items-center justify-center gap-2 whitespace-nowrap bg-hotel-gold px-6 py-3 text-[11px] font-semibold uppercase tracking-[0.2em] text-hotel-black transition-all duration-300 hover:bg-hotel-champagne active:scale-[0.98]",
-  );
-
   return (
     <header
       className={cn(
         "fixed inset-x-0 top-0 z-50 transition-all duration-500 ease-out",
         floating
-          ? "bg-hotel-black/75 py-2 sm:py-3 shadow-[0_8px_40px_rgba(0,0,0,0.5)] backdrop-blur-md"
-          : solid
-            ? "bg-hotel-black/95 py-3 sm:py-4 shadow-[0_4px_30px_rgba(0,0,0,0.4)] backdrop-blur-sm"
-            : "bg-transparent py-4 sm:py-6",
+          ? "bg-[#121316]/90 py-3 shadow-[0_15px_50px_rgba(0,0,0,0.8)] backdrop-blur-xl border-b border-[#c9a227]/30"
+          : scrolled
+          ? "bg-[#0b0b0b]/95 py-4 backdrop-blur-md border-b border-[#262930]"
+          : "bg-gradient-to-b from-[#0b0b0b]/80 to-transparent py-6"
       )}
     >
-      <div className="container flex items-center justify-between">
-        {onHomepage ? (
-          <a
-            href="#home"
-            className={cn(
-              "font-serif text-xl sm:text-2xl font-semibold tracking-[0.08em] text-hotel-white transition-transform duration-500 ease-out",
-              condensed && "scale-[0.92]",
-            )}
-          >
-            YES <span className="text-hotel-gold">HOTELS</span>
-          </a>
-        ) : (
-          <Link
-            to="/"
-            className={cn(
-              "font-serif text-xl sm:text-2xl font-semibold tracking-[0.08em] text-hotel-white transition-transform duration-500 ease-out",
-              condensed && "scale-[0.92]",
-            )}
-          >
-            YES <span className="text-hotel-gold">HOTELS</span>
-          </Link>
-        )}
+      <div className="container mx-auto px-4 md:px-8 max-w-[1400px] flex items-center justify-between">
+        {/* Brand Logo */}
+        <Link
+          to="/"
+          className="font-serif text-xl md:text-2xl font-bold tracking-[0.1em] text-white flex items-center gap-2 group"
+        >
+          <span className="p-1.5 bg-[#c9a227]/10 rounded-lg border border-[#c9a227]/30 text-[#c9a227] group-hover:bg-[#c9a227] group-hover:text-black transition">
+            <BedDouble size={18} />
+          </span>
+          <span>YES <span className="text-[#c9a227] font-normal italic">HOTELS</span></span>
+        </Link>
 
-        <nav className="hidden items-center gap-9 lg:flex">
-          {NAV_LINKS.map((link) => renderLink(link, navClasses))}
+        {/* Navigation Links */}
+        <nav className="hidden items-center gap-8 lg:flex">
+          {NAV_LINKS.map((link) =>
+            renderLink(
+              link,
+              "text-xs font-mono font-semibold uppercase tracking-[0.2em] text-gray-300 transition-colors hover:text-[#c9a227]"
+            )
+          )}
         </nav>
 
+        {/* Action Button */}
         <div className="hidden lg:block">
           {onHomepage ? (
-            <GoldButton href="#booking" className="px-6 py-3 text-[11px]">
-              Book Your Stay
-            </GoldButton>
+            <a
+              href="#booking"
+              className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#c9a227] hover:bg-[#e5c76b] text-black font-serif font-bold text-xs uppercase tracking-widest rounded-xl shadow-lg transition"
+            >
+              <Sparkles size={13} /> Book Your Stay
+            </a>
           ) : (
-            <Link to="/search" className={bookButtonClasses}>
-              Book Your Stay
+            <Link
+              to="/search"
+              className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#c9a227] hover:bg-[#e5c76b] text-black font-serif font-bold text-xs uppercase tracking-widest rounded-xl shadow-lg transition"
+            >
+              <Sparkles size={13} /> Book Your Stay
             </Link>
           )}
         </div>
 
+        {/* Mobile Hamburger */}
         <button
           type="button"
           aria-label="Toggle menu"
           onClick={() => setOpen((v) => !v)}
-          className="text-hotel-white lg:hidden"
+          className="text-white lg:hidden p-2 rounded-lg bg-[#1a1d24] border border-[#262930]"
         >
-          {open ? <X size={26} /> : <Menu size={26} />}
+          {open ? <X size={22} /> : <Menu size={22} />}
         </button>
       </div>
 
-      <div
-        className={cn(
-          "fixed inset-x-0 top-[60px] z-40 flex flex-col gap-1 bg-hotel-black/98 px-4 pb-6 pt-3 backdrop-blur-sm transition-all duration-300 sm:top-[76px] sm:px-6 sm:pb-8 sm:pt-4 lg:hidden",
-          open
-            ? "visible translate-y-0 opacity-100"
-            : "invisible -translate-y-4 opacity-0",
-        )}
-      >
-        {NAV_LINKS.map((link) => renderLink(link, mobileNavClasses, () => setOpen(false)))}
-        {onHomepage ? (
-          <GoldButton href="#booking" className="mt-6 w-full py-4">
-            Book Your Stay
-          </GoldButton>
-        ) : (
-          <Link to="/search" className={cn(bookButtonClasses, "mt-6 w-full py-4")} onClick={() => setOpen(false)}>
-            Book Your Stay
+      {/* Mobile Drawer */}
+      {open && (
+        <div className="fixed inset-x-0 top-[68px] z-40 bg-[#121316]/98 backdrop-blur-xl border-b border-[#262930] px-6 py-6 space-y-4 lg:hidden text-white shadow-2xl">
+          <div className="flex flex-col gap-3 font-mono text-sm uppercase tracking-widest">
+            {NAV_LINKS.map((link) =>
+              renderLink(link, "py-2 border-b border-[#262930] hover:text-[#c9a227]", () => setOpen(false))
+            )}
+          </div>
+          <Link
+            to="/search"
+            onClick={() => setOpen(false)}
+            className="w-full mt-4 py-3 bg-[#c9a227] text-black font-bold text-xs uppercase tracking-widest rounded-xl text-center block shadow-lg"
+          >
+            Book Your Stay →
           </Link>
-        )}
-      </div>
+        </div>
+      )}
     </header>
   );
 }

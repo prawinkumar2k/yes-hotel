@@ -1,21 +1,9 @@
-import { BedDouble, Wifi, Users, ArrowUpRight } from "lucide-react";
+import React from "react";
+import { BedDouble, Wifi, Users, ArrowUpRight, Sparkles } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import Reveal from "./Reveal";
-import SectionLabel from "./SectionLabel";
-import SplitReveal from "./SplitReveal";
-import Magnetic from "./Magnetic";
-import { TextLink } from "./HotelButtons";
-import { useReducedMotion } from "@/hooks/useReducedMotion";
 
-/**
- * Previously a 3-column grid of identical cards — the exact "square card"
- * feel this redesign is meant to move away from. Also fixed two real,
- * pre-existing bugs found while rewriting this: "View Details" and
- * "Book Now" had no onClick/Link at all (dead buttons), and prices were
- * prefixed with "$" while every other price on the site uses "₹".
- */
 export default function Rooms() {
   const { data, isLoading, error } = useQuery({
     queryKey: ["roomCategories"],
@@ -26,126 +14,140 @@ export default function Rooms() {
       return json.data;
     },
   });
-  const reducedMotion = useReducedMotion();
 
   const rooms = (data ?? []).slice(0, 3);
 
   return (
-    <section id="rooms" className="bg-hotel-ivory py-24 sm:py-32 lg:py-40">
-      <div className="container">
-        <Reveal className="max-w-xl">
-          <SectionLabel>Curated For You</SectionLabel>
-          <h2 className="mt-6 font-serif text-4xl leading-tight text-hotel-black sm:text-5xl">
-            <SplitReveal as="span" text="Choose your stay." trigger="scroll" />
-          </h2>
-          <p className="mt-5 text-base text-hotel-black/65 sm:text-lg">
-            Beautifully designed rooms for business visits, family trips and
-            relaxing city stays.
+    <section id="rooms" className="bg-[#0b0b0b] py-28 text-white border-t border-[#262930]">
+      <div className="container mx-auto px-4 md:px-8 max-w-[1400px] space-y-20">
+        {/* Header */}
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-[#262930] pb-8">
+          <div className="space-y-3">
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#c9a227]/10 border border-[#c9a227]/30 text-[#e5c76b] text-xs font-mono font-bold tracking-widest uppercase">
+              <Sparkles size={13} className="text-[#c9a227]" /> CURATED SUITES & VILLAS
+            </div>
+            <h2 className="font-serif text-4xl sm:text-6xl text-white font-normal leading-tight">
+              Select Your <span className="text-[#c9a227] italic font-serif">Sanctuary</span>.
+            </h2>
+          </div>
+
+          <p className="max-w-md text-xs sm:text-sm text-gray-400 font-light leading-relaxed">
+            Architectural suites engineered with spatial acoustic isolation, natural linen, and panoramic ocean vistas.
           </p>
-        </Reveal>
+        </div>
 
         {isLoading && (
-          <div className="mt-20 space-y-24">
+          <div className="space-y-16">
             {[0, 1].map((i) => (
-              <div key={i} className="h-[70vh] animate-pulse bg-hotel-black/5" />
+              <div key={i} className="h-[60vh] animate-pulse bg-[#121316] rounded-3xl border border-[#262930]" />
             ))}
           </div>
         )}
 
         {error && (
-          <p className="mt-16 text-red-500">Failed to load rooms. Please try again.</p>
+          <p className="text-red-400 text-sm">Failed to load live suite catalog. Please try again.</p>
         )}
 
-        <div className="mt-20 space-y-24 lg:space-y-32">
+        {/* Alternating Spatial Room Rows */}
+        <div className="space-y-24">
           {rooms.map((room: any, i: number) => (
-            <RoomRow key={room._id ?? room.name} room={room} index={i} reducedMotion={reducedMotion} />
+            <RoomRow key={room._id ?? room.name} room={room} index={i} />
           ))}
         </div>
 
-        <Reveal delay={200} className="mt-20 flex justify-center">
-          <TextLink href="/rooms">View All Rooms &rarr;</TextLink>
-        </Reveal>
+        {/* View All CTA */}
+        <div className="pt-8 text-center">
+          <Link
+            to="/rooms"
+            className="inline-flex items-center gap-2 px-8 py-4 bg-[#121316] hover:bg-[#1a1d24] text-[#e5c76b] font-mono font-bold text-xs uppercase tracking-widest rounded-xl border border-[#c9a227]/40 shadow-xl transition"
+          >
+            Explore Complete Room Catalog <ArrowUpRight size={16} />
+          </Link>
+        </div>
       </div>
     </section>
   );
 }
 
-function RoomRow({ room, index, reducedMotion }: { room: any; index: number; reducedMotion: boolean }) {
+function RoomRow({ room, index }: { room: any; index: number }) {
   const reversed = index % 2 !== 0;
 
   return (
     <motion.div
-      initial={reducedMotion ? false : { opacity: 0, y: 40 }}
+      initial={{ opacity: 0, y: 40 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: "-100px" }}
       transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
-      className={`flex flex-col gap-8 lg:flex-row lg:items-end lg:gap-12 ${reversed ? "lg:flex-row-reverse" : ""}`}
+      className={`flex flex-col lg:flex-row items-center gap-8 lg:gap-16 ${
+        reversed ? "lg:flex-row-reverse" : ""
+      }`}
     >
-      {/* Large, asymmetric feature image — 65% width on desktop, never a
-          square/uniform card. Index number overlaid large and translucent,
-          an editorial-catalogue convention rather than a card badge. */}
+      {/* 65% Viewport Feature Image */}
       <Link
         to={`/rooms/${room.slug}`}
         data-cursor="EXPLORE"
-        className="group relative block aspect-[4/5] w-full overflow-hidden lg:aspect-[16/11] lg:w-[65%]"
+        className="group relative block aspect-[16/10] w-full lg:w-[65%] overflow-hidden rounded-3xl border border-[#262930] shadow-2xl"
       >
         <img
-          src={room.images?.[0] || "/placeholder.svg"}
+          src={room.images?.[0] || "https://images.unsplash.com/photo-1590490360182-c33d57733427?auto=format&fit=crop&w=1600&q=80"}
           alt={room.name}
-          className="h-full w-full object-cover transition-transform duration-[1.4s] ease-out group-hover:scale-105"
+          className="h-full w-full object-cover filter brightness-90 transition-transform duration-700 ease-out group-hover:scale-105"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-hotel-black/60 via-transparent to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
-        <span className="pointer-events-none absolute -bottom-6 left-4 font-serif text-[9rem] leading-none text-hotel-white/15 sm:-bottom-10 sm:text-[13rem]">
+        <div className="absolute inset-0 bg-gradient-to-t from-[#0b0b0b] via-transparent to-transparent opacity-60" />
+
+        <span className="pointer-events-none absolute bottom-4 left-6 font-serif text-[7rem] sm:text-[10rem] font-bold leading-none text-white/10">
           0{index + 1}
         </span>
-        <span className="absolute bottom-6 right-6 flex translate-y-2 items-center gap-2 bg-hotel-white px-4 py-2 text-[11px] font-semibold uppercase tracking-widest text-hotel-black opacity-0 transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100">
-          Explore <ArrowUpRight size={14} />
+
+        <span className="absolute bottom-6 right-6 flex items-center gap-2 bg-[#c9a227] text-black px-4 py-2 text-xs font-mono font-bold uppercase tracking-widest rounded-xl shadow-lg opacity-0 transition-all duration-300 group-hover:opacity-100 group-hover:translate-y-0 translate-y-2">
+          Inspect Suite <ArrowUpRight size={14} />
         </span>
       </Link>
 
-      {/* Floating info panel — not a bordered card, just typography and
-          space, offset over/beside the image rather than stacked under it. */}
-      <div className="w-full lg:w-[35%]">
-        <h3 className="font-serif text-3xl text-hotel-black sm:text-4xl">{room.name}</h3>
-        <p className="mt-4 text-sm leading-relaxed text-hotel-black/60 sm:text-base">
+      {/* 35% Information Column */}
+      <div className="w-full lg:w-[35%] space-y-6">
+        <div>
+          <span className="font-mono text-xs text-[#c9a227] tracking-[0.3em] uppercase block mb-1">
+            SUITE 0{index + 1}
+          </span>
+          <h3 className="font-serif text-3xl sm:text-4xl text-white font-normal">{room.name}</h3>
+        </div>
+
+        <p className="text-xs sm:text-sm text-gray-300 font-light leading-relaxed">
           {room.description}
         </p>
 
-        <div className="mt-6 flex items-center gap-5 text-hotel-gold-text">
-          <span className="flex items-center gap-1.5 text-xs text-hotel-black/60">
-            <BedDouble size={15} className="text-hotel-gold" /> {room.bedType || "King Bed"}
+        <div className="flex items-center gap-4 text-xs font-mono text-gray-400 pt-2 border-t border-[#262930]">
+          <span className="flex items-center gap-1.5">
+            <BedDouble size={14} className="text-[#c9a227]" /> {room.bedType || "King Bed"}
           </span>
-          <span className="flex items-center gap-1.5 text-xs text-hotel-black/60">
-            <Users size={15} className="text-hotel-gold" /> Up to {room.capacity?.adults ?? 2}
+          <span className="flex items-center gap-1.5">
+            <Users size={14} className="text-[#c9a227]" /> {room.capacity?.adults ?? 2} Guests
           </span>
-          <span className="flex items-center gap-1.5 text-xs text-hotel-black/60">
-            <Wifi size={15} className="text-hotel-gold" /> Wi-Fi
+          <span className="flex items-center gap-1.5">
+            <Wifi size={14} className="text-[#c9a227]" /> Wi-Fi
           </span>
         </div>
 
-        <div className="mt-8 flex items-center justify-between border-t border-hotel-black/10 pt-6">
+        <div className="flex items-center justify-between border-t border-[#262930] pt-6">
           <div>
-            <p className="font-serif text-2xl text-hotel-black">₹{room.basePrice}</p>
-            <p className="text-[10px] uppercase tracking-widest text-hotel-black/50">Per Night</p>
+            <p className="font-mono font-bold text-2xl text-white">₹{room.basePrice}</p>
+            <p className="text-[10px] font-mono text-gray-400 uppercase tracking-widest">Per Night (Excl GST)</p>
           </div>
-          <div className="flex gap-3">
-            <Magnetic strength={0.25}>
-              <Link
-                to={`/rooms/${room.slug}`}
-                data-preview-image={room.images?.[0]}
-                className="border border-hotel-black/20 px-5 py-3 text-[11px] font-semibold uppercase tracking-widest text-hotel-black transition-colors hover:border-hotel-gold"
-              >
-                Details
-              </Link>
-            </Magnetic>
-            <Magnetic strength={0.25}>
-              <Link
-                to="/search"
-                className="bg-hotel-gold px-5 py-3 text-[11px] font-semibold uppercase tracking-widest text-hotel-black transition-colors hover:bg-hotel-champagne"
-              >
-                Book Now
-              </Link>
-            </Magnetic>
+
+          <div className="flex gap-2">
+            <Link
+              to={`/rooms/${room.slug}`}
+              className="border border-[#262930] bg-[#1a1d24] hover:bg-[#262930] px-4 py-2.5 text-xs font-mono font-semibold text-gray-300 hover:text-white rounded-xl transition"
+            >
+              Details
+            </Link>
+            <Link
+              to="/search"
+              className="bg-[#c9a227] hover:bg-[#e5c76b] px-5 py-2.5 text-xs font-mono font-bold text-black rounded-xl shadow-lg transition"
+            >
+              Reserve
+            </Link>
           </div>
         </div>
       </div>

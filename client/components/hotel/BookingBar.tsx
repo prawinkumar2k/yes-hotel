@@ -1,10 +1,9 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { CalendarDays, ChevronDown, Users2, BedDouble } from "lucide-react";
+import { CalendarDays, ChevronDown, Users2, BedDouble, Search, Sparkles } from "lucide-react";
 import { format, addDays } from "date-fns";
-import { GoldButton } from "./HotelButtons";
 
-const ROOM_TYPES = ["Standard Room", "Deluxe Room", "Executive Room"];
+const ROOM_TYPES = ["Standard Luxury Suite", "Deluxe Ocean View", "Executive Presidential Suite"];
 
 function Field({
   icon,
@@ -19,13 +18,13 @@ function Field({
 }) {
   return (
     <div
-      className={`flex flex-1 items-center gap-3 px-6 py-5 ${
-        divider ? "sm:border-r sm:border-hotel-black/10" : ""
-      } border-b border-hotel-black/10 last:border-b-0 sm:border-b-0`}
+      className={`flex flex-1 items-center gap-3 px-5 py-4 ${
+        divider ? "lg:border-r lg:border-[#262930]" : ""
+      } border-b border-[#262930] last:border-b-0 lg:border-b-0`}
     >
-      <span className="text-hotel-gold">{icon}</span>
+      <span className="text-[#c9a227]">{icon}</span>
       <div className="relative flex-1">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-hotel-black/50">
+        <p className="text-[9px] font-mono font-bold uppercase tracking-[0.2em] text-[#c9a227]">
           {label}
         </p>
         {children}
@@ -52,10 +51,6 @@ export default function BookingBar() {
     navigate(`/search?${params.toString()}`);
   };
 
-  // Setting check-in to a date on/after the already-picked check-out left
-  // check-out stale and invalid — the same real bug found and fixed on
-  // SearchPage.tsx, closed at this source too so an invalid pair can't even
-  // be submitted from the homepage widget in the first place.
   function handleCheckInChange(value: string) {
     setCheckIn(value);
     if (checkOut && value && checkOut <= value) {
@@ -64,7 +59,7 @@ export default function BookingBar() {
   }
 
   return (
-    <div className="flex flex-col rounded-sm bg-hotel-ivory shadow-[0_20px_60px_rgba(0,0,0,0.35)] sm:flex-row sm:items-stretch">
+    <div className="relative z-20 backdrop-blur-xl bg-[#121316]/80 rounded-2xl border border-[#c9a227]/40 p-2 shadow-[0_25px_60px_rgba(0,0,0,0.8)] lg:flex lg:items-stretch">
       <Field icon={<CalendarDays size={18} />} label="Check-In">
         <input
           type="date"
@@ -72,7 +67,7 @@ export default function BookingBar() {
           min={format(new Date(), "yyyy-MM-dd")}
           value={checkIn}
           onChange={(e) => handleCheckInChange(e.target.value)}
-          className="w-full bg-transparent text-sm font-medium text-hotel-black outline-none [color-scheme:light]"
+          className="w-full bg-transparent text-xs font-mono font-bold text-white outline-none [color-scheme:dark]"
         />
       </Field>
 
@@ -83,7 +78,7 @@ export default function BookingBar() {
           min={format(addDays(new Date(checkIn || Date.now()), 1), "yyyy-MM-dd")}
           value={checkOut}
           onChange={(e) => setCheckOut(e.target.value)}
-          className="w-full bg-transparent text-sm font-medium text-hotel-black outline-none [color-scheme:light]"
+          className="w-full bg-transparent text-xs font-mono font-bold text-white outline-none [color-scheme:dark]"
         />
       </Field>
 
@@ -91,49 +86,49 @@ export default function BookingBar() {
         <button
           type="button"
           onClick={() => setGuestsOpen((v) => !v)}
-          className="flex w-full items-center justify-between text-sm font-medium text-hotel-black"
+          className="flex w-full items-center justify-between text-xs font-mono font-bold text-white"
         >
-          {adults} Adults{children > 0 ? `, ${children} Children` : ""}
-          <ChevronDown size={14} className="text-hotel-black/60" />
+          {adults} Adult(s){children > 0 ? `, ${children} Child` : ""}
+          <ChevronDown size={14} className="text-[#c9a227]" />
         </button>
 
         {guestsOpen && (
-          <div className="absolute z-20 mt-3 w-64 space-y-4 rounded-sm border border-hotel-black/10 bg-hotel-white p-5 shadow-xl">
+          <div className="absolute z-30 mt-3 w-64 space-y-4 rounded-xl border border-[#262930] bg-[#121316] p-5 shadow-2xl text-white">
             <div className="flex items-center justify-between">
-              <span className="text-sm text-hotel-black">Adults</span>
-              <div className="flex items-center gap-3">
+              <span className="text-xs font-semibold text-gray-300">Adults</span>
+              <div className="flex items-center gap-3 font-mono">
                 <button
                   type="button"
                   onClick={() => setAdults((v) => Math.max(1, v - 1))}
-                  className="h-7 w-7 border border-hotel-black/20 text-hotel-black hover:border-hotel-gold"
+                  className="h-7 w-7 rounded border border-[#262930] bg-[#1a1d24] text-white hover:border-[#c9a227]"
                 >
                   −
                 </button>
-                <span className="w-4 text-center text-sm">{adults}</span>
+                <span className="w-4 text-center text-xs font-bold">{adults}</span>
                 <button
                   type="button"
                   onClick={() => setAdults((v) => v + 1)}
-                  className="h-7 w-7 border border-hotel-black/20 text-hotel-black hover:border-hotel-gold"
+                  className="h-7 w-7 rounded border border-[#262930] bg-[#1a1d24] text-white hover:border-[#c9a227]"
                 >
                   +
                 </button>
               </div>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-sm text-hotel-black">Children</span>
-              <div className="flex items-center gap-3">
+              <span className="text-xs font-semibold text-gray-300">Children</span>
+              <div className="flex items-center gap-3 font-mono">
                 <button
                   type="button"
                   onClick={() => setChildren((v) => Math.max(0, v - 1))}
-                  className="h-7 w-7 border border-hotel-black/20 text-hotel-black hover:border-hotel-gold"
+                  className="h-7 w-7 rounded border border-[#262930] bg-[#1a1d24] text-white hover:border-[#c9a227]"
                 >
                   −
                 </button>
-                <span className="w-4 text-center text-sm">{children}</span>
+                <span className="w-4 text-center text-xs font-bold">{children}</span>
                 <button
                   type="button"
                   onClick={() => setChildren((v) => v + 1)}
-                  className="h-7 w-7 border border-hotel-black/20 text-hotel-black hover:border-hotel-gold"
+                  className="h-7 w-7 rounded border border-[#262930] bg-[#1a1d24] text-white hover:border-[#c9a227]"
                 >
                   +
                 </button>
@@ -142,7 +137,7 @@ export default function BookingBar() {
             <button
               type="button"
               onClick={() => setGuestsOpen(false)}
-              className="w-full bg-hotel-black py-2 text-xs font-semibold uppercase tracking-[0.2em] text-hotel-white"
+              className="w-full bg-[#c9a227] py-2 text-xs font-bold uppercase tracking-[0.2em] text-black rounded-lg"
             >
               Done
             </button>
@@ -150,31 +145,35 @@ export default function BookingBar() {
         )}
       </Field>
 
-      <Field icon={<BedDouble size={18} />} label="Room Type" divider={false}>
+      <Field icon={<BedDouble size={18} />} label="Room Suite" divider={false}>
         <div className="relative">
           <select
             value={room}
-            aria-label="Room type"
+            aria-label="Room suite"
             onChange={(e) => setRoom(e.target.value)}
-            className="w-full cursor-pointer appearance-none bg-transparent text-sm font-medium text-hotel-black outline-none"
+            className="w-full cursor-pointer appearance-none bg-transparent text-xs font-mono font-bold text-white outline-none"
           >
             {ROOM_TYPES.map((type) => (
-              <option key={type} value={type}>
+              <option key={type} value={type} className="bg-[#121316] text-white">
                 {type}
               </option>
             ))}
           </select>
           <ChevronDown
             size={14}
-            className="pointer-events-none absolute right-0 top-1 text-hotel-black/60"
+            className="pointer-events-none absolute right-0 top-1 text-[#c9a227]"
           />
         </div>
       </Field>
 
-      <div className="p-3 sm:p-2 sm:pl-0">
-        <GoldButton type="button" onClick={handleSearch} className="h-full w-full py-5 sm:w-auto sm:px-10">
-          Search Availability
-        </GoldButton>
+      <div className="p-2">
+        <button
+          type="button"
+          onClick={handleSearch}
+          className="w-full lg:w-auto h-full px-8 py-3.5 bg-[#c9a227] hover:bg-[#e5c76b] text-black font-serif font-bold text-xs uppercase tracking-widest rounded-xl shadow-lg transition flex items-center justify-center gap-2 whitespace-nowrap"
+        >
+          <Sparkles size={14} /> Check Availability
+        </button>
       </div>
     </div>
   );
