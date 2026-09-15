@@ -32,5 +32,22 @@ export default defineConfig({
     hookTimeout: 15000,
     exclude: ["**/node_modules/**", "**/dist/**", "e2e/**"],
     setupFiles: ["./server/src/config/vitest.setup.ts"],
+    // Test files run in separate module registries (each gets its own
+    // in-memory job-handler Map, folio "current business date" state, etc.)
+    // but they all point at the SAME real MongoDB test database — there is
+    // no per-file DB namespace. That's fine for most specs (they scope their
+    // own documents with unique stamps), but job-queue.service.spec.ts and
+    // notificationRetry.job.spec.ts both call the real processNextJob(),
+    // which — correctly, for production — claims the single globally
+    // oldest-due job with no type filter. Run those two files concurrently
+    // and one can steal the other's job: it finds no handler for a type it
+    // never registered, silently resets that job back to PENDING, and the
+    // owning test observes PENDING instead of the DEAD_LETTER/COMPLETED it
+    // enqueued and expected. Reproduced directly: ~2 of 3 runs of these two
+    // files together failed non-deterministically; either file alone always
+    // passed. Fixed by serializing file execution rather than changing
+    // processNextJob()'s claim semantics, which are correct for the real
+    // single-process job queue this app runs.
+    fileParallelism: false,
   },
 });
