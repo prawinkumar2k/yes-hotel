@@ -107,12 +107,14 @@ export default function GalleryPage() {
                   layoutId={reducedMotion ? undefined : `gallerypage-image-${img.id}`}
                   src={img.src}
                   alt={img.title}
-                  className="w-full h-full min-h-[220px] object-cover group-hover:scale-105 transition-transform duration-700"
+                  style={{ imageRendering: "-webkit-optimize-contrast" as any }}
+                  className="w-full h-full min-h-[220px] object-cover filter contrast-[1.05] saturate-[1.05] brightness-[0.98] group-hover:brightness-100 group-hover:scale-105 transition-all duration-700"
                   loading="lazy"
                 />
                 {img.title && (
-                  <div className="absolute bottom-0 left-0 right-0 z-20 p-4 bg-gradient-to-t from-black/70 to-transparent translate-y-full group-hover:translate-y-0 transition-transform duration-300">
-                    <p className="text-white font-medium">{img.title}</p>
+                  <div className="absolute bottom-0 left-0 right-0 z-20 p-4 bg-gradient-to-t from-black/80 via-black/40 to-transparent translate-y-full group-hover:translate-y-0 transition-transform duration-300">
+                    <p className="text-white font-medium drop-shadow-md">{img.title}</p>
+                    <p className="text-[10px] font-mono text-[#c9a227] tracking-widest uppercase">{img.category}</p>
                   </div>
                 )}
               </motion.div>
@@ -121,25 +123,31 @@ export default function GalleryPage() {
         )}
       </div>
 
-      {/* Fullscreen viewer: the clicked tile's own image expands from its
-          grid position to fill the viewport (shared layoutId), and reverses
-          the same way on close. */}
+      {/* Fullscreen viewer */}
       <AnimatePresence>
         {activeImage && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4"
+            className="fixed inset-0 bg-black/95 backdrop-blur-2xl z-50 flex items-center justify-center p-4 sm:p-8 overflow-hidden"
             onClick={() => setActiveIndex(null)}
           >
+            {/* Ambient Background Glow */}
+            <img
+              src={activeImage.src}
+              alt=""
+              aria-hidden="true"
+              className="absolute inset-0 w-full h-full object-cover filter blur-3xl opacity-25 scale-125 pointer-events-none select-none"
+            />
+
             <button
               type="button"
               aria-label="Close"
-              className="absolute top-6 right-6 z-10 text-white transition-colors hover:text-hotel-gold"
+              className="absolute top-6 right-6 z-20 text-white hover:text-hotel-gold p-2.5 rounded-2xl bg-black/60 border border-white/10 backdrop-blur-md transition-all shadow-xl"
               onClick={() => setActiveIndex(null)}
             >
-              <X size={28} />
+              <X size={26} />
             </button>
 
             <button
@@ -149,9 +157,9 @@ export default function GalleryPage() {
                 e.stopPropagation();
                 setActiveIndex((v) => (v === null ? v : (v - 1 + images!.length) % images!.length));
               }}
-              className="absolute left-4 top-1/2 z-10 -translate-y-1/2 text-white/70 transition-colors hover:text-white sm:left-8"
+              className="absolute left-4 top-1/2 z-20 -translate-y-1/2 text-white/80 hover:text-white p-3 rounded-full bg-black/60 border border-white/10 backdrop-blur-md transition-all shadow-2xl sm:left-8"
             >
-              <ChevronLeft size={32} />
+              <ChevronLeft size={30} />
             </button>
             <button
               type="button"
@@ -160,18 +168,30 @@ export default function GalleryPage() {
                 e.stopPropagation();
                 setActiveIndex((v) => (v === null ? v : (v + 1) % images!.length));
               }}
-              className="absolute right-4 top-1/2 z-10 -translate-y-1/2 text-white/70 transition-colors hover:text-white sm:right-8"
+              className="absolute right-4 top-1/2 z-20 -translate-y-1/2 text-white/80 hover:text-white p-3 rounded-full bg-black/60 border border-white/10 backdrop-blur-md transition-all shadow-2xl sm:right-8"
             >
-              <ChevronRight size={32} />
+              <ChevronRight size={30} />
             </button>
 
-            <motion.img
-              layoutId={reducedMotion ? undefined : `gallerypage-image-${activeImage.id}`}
-              src={activeImage.src}
-              alt="Gallery"
-              className="max-w-full max-h-[90vh] shadow-2xl object-contain"
-              onClick={(e) => e.stopPropagation()}
-            />
+            <div className="relative z-10 flex flex-col items-center space-y-4 max-w-5xl">
+              <div className="overflow-hidden rounded-3xl border border-[#c9a227]/40 bg-black/80 shadow-[0_25px_70px_rgba(0,0,0,0.9)] p-2">
+                <motion.img
+                  layoutId={reducedMotion ? undefined : `gallerypage-image-${activeImage.id}`}
+                  src={activeImage.src}
+                  alt={activeImage.title || "Gallery"}
+                  style={{ imageRendering: "-webkit-optimize-contrast" as any }}
+                  className="max-w-full max-h-[78vh] rounded-2xl object-contain filter contrast-[1.04] saturate-[1.04]"
+                  onClick={(e) => e.stopPropagation()}
+                />
+              </div>
+              {activeImage.title && (
+                <div className="px-6 py-2 rounded-full bg-black/80 border border-white/10 backdrop-blur-md inline-flex items-center gap-3">
+                  <span className="text-xs font-mono text-hotel-gold uppercase tracking-widest">{activeImage.category}</span>
+                  <span className="text-gray-500">•</span>
+                  <p className="text-white font-serif text-lg font-medium">{activeImage.title}</p>
+                </div>
+              )}
+            </div>
           </motion.div>
         )}
       </AnimatePresence>

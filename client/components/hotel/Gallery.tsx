@@ -71,13 +71,14 @@ export default function Gallery() {
                   layoutId={reducedMotion ? undefined : `gallery-image-${i}`}
                   src={image.src}
                   alt={image.title}
-                  className="h-full min-h-[160px] w-full object-cover filter brightness-90 transition-transform duration-700 group-hover:scale-105"
+                  style={{ imageRendering: "-webkit-optimize-contrast" as any }}
+                  className="h-full min-h-[160px] w-full object-cover filter brightness-[0.97] contrast-[1.05] saturate-[1.05] transition-all duration-700 group-hover:scale-105 group-hover:brightness-100"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-[#0b0b0b] via-transparent to-transparent opacity-40 group-hover:opacity-80 transition-opacity" />
+                <div className="absolute inset-0 bg-gradient-to-t from-[#0b0b0b] via-[#0b0b0b]/20 to-transparent opacity-50 group-hover:opacity-85 transition-opacity duration-300" />
 
                 <div className="absolute inset-0 flex flex-col justify-end p-4 text-left opacity-0 group-hover:opacity-100 transition-all duration-300">
-                  <span className="text-[10px] font-mono text-[#c9a227] uppercase tracking-widest">ARCHIVE 0{i + 1}</span>
-                  <span className="text-sm font-serif text-white font-semibold flex items-center gap-1.5">
+                  <span className="text-[10px] font-mono text-[#c9a227] uppercase tracking-widest font-semibold">ARCHIVE 0{i + 1}</span>
+                  <span className="text-sm font-serif text-white font-semibold flex items-center gap-1.5 drop-shadow-md">
                     <Eye size={14} className="text-[#c9a227]" /> {image.title}
                   </span>
                 </div>
@@ -91,17 +92,25 @@ export default function Gallery() {
       <AnimatePresence>
         {active !== null && (
           <motion.div
-            className="fixed inset-0 z-[100] flex items-center justify-center bg-[#0b0b0b]/95 backdrop-blur-xl p-6"
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-[#0b0b0b]/90 backdrop-blur-2xl p-4 sm:p-8 overflow-hidden"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={() => setActive(null)}
           >
+            {/* Ambient Image Glow */}
+            <img
+              src={IMAGES[active].src}
+              alt=""
+              aria-hidden="true"
+              className="absolute inset-0 w-full h-full object-cover filter blur-3xl opacity-20 scale-125 pointer-events-none select-none"
+            />
+
             <button
               type="button"
               aria-label="Close"
               onClick={() => setActive(null)}
-              className="absolute right-6 top-6 z-10 text-white hover:text-[#c9a227] p-2 rounded-xl bg-[#121316] border border-[#262930]"
+              className="absolute right-6 top-6 z-20 text-white hover:text-[#c9a227] p-2.5 rounded-2xl bg-[#121316]/80 backdrop-blur-md border border-[#262930] hover:border-[#c9a227]/50 transition-all shadow-xl"
             >
               <X size={24} />
             </button>
@@ -113,7 +122,7 @@ export default function Gallery() {
                 e.stopPropagation();
                 setActive((v) => (v === null ? v : (v - 1 + IMAGES.length) % IMAGES.length));
               }}
-              className="absolute left-6 top-1/2 z-10 -translate-y-1/2 text-white/70 hover:text-white p-3 rounded-full bg-[#121316] border border-[#262930]"
+              className="absolute left-6 top-1/2 z-20 -translate-y-1/2 text-white/80 hover:text-white p-3.5 rounded-full bg-[#121316]/80 backdrop-blur-md border border-[#262930] hover:border-[#c9a227]/50 transition-all shadow-2xl"
             >
               <ChevronLeft size={24} />
             </button>
@@ -124,20 +133,27 @@ export default function Gallery() {
                 e.stopPropagation();
                 setActive((v) => (v === null ? v : (v + 1) % IMAGES.length));
               }}
-              className="absolute right-6 top-1/2 z-10 -translate-y-1/2 text-white/70 hover:text-white p-3 rounded-full bg-[#121316] border border-[#262930]"
+              className="absolute right-6 top-1/2 z-20 -translate-y-1/2 text-white/80 hover:text-white p-3.5 rounded-full bg-[#121316]/80 backdrop-blur-md border border-[#262930] hover:border-[#c9a227]/50 transition-all shadow-2xl"
             >
               <ChevronRight size={24} />
             </button>
 
-            <div className="space-y-3 text-center max-w-5xl">
-              <motion.img
-                layoutId={reducedMotion ? undefined : `gallery-image-${active}`}
-                src={IMAGES[active].src}
-                alt={IMAGES[active].title}
-                onClick={(e) => e.stopPropagation()}
-                className="max-h-[80vh] max-w-full rounded-3xl border border-[#262930] shadow-2xl object-contain mx-auto"
-              />
-              <p className="font-serif text-xl text-white">{IMAGES[active].title}</p>
+            <div className="relative z-10 space-y-4 text-center max-w-5xl flex flex-col items-center">
+              <div className="relative overflow-hidden rounded-3xl border border-[#c9a227]/30 bg-[#121316] shadow-[0_20px_60px_rgba(0,0,0,0.8)] p-2">
+                <motion.img
+                  layoutId={reducedMotion ? undefined : `gallery-image-${active}`}
+                  src={IMAGES[active].src}
+                  alt={IMAGES[active].title}
+                  style={{ imageRendering: "-webkit-optimize-contrast" as any }}
+                  onClick={(e) => e.stopPropagation()}
+                  className="max-h-[78vh] max-w-full rounded-2xl object-contain filter contrast-[1.04] saturate-[1.04] brightness-[0.99]"
+                />
+              </div>
+              <div className="px-6 py-2 rounded-full bg-[#121316]/90 border border-[#262930] backdrop-blur-md inline-flex items-center gap-3">
+                <span className="text-xs font-mono text-[#c9a227] uppercase tracking-widest">{IMAGES[active].category}</span>
+                <span className="text-gray-500">•</span>
+                <p className="font-serif text-lg text-white font-medium">{IMAGES[active].title}</p>
+              </div>
             </div>
           </motion.div>
         )}
