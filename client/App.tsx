@@ -119,7 +119,7 @@ function App() {
       <AuthProvider>
         <TooltipProvider>
           <Toaster />
-          <BrowserRouter>
+          <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
             <SmoothScroll />
             <ScrollProgress />
             <CursorFollower />
@@ -193,7 +193,7 @@ function App() {
                 <Route path="/admin/executive" element={<ProtectedRoute roles={["ADMIN","MANAGER"]}><AdminLayout title="Executive Command Center"><AdminExecutiveDashboard /></AdminLayout></ProtectedRoute>} />
                 <Route path="/admin/multi-property" element={<ProtectedRoute roles={["ADMIN","MANAGER"]}><AdminLayout title="Multi-Property & OTA Channel Manager"><AdminMultiProperty /></AdminLayout></ProtectedRoute>} />
                 <Route path="/admin/night-audit" element={<ProtectedRoute roles={["ADMIN","MANAGER"]}><AdminLayout title="Automated Night Audit & Business Date Engine"><AdminNightAudit /></AdminLayout></ProtectedRoute>} />
-                <Route path="/staff/mobile-housekeeping" element={<ProtectedRoute roles={["ADMIN","MANAGER","HOUSEKEEPING"]}><MobileHousekeeping /></ProtectedRoute>} />
+                <Route path="/staff/mobile-housekeeping" element={<ProtectedRoute roles={["ADMIN","MANAGER","HOUSEKEEPING"]}><AdminLayout title="Mobile Housekeeping"><MobileHousekeeping /></AdminLayout></ProtectedRoute>} />
                 <Route path="/admin/analytics" element={<Navigate to="/admin/reports" replace />} />
                 <Route path="/admin/settings" element={<ProtectedRoute roles={["ADMIN"]}><AdminLayout title="Settings"><AdminSettings /></AdminLayout></ProtectedRoute>} />
                 <Route path="/admin/audit-logs" element={<ProtectedRoute roles={["ADMIN","MANAGER"]}><AdminLayout title="Audit Logs"><AdminAuditLogs /></AdminLayout></ProtectedRoute>} />

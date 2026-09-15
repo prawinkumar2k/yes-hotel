@@ -181,7 +181,7 @@ export default function AdminBanquets() {
             const outstanding = Math.max(0, b.totalEstimatedAmount - b.advancePaid);
             const next = STATUS_FLOW[b.status];
             return (
-              <div key={b._id} className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm space-y-3">
+              <div key={b._id} className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm space-y-3 text-gray-900">
                 <div className="flex items-start justify-between">
                   <div>
                     <span className="font-mono text-xs text-gray-400 font-bold">{b.bookingNumber}</span>

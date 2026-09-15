@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import {
   LayoutDashboard, CalendarDays, BedDouble, Users, CreditCard,
-  BarChart3, Settings, Home, Wrench, LogOut, MenuIcon, X, Mail,
+  BarChart3, Settings, Home, Wrench, LogIn, LogOut, MenuIcon, X,
   Image, HelpCircle, MessageSquare, FileText, Star, Ticket, RotateCcw,
   ScrollText, Moon, DollarSign, Tag, Building2, UtensilsCrossed,
   Package, Truck, ShoppingBag, Landmark, AlertCircle, Monitor, Globe,
@@ -70,7 +70,7 @@ export default function AdminLayout({ children, title }: { children: ReactNode; 
     return () => document.removeEventListener("keydown", down);
   }, []);
 
-  // Fetch live stats for sidebar badges
+  // Fetch live stats for sidebar badges — only for roles the front-desk API actually authorizes
   const { data: frontDeskSummary } = useQuery({
     queryKey: ["sidebarStats"],
     queryFn: async () => {
@@ -81,6 +81,7 @@ export default function AdminLayout({ children, title }: { children: ReactNode; 
       const json = await res.json();
       return json.success ? json.data : null;
     },
+    enabled: ADMIN_ROLES.includes(user?.role || ""),
     refetchInterval: 45000,
   });
 
@@ -199,7 +200,7 @@ export default function AdminLayout({ children, title }: { children: ReactNode; 
   const totalBadgeCount = (arrivalsCount > 0 ? 1 : 0) + (departuresCount > 0 ? 1 : 0) + (dirtyCount > 0 ? 1 : 0);
 
   return (
-    <div className="min-h-screen bg-[#0c0d0e] text-zinc-100 flex selection:bg-hotel-gold selection:text-black">
+    <div className="h-screen overflow-hidden bg-[#0c0d0e] text-zinc-100 flex selection:bg-hotel-gold selection:text-black">
       {/* Command Palette */}
       <CommandPalette open={commandPaletteOpen} onOpenChange={setCommandPaletteOpen} />
 

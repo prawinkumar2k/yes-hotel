@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { ChevronLeft, ChevronRight, X, Sparkles, Eye } from "lucide-react";
 import { LOCAL_GALLERY_IMAGES } from "@/lib/gallery";
+import { useGallery } from "@/hooks/usePublicData";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 
 const SPAN_PATTERN = [
@@ -18,7 +19,12 @@ const SPAN_PATTERN = [
 export default function Gallery() {
   const [active, setActive] = useState<number | null>(null);
   const reducedMotion = useReducedMotion();
-  const IMAGES = LOCAL_GALLERY_IMAGES.slice(0, 8);
+  const { data: galleryData } = useGallery({ limit: 8 });
+  // Falls back to the bundled local images only until the DB gallery has
+  // loaded (or if it's ever empty) — the database is the source of truth.
+  const IMAGES = galleryData?.length
+    ? galleryData.map((img: any) => ({ src: img.imageUrl, title: img.title, category: img.category }))
+    : LOCAL_GALLERY_IMAGES.slice(0, 8);
 
   useEffect(() => {
     if (active === null) return;

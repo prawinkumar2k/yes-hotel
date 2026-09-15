@@ -69,7 +69,7 @@ export default function AdminReports() {
             <div className="px-6 py-4 border-b border-gray-100">
               <h2 className="font-semibold text-gray-800">Room Category Performance</h2>
             </div>
-            <table className="w-full text-sm text-left">
+            <table className="w-full text-sm text-left text-gray-900">
               <thead className="bg-gray-50 border-b">
                 <tr>
                   <th className="px-4 py-3 font-medium text-gray-500">Category</th>

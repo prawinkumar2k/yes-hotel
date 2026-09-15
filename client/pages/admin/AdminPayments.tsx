@@ -107,7 +107,7 @@ export default function AdminPayments() {
       </div>
 
       <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
-        <table className="w-full text-sm text-left">
+        <table className="w-full text-sm text-left text-gray-900">
           <thead className="bg-gray-50 border-b">
             <tr>
               <th className="px-4 py-3 font-medium text-gray-500">Transaction ID</th>

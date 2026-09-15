@@ -143,7 +143,7 @@ export default function AdminRoomCategories() {
         </div>
 
         <div className="bg-white rounded shadow-sm overflow-hidden">
-          <table className="w-full text-sm">
+          <table className="w-full text-sm text-gray-900">
             <thead className="bg-gray-50 border-b border-gray-100">
               <tr>
                 {["Name", "Slug", "Base Price", "Capacity", "Status", "Actions"].map(h => (

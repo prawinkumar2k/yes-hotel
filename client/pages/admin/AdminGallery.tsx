@@ -128,7 +128,7 @@ export default function AdminGallery() {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
           {galleryData?.map((img: any) => (
-            <div key={img._id} className="bg-white rounded-lg border shadow-sm overflow-hidden group">
+            <div key={img._id} className="bg-white rounded-lg border shadow-sm overflow-hidden group text-gray-900">
               <div className="aspect-video relative overflow-hidden bg-gray-100">
                 <img src={img.imageUrl} alt={img.altText} className="w-full h-full object-cover transition-transform group-hover:scale-105" />
                 <div className="absolute top-2 right-2 flex gap-1">

@@ -87,7 +87,8 @@ export default function AdminHousekeeping() {
       });
       const jsonRooms = await resRooms.json();
       if (jsonRooms.success) {
-        setRooms(jsonRooms.data?.rooms || jsonRooms.data || []);
+        const floors = jsonRooms.data?.floors || [];
+        setRooms(floors.flatMap((f: any) => f.rooms || []));
       }
     } catch (err: any) {
       toast({ title: "Error", description: err.message, variant: "destructive" });

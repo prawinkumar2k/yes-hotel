@@ -1,6 +1,7 @@
 import React, { Suspense, useRef } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { Float, ContactShadows } from "@react-three/drei";
+import { PCFShadowMap } from "three";
 import type { Mesh, Group } from "three";
 
 interface Hero3DProps {
@@ -71,7 +72,7 @@ function Scene({ pointer }: { pointer: { x: number; y: number } }) {
 
       <FloatingGoldSculpture pointer={pointer} />
 
-      <ContactShadows position={[1.2, -1.5, 0]} opacity={0.4} scale={7} blur={2.5} far={3} />
+      <ContactShadows position={[1.2, -1.5, 0]} opacity={0.4} scale={7} blur={2.5} far={3} frames={1} />
     </>
   );
 }
@@ -80,7 +81,7 @@ export default function Hero3D({ pointer }: Hero3DProps) {
   return (
     <div className="absolute inset-0 z-10 pointer-events-none overflow-hidden">
       <Canvas
-        shadows
+        shadows={{ type: PCFShadowMap }}
         camera={{ position: [0, 0, 5], fov: 45 }}
         dpr={[1, 1.5]}
         gl={{ alpha: true, antialias: true }}

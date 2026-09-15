@@ -1,12 +1,11 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import { ShieldCheck, Zap, BadgePercent } from "lucide-react";
 import { format, addDays } from "date-fns";
 import Reveal from "./Reveal";
 import SectionLabel from "./SectionLabel";
 import { GoldButton } from "./HotelButtons";
-
-const ROOM_TYPES = ["Standard Room", "Deluxe Room", "Executive Room"];
 
 function FormField({
   label,
@@ -36,7 +35,22 @@ export default function FeaturedBooking() {
   const [checkOut, setCheckOut] = useState("");
   const [adults, setAdults] = useState(2);
   const [children, setChildren] = useState(0);
-  const [room, setRoom] = useState(ROOM_TYPES[0]);
+  const [room, setRoom] = useState("");
+
+  const { data: categories } = useQuery({
+    queryKey: ["roomCategories"],
+    queryFn: async () => {
+      const res = await fetch("/api/rooms/categories");
+      const json = await res.json();
+      if (!json.success) throw new Error(json.message);
+      return json.data as { name: string }[];
+    },
+  });
+  const roomTypes = (categories ?? []).map((c) => c.name);
+
+  useEffect(() => {
+    if (roomTypes.length && !room) setRoom(roomTypes[0]);
+  }, [roomTypes, room]);
 
   const handleSearch = () => {
     const params = new URLSearchParams();
@@ -114,7 +128,7 @@ export default function FeaturedBooking() {
                 onChange={(e) => setRoom(e.target.value)}
                 className={`${inputClasses} cursor-pointer`}
               >
-                {ROOM_TYPES.map((type) => (
+                {roomTypes.map((type) => (
                   <option key={type} value={type} className="bg-hotel-charcoal">
                     {type}
                   </option>

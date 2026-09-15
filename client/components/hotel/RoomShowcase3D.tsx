@@ -1,6 +1,7 @@
 import { Suspense, useRef } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { OrbitControls, ContactShadows, Float } from "@react-three/drei";
+import { PCFShadowMap } from "three";
 import type { Mesh } from "three";
 
 /**
@@ -55,7 +56,7 @@ function Scene() {
       <pointLight position={[-3, 2, -2]} intensity={0.4} color="#C9A227" />
       <BedPlatform />
       <GoldRing />
-      <ContactShadows position={[0, -0.85, 0]} opacity={0.5} scale={6} blur={2.4} far={2} />
+      <ContactShadows position={[0, -0.85, 0]} opacity={0.5} scale={6} blur={2.4} far={2} frames={1} />
       <OrbitControls
         enablePan={false}
         enableZoom={false}
@@ -71,7 +72,7 @@ function Scene() {
 export default function RoomShowcase3D() {
   return (
     <div className="relative aspect-[16/10] w-full overflow-hidden border border-hotel-black/10 bg-hotel-ivory">
-      <Canvas shadows camera={{ position: [3, 1.6, 3.2], fov: 42 }} dpr={[1, 1.5]}>
+      <Canvas shadows={{ type: PCFShadowMap }} camera={{ position: [3, 1.6, 3.2], fov: 42 }} dpr={[1, 1.5]}>
         <Suspense fallback={null}>
           <Scene />
         </Suspense>

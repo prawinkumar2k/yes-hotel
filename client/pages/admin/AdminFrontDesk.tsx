@@ -86,12 +86,12 @@ export default function AdminFrontDesk() {
   const fetchAvailableRooms = async () => {
     try {
       const token = getStoredAuthToken();
-      const res = await fetch("/api/room-rack/availability", {
+      const res = await fetch("/api/rooms", {
         headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
       });
       const json = await res.json();
       if (json.success) {
-        setAvailableRooms(json.data || []);
+        setAvailableRooms((json.data || []).filter((r: any) => r.status === "AVAILABLE"));
       }
     } catch (err) {
       console.error("Failed to load available rooms", err);
@@ -870,7 +870,7 @@ export default function AdminFrontDesk() {
                   <option value="">-- Select Available Room --</option>
                   {availableRooms.map((rm) => (
                     <option key={rm._id} value={rm._id}>
-                      Room {rm.roomNumber} ({rm.roomCategory?.name || "Suite"}) — {rm.housekeepingStatus}
+                      Room {rm.roomNumber} ({rm.category?.name || "Suite"}) — {rm.housekeepingStatus}
                     </option>
                   ))}
                 </select>
@@ -1018,7 +1018,7 @@ export default function AdminFrontDesk() {
                 <option value="">-- Select Destination Room --</option>
                 {availableRooms.map((rm) => (
                   <option key={rm._id} value={rm._id}>
-                    Room {rm.roomNumber} ({rm.roomCategory?.name || "Suite"})
+                    Room {rm.roomNumber} ({rm.category?.name || "Suite"})
                   </option>
                 ))}
               </select>

@@ -6,6 +6,9 @@ import {
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { getStoredAuthToken } from "@/lib/authStorage";
+import { useAuth } from "@/context/AuthContext";
+
+const FRONT_DESK_ROLES = ["ADMIN", "MANAGER", "RECEPTIONIST"];
 
 interface Props {
   open: boolean;
@@ -14,6 +17,7 @@ interface Props {
 
 export default function NotificationCenter({ open, onClose }: Props) {
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   const { data: summary } = useQuery({
     queryKey: ["notificationSummary"],
@@ -25,6 +29,7 @@ export default function NotificationCenter({ open, onClose }: Props) {
       const json = await res.json();
       return json.success ? json.data : null;
     },
+    enabled: FRONT_DESK_ROLES.includes(user?.role || ""),
     refetchInterval: 30000,
   });
 

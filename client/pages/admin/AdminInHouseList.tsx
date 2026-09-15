@@ -49,7 +49,7 @@ export default function AdminInHouseList() {
           </div>
 
           <div className="overflow-x-auto print:overflow-visible">
-            <table className="w-full text-[11px] border-collapse border border-gray-400">
+            <table className="w-full text-[11px] border-collapse border border-gray-400 text-gray-900">
               <thead>
                 <tr className="bg-gray-100 print:bg-white text-center font-bold">
                   <th className="border border-gray-400 p-1 w-8">S. No.</th>

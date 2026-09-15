@@ -13,8 +13,8 @@ const router = Router();
 // All routes require authentication
 router.use(protect);
 
-// GET /api/room-rack — full room rack (RECEPTIONIST+)
-router.get("/", authorize("RECEPTIONIST", "HOUSEKEEPING", "MANAGER", "ADMIN"), getRoomRack);
+// GET /api/room-rack — full room rack (RECEPTIONIST+; MAINTENANCE needs read access for the Housekeeping Board)
+router.get("/", authorize("RECEPTIONIST", "HOUSEKEEPING", "MAINTENANCE", "MANAGER", "ADMIN"), getRoomRack);
 
 // GET /api/room-rack/availability — enhanced availability query
 router.get("/availability", authorize("RECEPTIONIST", "MANAGER", "ADMIN"), getRoomAvailability);

@@ -104,8 +104,8 @@ export default function AdminStaff() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-serif text-hotel-black">Staff Management</h1>
-          <p className="text-hotel-black/60">Manage employee accounts, roles, and permissions</p>
+          <h1 className="text-3xl font-serif text-white">Staff Management</h1>
+          <p className="text-zinc-400">Manage employee accounts, roles, and permissions</p>
         </div>
         <Button onClick={() => { setEditingStaff(null); setIsFormOpen(true); }} className="bg-hotel-gold hover:bg-yellow-500 text-hotel-black flex items-center gap-2">
           <Plus className="w-4 h-4" /> Add Staff Member
@@ -123,7 +123,7 @@ export default function AdminStaff() {
           />
         </div>
         <div className="flex gap-2">
-          <select className="border rounded-md px-3 py-2 text-sm" value={roleFilter} onChange={(e) => { setRoleFilter(e.target.value); setPage(1); }}>
+          <select className="border rounded-md px-3 py-2 text-sm text-gray-900 bg-white" value={roleFilter} onChange={(e) => { setRoleFilter(e.target.value); setPage(1); }}>
             <option value="">All Roles</option>
             <option value="ADMIN">Admin</option>
             <option value="MANAGER">Manager</option>
@@ -131,7 +131,7 @@ export default function AdminStaff() {
             <option value="HOUSEKEEPING">Housekeeping</option>
             <option value="MAINTENANCE">Maintenance</option>
           </select>
-          <select className="border rounded-md px-3 py-2 text-sm" value={deptFilter} onChange={(e) => { setDeptFilter(e.target.value); setPage(1); }}>
+          <select className="border rounded-md px-3 py-2 text-sm text-gray-900 bg-white" value={deptFilter} onChange={(e) => { setDeptFilter(e.target.value); setPage(1); }}>
             <option value="">All Departments</option>
             <option value="MANAGEMENT">Management</option>
             <option value="FRONT_DESK">Front Desk</option>
@@ -161,7 +161,7 @@ export default function AdminStaff() {
               <tr><td colSpan={5} className="p-8 text-center text-gray-500">No staff found</td></tr>
             ) : (
               data?.staff?.map((s: any) => (
-                <tr key={s._id} className="hover:bg-gray-50">
+                <tr key={s._id} className="hover:bg-gray-50 text-gray-900">
                   <td className="px-4 py-3">
                     <div className="font-bold flex items-center gap-2">
                       <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-gray-600 font-bold text-xs">

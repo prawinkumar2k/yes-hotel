@@ -1,4 +1,4 @@
-import { useEffect, useRef, type ElementType } from "react";
+import { createElement, useEffect, useRef, type ElementType } from "react";
 import { gsap } from "@/lib/gsap";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 
@@ -62,16 +62,19 @@ export default function SplitReveal({
 
   const words = text.split(" ");
 
-  return (
-    <Tag ref={ref} className={className}>
-      {words.map((word, i) => (
-        <span key={i} style={{ display: "inline-block", overflow: "hidden", verticalAlign: "top" }}>
-          <span data-word style={reducedMotion ? undefined : { display: "inline-block" }}>
-            {word}
-            {i < words.length - 1 ? " " : ""}
-          </span>
+  // Built via createElement rather than `<Tag ref={ref} .../>` JSX: with a
+  // dynamic ElementType, TS can't resolve a single ref type across every
+  // possible tag/component, so the JSX form collapses `children` to `never`.
+  return createElement(
+    Tag,
+    { ref, className },
+    words.map((word, i) => (
+      <span key={i} style={{ display: "inline-block", overflow: "hidden", verticalAlign: "top" }}>
+        <span data-word style={reducedMotion ? undefined : { display: "inline-block" }}>
+          {word}
+          {i < words.length - 1 ? " " : ""}
         </span>
-      ))}
-    </Tag>
+      </span>
+    ))
   );
 }

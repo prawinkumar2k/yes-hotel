@@ -1,26 +1,43 @@
-import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Loader2, RefreshCw, CheckCircle2, AlertTriangle, ShieldCheck, User } from "lucide-react";
+import { Loader2, RefreshCw, CheckCircle2, ShieldCheck, User } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
+
+const STATUS_BAR: Record<string, string> = {
+  DIRTY: "bg-red-500",
+  CLEANING: "bg-blue-500",
+  CLEANING_COMPLETED: "bg-cyan-400",
+  INSPECTED: "bg-emerald-500",
+};
+
+const STATUS_BADGE: Record<string, string> = {
+  DIRTY: "bg-red-500/10 text-red-400 border-red-500/30",
+  CLEANING: "bg-blue-500/10 text-blue-400 border-blue-500/30",
+  CLEANING_COMPLETED: "bg-cyan-500/10 text-cyan-300 border-cyan-500/30",
+  INSPECTED: "bg-emerald-500/10 text-emerald-400 border-emerald-500/30",
+};
+
+const OCCUPANCY_BADGE: Record<string, string> = {
+  VACANT: "bg-white/5 text-zinc-300 border-white/10",
+  OCCUPIED: "bg-blue-500/10 text-blue-300 border-blue-500/30",
+  DEPARTING: "bg-orange-500/10 text-orange-300 border-orange-500/30",
+  ARRIVING: "bg-emerald-500/10 text-emerald-300 border-emerald-500/30",
+};
+
+const OCCUPANCY_LABEL: Record<string, string> = {
+  VACANT: "Vacant",
+  OCCUPIED: "Occupied",
+  DEPARTING: "Check-out today",
+  ARRIVING: "Check-in today",
+};
 
 export default function MobileHousekeeping() {
   const { toast } = useToast();
   const qc = useQueryClient();
   const { user } = useAuth();
-  
-  // Mobile check
-  const [isMobile, setIsMobile] = useState(false);
-  useEffect(() => {
-    const check = () => setIsMobile(window.innerWidth < 768);
-    check();
-    window.addEventListener('resize', check);
-    return () => window.removeEventListener('resize', check);
-  }, []);
 
   const { data: assignments = [], isLoading } = useQuery({
     queryKey: ["housekeeping-assignments", user?._id],
@@ -47,88 +64,72 @@ export default function MobileHousekeeping() {
     }
   });
 
-  if (!isMobile) {
-    return (
-      <div className="p-8 text-center text-muted-foreground flex flex-col items-center justify-center min-h-[60vh]">
-        <AlertTriangle className="h-12 w-12 mb-4 text-yellow-500" />
-        <h2 className="text-2xl font-bold mb-2">Mobile View Only</h2>
-        <p className="max-w-md">This view is optimized for housekeeping staff using mobile devices. Please use a mobile device or switch your browser to mobile preview.</p>
-      </div>
-    );
-  }
-
   const handleAction = (roomId: string, newStatus: string) => {
     updateStatusMutation.mutate({ id: roomId, status: newStatus });
   };
 
   return (
-    <div className="pb-16 bg-gray-50 min-h-screen">
-      <div className="bg-hotel-black text-white p-4 sticky top-0 z-10 shadow-md">
-        <div className="flex justify-between items-center">
-          <div>
-            <h1 className="font-bold text-lg">My Assignments</h1>
-            <p className="text-xs text-gray-300">Housekeeping Staff</p>
-          </div>
-          <Button variant="ghost" size="icon" onClick={() => qc.invalidateQueries({ queryKey: ["housekeeping-assignments"] })} className="text-white">
-            <RefreshCw className="h-5 w-5" />
-          </Button>
+    <div className="space-y-4">
+      <div className="flex justify-between items-center">
+        <div>
+          <h2 className="text-sm font-semibold text-white">My Assignments</h2>
+          <p className="text-xs text-zinc-400">Rooms needing housekeeping action</p>
         </div>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => qc.invalidateQueries({ queryKey: ["housekeeping-assignments"] })}
+          className="text-zinc-400 hover:text-white hover:bg-white/5"
+        >
+          <RefreshCw className="h-5 w-5" />
+        </Button>
       </div>
 
-      <div className="p-4 space-y-4">
+      <div className="space-y-4">
         {isLoading ? (
           <div className="flex justify-center p-8"><Loader2 className="animate-spin h-8 w-8 text-hotel-gold" /></div>
         ) : assignments.length === 0 ? (
-          <div className="text-center p-8 text-muted-foreground">
-            <CheckCircle2 className="mx-auto h-12 w-12 mb-3 text-green-500 opacity-50" />
+          <div className="text-center p-8 text-zinc-500">
+            <CheckCircle2 className="mx-auto h-12 w-12 mb-3 text-emerald-500 opacity-60" />
             <p>No pending assignments.</p>
           </div>
         ) : (
           assignments.map((room: any) => (
-            <Card key={room._id} className="overflow-hidden border-0 shadow-sm rounded-xl">
-              <div className={`h-1.5 w-full ${
-                room.housekeepingStatus === 'DIRTY' ? 'bg-red-500' :
-                room.housekeepingStatus === 'CLEANING' ? 'bg-yellow-500' :
-                room.housekeepingStatus === 'CLEANING_COMPLETED' ? 'bg-blue-500' :
-                room.housekeepingStatus === 'INSPECTED' ? 'bg-green-500' : 'bg-gray-300'
-              }`} />
-              <CardHeader className="p-4 pb-2 border-b border-gray-100">
+            <div key={room._id} className="overflow-hidden rounded-xl bg-[#15171b] border border-white/10 shadow-sm">
+              <div className={`h-1.5 w-full ${STATUS_BAR[room.housekeepingStatus] || "bg-zinc-700"}`} />
+              <div className="p-4 pb-3 border-b border-white/10">
                 <div className="flex justify-between items-start">
                   <div>
-                    <h2 className="text-xl font-bold text-hotel-black">Room {room.roomNumber}</h2>
-                    <p className="text-sm text-muted-foreground">{room.category?.name || "Standard Room"}</p>
+                    <h2 className="text-xl font-bold text-white">Room {room.roomNumber}</h2>
+                    <p className="text-sm text-zinc-400">{room.category?.name || "Standard Room"}</p>
                   </div>
-                  <Badge variant="outline" className={`font-semibold ${
-                    room.housekeepingStatus === 'DIRTY' ? 'text-red-700 bg-red-50 border-red-200' :
-                    room.housekeepingStatus === 'CLEANING' ? 'text-yellow-700 bg-yellow-50 border-yellow-200' :
-                    room.housekeepingStatus === 'CLEANING_COMPLETED' ? 'text-blue-700 bg-blue-50 border-blue-200' :
-                    'text-gray-700 bg-gray-50 border-gray-200'
-                  }`}>
+                  <Badge variant="outline" className={`font-semibold ${STATUS_BADGE[room.housekeepingStatus] || "bg-zinc-800 text-zinc-300 border-zinc-700"}`}>
                     {room.housekeepingStatus.replace(/_/g, ' ')}
                   </Badge>
                 </div>
-              </CardHeader>
-              <CardContent className="p-4">
+              </div>
+              <div className="p-4">
                 <div className="flex flex-wrap gap-2 mb-4">
-                   {room.occupancyStatus === 'VACANT' && <Badge variant="secondary" className="bg-gray-100"><User className="h-3 w-3 mr-1" /> Vacant</Badge>}
-                   {room.occupancyStatus === 'OCCUPIED' && <Badge variant="secondary" className="bg-blue-100 text-blue-800"><User className="h-3 w-3 mr-1" /> Occupied</Badge>}
-                   {room.occupancyStatus === 'DEPARTING' && <Badge variant="secondary" className="bg-orange-100 text-orange-800"><User className="h-3 w-3 mr-1" /> Check-out today</Badge>}
-                   {room.occupancyStatus === 'ARRIVING' && <Badge variant="secondary" className="bg-emerald-100 text-emerald-800"><User className="h-3 w-3 mr-1" /> Check-in today</Badge>}
+                  {room.occupancyStatus && OCCUPANCY_LABEL[room.occupancyStatus] && (
+                    <Badge variant="outline" className={OCCUPANCY_BADGE[room.occupancyStatus]}>
+                      <User className="h-3 w-3 mr-1" /> {OCCUPANCY_LABEL[room.occupancyStatus]}
+                    </Badge>
+                  )}
                 </div>
-                
+
                 <div className="flex gap-2 w-full mt-2">
                   {room.housekeepingStatus === 'DIRTY' && (
-                    <Button onClick={() => handleAction(room._id, 'CLEANING')} className="flex-1 bg-hotel-gold hover:bg-yellow-600">Start Cleaning</Button>
+                    <Button onClick={() => handleAction(room._id, 'CLEANING')} className="flex-1 bg-hotel-gold hover:bg-champagne text-black font-semibold">Start Cleaning</Button>
                   )}
                   {room.housekeepingStatus === 'CLEANING' && (
-                    <Button onClick={() => handleAction(room._id, 'CLEANING_COMPLETED')} className="flex-1">Finish Cleaning</Button>
+                    <Button onClick={() => handleAction(room._id, 'CLEANING_COMPLETED')} className="flex-1 bg-blue-600 hover:bg-blue-500 text-white">Finish Cleaning</Button>
                   )}
                   {room.housekeepingStatus === 'CLEANING_COMPLETED' && user?.role === 'MANAGER' && (
-                     <Button onClick={() => handleAction(room._id, 'INSPECTED')} className="flex-1 bg-green-600 hover:bg-green-700"><ShieldCheck className="h-4 w-4 mr-2"/> Pass Inspection</Button>
+                    <Button onClick={() => handleAction(room._id, 'INSPECTED')} className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white"><ShieldCheck className="h-4 w-4 mr-2"/> Pass Inspection</Button>
                   )}
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           ))
         )}
       </div>

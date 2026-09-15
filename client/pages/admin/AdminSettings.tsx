@@ -52,12 +52,12 @@ export default function AdminSettings() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-serif text-hotel-black">Hotel Settings</h1>
-          <p className="text-hotel-black/60">Configure public website details and booking policies</p>
+          <h1 className="text-3xl font-serif text-white">Hotel Settings</h1>
+          <p className="text-zinc-400">Configure public website details and booking policies</p>
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow-sm border p-6">
+      <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow-sm border p-6 text-gray-900">
         <Tabs defaultValue="general">
           <TabsList className="mb-6 bg-gray-100">
             <TabsTrigger value="general">General</TabsTrigger>
