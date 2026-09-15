@@ -148,6 +148,21 @@ export const createPosOrder = async (req: Request, res: Response) => {
   }
 };
 
+// KDS lifecycle is strictly forward-moving. Without this, updateOrderStatus
+// previously accepted any enum value regardless of the order's current
+// status — including reverting an already-BILLED order (already invoiced,
+// and if chargeToFolio, already posted to the guest's folio) straight back
+// to KITCHEN_PENDING, which would resurrect it on the kitchen's live KDS
+// screen. BILLED/CANCELLED are terminal; nothing transitions out of them.
+const LEGAL_ORDER_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
+  [OrderStatus.KITCHEN_PENDING]: [OrderStatus.PREPARING, OrderStatus.CANCELLED],
+  [OrderStatus.PREPARING]: [OrderStatus.READY, OrderStatus.CANCELLED],
+  [OrderStatus.READY]: [OrderStatus.SERVED, OrderStatus.CANCELLED],
+  [OrderStatus.SERVED]: [OrderStatus.BILLED, OrderStatus.CANCELLED],
+  [OrderStatus.BILLED]: [],
+  [OrderStatus.CANCELLED]: [],
+};
+
 /**
  * PATCH /api/pos/orders/:id/status
  */
@@ -158,6 +173,16 @@ export const updateOrderStatus = async (req: Request, res: Response) => {
 
     if (!Object.values(OrderStatus).includes(status)) {
       return res.status(400).json({ success: false, message: `Invalid order status: ${status}` });
+    }
+
+    const existing = await RestaurantOrder.findById(id);
+    if (!existing) return res.status(404).json({ success: false, message: "Order not found" });
+
+    if (existing.status !== status && !LEGAL_ORDER_TRANSITIONS[existing.status as OrderStatus]?.includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: `Cannot transition order from ${existing.status} to ${status}`,
+      });
     }
 
     const order = await RestaurantOrder.findByIdAndUpdate(id, { status }, { new: true });
