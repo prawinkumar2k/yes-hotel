@@ -96,7 +96,7 @@ export function buildBookingRequestHash(payload: {
  *      never "needs to be created". That removes the upsert/E11000
  *      ambiguity entirely from the transactional path.
  */
-async function ensureInventoryDayDocuments(roomCategoryId: string, dates: Date[], capacity: number) {
+export async function ensureInventoryDayDocuments(roomCategoryId: string, dates: Date[], capacity: number) {
   for (const stayDate of dates) {
     try {
       await BookingInventoryDay.updateOne(

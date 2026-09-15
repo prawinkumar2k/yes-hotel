@@ -14,11 +14,11 @@ import { createAuditLog } from "../services/audit.service";
 import crypto from "crypto";
 import { z } from "zod";
 import { BookingIdempotency, BookingIdempotencyStatus } from "../models/BookingIdempotency";
-import { BookingConflictError, buildBookingRequestHash, reserveInventoryDays, buildStayDates } from "../services/booking-safety.service";
+import { BookingConflictError, buildBookingRequestHash, reserveInventoryDays, buildStayDates, ensureInventoryDayDocuments } from "../services/booking-safety.service";
 import { assertGuestNotBlocked, GuestBlockedError, syncGuestOnBookingCreated } from "../services/guest.service";
 import { Folio, FolioStatus } from "../models/Folio";
 import { FolioLine, FolioLineType } from "../models/FolioLine";
-import { createFolio, postCharge, finalizeFolio, settleFolio, calculateTaxBreakdown, recomputeFolioBalance } from "../services/folio.service";
+import { createFolio, postCharge, finalizeFolio, settleFolio, recomputeFolioBalance } from "../services/folio.service";
 import { AdvancePayment, AdvancePaymentStatus } from "../models/AdvancePayment";
 import { adjustAdvance } from "../services/advance.service";
 import { BookingEvent, BookingEventType } from "../models/BookingEvent";
@@ -1031,9 +1031,12 @@ export const checkExtensionConflict = async (req: Request, res: Response) => {
     const additionalNights = Math.ceil((targetCheckOut.getTime() - currentCheckOut.getTime()) / (1000 * 60 * 60 * 24));
     const basePrice = (booking.roomCategory as any)?.basePrice || 0;
     const additionalTariff = basePrice * additionalNights;
-    const tax = await calculateTaxBreakdown(additionalTariff);
-    const additionalTotal = tax.totalWithTax;
-    const additionalTax = tax.totalTax;
+    // Same room-rate GST slab extendStay actually posts (see its comment) —
+    // this preview must quote the same total the guest will really be
+    // charged, not calculateTaxBreakdown's flat rate.
+    const extensionTaxRate = basePrice > 7500 ? 0.18 : 0.12;
+    const additionalTax = Math.round(additionalTariff * extensionTaxRate * 100) / 100;
+    const additionalTotal = additionalTariff + additionalTax;
 
     const isConflict = conflicts.length > 0 && booking.assignedRoom
       ? conflicts.some((c) => c.assignedRoom?.toString() === booking.assignedRoom?.toString())
@@ -1082,9 +1085,21 @@ export const extendStay = async (req: Request, res: Response) => {
     const additionalNights = Math.ceil((targetCheckOut.getTime() - currentCheckOut.getTime()) / (1000 * 60 * 60 * 24));
     const basePrice = (booking.roomCategory as any)?.basePrice || 0;
     const additionalTariff = basePrice * additionalNights;
-    const tax = await calculateTaxBreakdown(additionalTariff);
-    const additionalTotal = tax.totalWithTax;
-    const additionalTax = tax.totalTax;
+    // Same room-rate GST slab used at booking time and check-in (12% at/under
+    // ₹7500/night, 18% above) — NOT calculateTaxBreakdown's flat HotelSettings
+    // rate (default 9%+9%=18% regardless of rate). Using the flat rate here
+    // silently overcharged every extension on a sub-₹7500 room by 6% (posted
+    // 18% vs the 12% the guest was quoted/charged for every other night of
+    // the same stay) — reproduced live during this audit on a ₹3500/night
+    // room: extending by 1 night posted ₹630 tax instead of the correct
+    // ₹420, a ₹210 overcharge invisible until someone reconciled the folio
+    // against the room's actual rate.
+    const extensionTaxRate = basePrice > 7500 ? 0.18 : 0.12;
+    const additionalTaxCgst = Math.round((additionalTariff * (extensionTaxRate / 2)) * 100) / 100;
+    const additionalTaxSgst = Math.round((additionalTariff * (extensionTaxRate / 2)) * 100) / 100;
+    const additionalTax = additionalTaxCgst + additionalTaxSgst;
+    const additionalTotal = additionalTariff + additionalTax;
+    const tax = { cgst: additionalTaxCgst, sgst: additionalTaxSgst, totalTax: additionalTax, totalWithTax: additionalTotal };
 
     // ── INVENTORY SAFETY: Reserve inventory days for extension ──
     const categoryId = (booking.roomCategory as any)._id || booking.roomCategory;
@@ -1093,6 +1108,19 @@ export const extendStay = async (req: Request, res: Response) => {
       category: categoryId,
       status: { $nin: [RoomStatus.MAINTENANCE, RoomStatus.OUT_OF_SERVICE] },
     });
+
+    // A stay date that has never had a booking before has no
+    // BookingInventoryDay document at all yet. Without creating it first,
+    // the atomic claim below (a plain findOneAndUpdate with no upsert) has
+    // nothing to match and falsely reports "Capacity exhausted" for a date
+    // that actually has zero reservations — reproduced live during this
+    // audit: extending into a brand-new date failed immediately after
+    // extension-check had just reported the date as fully available (that
+    // check queries overlapping Bookings directly, not the inventory-day
+    // ledger, so the two never agreed on this class of date). The real
+    // booking-creation path (reserveInventoryDays) always runs this same
+    // ensure-step first; extendStay's own inline claim loop had skipped it.
+    await ensureInventoryDayDocuments(categoryId.toString(), extStayDates, capacity);
 
     for (const stayDate of extStayDates) {
       const reservation = await BookingInventoryDay.findOneAndUpdate(
@@ -1144,7 +1172,7 @@ export const extendStay = async (req: Request, res: Response) => {
             folioId: folio._id.toString(),
             bookingId: booking._id.toString(),
             lineType: FolioLineType.TAX_CGST,
-            description: "CGST on Stay Extension (9%)",
+            description: `CGST on Stay Extension (${(extensionTaxRate / 2) * 100}%)`,
             amount: tax.cgst,
             date: new Date(),
             postedBy: "SYSTEM_TAX",
@@ -1158,7 +1186,7 @@ export const extendStay = async (req: Request, res: Response) => {
             folioId: folio._id.toString(),
             bookingId: booking._id.toString(),
             lineType: FolioLineType.TAX_SGST,
-            description: "SGST on Stay Extension (9%)",
+            description: `SGST on Stay Extension (${(extensionTaxRate / 2) * 100}%)`,
             amount: tax.sgst,
             date: new Date(),
             postedBy: "SYSTEM_TAX",
