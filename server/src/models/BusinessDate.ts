@@ -91,9 +91,20 @@ const BusinessDateSchema = new Schema<IBusinessDate>(
   { timestamps: true }
 );
 
-// Ensures only one OPEN date at a time — the unique partial index makes this
-// a database-level guarantee rather than application-level hope.
-BusinessDateSchema.index({ isCurrentDate: 1 }, { unique: true, sparse: true });
+// Ensures only one OPEN date at a time — a database-level guarantee rather
+// than application-level hope. This MUST be a partial index scoped to
+// isCurrentDate: true, not `sparse`: sparse only exempts documents where
+// the field is entirely missing, but every document here has an explicit
+// boolean (default: false), so a plain unique+sparse index also uniquely
+// constrains the value `false` across the whole collection — meaning the
+// SECOND business date ever closed (isCurrentDate set to false) collides
+// with the first, and every Night Audit after that permanently fails with
+// a duplicate-key error. Reproduced live: night audit worked once, then
+// failed on every subsequent run with E11000 on `{ isCurrentDate: false }`.
+BusinessDateSchema.index(
+  { isCurrentDate: 1 },
+  { unique: true, partialFilterExpression: { isCurrentDate: true } }
+);
 BusinessDateSchema.index({ date: 1 });
 BusinessDateSchema.index({ state: 1 });
 
