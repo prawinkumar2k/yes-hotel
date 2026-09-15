@@ -32,9 +32,60 @@ export const getHousekeepingTasks = async (req: Request, res: Response) => {
   }
 };
 
+// Task status values map 1:1 onto Room.housekeepingStatus by name — both
+// enums share the same lifecycle (DIRTY -> ASSIGNED -> CLEANING ->
+// CLEANING_COMPLETED -> INSPECTION -> [INSPECTION_FAILED | WAITING_FOR_RELEASE]
+// -> CLEAN). CLEAN is the terminal, released-and-sellable state.
+const TASK_TO_ROOM_HOUSEKEEPING_STATUS: Partial<Record<HousekeepingStatus, HousekeepingRoomStatus>> = {
+  [HousekeepingStatus.DIRTY]: HousekeepingRoomStatus.DIRTY,
+  [HousekeepingStatus.ASSIGNED]: HousekeepingRoomStatus.ASSIGNED,
+  [HousekeepingStatus.CLEANING]: HousekeepingRoomStatus.CLEANING,
+  [HousekeepingStatus.CLEANING_COMPLETED]: HousekeepingRoomStatus.CLEANING_COMPLETED,
+  [HousekeepingStatus.INSPECTION]: HousekeepingRoomStatus.INSPECTION,
+  [HousekeepingStatus.INSPECTION_FAILED]: HousekeepingRoomStatus.INSPECTION_FAILED,
+  [HousekeepingStatus.WAITING_FOR_RELEASE]: HousekeepingRoomStatus.WAITING_FOR_RELEASE,
+  [HousekeepingStatus.INSPECTED]: HousekeepingRoomStatus.INSPECTED,
+  [HousekeepingStatus.CLEAN]: HousekeepingRoomStatus.CLEAN,
+};
+
 export const updateHousekeepingTask = async (req: Request, res: Response) => {
   try {
     const data = updateTaskSchema.parse(req.body);
+    const actorId = (req as any).user?.id || (req as any).user?._id;
+
+    const existingTask = await HousekeepingTask.findById(req.params.id).populate("room", "roomNumber floor");
+    if (!existingTask) return res.status(404).json({ success: false, message: "Task not found" });
+
+    // Apply the room-side transition FIRST, through the single source of
+    // truth for legal housekeeping transitions, so this admin/desktop task
+    // board can never push a room through an illegal skip (e.g. straight
+    // from DIRTY to CLEAN, bypassing inspection and manual release) — this
+    // endpoint previously enforced no legal-transition check at all and had
+    // no mapping for INSPECTION/INSPECTION_FAILED/WAITING_FOR_RELEASE, so a
+    // room could never actually reach a real "awaiting manual release" state
+    // through the desktop UI, and CLEAN never reached the room at all (it
+    // was mapped to CLEANING_COMPLETED instead). Only update the task
+        // record after the room transition succeeds, so the two can't drift.
+
+    if (existingTask.room && data.status) {
+      const roomId = (existingTask.room as any)._id.toString();
+      const targetRoomStatus = TASK_TO_ROOM_HOUSEKEEPING_STATUS[data.status];
+      if (targetRoomStatus) {
+        try {
+          await transitionHousekeepingStatus(roomId, targetRoomStatus, {
+            req,
+            action: "housekeeping.task_status_change",
+            metadata: { taskId: existingTask._id.toString() },
+            releasedBy: targetRoomStatus === HousekeepingRoomStatus.CLEAN ? actorId?.toString() : undefined,
+          });
+        } catch (error: any) {
+          if (error instanceof IllegalHousekeepingTransitionError) {
+            return res.status(400).json({ success: false, message: error.message });
+          }
+          throw error;
+        }
+      }
+    }
 
     const task = await HousekeepingTask.findByIdAndUpdate(
       req.params.id,
@@ -42,36 +93,12 @@ export const updateHousekeepingTask = async (req: Request, res: Response) => {
       { returnDocument: "after" }
     ).populate("room", "roomNumber floor");
 
-    if (!task) return res.status(404).json({ success: false, message: "Task not found" });
-
-    // Operational lifecycle update for room:
-    // Housekeeping tasks drive the physical state; inspection and authorized release make it sellable.
-    if (task.room) {
-      const roomId = (task.room as any)._id.toString();
-      if (data.status === HousekeepingStatus.CLEANING) {
-        await Room.findByIdAndUpdate(roomId, {
-          housekeepingStatus: HousekeepingRoomStatus.CLEANING,
-          lastCleanedAt: new Date(),
-        }).catch(() => undefined);
-      } else if (data.status === HousekeepingStatus.CLEAN || data.status === HousekeepingStatus.CLEANING_COMPLETED) {
-        await Room.findByIdAndUpdate(roomId, {
-          housekeepingStatus: HousekeepingRoomStatus.CLEANING_COMPLETED,
-          lastCleanedAt: new Date(),
-        }).catch(() => undefined);
-      } else if (data.status === HousekeepingStatus.INSPECTED) {
-        await Room.findByIdAndUpdate(roomId, {
-          housekeepingStatus: HousekeepingRoomStatus.WAITING_FOR_RELEASE,
-          lastInspectedAt: new Date(),
-        }).catch(() => undefined);
-      }
-    }
-
     await createAuditLog({
       req,
       action: "housekeeping.task_updated",
       resourceType: "HousekeepingTask",
-      resourceId: task._id.toString(),
-      metadata: { status: task.status, priority: task.priority, room: (task.room as any)?.roomNumber },
+      resourceId: task!._id.toString(),
+      metadata: { status: task!.status, priority: task!.priority, room: (task!.room as any)?.roomNumber },
     });
 
     return res.status(200).json({ success: true, data: task });

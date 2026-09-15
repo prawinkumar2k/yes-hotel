@@ -210,6 +210,23 @@ export async function transitionHousekeepingStatus(
     updateFields.lastCleanedAt = new Date();
   }
 
+  // housekeepingStatus and the legacy room.status field are two separate
+  // state machines that were never wired together: reaching CLEAN here
+  // (the end of DIRTY -> ... -> WAITING_FOR_RELEASE -> CLEAN, the full
+  // manual-release lifecycle) left room.status stuck at whatever it was
+  // set to at checkout (CLEANING) forever. checkIn() requires room.status
+  // === AVAILABLE before assigning a room, and the room rack reads
+  // room.status for its AVAILABLE/OCCUPIED/CLEANING display — so a fully
+  // released, guest-ready room silently stayed unbookable and stuck
+  // showing "Cleaning" until someone manually patched it elsewhere.
+  // Reproduced live during a full checkout-to-resale walkthrough. Only
+  // sync CLEANING -> AVAILABLE (the legal, expected post-checkout path);
+  // never touch OCCUPIED/MAINTENANCE/OUT_OF_SERVICE rooms, whose legacy
+  // status is governed by other flows entirely.
+  if (to === HousekeepingRoomStatus.CLEAN && room.status === RoomStatus.CLEANING) {
+    updateFields.status = RoomStatus.AVAILABLE;
+  }
+
   Object.assign(room, updateFields);
   await room.save();
 

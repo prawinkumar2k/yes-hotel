@@ -9,11 +9,36 @@ const TASK_STATUS_COLORS: Record<string, string> = {
   DIRTY: "bg-red-100 text-red-700",
   ASSIGNED: "bg-yellow-100 text-yellow-700",
   CLEANING: "bg-blue-100 text-blue-700",
-  CLEAN: "bg-green-100 text-green-700",
+  CLEANING_COMPLETED: "bg-cyan-100 text-cyan-700",
+  INSPECTION: "bg-indigo-100 text-indigo-700",
+  INSPECTION_FAILED: "bg-rose-100 text-rose-700",
   INSPECTED: "bg-purple-100 text-purple-700",
+  WAITING_FOR_RELEASE: "bg-orange-100 text-orange-700",
+  CLEAN: "bg-green-100 text-green-700",
 };
 
-const TASK_STATUSES = ["DIRTY","ASSIGNED","CLEANING","CLEAN","INSPECTED"];
+// Full lifecycle, in order: DIRTY -> ASSIGNED -> CLEANING ->
+// CLEANING_COMPLETED -> INSPECTION -> [INSPECTED | INSPECTION_FAILED] ->
+// WAITING_FOR_RELEASE -> CLEAN (released/sellable). Mirrors the backend's
+// LEGAL_HOUSEKEEPING_TRANSITIONS in room-state.service.ts — the backend is
+// still the enforcement point, but only offering legal next-steps here
+// means a demo walkthrough never hits a rejected-transition error.
+const TASK_STATUSES = [
+  "DIRTY", "ASSIGNED", "CLEANING", "CLEANING_COMPLETED",
+  "INSPECTION", "INSPECTION_FAILED", "INSPECTED", "WAITING_FOR_RELEASE", "CLEAN",
+];
+
+const LEGAL_NEXT_STATUSES: Record<string, string[]> = {
+  DIRTY: ["ASSIGNED", "CLEANING"],
+  ASSIGNED: ["CLEANING", "DIRTY"],
+  CLEANING: ["CLEANING_COMPLETED", "DIRTY"],
+  CLEANING_COMPLETED: ["INSPECTION", "INSPECTED", "CLEAN", "DIRTY"],
+  INSPECTION: ["INSPECTED", "INSPECTION_FAILED"],
+  INSPECTION_FAILED: ["DIRTY", "ASSIGNED"],
+  INSPECTED: ["WAITING_FOR_RELEASE", "CLEAN"],
+  WAITING_FOR_RELEASE: ["CLEAN", "DIRTY"],
+  CLEAN: ["DIRTY"],
+};
 
 export default function AdminHousekeeping() {
   const { user } = useAuth();
@@ -76,11 +101,11 @@ export default function AdminHousekeeping() {
         </div>
 
         {/* Status columns */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-9 gap-4">
           {TASK_STATUSES.map(status => (
             <div key={status} className="bg-white rounded shadow-sm">
-              <div className={`px-4 py-2 rounded-t text-xs font-bold uppercase tracking-widest ${TASK_STATUS_COLORS[status]}`}>
-                {status}
+              <div className={`px-3 py-2 rounded-t text-[10px] font-bold uppercase tracking-wide ${TASK_STATUS_COLORS[status]}`}>
+                {status.replace(/_/g, " ")}
               </div>
               <div className="p-2 space-y-2 min-h-24">
                 {isLoading ? (
@@ -93,10 +118,10 @@ export default function AdminHousekeeping() {
                       <p className="font-bold text-gray-700">Room {task.room?.roomNumber ?? "—"}</p>
                       {task.notes && <p className="text-gray-400 mt-0.5 truncate">{task.notes}</p>}
                       <div className="mt-2 flex flex-wrap gap-1">
-                        {TASK_STATUSES.filter(s => s !== status).map(s => (
+                        {(LEGAL_NEXT_STATUSES[status] ?? []).map(s => (
                           <button key={s} onClick={() => updateTask.mutate({ id: task._id, status: s })}
                             className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 hover:bg-hotel-gold hover:text-hotel-black transition-colors">
-                            → {s}
+                            → {s.replace(/_/g, " ")}
                           </button>
                         ))}
                       </div>
