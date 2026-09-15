@@ -71,18 +71,53 @@ export const createAncillaryService = async (req: Request, res: Response) => {
       else if (category === ServiceCategory.MINIBAR) lineType = FolioLineType.MINIBAR;
       else lineType = FolioLineType.ADDON;
 
+      // Post the taxable amount and its GST as separate lines rather than
+      // folding tax into the service charge — same fix as POS/restaurant
+      // charges. Folding it in meant folio.totalTax/cgst/sgst never
+      // reflected GST collected on spa/transport/laundry/minibar revenue.
       await postCharge(
         {
           folioId,
           bookingId,
           lineType,
           description: `${serviceName} (${category})`,
-          amount: totalAmount,
+          amount: amt,
           date: new Date(),
           postedBy: actorId.toString(),
         },
         { req }
       );
+
+      if (taxAmount > 0) {
+        const cgst = Math.round((taxAmount / 2) * 100) / 100;
+        const sgst = Math.round((taxAmount - cgst) * 100) / 100;
+
+        await postCharge(
+          {
+            folioId,
+            bookingId,
+            lineType: FolioLineType.TAX_CGST,
+            description: `CGST on ${serviceName} (${category})`,
+            amount: cgst,
+            date: new Date(),
+            postedBy: actorId.toString(),
+          },
+          { req }
+        );
+
+        await postCharge(
+          {
+            folioId,
+            bookingId,
+            lineType: FolioLineType.TAX_SGST,
+            description: `SGST on ${serviceName} (${category})`,
+            amount: sgst,
+            date: new Date(),
+            postedBy: actorId.toString(),
+          },
+          { req }
+        );
+      }
     }
 
     const service = await AncillaryService.create({

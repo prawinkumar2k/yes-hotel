@@ -101,18 +101,57 @@ export const createPosOrder = async (req: Request, res: Response) => {
       }
 
       folioId = folio._id.toString();
+
+      // Post the taxable amount and its GST as separate lines, same
+      // convention as room charges (checkIn/night-audit split CGST+SGST
+      // rather than folding tax into the charge). Before this, the entire
+      // grandTotal (subtotal + tax) was posted as one RESTAURANT line, so
+      // folio.totalTax/cgst/sgst silently under-reported every restaurant
+      // charge's GST — a real gap for GST filing, which needs cgst+sgst
+      // collected across ALL revenue streams, not just room tariff.
       await postCharge(
         {
           folioId,
           bookingId,
           lineType: FolioLineType.RESTAURANT,
           description: `Restaurant Order ${kotNumber} (Room Service)`,
-          amount: grandTotal,
+          amount: subtotal,
           date: new Date(),
           postedBy: actorId?.toString() || "POS_SYSTEM",
         },
         { req }
       );
+
+      if (taxAmount > 0) {
+        const cgst = Math.round((taxAmount / 2) * 100) / 100;
+        const sgst = Math.round((taxAmount - cgst) * 100) / 100;
+
+        await postCharge(
+          {
+            folioId,
+            bookingId,
+            lineType: FolioLineType.TAX_CGST,
+            description: `CGST on Restaurant Order ${kotNumber}`,
+            amount: cgst,
+            date: new Date(),
+            postedBy: actorId?.toString() || "POS_SYSTEM",
+          },
+          { req }
+        );
+
+        await postCharge(
+          {
+            folioId,
+            bookingId,
+            lineType: FolioLineType.TAX_SGST,
+            description: `SGST on Restaurant Order ${kotNumber}`,
+            amount: sgst,
+            date: new Date(),
+            postedBy: actorId?.toString() || "POS_SYSTEM",
+          },
+          { req }
+        );
+      }
     }
 
     const order = await RestaurantOrder.create({
