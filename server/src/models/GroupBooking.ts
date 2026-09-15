@@ -78,10 +78,15 @@ const GroupBookingSchema = new Schema<IGroupBooking>(
   { timestamps: true }
 );
 
-// Auto-compute balance before save
-GroupBookingSchema.pre("save", function (this: IGroupBooking, next: () => void) {
+// Auto-compute balance before save. Modern promise-style hook (no `next`
+// callback) — the callback-style version broke under this project's
+// mongoose/kareem versions: TypeScript's `this: IGroupBooking` annotation
+// is erased at compile time, but something in the hook-arity detection
+// still resolved the actual `next` parameter to something that wasn't a
+// function, throwing "next is not a function" on every single save and
+// making Group Booking creation completely broken. Reproduced live.
+GroupBookingSchema.pre("save", async function (this: IGroupBooking) {
   this.balance = this.totalEstimatedValue - this.advancePaid;
-  next();
 });
 
 export const GroupBooking = (mongoose.models.GroupBooking as mongoose.Model<IGroupBooking>) || mongoose.model<IGroupBooking>("GroupBooking", GroupBookingSchema);
