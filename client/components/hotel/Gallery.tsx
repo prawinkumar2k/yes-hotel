@@ -38,20 +38,20 @@ export default function Gallery() {
   }, [active, IMAGES.length]);
 
   return (
-    <section id="gallery" className="bg-[#0b0b0b] py-28 text-white border-t border-[#262930]">
+    <section id="gallery" className="bg-white py-28 text-slate-800 border-t border-slate-200">
       <div className="container mx-auto px-4 md:px-8 max-w-[1400px] space-y-12">
         {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-[#262930] pb-8">
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-slate-200 pb-8">
           <div className="space-y-3">
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#c9a227]/10 border border-[#c9a227]/30 text-[#e5c76b] text-xs font-mono font-bold tracking-widest uppercase">
-              <Sparkles size={13} className="text-[#c9a227]" /> VISUAL ARCHIVE & ATMOSPHERE
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#c9a227]/10 border border-[#c9a227]/30 text-[#866A1C] text-xs font-mono font-bold tracking-widest uppercase">
+              <Sparkles size={13} className="text-[#c9a227]" /> VISUAL ARCHIVE &amp; ATMOSPHERE
             </div>
-            <h2 className="font-serif text-4xl sm:text-6xl text-white font-normal leading-tight">
+            <h2 className="font-serif text-3xl sm:text-4xl md:text-5xl lg:text-6xl text-slate-800 font-normal leading-tight">
               A Glimpse of <span className="text-[#c9a227] italic font-serif">Your Sanctuary</span>.
             </h2>
           </div>
 
-          <p className="max-w-md text-xs sm:text-sm text-gray-400 font-light leading-relaxed">
+          <p className="max-w-md text-xs sm:text-sm text-slate-500 font-light leading-relaxed">
             Moments captured across our coastal suites, private infinity pools, and Michelin-inspired dining salons.
           </p>
         </div>
@@ -61,7 +61,7 @@ export default function Gallery() {
           {IMAGES.map((image, i) => (
             <motion.div
               key={image.title}
-              className={`group relative cursor-pointer overflow-hidden rounded-2xl border border-[#262930] ${SPAN_PATTERN[i % SPAN_PATTERN.length]}`}
+              className={`group relative cursor-pointer overflow-hidden rounded-2xl border border-slate-200 shadow-sm ${SPAN_PATTERN[i % SPAN_PATTERN.length]}`}
               initial={reducedMotion ? false : { opacity: 0, scale: 0.95 }}
               whileInView={{ opacity: 1, scale: 1 }}
               viewport={{ once: true, margin: "-60px" }}
@@ -77,10 +77,10 @@ export default function Gallery() {
                   layoutId={reducedMotion ? undefined : `gallery-image-${i}`}
                   src={image.src}
                   alt={image.title}
-                  style={{ imageRendering: "-webkit-optimize-contrast" as any }}
-                  className="h-full min-h-[160px] w-full object-cover filter brightness-[0.97] contrast-[1.05] saturate-[1.05] transition-all duration-700 group-hover:scale-105 group-hover:brightness-100"
+                  style={{ filter: "url(#sharpen)" }}
+                  className="h-full min-h-[160px] w-full object-cover brightness-[0.97] contrast-[1.1] saturate-[1.1] transition-all duration-700 group-hover:scale-105 group-hover:brightness-90"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-[#0b0b0b] via-[#0b0b0b]/20 to-transparent opacity-50 group-hover:opacity-85 transition-opacity duration-300" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/10 to-transparent opacity-40 group-hover:opacity-90 transition-opacity duration-300" />
 
                 <div className="absolute inset-0 flex flex-col justify-end p-4 text-left opacity-0 group-hover:opacity-100 transition-all duration-300">
                   <span className="text-[10px] font-mono text-[#c9a227] uppercase tracking-widest font-semibold">ARCHIVE 0{i + 1}</span>
@@ -98,7 +98,7 @@ export default function Gallery() {
       <AnimatePresence>
         {active !== null && (
           <motion.div
-            className="fixed inset-0 z-[100] flex items-center justify-center bg-[#0b0b0b]/90 backdrop-blur-2xl p-4 sm:p-8 overflow-hidden"
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/85 backdrop-blur-2xl p-4 sm:p-8 overflow-hidden"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -116,7 +116,7 @@ export default function Gallery() {
               type="button"
               aria-label="Close"
               onClick={() => setActive(null)}
-              className="absolute right-6 top-6 z-20 text-white hover:text-[#c9a227] p-2.5 rounded-2xl bg-[#121316]/80 backdrop-blur-md border border-[#262930] hover:border-[#c9a227]/50 transition-all shadow-xl"
+              className="absolute right-6 top-6 z-20 text-white hover:text-[#c9a227] p-2.5 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 hover:border-[#c9a227]/50 transition-all shadow-xl"
             >
               <X size={24} />
             </button>
@@ -128,7 +128,7 @@ export default function Gallery() {
                 e.stopPropagation();
                 setActive((v) => (v === null ? v : (v - 1 + IMAGES.length) % IMAGES.length));
               }}
-              className="absolute left-6 top-1/2 z-20 -translate-y-1/2 text-white/80 hover:text-white p-3.5 rounded-full bg-[#121316]/80 backdrop-blur-md border border-[#262930] hover:border-[#c9a227]/50 transition-all shadow-2xl"
+              className="absolute left-6 top-1/2 z-20 -translate-y-1/2 text-white/80 hover:text-white p-3.5 rounded-full bg-white/10 backdrop-blur-md border border-white/20 hover:border-[#c9a227]/50 transition-all shadow-2xl"
             >
               <ChevronLeft size={24} />
             </button>
@@ -139,25 +139,25 @@ export default function Gallery() {
                 e.stopPropagation();
                 setActive((v) => (v === null ? v : (v + 1) % IMAGES.length));
               }}
-              className="absolute right-6 top-1/2 z-20 -translate-y-1/2 text-white/80 hover:text-white p-3.5 rounded-full bg-[#121316]/80 backdrop-blur-md border border-[#262930] hover:border-[#c9a227]/50 transition-all shadow-2xl"
+              className="absolute right-6 top-1/2 z-20 -translate-y-1/2 text-white/80 hover:text-white p-3.5 rounded-full bg-white/10 backdrop-blur-md border border-white/20 hover:border-[#c9a227]/50 transition-all shadow-2xl"
             >
               <ChevronRight size={24} />
             </button>
 
             <div className="relative z-10 space-y-4 text-center max-w-5xl flex flex-col items-center">
-              <div className="relative overflow-hidden rounded-3xl border border-[#c9a227]/30 bg-[#121316] shadow-[0_20px_60px_rgba(0,0,0,0.8)] p-2">
+              <div className="relative overflow-hidden rounded-3xl border border-white/20 bg-white/5 shadow-[0_20px_60px_rgba(0,0,0,0.6)] p-2">
                 <motion.img
                   layoutId={reducedMotion ? undefined : `gallery-image-${active}`}
                   src={IMAGES[active].src}
                   alt={IMAGES[active].title}
-                  style={{ imageRendering: "-webkit-optimize-contrast" as any }}
+                  style={{ filter: "url(#sharpen)" }}
                   onClick={(e) => e.stopPropagation()}
-                  className="max-h-[78vh] max-w-full rounded-2xl object-contain filter contrast-[1.04] saturate-[1.04] brightness-[0.99]"
+                  className="max-h-[78vh] max-w-full rounded-2xl object-contain contrast-[1.1] saturate-[1.1] brightness-[0.99]"
                 />
               </div>
-              <div className="px-6 py-2 rounded-full bg-[#121316]/90 border border-[#262930] backdrop-blur-md inline-flex items-center gap-3">
+              <div className="px-6 py-2 rounded-full bg-white/10 border border-white/20 backdrop-blur-md inline-flex items-center gap-3">
                 <span className="text-xs font-mono text-[#c9a227] uppercase tracking-widest">{IMAGES[active].category}</span>
-                <span className="text-gray-500">•</span>
+                <span className="text-white/40">•</span>
                 <p className="font-serif text-lg text-white font-medium">{IMAGES[active].title}</p>
               </div>
             </div>

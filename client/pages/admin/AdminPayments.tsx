@@ -180,7 +180,7 @@ export default function AdminPayments() {
                 {getStatusBadge(viewData.status)}
               </div>
 
-              <div className="grid grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 <div>
                   <h4 className="font-semibold text-gray-900 mb-2">Transaction Information</h4>
                   <div className="space-y-2 text-sm">
@@ -216,3 +216,4 @@ export default function AdminPayments() {
     </div>
   );
 }
+

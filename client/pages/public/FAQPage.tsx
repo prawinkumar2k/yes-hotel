@@ -20,7 +20,7 @@ export default function FAQPage() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-          className="font-serif text-5xl text-hotel-black mb-6 text-center"
+          className="font-serif text-4xl sm:text-5xl text-hotel-black mb-6 text-center"
         >
           Frequently Asked Questions
         </motion.h1>

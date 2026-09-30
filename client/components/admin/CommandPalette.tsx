@@ -98,7 +98,7 @@ export default function CommandPalette({ open, onOpenChange }: Props) {
 
           {/* Dynamic Live Bookings */}
           {searchResults.bookings.length > 0 && (
-            <CommandGroup heading="Live Reservations & Folios" className="text-zinc-400">
+            <CommandGroup heading="Live Reservations & Bills" className="text-zinc-400">
               {searchResults.bookings.map((b: any) => (
                 <CommandItem
                   key={b._id}
@@ -121,7 +121,7 @@ export default function CommandPalette({ open, onOpenChange }: Props) {
 
           {/* Dynamic Live Guests */}
           {searchResults.guests.length > 0 && (
-            <CommandGroup heading="Guests (CRM)" className="text-zinc-400">
+            <CommandGroup heading="Guest List" className="text-zinc-400">
               {searchResults.guests.map((g: any) => (
                 <CommandItem
                   key={g._id}
@@ -139,41 +139,48 @@ export default function CommandPalette({ open, onOpenChange }: Props) {
             </CommandGroup>
           )}
 
-          <CommandGroup heading="Quick Operational Actions" className="text-zinc-400">
+          <CommandGroup heading="Quick Actions" className="text-zinc-400">
             <CommandItem
               onSelect={() => handleSelect(() => navigate("/admin/check-in"))}
               className="hover:bg-white/10 text-zinc-200 cursor-pointer"
             >
               <LogIn className="mr-2 h-4 w-4 text-emerald-400" />
-              <span>Express Check-In Guest</span>
+              <span>Quick Check-In Guest</span>
             </CommandItem>
             <CommandItem
               onSelect={() => handleSelect(() => navigate("/admin/check-out"))}
               className="hover:bg-white/10 text-zinc-200 cursor-pointer"
             >
               <LogOut className="mr-2 h-4 w-4 text-blue-400" />
-              <span>Check-Out & Settle Folio</span>
+              <span>Check-Out & Pay Final Bill</span>
             </CommandItem>
             <CommandItem
               onSelect={() => handleSelect(() => navigate("/admin/room-rack"))}
               className="hover:bg-white/10 text-zinc-200 cursor-pointer"
             >
               <BedDouble className="mr-2 h-4 w-4 text-hotel-gold" />
-              <span>Open Visual Room Rack</span>
+              <span>View Live Room Floor Plan</span>
             </CommandItem>
             <CommandItem
               onSelect={() => handleSelect(() => navigate("/admin/advances"))}
               className="hover:bg-white/10 text-zinc-200 cursor-pointer"
             >
               <CreditCard className="mr-2 h-4 w-4 text-amber-400" />
-              <span>Receive Advance Payment</span>
+              <span>Collect Advance Payment</span>
+            </CommandItem>
+            <CommandItem
+              onSelect={() => handleSelect(() => navigate("/admin/maintenance"))}
+              className="hover:bg-white/10 text-zinc-200 cursor-pointer"
+            >
+              <ShieldCheck className="mr-2 h-4 w-4 text-[#c9a227]" />
+              <span>Approve Pending Tasks & Repairs</span>
             </CommandItem>
             <CommandItem
               onSelect={() => handleSelect(() => navigate("/admin/pos"))}
               className="hover:bg-white/10 text-zinc-200 cursor-pointer"
             >
               <UtensilsCrossed className="mr-2 h-4 w-4 text-purple-400" />
-              <span>Open Restaurant POS & KDS</span>
+              <span>Open Food Billing & Kitchen Screen</span>
             </CommandItem>
           </CommandGroup>
 
@@ -185,63 +192,63 @@ export default function CommandPalette({ open, onOpenChange }: Props) {
               className="hover:bg-white/10 text-zinc-200 cursor-pointer"
             >
               <Home className="mr-2 h-4 w-4 text-zinc-400" />
-              <span>Executive Command Center</span>
+              <span>Main Dashboard</span>
             </CommandItem>
             <CommandItem
               onSelect={() => handleSelect(() => navigate("/admin/front-desk"))}
               className="hover:bg-white/10 text-zinc-200 cursor-pointer"
             >
               <ShieldCheck className="mr-2 h-4 w-4 text-zinc-400" />
-              <span>Front Desk Operations</span>
+              <span>Front Desk Counter</span>
             </CommandItem>
             <CommandItem
               onSelect={() => handleSelect(() => navigate("/admin/housekeeping"))}
               className="hover:bg-white/10 text-zinc-200 cursor-pointer"
             >
               <Sparkles className="mr-2 h-4 w-4 text-zinc-400" />
-              <span>Housekeeping Floor Board</span>
+              <span>Room Cleaning Board</span>
             </CommandItem>
             <CommandItem
               onSelect={() => handleSelect(() => navigate("/admin/cashier-shifts"))}
               className="hover:bg-white/10 text-zinc-200 cursor-pointer"
             >
               <DollarSign className="mr-2 h-4 w-4 text-zinc-400" />
-              <span>Cashier Shifts & Cash Drawer</span>
+              <span>Register Shifts & Cash Drawer</span>
             </CommandItem>
             <CommandItem
               onSelect={() => handleSelect(() => navigate("/admin/night-audit"))}
               className="hover:bg-white/10 text-zinc-200 cursor-pointer"
             >
               <Moon className="mr-2 h-4 w-4 text-zinc-400" />
-              <span>Automated Night Audit</span>
+              <span>End-of-Day Daily Closing</span>
             </CommandItem>
             <CommandItem
               onSelect={() => handleSelect(() => navigate("/admin/reports"))}
               className="hover:bg-white/10 text-zinc-200 cursor-pointer"
             >
               <BarChart3 className="mr-2 h-4 w-4 text-zinc-400" />
-              <span>Reports & Analytics</span>
+              <span>Reports & Charts</span>
             </CommandItem>
             <CommandItem
               onSelect={() => handleSelect(() => navigate("/admin/corporate-accounts"))}
               className="hover:bg-white/10 text-zinc-200 cursor-pointer"
             >
               <Building2 className="mr-2 h-4 w-4 text-zinc-400" />
-              <span>Corporate Accounts & B2B Billing</span>
+              <span>Company & Business Accounts</span>
             </CommandItem>
             <CommandItem
               onSelect={() => handleSelect(() => navigate("/admin/inventory"))}
               className="hover:bg-white/10 text-zinc-200 cursor-pointer"
             >
               <Package className="mr-2 h-4 w-4 text-zinc-400" />
-              <span>Inventory & Store Management</span>
+              <span>Item Supplies & Stock</span>
             </CommandItem>
             <CommandItem
               onSelect={() => handleSelect(() => navigate("/admin/maintenance"))}
               className="hover:bg-white/10 text-zinc-200 cursor-pointer"
             >
               <Wrench className="mr-2 h-4 w-4 text-zinc-400" />
-              <span>Maintenance Work Orders</span>
+              <span>Repair Requests</span>
             </CommandItem>
           </CommandGroup>
         </CommandList>

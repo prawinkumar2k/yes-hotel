@@ -16,9 +16,12 @@ export enum PaymentTxStatus {
 }
 
 export interface IPayment extends Document {
+  propertyId: mongoose.Types.ObjectId;
   booking: mongoose.Types.ObjectId;
   amount: number;
   currency: string;
+  paymentChannel?: mongoose.Types.ObjectId;
+  /** @deprecated Use paymentChannel instead for new logic */
   method: PaymentMethod;
   transactionId?: string;
   razorpayOrderId?: string;
@@ -30,9 +33,12 @@ export interface IPayment extends Document {
 
 const PaymentSchema = new Schema<IPayment>(
   {
+    propertyId: { type: Schema.Types.ObjectId, ref: "Property", required: true },
     booking: { type: Schema.Types.ObjectId, ref: "Booking", required: true },
     amount: { type: Number, required: true },
     currency: { type: String, required: true, default: "USD" },
+    paymentChannel: { type: Schema.Types.ObjectId, ref: "PaymentChannel" },
+    /** @deprecated */
     method: { type: String, enum: Object.values(PaymentMethod), required: true },
     transactionId: { type: String },
     razorpayOrderId: { type: String },

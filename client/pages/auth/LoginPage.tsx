@@ -3,35 +3,44 @@ import { useNavigate, Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useAuth } from "../../context/AuthContext";
 import { useToast } from "@/components/ui/use-toast";
-import { GoldButton } from "@/components/hotel/HotelButtons";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
+import { 
+  Mail, 
+  Lock, 
+  Eye, 
+  EyeOff, 
+  Hotel, 
+  Star, 
+  ShieldCheck, 
+  UserCheck, 
+  Calendar, 
+  Sparkles, 
+  Wrench, 
+  User, 
+  ArrowRight,
+  CheckCircle2,
+  Key,
+  CreditCard,
+  UtensilsCrossed,
+  Landmark
+} from "lucide-react";
 
-// Demo/seed accounts (see server/src/scripts/seed.ts) — shown only outside
-// production so a real deployment never advertises working credentials.
-// Every role lands on a genuinely different part of the app: ADMIN/MANAGER/
-// RECEPTIONIST go to /admin/dashboard (with role-scoped sidebar sections),
-// HOUSEKEEPING and MAINTENANCE go to their own dedicated staff views, and
-// CUSTOMER goes to the customer portal — these are not the same page.
-const DEMO_ACCOUNTS: { role: string; email: string; password: string; note: string }[] = [
-  { role: "Admin", email: "admin@yeshotels.com", password: "Admin@123", note: "Full admin panel — every module" },
-  { role: "Manager", email: "manager@yeshotels.com", password: "Manager@123", note: "Admin panel minus Settings/Content" },
-  { role: "Receptionist", email: "reception@yeshotels.com", password: "Reception@123", note: "Bookings, check-in/out, calendar" },
-  { role: "Housekeeping", email: "housekeeping@yeshotels.com", password: "House@123", note: "Dedicated housekeeping view only" },
-  { role: "Maintenance", email: "maintenance@yeshotels.com", password: "Main@123", note: "Dedicated maintenance view only" },
-  { role: "Customer", email: "customer@yeshotels.com", password: "Customer@123", note: "Customer portal — bookings, profile" },
+const DEMO_ACCOUNTS = [
+  { role: "Admin", email: "admin@yeshotels.com", password: "Admin@123", note: "General system & property administration", icon: ShieldCheck, badge: "bg-amber-100 text-amber-900 border-amber-300" },
+  { role: "Manager", email: "manager@yeshotels.com", password: "Manager@123", note: "Operations & executive reporting panel", icon: UserCheck, badge: "bg-indigo-100 text-indigo-900 border-indigo-300" },
+  { role: "Supervisor", email: "supervisor@yeshotels.com", password: "Supervisor@123", note: "Floor supervision & operational desk", icon: UserCheck, badge: "bg-slate-100 text-slate-800 border-slate-300" },
+  { role: "Receptionist", email: "reception@yeshotels.com", password: "Reception@123", note: "Bookings, check-in & desk calendar", icon: Calendar, badge: "bg-emerald-100 text-emerald-900 border-emerald-300" },
+  { role: "Housekeeping", email: "housekeeping@yeshotels.com", password: "House@123", note: "Room status & cleaning tasks", icon: Sparkles, badge: "bg-sky-100 text-sky-900 border-sky-300" },
 ];
 
-// Same verified, free-license Pixabay clip used on the homepage hero
-// (Hero.tsx) — reused rather than a second asset so this doesn't cost the
-// user a second multi-MB download if they've already visited the homepage
-// (the browser's HTTP cache serves it instantly the second time).
-const AUTH_VIDEO_URL = "https://cdn.pixabay.com/video/2024/02/29/202392-918066367_tiny.mp4";
-const AUTH_VIDEO_POSTER = "https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1600&q=80";
+const LIGHT_HERO_IMAGE = "/gallery/hotel-60.jpg";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [rememberMe, setRememberMe] = useState(true);
   const reducedMotion = useReducedMotion();
 
   const { login } = useAuth();
@@ -52,145 +61,289 @@ export default function LoginPage() {
 
       if (data.success) {
         login(data.data);
-        toast({ title: "Welcome back", description: "Successfully logged in." });
-        // Redirect based on role
-        if (["ADMIN", "MANAGER", "RECEPTIONIST"].includes(data.data.role)) {
-          navigate("/admin/dashboard");
-        } else if (data.data.role === "HOUSEKEEPING") {
-          navigate("/staff/housekeeping");
-        } else if (data.data.role === "MAINTENANCE") {
-          navigate("/staff/maintenance");
-        } else {
-          navigate("/customer/dashboard");
-        }
+        toast({ title: "Welcome back", description: `Signed in as ${data.data.name || data.data.email}` });
+        const role = data.data.role;
+        const ROLE_ROUTES: Record<string, string> = {
+          SUPER_ADMIN: "/admin/dashboard",
+          ADMIN: "/admin/dashboard",
+          MANAGER: "/admin/dashboard",
+          SUPERVISOR: "/admin/dashboard",
+          RECEPTIONIST: "/front-desk/dashboard",
+          CASHIER: "/cashier/dashboard",
+          HOUSEKEEPING: "/housekeeping/dashboard",
+          MAINTENANCE: "/maintenance/dashboard",
+          RESTAURANT: "/restaurant/dashboard",
+          FINANCE: "/finance/dashboard",
+          EVENTS: "/events/dashboard",
+          INVENTORY: "/inventory/dashboard",
+          PROCUREMENT: "/procurement/dashboard",
+          CUSTOMER: "/customer/dashboard",
+        };
+        navigate(ROLE_ROUTES[role] || "/customer/dashboard");
       } else {
         toast({ title: "Login Failed", description: data.message, variant: "destructive" });
       }
     } catch (error: any) {
-      toast({ title: "Error", description: "Network error occurred.", variant: "destructive" });
+      toast({ title: "Error", description: "Network connection error.", variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="grid min-h-screen grid-cols-1 lg:grid-cols-2">
-      {/* Visual panel — hidden below lg to avoid shipping a video download
-          on mobile where it would just be wasted bytes off-screen space. */}
-      <div className="relative hidden overflow-hidden bg-hotel-black lg:block">
-        {reducedMotion ? (
-          <img src={AUTH_VIDEO_POSTER} alt="" className="absolute inset-0 h-full w-full object-cover" />
-        ) : (
-          <video
-            className="absolute inset-0 h-full w-full object-cover"
-            src={AUTH_VIDEO_URL}
-            poster={AUTH_VIDEO_POSTER}
-            autoPlay
-            muted
-            loop
-            playsInline
-            preload="metadata"
-            aria-hidden="true"
-          />
-        )}
-        <div className="absolute inset-0 bg-gradient-to-t from-hotel-black via-hotel-black/50 to-hotel-black/20" />
-        <motion.div
-          initial={reducedMotion ? false : { opacity: 0, y: 24 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
-          className="absolute inset-x-0 bottom-0 p-14"
-        >
-          <p className="text-xs font-semibold uppercase tracking-[0.3em] text-hotel-gold">Welcome Back</p>
-          <h2 className="mt-4 max-w-md font-serif text-4xl leading-tight text-hotel-white">
-            Every stay begins with a moment of arrival.
-          </h2>
-        </motion.div>
-      </div>
+    <div className="min-h-screen bg-[#FDFBF7] grid grid-cols-1 lg:grid-cols-12 text-slate-800 selection:bg-amber-100 selection:text-amber-900">
+      {/* Left visual showcase — Light luxury aesthetic */}
+      <div className="lg:col-span-6 relative hidden lg:flex flex-col justify-between p-12 overflow-hidden bg-gradient-to-br from-amber-50 via-stone-100 to-amber-100/50 border-r border-amber-200/50">
+        {/* Subtle background image overlay with soft light gradient */}
+        <div className="absolute inset-0 z-0 opacity-20 bg-cover bg-center mix-blend-multiply" style={{ backgroundImage: `url(${LIGHT_HERO_IMAGE})` }} />
+        <div className="absolute inset-0 z-0 bg-gradient-to-t from-[#FDFBF7] via-transparent to-amber-50/80" />
 
-      {/* Form panel */}
-      <div className="flex items-center justify-center bg-hotel-ivory px-4 py-16">
-        <motion.div
-          initial={reducedMotion ? false : { opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-          className="w-full max-w-md bg-hotel-white p-8 border border-hotel-black/10"
-        >
-          <div className="text-center mb-8">
-            <Link to="/" className="font-serif text-2xl text-hotel-black tracking-widest uppercase">YES HOTELS</Link>
-            <h2 className="mt-4 text-xl font-serif text-hotel-black">Sign in to your account</h2>
+        {/* Brand logo top left */}
+        <div className="relative z-10 flex items-center justify-between">
+          <Link to="/" className="flex items-center gap-3 group">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-amber-700 flex items-center justify-center shadow-md shadow-amber-500/20 text-white font-serif font-bold text-xl group-hover:scale-105 transition-transform">
+              Y
+            </div>
+            <div>
+              <span className="font-serif text-2xl font-bold tracking-wider text-slate-900 uppercase block leading-none">
+                YES <span className="text-amber-600">HOTELS</span>
+              </span>
+              <span className="text-[10px] tracking-[0.25em] text-amber-700/80 font-medium uppercase">Luxurious Sanctuaries</span>
+            </div>
+          </Link>
+          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/80 backdrop-blur border border-amber-200/60 shadow-sm text-xs font-medium text-amber-800">
+            <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-500" />
+            <span>5-Star Premium Hospitality</span>
           </div>
+        </div>
 
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div>
-              <label htmlFor="login-email" className="block text-sm font-medium text-hotel-black/70 mb-1">Email Address</label>
-              <input
-                id="login-email"
-                type="email"
-                required
-                className="w-full border-b border-hotel-black/20 py-2 bg-transparent focus:outline-none focus:border-hotel-gold transition-colors"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-              />
-            </div>
-
-            <div>
-              <label htmlFor="login-password" className="block text-sm font-medium text-hotel-black/70 mb-1">Password</label>
-              <input
-                id="login-password"
-                type="password"
-                required
-                className="w-full border-b border-hotel-black/20 py-2 bg-transparent focus:outline-none focus:border-hotel-gold transition-colors"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
-            </div>
-
-            <div className="flex items-center justify-between text-sm">
-              <Link to="/forgot-password" className="text-hotel-black/60 hover:text-hotel-gold transition-colors">
-                Forgot your password?
-              </Link>
-            </div>
-
-            <GoldButton className="w-full py-3" disabled={isLoading}>
-              {isLoading ? "Signing in..." : "Sign In"}
-            </GoldButton>
-          </form>
-
-          <p className="mt-8 text-center text-sm text-hotel-black/60">
-            Don't have an account?{" "}
-            <Link to="/register" className="text-hotel-gold-text hover:underline">
-              Register here
-            </Link>
+        {/* Center luxury experience message */}
+        <motion.div
+          initial={reducedMotion ? false : { opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+          className="relative z-10 my-auto py-12 max-w-lg"
+        >
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-100/80 border border-amber-300/60 text-amber-900 text-xs font-semibold uppercase tracking-widest mb-6">
+            <Hotel className="w-3.5 h-3.5 text-amber-600" /> Welcome Back
+          </div>
+          <h1 className="font-serif text-4xl lg:text-5xl font-bold text-slate-900 leading-tight tracking-tight">
+            Elevated stays, <br />
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-600 via-amber-700 to-amber-900">
+              unmatched luxury.
+            </span>
+          </h1>
+          <p className="mt-4 text-base text-slate-600 leading-relaxed font-light">
+            Sign in to access your reservation itinerary, room service requests, concierge preferences, and staff operations management.
           </p>
 
-          {!import.meta.env.PROD && (
-            <div className="mt-8 border-t border-hotel-black/10 pt-6">
-              <p className="text-center text-xs font-semibold uppercase tracking-widest text-hotel-black/50 mb-3">
-                Demo Accounts (dev only)
-              </p>
-              <div className="space-y-1.5">
-                {DEMO_ACCOUNTS.map((acc) => (
-                  <button
-                    key={acc.email}
-                    type="button"
-                    onClick={() => {
-                      setEmail(acc.email);
-                      setPassword(acc.password);
-                    }}
-                    className="w-full flex items-center justify-between gap-2 border border-hotel-black/10 px-3 py-2 text-left text-xs hover:border-hotel-gold hover:bg-hotel-ivory transition-colors"
-                  >
-                    <span>
-                      <span className="font-semibold text-hotel-black">{acc.role}</span>
-                      <span className="block text-hotel-black/50">{acc.note}</span>
-                    </span>
-                    <span className="shrink-0 text-hotel-gold-text">Fill</span>
-                  </button>
-                ))}
+          <div className="mt-10 grid grid-cols-2 gap-4 border-t border-amber-200/60 pt-8">
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center shrink-0">
+                <CheckCircle2 className="w-4 h-4" />
+              </div>
+              <div>
+                <p className="text-xs font-bold text-slate-900">Instant Check-in</p>
+                <p className="text-xs text-slate-500">Contactless digital key access</p>
               </div>
             </div>
-          )}
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center shrink-0">
+                <Key className="w-4 h-4" />
+              </div>
+              <div>
+                <p className="text-xs font-bold text-slate-900">Unified Portal</p>
+                <p className="text-xs text-slate-500">Guests & staff operations sync</p>
+              </div>
+            </div>
+          </div>
         </motion.div>
+
+        {/* Footer info */}
+        <div className="relative z-10 text-xs text-slate-500 flex justify-between items-center border-t border-amber-200/40 pt-6">
+          <span>&copy; {new Date().getFullYear()} YES HOTELS Group. All rights reserved.</span>
+          <div className="flex gap-4">
+            <Link to="/privacy" className="hover:text-amber-700 transition-colors">Privacy</Link>
+            <Link to="/terms" className="hover:text-amber-700 transition-colors">Terms</Link>
+          </div>
+        </div>
+      </div>
+
+      {/* Right form section — Clean white light card container */}
+      <div className="lg:col-span-6 flex flex-col justify-between p-6 sm:p-12 lg:p-16 bg-[#FDFBF7]">
+        {/* Mobile Header Link */}
+        <div className="flex lg:hidden items-center justify-between mb-8">
+          <Link to="/" className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-500 to-amber-700 flex items-center justify-center text-white font-serif font-bold text-lg">
+              Y
+            </div>
+            <span className="font-serif text-xl font-bold tracking-wider text-slate-900 uppercase">
+              YES <span className="text-amber-600">HOTELS</span>
+            </span>
+          </Link>
+          <Link to="/register" className="text-xs font-semibold text-amber-700 hover:text-amber-900">
+            Create Account &rarr;
+          </Link>
+        </div>
+
+        <div className="max-w-md w-full mx-auto my-auto py-4">
+          <motion.div
+            initial={reducedMotion ? false : { opacity: 0, scale: 0.98 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.4 }}
+            className="bg-white p-8 sm:p-10 rounded-2xl border border-stone-200/80 shadow-xl shadow-amber-900/5"
+          >
+            <div className="mb-8 text-center sm:text-left">
+              <h2 className="text-2xl sm:text-3xl font-serif font-bold text-slate-900">Sign in</h2>
+              <p className="mt-1 text-sm text-slate-500">
+                Enter your credentials to access your YES HOTELS account
+              </p>
+            </div>
+
+            <form onSubmit={handleSubmit} className="space-y-5">
+              {/* Email field */}
+              <div>
+                <label htmlFor="login-email" className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-2">
+                  Email Address
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                    <Mail className="w-4 h-4" />
+                  </div>
+                  <input
+                    id="login-email"
+                    type="email"
+                    autoComplete="username"
+                    required
+                    placeholder="name@company.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="w-full pl-10 pr-4 py-3 bg-stone-50 border border-stone-200 rounded-xl text-slate-900 placeholder:text-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500 focus:bg-white transition-all"
+                  />
+                </div>
+              </div>
+
+              {/* Password field */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label htmlFor="login-password" className="block text-xs font-bold uppercase tracking-wider text-slate-700">
+                    Password
+                  </label>
+                  <Link to="/forgot-password" className="text-xs font-medium text-amber-700 hover:text-amber-900 hover:underline">
+                    Forgot password?
+                  </Link>
+                </div>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                    <Lock className="w-4 h-4" />
+                  </div>
+                  <input
+                    id="login-password"
+                    type={showPassword ? "text" : "password"}
+                    autoComplete="current-password"
+                    required
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="w-full pl-10 pr-11 py-3 bg-stone-50 border border-stone-200 rounded-xl text-slate-900 placeholder:text-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500 focus:bg-white transition-all"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-600 transition-colors"
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+
+              {/* Remember me option */}
+              <div className="flex items-center justify-between pt-1">
+                <label className="flex items-center gap-2 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={rememberMe}
+                    onChange={(e) => setRememberMe(e.target.checked)}
+                    className="w-4 h-4 rounded border-stone-300 text-amber-600 focus:ring-amber-500 accent-amber-600 cursor-pointer"
+                  />
+                  <span className="text-xs text-slate-600 font-medium">Keep me signed in</span>
+                </label>
+              </div>
+
+              {/* Submit button */}
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="w-full py-3.5 px-6 rounded-xl bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800 text-white font-semibold text-sm shadow-lg shadow-amber-600/25 active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
+              >
+                {isLoading ? (
+                  <span>Signing in...</span>
+                ) : (
+                  <>
+                    <span>Sign In to Account</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </>
+                )}
+              </button>
+            </form>
+
+            <div className="mt-8 text-center pt-6 border-t border-stone-100">
+              <p className="text-xs text-slate-500">
+                Don't have an account yet?{" "}
+                <Link to="/register" className="font-semibold text-amber-700 hover:text-amber-900 hover:underline">
+                  Create an account
+                </Link>
+              </p>
+            </div>
+
+            {/* Dev Demo Account Picker */}
+            {!import.meta.env.PROD && (
+              <div className="mt-8 pt-6 border-t border-stone-200/70">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-amber-800 flex items-center gap-1.5">
+                    <Key className="w-3.5 h-3.5 text-amber-600" /> Dev Demo Quick Fill
+                  </span>
+                  <span className="text-[10px] bg-amber-100 text-amber-800 px-2 py-0.5 rounded font-mono">Development</span>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  {DEMO_ACCOUNTS.map((acc) => {
+                    const IconComp = acc.icon;
+                    return (
+                      <button
+                        key={acc.email}
+                        type="button"
+                        onClick={() => {
+                          setEmail(acc.email);
+                          setPassword(acc.password);
+                          toast({ title: `Loaded ${acc.role}`, description: acc.email });
+                        }}
+                        className="flex flex-col text-left p-2.5 rounded-xl border border-stone-200 bg-stone-50/70 hover:bg-amber-50/80 hover:border-amber-300 transition-all group"
+                      >
+                        <div className="flex items-center justify-between w-full mb-1">
+                          <div className="flex items-center gap-1.5">
+                            <IconComp className="w-3.5 h-3.5 text-slate-600 group-hover:text-amber-700" />
+                            <span className="text-xs font-bold text-slate-800 group-hover:text-amber-950">{acc.role}</span>
+                          </div>
+                          <span className={`text-[9px] px-1.5 py-0.2 rounded font-semibold border ${acc.badge}`}>
+                            Fill
+                          </span>
+                        </div>
+                        <span className="text-[10px] text-slate-500 line-clamp-1 group-hover:text-slate-700">{acc.note}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </motion.div>
+        </div>
+
+        {/* Mobile footer */}
+        <div className="lg:hidden text-center text-xs text-slate-400 mt-8">
+          &copy; {new Date().getFullYear()} YES HOTELS Group
+        </div>
       </div>
     </div>
   );
 }
+

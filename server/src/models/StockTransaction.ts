@@ -10,6 +10,7 @@ export enum TransactionType {
 }
 
 export interface IStockTransaction extends Document {
+  propertyId: mongoose.Types.ObjectId;
   transactionNumber: string;
   type: TransactionType;
   item: mongoose.Types.ObjectId;
@@ -27,6 +28,7 @@ export interface IStockTransaction extends Document {
 
 const StockTransactionSchema: Schema = new Schema(
   {
+    propertyId: { type: Schema.Types.ObjectId, ref: "Property", required: true },
     transactionNumber: { type: String, required: true, unique: true, uppercase: true },
     type: { type: String, enum: Object.values(TransactionType), required: true },
     item: { type: Schema.Types.ObjectId, ref: "InventoryItem", required: true },

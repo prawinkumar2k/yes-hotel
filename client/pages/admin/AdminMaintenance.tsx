@@ -79,22 +79,31 @@ export default function AdminMaintenance() {
       });
       return res.json();
     },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["maintenanceTickets"] });
-      toast({ title: "Ticket resolved" });
+    onSuccess: (data) => {
+      if (data.success) {
+        qc.invalidateQueries({ queryKey: ["maintenanceTickets"] });
+        toast({ title: "Ticket Approved & Resolved" });
+      } else {
+        toast({ title: "Approval Failed", description: data.message, variant: "destructive" });
+      }
     },
   });
+
+  const isAdminOrManager = ["ADMIN", "MANAGER"].includes(user?.role || "");
 
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="bg-hotel-black text-white px-6 py-4 flex items-center gap-4">
         <Link to="/admin/dashboard" className="font-serif text-lg text-hotel-gold uppercase tracking-widest">YES HOTELS</Link>
         <span className="text-white/30">/</span>
-        <span className="text-white/70 text-sm">Maintenance</span>
+        <span className="text-white/70 text-sm">Maintenance & Task Approvals</span>
       </div>
       <div className="max-w-6xl mx-auto p-6">
         <div className="flex items-center justify-between mb-6">
-          <h1 className="text-2xl font-bold text-gray-800">Maintenance Tickets</h1>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-800">Maintenance & Critical Task Approvals</h1>
+            <p className="text-sm text-gray-500">Critical tasks mandate Admin or Manager sign-off before being marked complete.</p>
+          </div>
           <button onClick={() => setShowCreate(!showCreate)}
             className="bg-hotel-gold text-hotel-black text-sm font-medium px-5 py-2 rounded hover:bg-yellow-500 transition-colors">
             + New Ticket
@@ -152,28 +161,53 @@ export default function AdminMaintenance() {
           ) : (tickets ?? []).length === 0 ? (
             <div className="bg-white rounded shadow-sm p-12 text-center">
               <CheckCircle size={40} className="mx-auto text-green-400 mb-3" />
-              <p className="text-gray-400">No open maintenance tickets.</p>
+              <p className="text-gray-400">No open maintenance tasks.</p>
             </div>
           ) : (
-            (tickets ?? []).map((ticket: any) => (
-              <div key={ticket._id} className="bg-white rounded shadow-sm p-5 flex items-start justify-between">
-                <div className="flex gap-3">
-                  <AlertTriangle size={18} className={ticket.priority === "CRITICAL" ? "text-red-500" : "text-orange-400"} />
-                  <div>
-                    <p className="font-semibold text-gray-800">{ticket.issueTitle}</p>
-                    <p className="text-sm text-gray-500 mt-0.5">Room {ticket.room?.roomNumber ?? "—"} · {ticket.description}</p>
+            (tickets ?? []).map((ticket: any) => {
+              const isCriticalOrHigh = ticket.priority === "CRITICAL" || ticket.priority === "HIGH";
+              const isResolved = ticket.status === "RESOLVED" || ticket.status === "CLOSED";
+
+              return (
+                <div key={ticket._id} className="bg-white rounded shadow-sm p-5 flex items-start justify-between border-l-4 border-l-amber-500">
+                  <div className="flex gap-3">
+                    <AlertTriangle size={18} className={ticket.priority === "CRITICAL" ? "text-red-500 mt-1" : "text-amber-500 mt-1"} />
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <p className="font-semibold text-gray-800">{ticket.issueTitle}</p>
+                        {isCriticalOrHigh && !isResolved && (
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-50 text-amber-800 border border-amber-200">
+                            🔒 Admin Approval Required
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-sm text-gray-500 mt-0.5">Room {ticket.room?.roomNumber ?? "—"} · {ticket.description || "No additional description"}</p>
+                      {ticket.approvedBy && (
+                        <p className="text-xs text-emerald-600 font-medium mt-1 flex items-center gap-1">
+                          <CheckCircle size={12} /> Approved by {ticket.approvedBy.firstName || "Admin"} ({ticket.approvedBy.role})
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 ml-4 flex-shrink-0">
+                    <span className={`text-xs px-2 py-1 rounded-full font-medium ${PRIORITY_COLORS[ticket.priority]}`}>{ticket.priority}</span>
+                    <span className={`text-xs px-2 py-1 rounded-full font-medium ${TICKET_STATUS_COLORS[ticket.status]}`}>{ticket.status}</span>
+                    {!isResolved && (
+                      <button
+                        onClick={() => resolveTicket.mutate(ticket._id)}
+                        className={`text-xs px-3 py-1.5 rounded font-bold transition ${
+                          isAdminOrManager
+                            ? "bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs"
+                            : "bg-gray-100 hover:bg-gray-200 text-gray-700"
+                        }`}
+                      >
+                        {isAdminOrManager ? "Approve & Complete" : "Submit for Resolution"}
+                      </button>
+                    )}
                   </div>
                 </div>
-                <div className="flex items-center gap-2 ml-4 flex-shrink-0">
-                  <span className={`text-xs px-2 py-1 rounded-full font-medium ${PRIORITY_COLORS[ticket.priority]}`}>{ticket.priority}</span>
-                  <span className={`text-xs px-2 py-1 rounded-full font-medium ${TICKET_STATUS_COLORS[ticket.status]}`}>{ticket.status}</span>
-                  {ticket.status !== "RESOLVED" && ticket.status !== "CLOSED" && (
-                    <button onClick={() => resolveTicket.mutate(ticket._id)}
-                      className="text-xs text-green-600 hover:underline">Resolve</button>
-                  )}
-                </div>
-              </div>
-            ))
+              );
+            })
           )}
         </div>
       </div>

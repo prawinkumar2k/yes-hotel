@@ -44,8 +44,8 @@ export default function AdminBookings() {
       </div>
 
       <div className="max-w-7xl mx-auto p-6">
-        <div className="flex items-center justify-between mb-6">
-          <h1 className="text-2xl font-bold text-gray-800">All Bookings</h1>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-3">
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-800">All Bookings</h1>
         </div>
 
         {/* Filters */}
@@ -67,7 +67,7 @@ export default function AdminBookings() {
         </div>
 
         {/* Table */}
-        <div className="bg-white rounded shadow-sm overflow-hidden">
+        <div className="bg-white rounded shadow-sm table-scroll">
           <table className="w-full text-sm">
             <thead className="bg-gray-50 border-b border-gray-100">
               <tr>

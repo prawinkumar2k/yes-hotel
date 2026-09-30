@@ -108,25 +108,27 @@ export const closeShift = async (req: Request, res: Response) => {
       postedBy: shift.cashier.toString(),
       lineType: FolioLineType.PAYMENT,
       postedAt: { $gte: shift.openedAt },
-    }).populate("paymentId").lean();
+    }).populate("paymentId").populate("paymentChannelId").lean();
 
     const advancePayments = await AdvancePayment.find({
       receivedBy: shift.cashier,
       receivedAt: { $gte: shift.openedAt },
-    }).lean();
+    }).populate("paymentChannel").lean();
 
     let cashCollected = 0;
     let upiCollected = 0;
     let cardCollected = 0;
 
     for (const p of paymentLines) {
+      const channelType = (p.paymentChannelId as any)?.type;
       const method = (p.paymentId as any)?.method || "";
       const desc = (p.description || "").toUpperCase();
-      if (method === PaymentMethod.CASH || desc.includes("CASH")) {
+      
+      if (channelType === "CASH" || method === PaymentMethod.CASH || desc.includes("CASH")) {
         cashCollected += p.amount;
-      } else if (method === PaymentMethod.UPI || desc.includes("UPI")) {
+      } else if (channelType === "UPI" || method === PaymentMethod.UPI || desc.includes("UPI")) {
         upiCollected += p.amount;
-      } else if (method === PaymentMethod.CARD || method === PaymentMethod.RAZORPAY || desc.includes("CARD") || desc.includes("ONLINE")) {
+      } else if (channelType === "CARD" || channelType === "GATEWAY" || method === PaymentMethod.CARD || method === PaymentMethod.RAZORPAY || desc.includes("CARD") || desc.includes("ONLINE")) {
         cardCollected += p.amount;
       } else {
         // Default physical cash if unspecified at counter
@@ -135,11 +137,12 @@ export const closeShift = async (req: Request, res: Response) => {
     }
 
     for (const adv of advancePayments) {
-      if (adv.method === AdvancePaymentMethod.CASH) {
+      const channelType = (adv.paymentChannel as any)?.type;
+      if (channelType === "CASH" || adv.method === AdvancePaymentMethod.CASH) {
         cashCollected += adv.amount;
-      } else if (adv.method === AdvancePaymentMethod.UPI) {
+      } else if (channelType === "UPI" || adv.method === AdvancePaymentMethod.UPI) {
         upiCollected += adv.amount;
-      } else if (adv.method === AdvancePaymentMethod.CARD || adv.method === AdvancePaymentMethod.RAZORPAY) {
+      } else if (channelType === "CARD" || channelType === "GATEWAY" || adv.method === AdvancePaymentMethod.CARD || adv.method === AdvancePaymentMethod.RAZORPAY) {
         cardCollected += adv.amount;
       }
     }

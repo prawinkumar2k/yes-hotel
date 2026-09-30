@@ -8,6 +8,7 @@ export enum MealPlanType {
 }
 
 export interface IRatePlan extends Document {
+  propertyId: mongoose.Types.ObjectId;
   name: string;
   code: string;
   mealPlan: MealPlanType;
@@ -19,6 +20,7 @@ export interface IRatePlan extends Document {
 
 const RatePlanSchema = new Schema<IRatePlan>(
   {
+    propertyId: { type: Schema.Types.ObjectId, ref: "Property", required: true },
     name: { type: String, required: true },
     code: { type: String, required: true, unique: true },
     mealPlan: { type: String, enum: Object.values(MealPlanType), default: MealPlanType.CP },

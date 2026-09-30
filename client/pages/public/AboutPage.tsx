@@ -10,8 +10,8 @@ const FALLBACK = {
   description:
     "At YES Hotels, we believe that true luxury lies in the details. From the moment you step into our grand lobby, you are enveloped in an atmosphere of refined elegance and warm hospitality. Our spaces are crafted with a meticulous attention to design, blending contemporary aesthetics with timeless comfort.\n\nOur mission is to create moments that linger long after checkout. Whether you are here for business, leisure, or a special celebration, our dedicated team is committed to ensuring every aspect of your stay is flawless. We don't just provide rooms; we curate experiences.",
   images: [
-    "https://images.unsplash.com/photo-1542314831-c6a4d27df08f?auto=format&fit=crop&q=80",
-    "https://images.unsplash.com/photo-1551882547-ff40c0d129df?auto=format&fit=crop&q=80",
+    "/gallery/hotel-54.jpg",
+    "/gallery/hotel-55.jpg",
   ],
 };
 
@@ -33,7 +33,7 @@ export default function AboutPage() {
           <div className="absolute inset-0 bg-hotel-black/40" />
         </div>
         <div className="relative z-10 text-center px-6">
-          <h1 className="font-serif text-5xl md:text-7xl text-hotel-white mb-6">{content.title ?? FALLBACK.title}</h1>
+          <h1 className="font-serif text-4xl sm:text-5xl md:text-7xl text-hotel-white mb-6">{content.title ?? FALLBACK.title}</h1>
           <p className="text-hotel-white/80 tracking-widest uppercase text-sm max-w-md mx-auto">
             {content.subtitle ?? FALLBACK.subtitle}
           </p>
@@ -50,7 +50,7 @@ export default function AboutPage() {
           </p>
         ))}
         {lobbyImage && (
-          <img src={lobbyImage} alt="Lobby" className="w-full h-[400px] object-cover mb-12 mt-6" />
+          <img src={lobbyImage} alt="Lobby" className="w-full h-[220px] sm:h-[300px] md:h-[400px] object-cover mb-12 mt-6" />
         )}
 
         <Link to="/search" className="block sm:inline-block">

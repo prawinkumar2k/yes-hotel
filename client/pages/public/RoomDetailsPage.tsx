@@ -38,11 +38,11 @@ export default function RoomDetailsPage() {
         <img src={category.images?.[0] || "/placeholder.svg"}
           alt={category.name} 
           className="w-full h-full object-cover" />
-        <div className="absolute inset-0 bg-gradient-to-t from-hotel-black/80 to-transparent flex flex-col justify-end p-12 text-hotel-white">
+        <div className="absolute inset-0 bg-gradient-to-t from-hotel-black/80 to-transparent flex flex-col justify-end p-6 md:p-12 text-hotel-white">
           <div className="max-w-6xl mx-auto w-full flex flex-col md:flex-row justify-between items-end gap-6">
             <div>
               <span className="text-xs tracking-[0.2em] uppercase text-hotel-gold font-semibold mb-3 block">Premium Accommodation</span>
-              <h1 className="font-serif text-5xl md:text-7xl">{category.name}</h1>
+              <h1 className="font-serif text-3xl sm:text-4xl md:text-5xl lg:text-7xl">{category.name}</h1>
             </div>
             <div className="text-right">
               <p className="text-hotel-white/60 uppercase tracking-widest text-xs mb-1">From</p>
@@ -54,7 +54,7 @@ export default function RoomDetailsPage() {
       </div>
 
       <div className="max-w-6xl mx-auto px-6 py-20">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-16">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-10 md:gap-12 lg:gap-16">
           <div className="lg:col-span-2 space-y-12">
             <div>
               <h2 className="font-serif text-3xl text-hotel-black mb-6">Overview</h2>
@@ -92,7 +92,7 @@ export default function RoomDetailsPage() {
                   </div>
                 }
               >
-                <RoomShowcase3D />
+                <RoomShowcase3D image={category.images?.[0] || "/gallery/hotel-50.jpg"} />
               </Suspense>
             </div>
 
@@ -113,7 +113,7 @@ export default function RoomDetailsPage() {
           </div>
 
           <div className="lg:col-span-1">
-            <div className="bg-hotel-white border border-hotel-black/10 p-8 sticky top-32 shadow-sm">
+            <div className="bg-hotel-white border border-hotel-black/10 p-8 lg:sticky lg:top-32 shadow-sm">
               <h3 className="font-serif text-2xl text-hotel-black mb-6">Reserve this room</h3>
               <p className="text-sm text-hotel-black/60 mb-8">
                 Check availability for your dates and secure your stay.

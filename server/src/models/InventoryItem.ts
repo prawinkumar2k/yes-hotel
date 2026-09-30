@@ -11,6 +11,7 @@ export enum ItemCategory {
 }
 
 export interface IInventoryItem extends Document {
+  propertyId: mongoose.Types.ObjectId;
   itemCode: string;
   name: string;
   category: ItemCategory;
@@ -28,6 +29,7 @@ export interface IInventoryItem extends Document {
 
 const InventoryItemSchema: Schema = new Schema(
   {
+    propertyId: { type: Schema.Types.ObjectId, ref: "Property", required: true },
     itemCode: { type: String, required: true, unique: true, uppercase: true, trim: true },
     name: { type: String, required: true, trim: true },
     category: { type: String, enum: Object.values(ItemCategory), default: ItemCategory.FOOD_INGREDIENT },

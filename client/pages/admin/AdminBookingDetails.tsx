@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "../../context/AuthContext";
 import { useToast } from "@/components/ui/use-toast";
 import { format, differenceInDays } from "date-fns";
-import { ArrowLeft, Loader2, Calendar, User, CreditCard, Building, Edit, LogIn, LogOut, Ban, Check } from "lucide-react";
+import { ArrowLeft, Loader2, Calendar, User, CreditCard, Building, Edit, LogIn, LogOut, Ban, Check, ShieldCheck, MapPin, Briefcase, FileImage } from "lucide-react";
 
 async function apiFetch(url: string, token?: string, method = "GET", body?: any) {
   const res = await fetch(url, {
@@ -45,12 +45,17 @@ export default function AdminBookingDetails() {
     },
   });
   
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [cancelReason, setCancelReason] = useState("");
+
   const cancelMutation = useMutation({
-    mutationFn: () => apiFetch(`/api/bookings/${id}/cancel`, user?.token, "POST"),
+    mutationFn: () => apiFetch(`/api/bookings/${id}/cancel`, user?.token, "POST", { reason: cancelReason }),
     onSuccess: (resData) => {
       if (resData.success) {
         toast({ title: "Booking Cancelled", description: "Booking has been cancelled by admin." });
         queryClient.invalidateQueries({ queryKey: ["adminBooking", id] });
+        setShowCancelModal(false);
+        setCancelReason("");
       } else {
         toast({ title: "Error", description: resData.message, variant: "destructive" });
       }
@@ -79,7 +84,7 @@ export default function AdminBookingDetails() {
         <div className="flex items-center gap-3">
           {booking.status !== "CANCELLED" && booking.status !== "CHECKED_OUT" && (
             <button 
-              onClick={() => cancelMutation.mutate()}
+              onClick={() => setShowCancelModal(true)}
               disabled={cancelMutation.isPending}
               className="px-4 py-2 text-sm font-medium text-red-600 bg-red-50 rounded hover:bg-red-100 transition-colors flex items-center gap-2"
             >
@@ -107,7 +112,7 @@ export default function AdminBookingDetails() {
             <div className="border-b border-gray-200 px-6 py-4 flex items-center justify-between">
                <h3 className="text-lg font-medium text-gray-900 flex items-center gap-2"><User size={18} className="text-indigo-500"/> Guest Details</h3>
             </div>
-            <div className="p-6 grid grid-cols-2 gap-6">
+            <div className="p-6 grid grid-cols-1 sm:grid-cols-2 gap-6">
               <div>
                 <p className="text-sm font-medium text-gray-500 mb-1">Name</p>
                 <p className="text-gray-900">{booking.guestDetails.firstName} {booking.guestDetails.lastName}</p>
@@ -123,6 +128,71 @@ export default function AdminBookingDetails() {
                 </div>
               )}
             </div>
+
+            {/* Registration Details (Added for Walk-in / Full Registration flow) */}
+            <div className="border-t border-gray-100 p-6 bg-gray-50/50">
+               <h4 className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-4 flex items-center gap-2"><ShieldCheck size={14}/> Identity & Registration Data</h4>
+               
+               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+                 <div>
+                   <p className="text-[10px] uppercase text-gray-500 font-bold mb-1">ID Type</p>
+                   <p className="text-sm font-medium">{booking.guestDetails.idType || "—"}</p>
+                 </div>
+                 <div>
+                   <p className="text-[10px] uppercase text-gray-500 font-bold mb-1">ID Number</p>
+                   <p className="text-sm font-mono">{booking.guestDetails.idNumber || "—"}</p>
+                 </div>
+                 <div>
+                   <p className="text-[10px] uppercase text-gray-500 font-bold mb-1">Nationality</p>
+                   <p className="text-sm">{booking.guestDetails.nationality || "Indian"}</p>
+                 </div>
+                 <div>
+                   <p className="text-[10px] uppercase text-gray-500 font-bold mb-1">Date of Birth</p>
+                   <p className="text-sm">{booking.guestDetails.dateOfBirth ? format(new Date(booking.guestDetails.dateOfBirth), "PP") : "—"}</p>
+                 </div>
+                 <div className="col-span-2">
+                   <p className="text-[10px] uppercase text-gray-500 font-bold mb-1">Full Address</p>
+                   <p className="text-sm text-gray-700">{booking.guestDetails.address || "—"}</p>
+                 </div>
+                 <div>
+                   <p className="text-[10px] uppercase text-gray-500 font-bold mb-1">Organization</p>
+                   <p className="text-sm">{booking.guestDetails.organization || "—"}</p>
+                 </div>
+                 <div>
+                   <p className="text-[10px] uppercase text-gray-500 font-bold mb-1">Purpose of Visit</p>
+                   <p className="text-sm">{booking.guestDetails.purposeOfVisit || "—"}</p>
+                 </div>
+               </div>
+
+               {booking.foreignGuestDetails && (
+                 <div className="mb-6 p-4 border border-orange-200 bg-orange-50 rounded-lg">
+                   <h5 className="text-xs font-bold text-orange-800 uppercase tracking-widest mb-3">Foreign Guest (Form C) Data</h5>
+                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                     <div><p className="text-[10px] uppercase text-orange-600 font-bold mb-1">Passport No.</p><p className="text-sm font-mono text-orange-900">{booking.foreignGuestDetails.passportNumber || "—"}</p></div>
+                     <div><p className="text-[10px] uppercase text-orange-600 font-bold mb-1">Issue Date</p><p className="text-sm text-orange-900">{booking.foreignGuestDetails.passportIssueDate ? format(new Date(booking.foreignGuestDetails.passportIssueDate), "PP") : "—"}</p></div>
+                     <div><p className="text-[10px] uppercase text-orange-600 font-bold mb-1">Expiry Date</p><p className="text-sm text-orange-900">{booking.foreignGuestDetails.passportExpiryDate ? format(new Date(booking.foreignGuestDetails.passportExpiryDate), "PP") : "—"}</p></div>
+                     <div><p className="text-[10px] uppercase text-orange-600 font-bold mb-1">Visa No.</p><p className="text-sm font-mono text-orange-900">{booking.foreignGuestDetails.visaNumber || "—"}</p></div>
+                   </div>
+                 </div>
+               )}
+
+               {booking.guestDetails.idProofImages && booking.guestDetails.idProofImages.length > 0 && (
+                 <div>
+                   <p className="text-[10px] uppercase text-gray-500 font-bold mb-2 flex items-center gap-1"><FileImage size={12}/> ID Proof Documents</p>
+                   <div className="flex gap-3 overflow-x-auto pb-2">
+                     {booking.guestDetails.idProofImages.map((img: string, idx: number) => (
+                       <a key={idx} href={img} target="_blank" rel="noopener noreferrer" className="block w-24 h-24 rounded border border-gray-200 overflow-hidden hover:border-indigo-500 transition shadow-sm">
+                         {img.startsWith("data:image") || img.startsWith("http") ? (
+                           <img src={img} alt="ID Proof" className="w-full h-full object-cover" />
+                         ) : (
+                           <div className="w-full h-full bg-gray-100 flex items-center justify-center text-xs text-gray-400">Doc</div>
+                         )}
+                       </a>
+                     ))}
+                   </div>
+                 </div>
+               )}
+            </div>
           </div>
 
           {/* Stay Info */}
@@ -131,7 +201,7 @@ export default function AdminBookingDetails() {
                <h3 className="text-lg font-medium text-gray-900 flex items-center gap-2"><Calendar size={18} className="text-indigo-500"/> Stay Information</h3>
             </div>
             <div className="p-6">
-               <div className="grid grid-cols-2 gap-6 mb-6">
+               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-6">
                   <div>
                     <p className="text-sm font-medium text-gray-500 mb-1">Dates</p>
                     <p className="text-gray-900">{format(new Date(booking.checkInDate), "MMM dd, yyyy")} → {format(new Date(booking.checkOutDate), "MMM dd, yyyy")}</p>
@@ -143,7 +213,7 @@ export default function AdminBookingDetails() {
                   </div>
                </div>
                
-               <div className="pt-6 border-t border-gray-100 grid grid-cols-2 gap-6">
+               <div className="pt-6 border-t border-gray-100 grid grid-cols-1 sm:grid-cols-2 gap-6">
                   <div>
                     <p className="text-sm font-medium text-gray-500 mb-1">Category</p>
                     <p className="text-gray-900 font-medium">{booking.roomCategory?.name || "Unknown"}</p>
@@ -241,10 +311,23 @@ export default function AdminBookingDetails() {
                      {booking.paymentStatus}
                    </span>
                  </div>
-                 <div className="flex justify-between items-center text-sm">
+                 <div className="flex justify-between items-center text-sm mb-2">
                    <span className="text-gray-500">Paid Amount</span>
                    <span className="text-gray-900">₹{booking.paidAmount?.toLocaleString("en-IN") || 0}</span>
                  </div>
+                 {booking.status === "CANCELLED" && (
+                   <div className="mt-4 pt-4 border-t border-gray-100 space-y-2">
+                     <div className="flex justify-between items-center text-sm">
+                       <span className="text-red-500 font-medium">Cancellation Penalty</span>
+                       <span className="text-red-600 font-semibold">₹{booking.cancellationPenalty?.toLocaleString("en-IN") || 0}</span>
+                     </div>
+                     {booking.cancellationReason && (
+                       <div className="text-xs text-gray-500 bg-gray-50 p-2 rounded">
+                         <span className="font-semibold text-gray-700">Reason:</span> {booking.cancellationReason}
+                       </div>
+                     )}
+                   </div>
+                 )}
                </div>
             </div>
            </div>
@@ -253,6 +336,38 @@ export default function AdminBookingDetails() {
 
       {/* Folio Ledger Section */}
       <FolioSection bookingId={id as string} userToken={user?.token} />
+
+      {showCancelModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-6">
+            <h3 className="text-lg font-bold text-gray-900 mb-4">Cancel Booking</h3>
+            <p className="text-sm text-gray-500 mb-4">
+              Are you sure you want to cancel this booking? If the reason is an emergency, the system may process a refund automatically.
+            </p>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Cancellation Reason</label>
+              <textarea 
+                className="w-full border border-gray-300 rounded shadow-sm text-sm p-2" 
+                rows={3} 
+                value={cancelReason} 
+                onChange={(e) => setCancelReason(e.target.value)} 
+                placeholder="e.g. Guest requested, Urgent emergency, etc."
+                required
+              />
+            </div>
+            <div className="flex justify-end gap-3">
+              <button onClick={() => setShowCancelModal(false)} className="px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded">Close</button>
+              <button 
+                onClick={() => cancelMutation.mutate()} 
+                disabled={cancelMutation.isPending || cancelReason.trim().length === 0} 
+                className="px-4 py-2 text-sm text-white bg-red-600 hover:bg-red-700 rounded disabled:opacity-50"
+              >
+                {cancelMutation.isPending ? "Cancelling..." : "Confirm Cancellation"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -473,4 +588,5 @@ function FolioSection({ bookingId, userToken }: { bookingId: string; userToken?:
     </div>
   );
 }
+
 

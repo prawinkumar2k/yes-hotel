@@ -6,6 +6,7 @@ export interface IRoomCategory extends Document {
   shortDescription?: string;
   description: string;
   basePrice: number;
+  hourlyPrice?: number;
   capacity: {
     adults: number;
     children: number;
@@ -26,6 +27,7 @@ const RoomCategorySchema = new Schema<IRoomCategory>(
     shortDescription: { type: String },
     description: { type: String, required: true },
     basePrice: { type: Number, required: true },
+    hourlyPrice: { type: Number, default: 0 },
     capacity: {
       adults: { type: Number, required: true, default: 2 },
       children: { type: Number, required: true, default: 0 },

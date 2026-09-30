@@ -76,13 +76,13 @@ export default function AdminMultiProperty() {
 
   return (
     <div className="space-y-8 p-2">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Multi-Property & OTA Channel Manager</h1>
-          <p className="text-muted-foreground text-sm mt-1">Manage properties and distribution channel mappings</p>
+          <h1 className="text-xl sm:text-3xl font-bold tracking-tight">All Hotel Locations & Booking Websites Sync</h1>
+          <p className="text-muted-foreground text-sm mt-1">Manage multiple hotel locations and sync rates/rooms with online booking websites (Booking.com, Agoda, Airbnb)</p>
         </div>
-        <Button onClick={() => setAddPropertyOpen(true)}>
-          <Plus className="mr-2 h-4 w-4" /> Add Property
+        <Button onClick={() => setAddPropertyOpen(true)} className="w-full sm:w-auto">
+          <Plus className="mr-2 h-4 w-4" /> Add Hotel Location
         </Button>
       </div>
 
@@ -205,7 +205,7 @@ export default function AdminMultiProperty() {
             const fd = new FormData(e.currentTarget);
             createPropertyMutation.mutate(Object.fromEntries(fd));
           }} className="space-y-4">
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1"><label className="text-sm font-medium">Property Name *</label><Input name="name" required /></div>
               <div className="space-y-1"><label className="text-sm font-medium">Property Code *</label><Input name="code" placeholder="e.g. YES-HYD" required /></div>
               <div className="space-y-1"><label className="text-sm font-medium">Legal Name</label><Input name="legalName" /></div>
@@ -259,7 +259,7 @@ export default function AdminMultiProperty() {
                 {CHANNELS.map(c => <option key={c} value={c}>{CHANNEL_LABELS[c]}</option>)}
               </select>
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1"><label className="text-sm font-medium">Channel Room Type ID *</label><Input name="channelRoomTypeId" required /></div>
               <div className="space-y-1"><label className="text-sm font-medium">Channel Rate Plan ID</label><Input name="channelRatePlanId" /></div>
               <div className="space-y-1"><label className="text-sm font-medium">Channel Property ID</label><Input name="channelPropertyId" /></div>

@@ -7,6 +7,7 @@ export enum CashierShiftStatus {
 }
 
 export interface ICashierShift extends Document {
+  propertyId: mongoose.Types.ObjectId;
   shiftNumber: string;
   cashier: mongoose.Types.ObjectId;
   openedAt: Date;
@@ -23,6 +24,7 @@ export interface ICashierShift extends Document {
 
 const CashierShiftSchema = new Schema<ICashierShift>(
   {
+    propertyId: { type: Schema.Types.ObjectId, ref: "Property", required: true },
     shiftNumber: { type: String, required: true, unique: true },
     cashier: { type: Schema.Types.ObjectId, ref: "User", required: true },
     openedAt: { type: Date, default: Date.now },

@@ -23,11 +23,20 @@ export const getFolioByBooking = async (req: Request, res: Response) => {
 
     const folio = await Folio.findOne({ booking: bookingId })
       .populate("guest", "firstName lastName email phone")
-      .populate("room", "roomNumber floor");
+      .populate("room", "roomNumber floor")
+      .populate("booking"); // We need the booking to check ownership
 
     if (!folio) {
       return res.status(404).json({ success: false, message: "No folio found for this booking" });
     }
+
+    const actor = (req as any).user;
+    const isStaff = ["SUPER_ADMIN", "ADMIN", "MANAGER", "RECEPTIONIST"].includes(actor?.role);
+    
+    if (!isStaff && (folio.booking as any).customer?.toString() !== actor?._id?.toString() && (folio.booking as any).customer?.toString() !== actor?.id?.toString()) {
+        return res.status(403).json({ success: false, message: "Forbidden: You do not own this folio" });
+    }
+
 
     // postedBy is a plain string (a user's ObjectId as a string, or a
     // system sentinel like "SYSTEM_TAX" for automated postings) — not a

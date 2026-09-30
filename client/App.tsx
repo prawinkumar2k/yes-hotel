@@ -5,7 +5,9 @@ import { queryClient } from "./lib/queryClient";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "./context/AuthContext";
+import { PermissionProvider } from "./context/PermissionContext";
 import ProtectedRoute from "./components/common/ProtectedRoute";
+import { PermissionRoute } from "./components/common/PermissionRoute";
 import AdminLayout from "./components/admin/AdminLayout";
 import SmoothScroll from "./components/hotel/SmoothScroll";
 import ScrollProgress from "./components/hotel/ScrollProgress";
@@ -38,12 +40,14 @@ const LegalPage = lazy(() => import("./pages/public/LegalPage"));
 
 const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
 const AdminFrontDesk = lazy(() => import("./pages/admin/AdminFrontDesk"));
+const AdminGuestRegistration = lazy(() => import("./pages/admin/AdminGuestRegistration"));
 const AdminRoomRack = lazy(() => import("./pages/admin/AdminRoomRack"));
 const AdminBookings = lazy(() => import("./pages/admin/AdminBookings"));
 const AdminBookingDetails = lazy(() => import("./pages/admin/AdminBookingDetails"));
 const AdminRooms = lazy(() => import("./pages/admin/AdminRooms"));
 const AdminRoomCategories = lazy(() => import("./pages/admin/AdminRoomCategories"));
 const AdminRatePlans = lazy(() => import("./pages/admin/AdminRatePlans"));
+const AdminPaymentChannels = lazy(() => import("./pages/admin/AdminPaymentChannels"));
 const AdminPricing = lazy(() => import("./pages/admin/AdminPricing"));
 const AdminHousekeeping = lazy(() => import("./pages/admin/AdminHousekeeping"));
 const AdminMaintenance = lazy(() => import("./pages/admin/AdminMaintenance"));
@@ -65,7 +69,7 @@ const AdminSettings = lazy(() => import("./pages/admin/AdminSettings"));
 const AdminContactMessages = lazy(() => import("./pages/admin/AdminContactMessages"));
 const AdminReviews = lazy(() => import("./pages/admin/AdminReviews"));
 const AdminAuditLogs = lazy(() => import("./pages/admin/AdminAuditLogs"));
-const AdminReports = lazy(() => import("./pages/admin/AdminReports"));
+const AdminReportsLayout = lazy(() => import("./pages/admin/AdminReportsLayout"));
 const AdminNightAudit = lazy(() => import("./pages/admin/AdminNightAudit"));
 const AdminCorporateAccounts = lazy(() => import("./pages/admin/AdminCorporateAccounts"));
 const AdminPOS = lazy(() => import("./pages/admin/AdminPOS"));
@@ -81,16 +85,29 @@ const AdminComplaints = lazy(() => import("./pages/admin/AdminComplaints"));
 const AdminExecutiveDashboard = lazy(() => import("./pages/admin/AdminExecutiveDashboard"));
 const AdminMultiProperty = lazy(() => import("./pages/admin/AdminMultiProperty"));
 const MobileHousekeeping = lazy(() => import("./pages/staff/MobileHousekeeping"));
+const FrontDeskDashboard = lazy(() => import("./pages/staff/FrontDeskDashboard"));
+const HousekeepingDashboard = lazy(() => import("./pages/staff/HousekeepingDashboard"));
+const MaintenanceDashboard = lazy(() => import("./pages/staff/MaintenanceDashboard"));
+const CashierDashboard = lazy(() => import("./pages/staff/CashierDashboard"));
+const RestaurantDashboard = lazy(() => import("./pages/staff/RestaurantDashboard"));
+const FinanceDashboard = lazy(() => import("./pages/staff/FinanceDashboard"));
 const AdminInHouseList = lazy(() => import("./pages/admin/AdminInHouseList"));
+const AdminDaySalesSummary = lazy(() => import("./pages/admin/AdminDaySalesSummary"));
+const AdminMonthlyMIS = lazy(() => import("./pages/admin/AdminMonthlyMIS"));
+const AdminEnquiries = lazy(() => import("./pages/admin/AdminEnquiries"));
+const AdminTaskApprovals = lazy(() => import("./pages/admin/AdminTaskApprovals"));
 
 
 
 const CustomerDashboard = lazy(() => import("./pages/customer/CustomerDashboard"));
 const CustomerBookings = lazy(() => import("./pages/customer/CustomerBookings"));
 const CustomerBookingDetails = lazy(() => import("./pages/customer/CustomerBookingDetails"));
+const CustomerFolio = lazy(() => import("./pages/customer/CustomerFolio"));
 const CustomerProfile = lazy(() => import("./pages/customer/CustomerProfile"));
 const CustomerPayments = lazy(() => import("./pages/customer/CustomerPayments"));
 const CustomerReviews = lazy(() => import("./pages/customer/CustomerReviews"));
+const CustomerComplaints = lazy(() => import("./pages/customer/CustomerComplaints"));
+const CustomerLoyalty = lazy(() => import("./pages/customer/CustomerLoyalty"));
 
 // Placeholder pages
 const Placeholder = ({ title }: { title: string }) => (
@@ -102,8 +119,9 @@ const Placeholder = ({ title }: { title: string }) => (
   </div>
 );
 
-const ADMIN_ROLES = ["ADMIN", "MANAGER", "RECEPTIONIST"];
-const STAFF_ROLES = ["ADMIN", "MANAGER", "RECEPTIONIST", "HOUSEKEEPING", "MAINTENANCE"];
+const ADMIN_ROLES = ["ADMIN", "SUPER_ADMIN", "MANAGER", "RECEPTIONIST"];
+const STAFF_ROLES = ["ADMIN", "SUPER_ADMIN", "MANAGER", "RECEPTIONIST", "HOUSEKEEPING", "MAINTENANCE"];
+const ALL_STAFF = ["ADMIN", "SUPER_ADMIN", "MANAGER", "RECEPTIONIST", "CASHIER", "RESTAURANT", "FINANCE", "EVENTS", "INVENTORY", "PROCUREMENT", "HOUSEKEEPING", "MAINTENANCE"];
 
 function PageLoader() {
   return (
@@ -117,7 +135,8 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <TooltipProvider>
+        <PermissionProvider>
+          <TooltipProvider>
           <Toaster />
           <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
             <SmoothScroll />
@@ -155,64 +174,85 @@ function App() {
                 <Route path="/customer/dashboard" element={<ProtectedRoute roles={["CUSTOMER"]}><CustomerDashboard /></ProtectedRoute>} />
                 <Route path="/customer/bookings" element={<ProtectedRoute roles={["CUSTOMER"]}><CustomerBookings /></ProtectedRoute>} />
                 <Route path="/customer/bookings/:id" element={<ProtectedRoute roles={["CUSTOMER"]}><CustomerBookingDetails /></ProtectedRoute>} />
+                <Route path="/customer/bookings/:id/folio" element={<ProtectedRoute roles={["CUSTOMER"]}><CustomerFolio /></ProtectedRoute>} />
                 <Route path="/customer/profile" element={<ProtectedRoute roles={["CUSTOMER"]}><CustomerProfile /></ProtectedRoute>} />
                 <Route path="/customer/payments" element={<ProtectedRoute roles={["CUSTOMER"]}><CustomerPayments /></ProtectedRoute>} />
                 <Route path="/customer/reviews" element={<ProtectedRoute roles={["CUSTOMER"]}><CustomerReviews /></ProtectedRoute>} />
+                <Route path="/customer/requests" element={<ProtectedRoute roles={["CUSTOMER"]}><CustomerComplaints /></ProtectedRoute>} />
+                <Route path="/customer/loyalty" element={<ProtectedRoute roles={["CUSTOMER"]}><CustomerLoyalty /></ProtectedRoute>} />
 
                 {/* ADMIN ROUTES */}
-                <Route path="/admin/dashboard" element={<ProtectedRoute roles={ADMIN_ROLES}><AdminDashboard /></ProtectedRoute>} />
-                <Route path="/admin/front-desk" element={<ProtectedRoute roles={ADMIN_ROLES}><AdminLayout title="Front Desk Command Center"><AdminFrontDesk /></AdminLayout></ProtectedRoute>} />
-                <Route path="/admin/room-rack" element={<ProtectedRoute roles={ADMIN_ROLES}><AdminLayout title="Visual Room Rack"><AdminRoomRack /></AdminLayout></ProtectedRoute>} />
-                <Route path="/admin/bookings" element={<ProtectedRoute roles={ADMIN_ROLES}><AdminLayout title="Bookings"><AdminBookings /></AdminLayout></ProtectedRoute>} />
-                <Route path="/admin/bookings/:id" element={<ProtectedRoute roles={ADMIN_ROLES}><AdminLayout title="Booking Details"><AdminBookingDetails /></AdminLayout></ProtectedRoute>} />
-                <Route path="/admin/calendar" element={<ProtectedRoute roles={ADMIN_ROLES}><AdminLayout title="Calendar"><AdminCalendar /></AdminLayout></ProtectedRoute>} />
-                <Route path="/admin/check-in" element={<ProtectedRoute roles={ADMIN_ROLES}><AdminLayout title="Check-In"><AdminCheckIn /></AdminLayout></ProtectedRoute>} />
-                <Route path="/admin/check-out" element={<ProtectedRoute roles={ADMIN_ROLES}><AdminLayout title="Check-Out"><AdminCheckOut /></AdminLayout></ProtectedRoute>} />
-                <Route path="/admin/rooms" element={<ProtectedRoute roles={ADMIN_ROLES}><AdminLayout title="Rooms"><AdminRooms /></AdminLayout></ProtectedRoute>} />
-                <Route path="/admin/room-categories" element={<ProtectedRoute roles={["ADMIN","MANAGER"]}><AdminLayout title="Room Categories"><AdminRoomCategories /></AdminLayout></ProtectedRoute>} />
-                <Route path="/admin/rate-plans" element={<ProtectedRoute roles={["ADMIN","MANAGER"]}><AdminLayout title="Dynamic Rate Plans & Meal Packages"><AdminRatePlans /></AdminLayout></ProtectedRoute>} />
-                <Route path="/admin/pricing" element={<ProtectedRoute roles={["ADMIN","MANAGER"]}><AdminLayout title="Pricing"><AdminPricing /></AdminLayout></ProtectedRoute>} />
-                <Route path="/admin/guests" element={<ProtectedRoute roles={ADMIN_ROLES}><AdminLayout title="Guests"><AdminGuests /></AdminLayout></ProtectedRoute>} />
-                <Route path="/admin/payments" element={<ProtectedRoute roles={["ADMIN","MANAGER"]}><AdminLayout title="Payments"><AdminPayments /></AdminLayout></ProtectedRoute>} />
-                <Route path="/admin/advances" element={<ProtectedRoute roles={ADMIN_ROLES}><AdminLayout title="Advance Payments Ledger"><AdminAdvances /></AdminLayout></ProtectedRoute>} />
-                <Route path="/admin/cashier-shifts" element={<ProtectedRoute roles={ADMIN_ROLES}><AdminLayout title="Cashier Shift & Drawer Reconciliation"><AdminCashierShifts /></AdminLayout></ProtectedRoute>} />
-                <Route path="/admin/refunds" element={<ProtectedRoute roles={["ADMIN","MANAGER"]}><AdminLayout title="Refunds"><AdminRefunds /></AdminLayout></ProtectedRoute>} />
-                <Route path="/admin/coupons" element={<ProtectedRoute roles={["ADMIN","MANAGER"]}><AdminLayout title="Coupons"><AdminCoupons /></AdminLayout></ProtectedRoute>} />
-                <Route path="/admin/housekeeping" element={<ProtectedRoute roles={STAFF_ROLES}><AdminLayout title="Housekeeping"><AdminHousekeeping /></AdminLayout></ProtectedRoute>} />
-                <Route path="/admin/maintenance" element={<ProtectedRoute roles={STAFF_ROLES}><AdminLayout title="Maintenance"><AdminMaintenance /></AdminLayout></ProtectedRoute>} />
-                <Route path="/admin/staff" element={<ProtectedRoute roles={["ADMIN","MANAGER"]}><AdminLayout title="Staff"><AdminStaff /></AdminLayout></ProtectedRoute>} />
-                <Route path="/admin/gallery" element={<ProtectedRoute roles={["ADMIN","MANAGER"]}><AdminLayout title="Gallery"><AdminGallery /></AdminLayout></ProtectedRoute>} />
-                <Route path="/admin/content" element={<ProtectedRoute roles={["ADMIN"]}><AdminLayout title="Content"><AdminContent /></AdminLayout></ProtectedRoute>} />
-                <Route path="/admin/faqs" element={<ProtectedRoute roles={["ADMIN","MANAGER"]}><AdminLayout title="FAQs"><AdminFAQs /></AdminLayout></ProtectedRoute>} />
-                <Route path="/admin/testimonials" element={<ProtectedRoute roles={["ADMIN","MANAGER"]}><AdminLayout title="Testimonials"><AdminTestimonials /></AdminLayout></ProtectedRoute>} />
-                <Route path="/admin/reviews" element={<ProtectedRoute roles={["ADMIN","MANAGER"]}><AdminLayout title="Reviews"><AdminReviews /></AdminLayout></ProtectedRoute>} />
-                <Route path="/admin/contact-messages" element={<ProtectedRoute roles={["ADMIN","MANAGER"]}><AdminLayout title="Contact Messages"><AdminContactMessages /></AdminLayout></ProtectedRoute>} />
-                <Route path="/admin/complaints" element={<ProtectedRoute roles={["ADMIN","MANAGER"]}><AdminLayout title="Complaints & Service Recovery"><AdminComplaints /></AdminLayout></ProtectedRoute>} />
-                <Route path="/admin/reports" element={<ProtectedRoute roles={["ADMIN","MANAGER"]}><AdminLayout title="Reports"><AdminReports /></AdminLayout></ProtectedRoute>} />
-                <Route path="/admin/in-house-list" element={<ProtectedRoute roles={["ADMIN","MANAGER","RECEPTIONIST"]}><AdminLayout title="In-House Guest List"><AdminInHouseList /></AdminLayout></ProtectedRoute>} />
-                <Route path="/admin/executive" element={<ProtectedRoute roles={["ADMIN","MANAGER"]}><AdminLayout title="Executive Command Center"><AdminExecutiveDashboard /></AdminLayout></ProtectedRoute>} />
-                <Route path="/admin/multi-property" element={<ProtectedRoute roles={["ADMIN","MANAGER"]}><AdminLayout title="Multi-Property & OTA Channel Manager"><AdminMultiProperty /></AdminLayout></ProtectedRoute>} />
-                <Route path="/admin/night-audit" element={<ProtectedRoute roles={["ADMIN","MANAGER"]}><AdminLayout title="Automated Night Audit & Business Date Engine"><AdminNightAudit /></AdminLayout></ProtectedRoute>} />
-                <Route path="/staff/mobile-housekeeping" element={<ProtectedRoute roles={["ADMIN","MANAGER","HOUSEKEEPING"]}><AdminLayout title="Mobile Housekeeping"><MobileHousekeeping /></AdminLayout></ProtectedRoute>} />
+                <Route path="/admin/dashboard" element={<PermissionRoute pageKey="DASHBOARD.ADMIN"><AdminDashboard /></PermissionRoute>} />
+                <Route path="/admin/front-desk" element={<PermissionRoute pageKey="FRONT_DESK"><AdminLayout title="Front Desk Command Center"><AdminFrontDesk /></AdminLayout></PermissionRoute>} />
+                <Route path="/admin/guest-registration" element={<PermissionRoute pageKey="GUEST_REGISTRATION"><AdminLayout title="Guest Registration"><AdminGuestRegistration /></AdminLayout></PermissionRoute>} />
+                <Route path="/admin/room-rack" element={<PermissionRoute pageKey="ROOM_RACK"><AdminLayout title="Visual Room Rack"><AdminRoomRack /></AdminLayout></PermissionRoute>} />
+                <Route path="/admin/bookings" element={<PermissionRoute pageKey="BOOKINGS"><AdminLayout title="Bookings"><AdminBookings /></AdminLayout></PermissionRoute>} />
+                <Route path="/admin/bookings/:id" element={<PermissionRoute pageKey="BOOKINGS"><AdminLayout title="Booking Details"><AdminBookingDetails /></AdminLayout></PermissionRoute>} />
+                <Route path="/admin/calendar" element={<PermissionRoute pageKey="CALENDAR"><AdminLayout title="Calendar"><AdminCalendar /></AdminLayout></PermissionRoute>} />
+                <Route path="/admin/check-in" element={<PermissionRoute pageKey="CHECK_IN"><AdminLayout title="Check-In"><AdminCheckIn /></AdminLayout></PermissionRoute>} />
+                <Route path="/admin/check-out" element={<PermissionRoute pageKey="CHECK_OUT"><AdminLayout title="Check-Out"><AdminCheckOut /></AdminLayout></PermissionRoute>} />
+                <Route path="/admin/rooms" element={<PermissionRoute pageKey="ROOMS"><AdminLayout title="Rooms"><AdminRooms /></AdminLayout></PermissionRoute>} />
+                <Route path="/admin/room-categories" element={<PermissionRoute pageKey="ROOM_CATEGORIES"><AdminLayout title="Room Categories"><AdminRoomCategories /></AdminLayout></PermissionRoute>} />
+                <Route path="/admin/rate-plans" element={<PermissionRoute pageKey="RATE_PLANS"><AdminLayout title="Dynamic Rate Plans & Meal Packages"><AdminRatePlans /></AdminLayout></PermissionRoute>} />
+                <Route path="/admin/pricing" element={<PermissionRoute pageKey="PRICING"><AdminLayout title="Pricing"><AdminPricing /></AdminLayout></PermissionRoute>} />
+                <Route path="/admin/guests" element={<PermissionRoute pageKey="GUESTS"><AdminLayout title="Guests"><AdminGuests /></AdminLayout></PermissionRoute>} />
+                <Route path="/admin/payments" element={<PermissionRoute pageKey="PAYMENTS"><AdminLayout title="Payments"><AdminPayments /></AdminLayout></PermissionRoute>} />
+                <Route path="/admin/advances" element={<PermissionRoute pageKey="ADVANCES"><AdminLayout title="Advance Payments Ledger"><AdminAdvances /></AdminLayout></PermissionRoute>} />
+                <Route path="/admin/cashier-shifts" element={<PermissionRoute pageKey="CASHIER_SHIFTS"><AdminLayout title="Cashier Shift & Drawer Reconciliation"><AdminCashierShifts /></AdminLayout></PermissionRoute>} />
+                <Route path="/admin/refunds" element={<PermissionRoute pageKey="REFUNDS"><AdminLayout title="Refunds"><AdminRefunds /></AdminLayout></PermissionRoute>} />
+                <Route path="/admin/coupons" element={<PermissionRoute pageKey="COUPONS"><AdminLayout title="Coupons"><AdminCoupons /></AdminLayout></PermissionRoute>} />
+                <Route path="/admin/housekeeping" element={<PermissionRoute pageKey="HOUSEKEEPING"><AdminLayout title="Housekeeping"><AdminHousekeeping /></AdminLayout></PermissionRoute>} />
+                <Route path="/admin/task-approvals" element={<PermissionRoute pageKey="TASK_APPROVALS"><AdminLayout title="Task Approvals"><AdminTaskApprovals /></AdminLayout></PermissionRoute>} />
+                <Route path="/admin/maintenance" element={<PermissionRoute pageKey="MAINTENANCE"><AdminLayout title="Maintenance"><AdminMaintenance /></AdminLayout></PermissionRoute>} />
+                <Route path="/admin/staff" element={<PermissionRoute pageKey="STAFF"><AdminLayout title="Staff"><AdminStaff /></AdminLayout></PermissionRoute>} />
+                <Route path="/admin/gallery" element={<PermissionRoute pageKey="CONTENT_MANAGEMENT"><AdminLayout title="Gallery"><AdminGallery /></AdminLayout></PermissionRoute>} />
+                <Route path="/admin/content" element={<PermissionRoute pageKey="CONTENT_MANAGEMENT"><AdminLayout title="Content"><AdminContent /></AdminLayout></PermissionRoute>} />
+                <Route path="/admin/faqs" element={<PermissionRoute pageKey="CONTENT_MANAGEMENT"><AdminLayout title="FAQs"><AdminFAQs /></AdminLayout></PermissionRoute>} />
+                <Route path="/admin/testimonials" element={<PermissionRoute pageKey="CONTENT_MANAGEMENT"><AdminLayout title="Testimonials"><AdminTestimonials /></AdminLayout></PermissionRoute>} />
+                <Route path="/admin/reviews" element={<PermissionRoute pageKey="REVIEWS"><AdminLayout title="Reviews"><AdminReviews /></AdminLayout></PermissionRoute>} />
+                <Route path="/admin/contact-messages" element={<PermissionRoute pageKey="CONTACT_MESSAGES"><AdminLayout title="Contact Messages"><AdminContactMessages /></AdminLayout></PermissionRoute>} />
+                <Route path="/admin/complaints" element={<PermissionRoute pageKey="COMPLAINTS"><AdminLayout title="Complaints & Service Recovery"><AdminComplaints /></AdminLayout></PermissionRoute>} />
+                <Route path="/admin/reports/*" element={<PermissionRoute pageKey="REPORTS_LAYOUT"><AdminLayout title="Reports" hidePadding><AdminReportsLayout /></AdminLayout></PermissionRoute>} />
+                <Route path="/admin/in-house-list" element={<PermissionRoute pageKey="IN_HOUSE_GUESTS"><AdminLayout title="In-House Guest List"><AdminInHouseList /></AdminLayout></PermissionRoute>} />
+                <Route path="/admin/day-sales-summary" element={<PermissionRoute pageKey="DAY_SALES_SUMMARY"><AdminLayout title="Day Sales Summary"><AdminDaySalesSummary /></AdminLayout></PermissionRoute>} />
+                <Route path="/admin/monthly-mis" element={<PermissionRoute pageKey="MONTHLY_MIS"><AdminLayout title="Monthly MIS Report"><AdminMonthlyMIS /></AdminLayout></PermissionRoute>} />
+                <Route path="/admin/enquiries" element={<PermissionRoute pageKey="ENQUIRIES"><AdminLayout title="Booking Enquiries"><AdminEnquiries /></AdminLayout></PermissionRoute>} />
+                <Route path="/admin/executive" element={<PermissionRoute pageKey="DASHBOARD.EXECUTIVE"><AdminLayout title="Executive Command Center"><AdminExecutiveDashboard /></AdminLayout></PermissionRoute>} />
+                <Route path="/admin/multi-property" element={<PermissionRoute pageKey="MULTI_PROPERTY"><AdminLayout title="Multi-Property & OTA Channel Manager"><AdminMultiProperty /></AdminLayout></PermissionRoute>} />
+                <Route path="/admin/night-audit" element={<PermissionRoute pageKey="NIGHT_AUDIT"><AdminLayout title="Automated Night Audit & Business Date Engine"><AdminNightAudit /></AdminLayout></PermissionRoute>} />
+                <Route path="/staff/mobile-housekeeping" element={<PermissionRoute pageKey="HOUSEKEEPING"><AdminLayout title="Mobile Housekeeping"><MobileHousekeeping /></AdminLayout></PermissionRoute>} />
                 <Route path="/admin/analytics" element={<Navigate to="/admin/reports" replace />} />
-                <Route path="/admin/settings" element={<ProtectedRoute roles={["ADMIN"]}><AdminLayout title="Settings"><AdminSettings /></AdminLayout></ProtectedRoute>} />
-                <Route path="/admin/audit-logs" element={<ProtectedRoute roles={["ADMIN","MANAGER"]}><AdminLayout title="Audit Logs"><AdminAuditLogs /></AdminLayout></ProtectedRoute>} />
-                <Route path="/admin/corporate-accounts" element={<ProtectedRoute roles={["ADMIN","MANAGER"]}><AdminLayout title="Corporate Accounts & B2B Billing"><AdminCorporateAccounts /></AdminLayout></ProtectedRoute>} />
-                <Route path="/admin/pos" element={<ProtectedRoute roles={["ADMIN","MANAGER","RECEPTIONIST"]}><AdminLayout title="Restaurant POS & Kitchen Display System"><AdminPOS /></AdminLayout></ProtectedRoute>} />
-                <Route path="/admin/menu" element={<ProtectedRoute roles={["ADMIN","MANAGER"]}><AdminLayout title="Menu Management"><AdminMenu /></AdminLayout></ProtectedRoute>} />
-                <Route path="/admin/banquets" element={<ProtectedRoute roles={["ADMIN","MANAGER","RECEPTIONIST"]}><AdminLayout title="Banquets & Events"><AdminBanquets /></AdminLayout></ProtectedRoute>} />
-                <Route path="/admin/ancillary" element={<ProtectedRoute roles={["ADMIN","MANAGER","RECEPTIONIST"]}><AdminLayout title="Ancillary Services"><AdminAncillary /></AdminLayout></ProtectedRoute>} />
-                <Route path="/admin/group-bookings" element={<ProtectedRoute roles={["ADMIN","MANAGER","RECEPTIONIST"]}><AdminLayout title="Group Bookings — MICE & Events"><AdminGroupBookings /></AdminLayout></ProtectedRoute>} />
-                <Route path="/admin/inventory" element={<ProtectedRoute roles={["ADMIN","MANAGER","HOUSEKEEPING"]}><AdminLayout title="Inventory & Store Management"><AdminInventory /></AdminLayout></ProtectedRoute>} />
-                <Route path="/admin/vendors" element={<ProtectedRoute roles={["ADMIN","MANAGER"]}><AdminLayout title="Vendor & Supplier Directory"><AdminVendors /></AdminLayout></ProtectedRoute>} />
-                <Route path="/admin/procurement" element={<ProtectedRoute roles={["ADMIN","MANAGER"]}><AdminLayout title="Procurement & Purchase Orders"><AdminProcurement /></AdminLayout></ProtectedRoute>} />
-                <Route path="/admin/accounting" element={<ProtectedRoute roles={["ADMIN","MANAGER"]}><AdminLayout title="General Ledger & Accounting Foundation"><AdminAccounting /></AdminLayout></ProtectedRoute>} />
+                <Route path="/admin/settings" element={<PermissionRoute pageKey="SETTINGS"><AdminLayout title="Settings"><AdminSettings /></AdminLayout></PermissionRoute>} />
+                <Route path="/admin/settings/payment-channels" element={<PermissionRoute pageKey="PAYMENT_CHANNELS"><AdminLayout title="Payment Channels"><AdminPaymentChannels /></AdminLayout></PermissionRoute>} />
+                <Route path="/admin/audit-logs" element={<PermissionRoute pageKey="AUDIT_LOGS"><AdminLayout title="Audit Logs"><AdminAuditLogs /></AdminLayout></PermissionRoute>} />
+                <Route path="/admin/corporate-accounts" element={<PermissionRoute pageKey="CORPORATE_ACCOUNTS"><AdminLayout title="Corporate Accounts & B2B Billing"><AdminCorporateAccounts /></AdminLayout></PermissionRoute>} />
+                <Route path="/admin/pos" element={<PermissionRoute pageKey="RESTAURANT_POS"><AdminLayout title="Restaurant POS & Kitchen Display System"><AdminPOS /></AdminLayout></PermissionRoute>} />
+                <Route path="/admin/menu" element={<PermissionRoute pageKey="MENU_MANAGEMENT"><AdminLayout title="Menu Management"><AdminMenu /></AdminLayout></PermissionRoute>} />
+                <Route path="/admin/banquets" element={<PermissionRoute pageKey="BANQUETS"><AdminLayout title="Banquets & Events"><AdminBanquets /></AdminLayout></PermissionRoute>} />
+                <Route path="/admin/ancillary" element={<PermissionRoute pageKey="FRONT_DESK"><AdminLayout title="Ancillary Services"><AdminAncillary /></AdminLayout></PermissionRoute>} />
+                <Route path="/admin/group-bookings" element={<PermissionRoute pageKey="GROUP_BOOKINGS"><AdminLayout title="Group Bookings — MICE & Events"><AdminGroupBookings /></AdminLayout></PermissionRoute>} />
+                <Route path="/admin/inventory" element={<PermissionRoute pageKey="INVENTORY"><AdminLayout title="Inventory & Store Management"><AdminInventory /></AdminLayout></PermissionRoute>} />
+                <Route path="/admin/vendors" element={<PermissionRoute pageKey="VENDORS"><AdminLayout title="Vendor & Supplier Directory"><AdminVendors /></AdminLayout></PermissionRoute>} />
+                <Route path="/admin/procurement" element={<PermissionRoute pageKey="PROCUREMENT"><AdminLayout title="Procurement & Purchase Orders"><AdminProcurement /></AdminLayout></PermissionRoute>} />
+                <Route path="/admin/accounting" element={<PermissionRoute pageKey="ACCOUNTING"><AdminLayout title="General Ledger & Accounting Foundation"><AdminAccounting /></AdminLayout></PermissionRoute>} />
 
 
 
-                {/* STAFF ROUTES */}
-                <Route path="/staff/housekeeping" element={<ProtectedRoute roles={["HOUSEKEEPING","ADMIN","MANAGER"]}><AdminLayout title="Housekeeping"><AdminHousekeeping /></AdminLayout></ProtectedRoute>} />
-                <Route path="/staff/maintenance" element={<ProtectedRoute roles={["MAINTENANCE","ADMIN","MANAGER"]}><AdminLayout title="Maintenance"><AdminMaintenance /></AdminLayout></ProtectedRoute>} />
+                {/* ROLE-SPECIFIC DASHBOARDS */}
+                <Route path="/front-desk/dashboard" element={<PermissionRoute pageKey="DASHBOARD.FRONT_DESK"><FrontDeskDashboard /></PermissionRoute>} />
+                <Route path="/housekeeping/dashboard" element={<PermissionRoute pageKey="DASHBOARD.HOUSEKEEPING"><HousekeepingDashboard /></PermissionRoute>} />
+                <Route path="/maintenance/dashboard" element={<PermissionRoute pageKey="DASHBOARD.MAINTENANCE"><MaintenanceDashboard /></PermissionRoute>} />
+                <Route path="/cashier/dashboard" element={<PermissionRoute pageKey="DASHBOARD.CASHIER"><CashierDashboard /></PermissionRoute>} />
+                <Route path="/restaurant/dashboard" element={<PermissionRoute pageKey="DASHBOARD.RESTAURANT"><RestaurantDashboard /></PermissionRoute>} />
+                <Route path="/finance/dashboard" element={<PermissionRoute pageKey="DASHBOARD.FINANCE"><FinanceDashboard /></PermissionRoute>} />
+                {/* Placeholder dashboards for roles pending full implementation */}
+                <Route path="/events/dashboard" element={<PermissionRoute pageKey="BANQUETS"><AdminLayout title="Events & Banquets"><AdminBanquets /></AdminLayout></PermissionRoute>} />
+                <Route path="/inventory/dashboard" element={<PermissionRoute pageKey="INVENTORY"><AdminLayout title="Inventory"><AdminInventory /></AdminLayout></PermissionRoute>} />
+                <Route path="/procurement/dashboard" element={<PermissionRoute pageKey="PROCUREMENT"><AdminLayout title="Procurement"><AdminProcurement /></AdminLayout></PermissionRoute>} />
+
+                {/* STAFF ROUTES (legacy paths — redirect to new role dashboards) */}
+                <Route path="/staff/housekeeping" element={<PermissionRoute pageKey="HOUSEKEEPING"><HousekeepingDashboard /></PermissionRoute>} />
+                <Route path="/staff/maintenance" element={<PermissionRoute pageKey="MAINTENANCE"><MaintenanceDashboard /></PermissionRoute>} />
 
                 {/* CATCH ALL */}
                 <Route path="*" element={<Navigate to="/" replace />} />
@@ -220,6 +260,7 @@ function App() {
             </Suspense>
           </BrowserRouter>
         </TooltipProvider>
+        </PermissionProvider>
       </AuthProvider>
     </QueryClientProvider>
   );

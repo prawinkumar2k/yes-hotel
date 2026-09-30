@@ -34,6 +34,7 @@ export enum AdvancePaymentMethod {
 }
 
 export interface IAdvancePayment extends Document {
+  propertyId: mongoose.Types.ObjectId;
   advanceNumber: string;       // human-readable ID, e.g. "ADV-2024-0001"
   booking?: mongoose.Types.ObjectId;
   guest: mongoose.Types.ObjectId;
@@ -44,6 +45,8 @@ export interface IAdvancePayment extends Document {
   totalRefunded: number;       // sum of refunds given
   remainingBalance: number;    // amount - totalAdjusted - totalRefunded
 
+  paymentChannel?: mongoose.Types.ObjectId;
+  /** @deprecated Use paymentChannel instead for new logic */
   method: AdvancePaymentMethod;
   referenceNumber?: string;    // cheque/transfer ref, Razorpay payment ID, etc.
   razorpayPaymentId?: string;
@@ -59,6 +62,7 @@ export interface IAdvancePayment extends Document {
 
 const AdvancePaymentSchema = new Schema<IAdvancePayment>(
   {
+    propertyId: { type: Schema.Types.ObjectId, ref: "Property", required: true },
     advanceNumber: { type: String, required: true, unique: true },
     booking: { type: Schema.Types.ObjectId, ref: "Booking", index: true },
     guest: { type: Schema.Types.ObjectId, ref: "Guest", required: true },
@@ -69,6 +73,8 @@ const AdvancePaymentSchema = new Schema<IAdvancePayment>(
     totalRefunded: { type: Number, default: 0, min: 0 },
     remainingBalance: { type: Number, required: true, min: 0 },
 
+    paymentChannel: { type: Schema.Types.ObjectId, ref: "PaymentChannel" },
+    /** @deprecated */
     method: { type: String, enum: Object.values(AdvancePaymentMethod), required: true },
     referenceNumber: { type: String },
     razorpayPaymentId: { type: String },

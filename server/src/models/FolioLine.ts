@@ -92,6 +92,7 @@ export interface IFolioLine extends Document {
   // Optional links
   advancePaymentId?: mongoose.Types.ObjectId;  // if ADVANCE_ADJUSTMENT
   paymentId?: mongoose.Types.ObjectId;          // if PAYMENT
+  paymentChannelId?: mongoose.Types.ObjectId;   // configured channel used for this payment
   refundId?: mongoose.Types.ObjectId;           // if REFUND
   reversedLineId?: mongoose.Types.ObjectId;     // if REVERSAL — points to the line being reversed
 
@@ -116,6 +117,7 @@ const FolioLineSchema = new Schema<IFolioLine>(
     postedBy: { type: String, required: true },
     advancePaymentId: { type: Schema.Types.ObjectId, ref: "AdvancePayment" },
     paymentId: { type: Schema.Types.ObjectId, ref: "Payment" },
+    paymentChannelId: { type: Schema.Types.ObjectId, ref: "PaymentChannel" },
     refundId: { type: Schema.Types.ObjectId, ref: "Refund" },
     reversedLineId: { type: Schema.Types.ObjectId, ref: "FolioLine" },
     businessDate: { type: Date },

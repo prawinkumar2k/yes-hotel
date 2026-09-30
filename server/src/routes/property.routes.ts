@@ -1,4 +1,6 @@
 import { Router } from "express";
+import { requirePropertyAccess } from "../middleware/propertyAuth";
+import { requirePermission } from "../middleware/permissionAuth";
 import { protect, authorize } from "../middleware/auth.middleware";
 import {
   getProperties, createProperty, updateProperty, togglePropertyActive,
@@ -10,14 +12,14 @@ router.use(protect);
 
 // Properties
 router.get("/", getProperties);
-router.post("/", authorize("ADMIN"), createProperty);
-router.patch("/:id", authorize("ADMIN", "MANAGER"), updateProperty);
-router.patch("/:id/toggle-active", authorize("ADMIN"), togglePropertyActive);
+router.post("/", requirePermission("MULTI_PROPERTY", "CREATE"), createProperty);
+router.patch("/:id", requirePermission("MULTI_PROPERTY", "EDIT"), updateProperty);
+router.patch("/:id/toggle-active", requirePermission("MULTI_PROPERTY", "EDIT"), togglePropertyActive);
 
 // Channel Mappings
 router.get("/channels", getChannelMappings);
-router.post("/channels", authorize("ADMIN", "MANAGER"), upsertChannelMapping);
-router.delete("/channels/:id", authorize("ADMIN"), deleteChannelMapping);
-router.post("/channels/:id/sync", authorize("ADMIN", "MANAGER"), syncChannelMapping);
+router.post("/channels", requirePermission("MULTI_PROPERTY", "CREATE"), upsertChannelMapping);
+router.delete("/channels/:id", requirePermission("MULTI_PROPERTY", "DELETE"), deleteChannelMapping);
+router.post("/channels/:id/sync", requirePermission("MULTI_PROPERTY", "CREATE"), syncChannelMapping);
 
 export default router;

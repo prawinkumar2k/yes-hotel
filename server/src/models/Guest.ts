@@ -1,6 +1,7 @@
 import mongoose, { Document, Schema } from "mongoose";
 
 export interface IGuest extends Document {
+  propertyId: mongoose.Types.ObjectId;
   fullName: string;
   email: string;
   phone: string;
@@ -27,6 +28,7 @@ export interface IGuest extends Document {
 
 const GuestSchema = new Schema<IGuest>(
   {
+    propertyId: { type: Schema.Types.ObjectId, ref: "Property", required: true },
     fullName: { type: String, required: true },
     email: { type: String, required: true, unique: true },
     phone: { type: String, required: true },

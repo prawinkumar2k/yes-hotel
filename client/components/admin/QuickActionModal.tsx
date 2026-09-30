@@ -55,13 +55,7 @@ export default function QuickActionModal({ open, onOpenChange }: Props) {
       path: "/admin/room-rack",
       color: "from-hotel-gold/20 to-amber-600/10 text-hotel-gold border-hotel-gold/30",
     },
-    {
-      title: "Restaurant POS & KDS",
-      desc: "Enter KOT docket, charge to room folio or cash bill",
-      icon: UtensilsCrossed,
-      path: "/admin/pos",
-      color: "from-orange-500/20 to-red-500/10 text-orange-400 border-orange-500/30",
-    },
+
     {
       title: "Housekeeping Board",
       desc: "Inspect rooms, manage cleaning queue & release clean",

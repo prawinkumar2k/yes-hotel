@@ -18,6 +18,7 @@ export interface IPurchaseOrderItem {
 }
 
 export interface IPurchaseOrder extends Document {
+  propertyId: mongoose.Types.ObjectId;
   poNumber: string;
   vendor: mongoose.Types.ObjectId;
   vendorName: string;
@@ -33,6 +34,7 @@ export interface IPurchaseOrder extends Document {
 }
 
 const PurchaseOrderItemSchema = new Schema({
+    propertyId: { type: Schema.Types.ObjectId, ref: "Property", required: true },
   item: { type: Schema.Types.ObjectId, ref: "InventoryItem", required: true },
   itemName: { type: String, required: true },
   quantity: { type: Number, required: true, min: 1 },

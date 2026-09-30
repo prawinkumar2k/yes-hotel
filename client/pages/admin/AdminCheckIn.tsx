@@ -47,6 +47,20 @@ export default function AdminCheckIn() {
     enabled: !!selectedBooking,
   });
 
+  const [idProofPhoto, setIdProofPhoto] = useState<string>("");
+  const [viewProofModal, setViewProofModal] = useState<string | null>(null);
+
+  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setIdProofPhoto(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const checkInMutation = useMutation({
     mutationFn: ({ id, roomId }: { id: string; roomId: string }) =>
       apiFetch(`/api/bookings/${id}/check-in`, user?.token, "POST", {
@@ -55,6 +69,7 @@ export default function AdminCheckIn() {
         idNumber: idNumber || undefined,
         nationality: nationality || undefined,
         emergencyPhone: emergencyPhone || undefined,
+        idProofPhoto: idProofPhoto || undefined,
       }),
     onSuccess: (data) => {
       if (data.success) {
@@ -65,6 +80,7 @@ export default function AdminCheckIn() {
         setIdNumber("");
         setNationality("Indian");
         setEmergencyPhone("");
+        setIdProofPhoto("");
         queryClient.invalidateQueries({ queryKey: ["checkInBookings"] });
         queryClient.invalidateQueries({ queryKey: ["availableRooms"] });
       } else {
@@ -189,7 +205,7 @@ export default function AdminCheckIn() {
                     )}
                   </div>
 
-                  {/* KYC Identification Details */}
+                  {/* KYC Identification Details & Proof Photo */}
                   <div className="border border-gray-200 rounded-lg p-4 bg-gray-50/50 space-y-3">
                     <p className="text-xs font-bold text-gray-700 uppercase tracking-wider">Guest Identity Verification (KYC)</p>
                     <div className="grid grid-cols-2 gap-3">
@@ -236,6 +252,35 @@ export default function AdminCheckIn() {
                         />
                       </div>
                     </div>
+
+                    {/* ID Proof Photo Input & Lightbox Preview */}
+                    <div className="pt-2 border-t border-gray-200">
+                      <label className="block text-xs font-semibold text-gray-700 mb-1">📷 Upload / Snap ID Proof Photo *</label>
+                      <div className="flex items-center gap-3">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          capture="environment"
+                          onChange={handlePhotoChange}
+                          className="text-xs text-gray-600 file:mr-2 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100 cursor-pointer"
+                        />
+                        {(idProofPhoto || selectedBooking?.idProofPhoto || selectedBooking?.guestDetails?.idProofPhoto) && (
+                          <button
+                            type="button"
+                            onClick={() => setViewProofModal(idProofPhoto || selectedBooking?.idProofPhoto || selectedBooking?.guestDetails?.idProofPhoto)}
+                            className="px-2.5 py-1 text-xs bg-indigo-50 text-indigo-700 border border-indigo-200 rounded font-semibold hover:bg-indigo-100 transition flex items-center gap-1 shrink-0"
+                          >
+                            👁️ View Proof Photo
+                          </button>
+                        )}
+                      </div>
+                      {idProofPhoto && (
+                        <div className="mt-2 flex items-center gap-2">
+                          <img src={idProofPhoto} alt="ID Proof Preview" className="h-14 w-20 object-cover rounded border border-gray-300" />
+                          <span className="text-[11px] text-emerald-600 font-semibold">✓ ID Proof Photo Ready</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                   {/* Special Requests */}
@@ -267,6 +312,25 @@ export default function AdminCheckIn() {
           </div>
         </div>
       </div>
+
+      {/* Lightbox Modal for Viewing Proof Photo */}
+      {viewProofModal && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setViewProofModal(null)}>
+          <div className="bg-white rounded-2xl p-4 max-w-2xl w-full shadow-2xl relative space-y-3" onClick={e => e.stopPropagation()}>
+            <div className="flex justify-between items-center border-b pb-2">
+              <h3 className="font-bold text-gray-900 text-sm flex items-center gap-2">📷 Guest Identity Proof Photo</h3>
+              <button onClick={() => setViewProofModal(null)} className="text-gray-500 hover:text-gray-900 text-lg font-bold">✕</button>
+            </div>
+            <div className="flex justify-center max-h-[75vh] overflow-hidden rounded-lg bg-gray-900">
+              <img src={viewProofModal} alt="Guest Proof" className="max-h-[70vh] w-auto object-contain" />
+            </div>
+            <div className="flex justify-between items-center text-xs text-gray-500 pt-1">
+              <span>Verified Guest Identity Document</span>
+              <button onClick={() => setViewProofModal(null)} className="px-3 py-1 bg-gray-900 text-white rounded text-xs">Close</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

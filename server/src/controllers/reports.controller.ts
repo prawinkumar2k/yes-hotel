@@ -1,11 +1,19 @@
 import { Request, Response } from "express";
 import { FolioLine, FolioLineType, FolioLineDirection } from "../models/FolioLine";
 import { Booking, BookingStatus } from "../models/Booking";
-import { Room } from "../models/Room";
+import { Room, HousekeepingRoomStatus } from "../models/Room";
 import { AdvancePayment } from "../models/AdvancePayment";
 import { RestaurantOrder } from "../models/RestaurantOrder";
 import { Complaint } from "../models/Complaint";
 import { Payment } from "../models/Payment";
+
+import { Folio } from "../models/Folio";
+import { HousekeepingTask } from "../models/HousekeepingTask";
+import { MaintenanceTicket, MaintenanceStatus } from "../models/MaintenanceTicket";
+import { InventoryItem } from "../models/InventoryItem";
+import { PurchaseOrder } from "../models/PurchaseOrder";
+import { CorporateAccount } from "../models/CorporateAccount";
+import { CashierShift } from "../models/CashierShift";
 
 /**
  * GET /api/admin/reports/overview?dateFrom&dateTo
@@ -536,6 +544,8 @@ export const getInHouseList = async (_req: Request, res: Response) => {
           balance: Math.round(balance),
           settled: Math.round(settled),
           paymentMode: Array.from(paymentModes).join(", ") || "-",
+          discountAmount: booking.discountAmount || 0,
+          appliedCoupon: booking.appliedCoupon || "-",
         };
       })
     );
@@ -544,6 +554,648 @@ export const getInHouseList = async (_req: Request, res: Response) => {
     data.sort((a, b) => a.roomNo.localeCompare(b.roomNo, undefined, { numeric: true }));
 
     return res.json({ success: true, data });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+/**
+ * GET /api/reports/day-summary
+ * Replicates the "YH - Day Sales Summary" and "CASH Sheet" PDF structure.
+ */
+export const getDaySummary = async (req: Request, res: Response) => {
+  try {
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    const todayEnd = new Date();
+    todayEnd.setHours(23, 59, 59, 999);
+    const todayQuery = { $gte: todayStart, $lte: todayEnd };
+
+    // 1. Fetch relevant bookings for today
+    const checkIns = await Booking.find({ checkInDate: todayQuery });
+    const checkOuts = await Booking.find({ checkOutDate: todayQuery });
+    const dayUses = await Booking.find({ stayType: "HOURLY", createdAt: todayQuery });
+    
+    // Total occupied rooms (Checked In status)
+    const activeBookings = await Booking.find({ status: BookingStatus.CHECKED_IN });
+    const totalPax = activeBookings.reduce((sum, b) => sum + (b.adults || 1) + (b.children || 0), 0);
+
+    const cancelled = await Booking.countDocuments({ status: BookingStatus.CANCELLED, cancelledAt: todayQuery });
+    const noShows = await Booking.countDocuments({ status: BookingStatus.NO_SHOW, noShowAt: todayQuery });
+    
+    // Through channels (Walkin, OTA, Agency, Auto)
+    const walkins = checkIns.filter(b => b.source === "WALK_IN").length;
+    const otas = checkIns.filter(b => b.source === "OTA").length;
+    const agencies = checkIns.filter(b => b.source === "CORPORATE").length;
+    
+    // 2. Fetch payments for today
+    const todayPayments = await Payment.find({ createdAt: todayQuery });
+    
+    let resrvAdv = 0, roomAdv = 0, partial = 0, final = 0, advAdjd = 0;
+    const paymentModes: Record<string, number> = {
+      CASH: 0, UPI: 0, CARD: 0, PAYTM: 0, HDFC: 0, OTA_CREDIT: 0
+    };
+
+    todayPayments.forEach(p => {
+      const anyP = p as any;
+      // Very basic bucketing for the summary
+      if (anyP.purpose === "ADVANCE") {
+        const b = checkIns.find(cb => cb._id.toString() === p.booking?.toString());
+        if (b) roomAdv += p.amount;
+        else resrvAdv += p.amount;
+      } else if (anyP.purpose === "SETTLEMENT") {
+        final += p.amount;
+      } else {
+        partial += p.amount;
+      }
+      
+      const mode = p.method.toUpperCase();
+      if (paymentModes[mode] !== undefined) paymentModes[mode] += p.amount;
+      else if (mode.includes("UPI")) paymentModes.UPI += p.amount;
+      else if (mode.includes("CARD")) paymentModes.CARD += p.amount;
+      else paymentModes.CASH += p.amount;
+    });
+
+    // 3. Cash Sheet Data
+    const cashPayments = todayPayments.filter(p => p.method.toUpperCase().includes("CASH"));
+    let todayCashInward = 0;
+    const cashTransactions = cashPayments.map(p => {
+      todayCashInward += p.amount;
+      const anyP = p as any;
+      return {
+        party: anyP.notes || "Guest",
+        description: anyP.purpose || "Payment",
+        debit: 0,
+        credit: p.amount
+      };
+    });
+
+    return res.json({
+      success: true,
+      data: {
+        date: new Date().toISOString(),
+        page1: {
+          rooms: {
+            checkIn: checkIns.length,
+            checkOut: checkOuts.length,
+            dayUse: dayUses.length
+          },
+          occupancy: {
+            room: activeBookings.length,
+            pax: totalPax
+          },
+          status: {
+            cancelled,
+            noShow: noShows,
+            noOfInquiry: 0 // Stub
+          },
+          through: {
+            walkin: walkins,
+            ota: otas,
+            agency: agencies,
+            auto: 0
+          },
+          receipts: {
+            resrvAdv,
+            roomAdv,
+            partial,
+            final,
+            advAdjd
+          },
+          modes: paymentModes
+        },
+        page2: {
+          openingBalance: 0, // Stub - would come from CashierShift
+          todayCashInward,
+          transactions: cashTransactions,
+          total: todayCashInward,
+          closingBalance: todayCashInward
+        }
+      }
+    });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+/**
+ * GET /api/reports/monthly-mis
+ * Provides a monthly MIS report, grouping payments and sales by day.
+ */
+export const getMonthlyMIS = async (req: Request, res: Response) => {
+  try {
+    const month = req.query.month ? String(req.query.month) : new Date().toISOString().substring(0, 7);
+    const [year, m] = month.split('-');
+    
+    // Create dates in local time roughly
+    const startOfMonth = new Date(parseInt(year), parseInt(m) - 1, 1);
+    const endOfMonth = new Date(parseInt(year), parseInt(m), 0, 23, 59, 59, 999);
+    
+    const daysInMonth = endOfMonth.getDate();
+    const query = { createdAt: { $gte: startOfMonth, $lte: endOfMonth } };
+
+    // Grouping by day mapping
+    const dailyData: Record<number, any> = {};
+    for (let i = 1; i <= daysInMonth; i++) {
+      const d = new Date(parseInt(year), parseInt(m) - 1, i);
+      dailyData[i] = {
+        date: d.toISOString(),
+        day: d.toLocaleDateString("en-US", { weekday: "short" }),
+        cash: 0,
+        card: 0,
+        upi: 0,
+        paytm: 0,
+        ota: 0,
+        refunds: 0,
+        expenses: 0,
+        salesRoom: 0,
+        salesFb: 0,
+        advances: 0,
+      };
+    }
+
+    const payments = await Payment.find(query);
+    payments.forEach(p => {
+      const anyP = p as any;
+      const day = new Date(anyP.createdAt).getDate();
+      const amount = p.amount;
+      
+      const method = (p.method || "").toUpperCase();
+      if (method.includes("CASH")) dailyData[day].cash += amount;
+      else if (method.includes("CARD")) dailyData[day].card += amount;
+      else if (method.includes("UPI")) dailyData[day].upi += amount;
+      else if (method.includes("PAYTM")) dailyData[day].paytm += amount;
+      else dailyData[day].ota += amount;
+
+      if (anyP.purpose === "ADVANCE") {
+        dailyData[day].advances += amount;
+      }
+    });
+
+    const folios = await FolioLine.find({ ...query, direction: FolioLineDirection.DEBIT });
+    folios.forEach(f => {
+      const anyF = f as any;
+      const day = new Date(anyF.createdAt).getDate();
+      if (anyF.lineType === "ROOM_CHARGE") dailyData[day].salesRoom += f.amount;
+      else if (anyF.lineType === "POS_CHARGE") dailyData[day].salesFb += f.amount;
+    });
+
+    // Compute totals per row
+    Object.values(dailyData).forEach(row => {
+      row.dayTotal = row.cash + row.card + row.upi + row.paytm + row.ota;
+      row.grandTotal = row.dayTotal - row.refunds - row.expenses;
+      row.salesTotal = row.salesRoom + row.salesFb;
+      row.difference = row.grandTotal - row.salesTotal;
+    });
+
+    return res.json({
+      success: true,
+      data: Object.values(dailyData)
+    });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const getDynamicReport = async (req: Request, res: Response) => {
+  try {
+    const { reportId } = req.params;
+    const range = req.query.range as string || "today";
+    
+    // Set date bounds
+    const now = new Date();
+    let startDate = new Date();
+    startDate.setHours(0, 0, 0, 0);
+    let endDate = new Date();
+    endDate.setHours(23, 59, 59, 999);
+    
+    let dateQuery: any = { $gte: startDate, $lte: endDate };
+    let createdAtQuery: any = { createdAt: dateQuery };
+
+    if (range === "all-time") {
+      dateQuery = {};
+      createdAtQuery = {};
+    } else if (range === "yesterday") {
+      startDate.setDate(startDate.getDate() - 1);
+      endDate.setDate(endDate.getDate() - 1);
+      dateQuery = { $gte: startDate, $lte: endDate };
+      createdAtQuery = { createdAt: dateQuery };
+    } else if (range === "this-week") {
+      startDate.setDate(startDate.getDate() - startDate.getDay());
+      dateQuery = { $gte: startDate, $lte: endDate };
+      createdAtQuery = { createdAt: dateQuery };
+    } else if (range === "this-month") {
+      startDate.setDate(1);
+      dateQuery = { $gte: startDate, $lte: endDate };
+      createdAtQuery = { createdAt: dateQuery };
+    } else if (range === "last-month") {
+      startDate.setMonth(startDate.getMonth() - 1, 1);
+      endDate.setMonth(endDate.getMonth(), 0);
+      dateQuery = { $gte: startDate, $lte: endDate };
+      createdAtQuery = { createdAt: dateQuery };
+    }
+
+    let kpis = {};
+    let table: any[] = [];
+    
+    // Helpers for fields that use dateQuery
+    const dateField = range === "all-time" ? {} : { date: dateQuery };
+    const checkInField = range === "all-time" ? {} : { checkInDate: dateQuery };
+    const checkOutField = range === "all-time" ? {} : { checkOutDate: dateQuery };
+
+    switch (reportId) {
+      case "daily-summary": {
+        const [totalRooms, inHouse, arrivals, departures, salesLines] = await Promise.all([
+          Room.countDocuments(),
+          Booking.countDocuments({ status: BookingStatus.CHECKED_IN }),
+          Booking.countDocuments(checkInField),
+          Booking.countDocuments(checkOutField),
+          FolioLine.find({ ...dateField, direction: FolioLineDirection.DEBIT })
+        ]);
+
+        let roomRevenue = 0, restaurantRevenue = 0;
+        for (const line of salesLines as any[]) {
+           if (line.lineType === "ROOM_CHARGE") roomRevenue += line.amount;
+           else if (line.lineType === "POS_CHARGE") restaurantRevenue += line.amount;
+        }
+
+        kpis = {
+          TotalRooms: totalRooms,
+          OccupiedRooms: inHouse,
+          Arrivals: arrivals,
+          Departures: departures,
+          DailyRevenue: roomRevenue + restaurantRevenue
+        };
+
+        table = [
+          { Metric: "Room Revenue", Value: `₹${roomRevenue.toLocaleString('en-IN')}` },
+          { Metric: "F&B Revenue", Value: `₹${restaurantRevenue.toLocaleString('en-IN')}` },
+          { Metric: "Pending Arrivals", Value: arrivals },
+          { Metric: "Pending Departures", Value: departures }
+        ];
+        break;
+      }
+      
+      case "management-summary": {
+        const [totalRooms, inHouse, dirtyRooms, unresolvedTickets] = await Promise.all([
+          Room.countDocuments(),
+          Booking.countDocuments({ status: BookingStatus.CHECKED_IN }),
+          Room.countDocuments({ housekeepingStatus: HousekeepingRoomStatus.DIRTY }),
+          MaintenanceTicket.countDocuments({ status: { $ne: MaintenanceStatus.RESOLVED } })
+        ]);
+
+        kpis = {
+          OccupancyPercentage: totalRooms ? Math.round((inHouse/totalRooms)*100) + '%' : '0%',
+          RoomsToClean: dirtyRooms,
+          PendingMaintenance: unresolvedTickets,
+          ActiveGuests: inHouse
+        };
+
+        table = [
+          { Department: "Front Office", Status: "Active", Focus: "Guest Check-ins" },
+          { Department: "Housekeeping", Status: dirtyRooms > 0 ? "Busy" : "Clear", Focus: `${dirtyRooms} rooms pending` },
+          { Department: "Maintenance", Status: unresolvedTickets > 0 ? "Action Required" : "Clear", Focus: `${unresolvedTickets} tickets open` },
+          { Department: "Restaurant", Status: "Active", Focus: "Normal Operations" }
+        ];
+        break;
+      }
+
+      case "executive": {
+        const [salesLines, payments, advances] = await Promise.all([
+          FolioLine.find({ ...dateField, direction: FolioLineDirection.DEBIT }),
+          Payment.find(createdAtQuery),
+          AdvancePayment.find(createdAtQuery)
+        ]);
+
+        let roomRevenue = 0, restaurantRevenue = 0, taxes = 0;
+        for (const line of salesLines as any[]) {
+           if (line.lineType === "ROOM_CHARGE") roomRevenue += line.amount;
+           else if (line.lineType === "POS_CHARGE") restaurantRevenue += line.amount;
+           else if (line.lineType.startsWith("TAX_")) taxes += line.amount;
+        }
+
+        const totalPayments = payments.reduce((acc, p) => acc + (p.amount || 0), 0);
+        const totalAdvances = advances.reduce((acc, p: any) => acc + (p.amount || 0), 0);
+
+        kpis = {
+          GrossRevenue: roomRevenue + restaurantRevenue + taxes,
+          NetRevenue: roomRevenue + restaurantRevenue,
+          TaxesCollected: taxes,
+          PaymentsCollected: totalPayments,
+          AdvancesHeld: totalAdvances
+        };
+
+        table = [
+          { Category: "Room Revenue", Gross: roomRevenue, Tax: taxes * 0.8, Net: roomRevenue - (taxes*0.8) },
+          { Category: "F&B Revenue", Gross: restaurantRevenue, Tax: taxes * 0.2, Net: restaurantRevenue - (taxes*0.2) },
+          { Category: "Cash Flow (Payments)", Gross: totalPayments, Tax: 0, Net: totalPayments },
+          { Category: "Cash Flow (Advances)", Gross: totalAdvances, Tax: 0, Net: totalAdvances }
+        ];
+        break;
+      }
+      case "rooms": {
+        const rooms = await Room.find().lean();
+        
+        const clean = rooms.filter((r: any) => r.housekeepingStatus === "CLEAN").length;
+        const dirty = rooms.filter((r: any) => r.housekeepingStatus === "DIRTY").length;
+        const ooo = rooms.filter((r: any) => r.sellStatus === "OUT_OF_ORDER").length;
+        const oos = rooms.filter((r: any) => r.sellStatus === "OUT_OF_SERVICE").length;
+
+        kpis = {
+           TotalRooms: rooms.length,
+           CleanRooms: clean,
+           DirtyRooms: dirty,
+           OutOfOrder: ooo,
+           OutOfService: oos
+        };
+        
+        table = rooms.map((r: any) => ({
+           RoomNumber: r.roomNumber,
+           Category: r.category,
+           SellStatus: r.sellStatus,
+           Housekeeping: r.housekeepingStatus || 'CLEAN',
+           Maintenance: r.maintenanceStatus || 'OK'
+        }));
+        break;
+      }
+      
+      case "occupancy": {
+        const [rooms, inHouse, arrivals] = await Promise.all([
+          Room.find().lean(),
+          Booking.find({ status: BookingStatus.CHECKED_IN }).populate("assignedRoom").lean(),
+          Booking.countDocuments(checkInField)
+        ]);
+        
+        kpis = {
+           TotalRooms: rooms.length,
+           OccupiedRooms: inHouse.length,
+           OccupancyRate: rooms.length ? Math.round((inHouse.length/rooms.length)*100) + '%' : '0%',
+           PendingArrivals: arrivals
+        };
+        
+        table = inHouse.map((b: any) => ({
+           Room: b.assignedRoom?.roomNumber || 'Unassigned',
+           Guest: b.guestDetails?.firstName ? `${b.guestDetails.firstName} ${b.guestDetails.lastName}` : 'Unknown',
+           Adults: b.adults,
+           CheckIn: b.checkInDate,
+           CheckOut: b.checkOutDate
+        }));
+        break;
+      }
+      case "bookings": {
+        const bookings = await Booking.find(createdAtQuery).lean();
+        kpis = {
+           TotalBookings: bookings.length,
+           Confirmed: bookings.filter((b: any) => b.status === BookingStatus.CONFIRMED).length,
+           CheckedIn: bookings.filter((b: any) => b.status === BookingStatus.CHECKED_IN).length,
+           Cancelled: bookings.filter((b: any) => b.status === BookingStatus.CANCELLED).length,
+        };
+        table = bookings.map((b: any) => ({
+           BookingNumber: b.bookingReference || b._id,
+           Guest: b.guestDetails?.firstName ? `${b.guestDetails.firstName} ${b.guestDetails.lastName}` : 'Unknown',
+           CheckIn: b.checkInDate,
+           CheckOut: b.checkOutDate,
+           TotalAmount: b.totalAmount,
+           Status: b.status
+        }));
+        break;
+      }
+      case "sales": {
+        const lines = await FolioLine.find({ ...dateField, direction: FolioLineDirection.DEBIT }).lean();
+        let roomSales = 0, posSales = 0, tax = 0;
+        lines.forEach((l: any) => {
+           if (l.lineType === "ROOM_CHARGE") roomSales += l.amount;
+           else if (l.lineType === "RESTAURANT") posSales += l.amount;
+           else if (l.lineType.startsWith("TAX_")) tax += l.amount;
+        });
+        kpis = {
+           RoomSales: roomSales,
+           RestaurantSales: posSales,
+           TotalTax: tax,
+           TotalGrossSales: roomSales + posSales + tax
+        };
+        table = lines.map((l: any) => ({
+           Date: l.date,
+           Description: l.description,
+           Type: l.lineType,
+           Amount: l.amount
+        }));
+        break;
+      }
+      case "payments": {
+        const payments = await Payment.find(createdAtQuery).lean();
+        let cash = 0, card = 0, upi = 0;
+        payments.forEach((p: any) => {
+           if (p.method === "CASH") cash += p.amount;
+           else if (p.method === "CARD") card += p.amount;
+           else if (p.method === "UPI") upi += p.amount;
+        });
+        kpis = {
+           TotalReceived: cash + card + upi,
+           CashReceived: cash,
+           CardReceived: card,
+           UpiReceived: upi,
+           TransactionCount: payments.length
+        };
+        table = payments.map((p: any) => ({
+           Reference: p.transactionId || p._id,
+           Amount: p.amount,
+           Method: p.method,
+           Status: p.status,
+           Date: p.createdAt || p.date
+        }));
+        break;
+      }
+      
+      case "cashier": {
+        const shifts = await CashierShift.find(createdAtQuery).populate('user').lean();
+        let discrepancies = 0;
+        let totalDeclared = 0;
+        shifts.forEach((s: any) => {
+           totalDeclared += (s.declaredCash || 0);
+           if (s.cashDiscrepancy && s.cashDiscrepancy !== 0) discrepancies++;
+        });
+        
+        kpis = {
+           TotalShifts: shifts.length,
+           OpenShifts: shifts.filter((s: any) => s.status === 'OPEN').length,
+           TotalDeclaredCash: totalDeclared,
+           ShiftsWithDiscrepancy: discrepancies
+        };
+        
+        table = shifts.map((s: any) => ({
+           Cashier: s.user?.firstName ? `${s.user.firstName} ${s.user.lastName}` : 'Unknown',
+           Status: s.status,
+           OpeningBalance: s.openingBalance,
+           DeclaredCash: s.declaredCash || 0,
+           Discrepancy: s.cashDiscrepancy || 0
+        }));
+        break;
+      }
+      
+      case "cash-sheet": {
+        const cashPayments = await Payment.find({ ...createdAtQuery, method: "CASH" }).lean();
+        const totalCash = cashPayments.reduce((acc, p: any) => acc + (p.amount || 0), 0);
+        
+        kpis = {
+           TotalCashTransactions: cashPayments.length,
+           TotalCashVolume: totalCash,
+           AverageTransactionSize: cashPayments.length > 0 ? Math.round(totalCash / cashPayments.length) : 0
+        };
+        
+        table = cashPayments.map((p: any) => ({
+           Time: p.createdAt,
+           Reference: p.transactionId || p._id,
+           Purpose: p.purpose || 'Payment',
+           Amount: p.amount,
+           Status: p.status
+        }));
+        break;
+      }
+      case "advances": {
+         const advances = await AdvancePayment.find(createdAtQuery).lean();
+         const totalAdvances = advances.reduce((acc, p: any) => acc + (p.amount || 0), 0);
+         const totalAdjusted = advances.reduce((acc, p: any) => acc + (p.totalAdjusted || 0), 0);
+         
+         kpis = {
+           TotalReceived: totalAdvances,
+           TotalUsed: totalAdjusted,
+           TotalRemaining: totalAdvances - totalAdjusted,
+           Count: advances.length
+         };
+         
+         table = advances.map((a: any) => ({
+            Reference: a.advanceNumber || a._id,
+            Guest: a.guest ? String(a.guest) : 'Unknown',
+            OriginalAmount: a.amount || 0,
+            UsedAmount: a.totalAdjusted || 0,
+            Remaining: a.remainingBalance || 0,
+            Status: a.status
+         }));
+         break;
+      }
+      case "tax": {
+        const lines = await FolioLine.find({ ...dateField, lineType: { $in: [FolioLineType.TAX_CGST, FolioLineType.TAX_SGST, FolioLineType.TAX_IGST] } }).lean();
+        let cgst = 0, sgst = 0, igst = 0;
+        lines.forEach(l => {
+           if (l.lineType === FolioLineType.TAX_CGST) cgst += l.amount;
+           if (l.lineType === FolioLineType.TAX_SGST) sgst += l.amount;
+           if (l.lineType === FolioLineType.TAX_IGST) igst += l.amount;
+        });
+        kpis = {
+           TotalTax: cgst + sgst + igst,
+           TotalCGST: cgst,
+           TotalSGST: sgst,
+           TotalIGST: igst
+        };
+        table = lines.map(l => ({
+           Description: l.description,
+           Type: l.lineType,
+           Amount: l.amount,
+           Date: l.date
+        }));
+        break;
+      }
+      case "guest-bills": {
+        const folios = await Folio.find(createdAtQuery).lean();
+        kpis = { TotalFolios: folios.length };
+        table = folios.map((f: any) => ({
+           FolioNumber: f.folioNumber || f._id,
+           Status: f.status,
+           Balance: f.balance || 0,
+           CreatedAt: f.createdAt
+        }));
+        break;
+      }
+      case "restaurant": {
+        const orders = await RestaurantOrder.find(createdAtQuery).lean();
+        kpis = { TotalOrders: orders.length, TotalRevenue: orders.reduce((acc, o: any) => acc + (o.totalAmount || 0), 0) };
+        table = orders.map((o: any) => ({
+           OrderNumber: o.orderNumber || o._id,
+           Table: o.tableNumber || 'N/A',
+           Status: o.status,
+           Total: o.totalAmount,
+           Date: o.createdAt
+        }));
+        break;
+      }
+      case "housekeeping": {
+        const tasks = await HousekeepingTask.find(createdAtQuery).lean();
+        kpis = { TotalTasks: tasks.length, Completed: tasks.filter((t: any) => t.status === 'COMPLETED').length };
+        table = tasks.map((t: any) => ({
+           Room: t.room ? String(t.room) : 'General',
+           TaskType: t.taskType,
+           Status: t.status,
+           Priority: t.priority,
+           Date: t.createdAt
+        }));
+        break;
+      }
+      case "maintenance": {
+        const tickets = await MaintenanceTicket.find(createdAtQuery).lean();
+        kpis = { TotalTickets: tickets.length, Resolved: tickets.filter((t: any) => t.status === 'RESOLVED').length };
+        table = tickets.map((t: any) => ({
+           Issue: t.issueType || t.title,
+           Room: t.room ? String(t.room) : 'General',
+           Status: t.status,
+           Priority: t.priority,
+           Date: t.createdAt
+        }));
+        break;
+      }
+      case "inventory": {
+        const items = await InventoryItem.find().lean();
+        kpis = { TotalItems: items.length, LowStock: items.filter((i: any) => i.quantity <= i.minThreshold).length };
+        table = items.map((i: any) => ({
+           Item: i.name,
+           Category: i.category,
+           Quantity: i.quantity,
+           Threshold: i.minThreshold,
+           Unit: i.unit
+        }));
+        break;
+      }
+      case "procurement": {
+        const orders = await PurchaseOrder.find(createdAtQuery).lean();
+        kpis = { TotalPOs: orders.length, TotalAmount: orders.reduce((acc, o: any) => acc + (o.totalAmount || 0), 0) };
+        table = orders.map((o: any) => ({
+           PONumber: o.poNumber || o._id,
+           Vendor: o.vendor ? String(o.vendor) : 'Unknown',
+           Status: o.status,
+           Total: o.totalAmount,
+           Date: o.createdAt
+        }));
+        break;
+      }
+      case "corporate": {
+        const accounts = await CorporateAccount.find().lean();
+        kpis = { TotalAccounts: accounts.length };
+        table = accounts.map((a: any) => ({
+           Company: a.companyName,
+           Code: a.corporateCode,
+           Contact: a.contactPerson,
+           Email: a.email,
+           Phone: a.phone
+        }));
+        break;
+      }
+      case "night-audit": {
+        const lines = await FolioLine.find(createdAtQuery).lean();
+        kpis = { TotalPostings: lines.length, RevenuePosted: lines.filter((l: any) => l.direction === 'DEBIT').reduce((acc, l: any) => acc + (l.amount || 0), 0) };
+        table = lines.map((l: any) => ({
+           Date: l.date,
+           Description: l.description,
+           Amount: l.amount,
+           Type: l.lineType
+        }));
+        break;
+      }
+      default:
+        kpis = { Info: `Report ${reportId} is partially implemented or empty for this date range.` };
+        table = [];
+    }
+    
+    return res.json({ success: true, data: { kpis, table, range } });
   } catch (error: any) {
     return res.status(500).json({ success: false, message: error.message });
   }

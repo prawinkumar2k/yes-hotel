@@ -1,4 +1,6 @@
 import { Router } from "express";
+import { requirePropertyAccess } from "../middleware/propertyAuth";
+import { requirePermission } from "../middleware/permissionAuth";
 import { protect, authorize } from "../middleware/auth.middleware";
 import { Request, Response } from "express";
 import { AdvancePayment, AdvancePaymentMethod } from "../models/AdvancePayment";
@@ -16,12 +18,9 @@ router.use(protect);
 // resolved-or-created by email — deliberately NOT via
 // guest.service.ts's syncGuestOnBookingCreated, since that increments
 // totalBookings, which would be wrong for a deposit that isn't a booking.
-router.post(
-  "/",
-  authorize("RECEPTIONIST", "MANAGER", "ADMIN"),
-  async (req: Request, res: Response) => {
+router.post("/", requirePropertyAccess, requirePermission("ADVANCES", "CREATE"), async (req: Request, res: Response) => {
     try {
-      const { bookingId, guestId, guestName, guestPhone, guestEmail, amount, method, referenceNumber, razorpayPaymentId, purpose, notes } = req.body;
+      const { bookingId, guestId, guestName, guestPhone, guestEmail, amount, method, paymentChannelId, referenceNumber, razorpayPaymentId, purpose, notes } = req.body;
 
       let resolvedGuestId = guestId;
       if (!resolvedGuestId) {
@@ -43,8 +42,11 @@ router.post(
       if (!resolvedGuestId || !amount || !method) {
         return res.status(400).json({ success: false, message: "guestId, amount, and method are required" });
       }
+      const { resolvePaymentChannel } = await import("../utils/payment-channel.resolver");
+      const resolvedChannelId = await resolvePaymentChannel(method || "CASH", paymentChannelId);
+
       const advance = await receiveAdvance(
-        { bookingId, guestId: resolvedGuestId, amount: Number(amount), method: method as AdvancePaymentMethod, referenceNumber, razorpayPaymentId, purpose, receivedBy: (req as any).user?.id, notes },
+        { bookingId, guestId: resolvedGuestId, amount: Number(amount), method: method as AdvancePaymentMethod, paymentChannelId: resolvedChannelId?.toString(), referenceNumber, razorpayPaymentId, purpose, receivedBy: (req as any).user?.id, notes },
         { req }
       );
       return res.status(201).json({ success: true, data: advance });
@@ -55,10 +57,7 @@ router.post(
 );
 
 // GET /api/advances — list advances (filter by booking or guest)
-router.get(
-  "/",
-  authorize("RECEPTIONIST", "MANAGER", "ADMIN"),
-  async (req: Request, res: Response) => {
+router.get("/", requirePropertyAccess, requirePermission("ADVANCES", "VIEW"), async (req: Request, res: Response) => {
     try {
       const { bookingId, guestId, status } = req.query;
       const filter: Record<string, any> = {};
@@ -78,10 +77,7 @@ router.get(
 );
 
 // GET /api/advances/summary/:bookingId
-router.get(
-  "/summary/:bookingId",
-  authorize("RECEPTIONIST", "MANAGER", "ADMIN"),
-  async (req: Request, res: Response) => {
+router.get("/summary/:bookingId", requirePropertyAccess, requirePermission("ADVANCES", "VIEW"), async (req: Request, res: Response) => {
     try {
       const summary = await getAdvanceSummary(req.params.bookingId as string);
       return res.json({ success: true, data: summary });
@@ -92,10 +88,7 @@ router.get(
 );
 
 // POST /api/advances/:id/adjust — apply advance to folio
-router.post(
-  "/:id/adjust",
-  authorize("RECEPTIONIST", "MANAGER", "ADMIN"),
-  async (req: Request, res: Response) => {
+router.post("/:id/adjust", requirePropertyAccess, requirePermission("ADVANCES", "CREATE"), async (req: Request, res: Response) => {
     try {
       const { folioId, bookingId, amount, reason } = req.body;
       if (!folioId || !bookingId || !amount) {
@@ -113,10 +106,7 @@ router.post(
 );
 
 // POST /api/advances/:id/refund — refund remaining balance to guest
-router.post(
-  "/:id/refund",
-  authorize("MANAGER", "ADMIN"),
-  async (req: Request, res: Response) => {
+router.post("/:id/refund", requirePropertyAccess, requirePermission("ADVANCES", "CREATE"), async (req: Request, res: Response) => {
     try {
       const { amount, reason } = req.body;
       if (!amount || !reason) {

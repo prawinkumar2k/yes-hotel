@@ -29,6 +29,7 @@ export interface ReceiveAdvanceParams {
   guestId: string;
   amount: number;
   method: AdvancePaymentMethod;
+  paymentChannelId?: string;
   referenceNumber?: string;
   razorpayPaymentId?: string;
   purpose?: string;
@@ -53,6 +54,7 @@ export async function receiveAdvance(
     totalRefunded: 0,
     remainingBalance: params.amount,
     method: params.method,
+    paymentChannel: params.paymentChannelId,
     referenceNumber: params.referenceNumber,
     razorpayPaymentId: params.razorpayPaymentId,
     status: AdvancePaymentStatus.RECEIVED,

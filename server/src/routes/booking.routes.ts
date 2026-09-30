@@ -1,4 +1,6 @@
 import { Router } from "express";
+import { requirePropertyAccess } from "../middleware/propertyAuth";
+import { requirePermission } from "../middleware/permissionAuth";
 import { protect, authorize, optionalProtect } from "../middleware/auth.middleware";
 import { UserRole } from "../models/User";
 import {
@@ -35,12 +37,12 @@ router.post("/:id/confirm-demo", optionalProtect, confirmDemoBooking);
 router.post("/:id/cancel", protect, cancelBooking);
 
 // Check-in / Check-out (admin/receptionist)
-router.post("/:id/check-in", protect, authorize(...ADMIN_ROLES), checkIn);
-router.get("/:id/checkout-preview", protect, authorize(...ADMIN_ROLES), getCheckoutPreview);
-router.post("/:id/check-out", protect, authorize(...ADMIN_ROLES), checkOut);
+router.post("/:id/check-in", protect, requirePropertyAccess, requirePermission("BOOKINGS", "CREATE"), checkIn);
+router.get("/:id/checkout-preview", protect, requirePropertyAccess, requirePermission("BOOKINGS", "VIEW"), getCheckoutPreview);
+router.post("/:id/check-out", protect, requirePropertyAccess, requirePermission("BOOKINGS", "CREATE"), checkOut);
 
 // Stay Extension
-router.post("/:id/extension-check", protect, authorize(...ADMIN_ROLES), checkExtensionConflict);
-router.post("/:id/extend", protect, authorize(...ADMIN_ROLES), extendStay);
+router.post("/:id/extension-check", protect, requirePropertyAccess, requirePermission("BOOKINGS", "CREATE"), checkExtensionConflict);
+router.post("/:id/extend", protect, requirePropertyAccess, requirePermission("BOOKINGS", "CREATE"), extendStay);
 
 export default router;

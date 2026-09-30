@@ -1,8 +1,10 @@
 import React from "react";
-import { BedDouble, Wifi, Users, ArrowUpRight, Sparkles } from "lucide-react";
+import { BedDouble, Wifi, Users, ArrowUpRight, Sparkles, Cuboid } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
+import { Dialog, DialogContent, DialogTrigger, DialogTitle } from "@/components/ui/dialog";
+import Room3DViewer from "./Room3DViewer";
 
 export default function Rooms() {
   const { data, isLoading, error } = useQuery({
@@ -18,20 +20,20 @@ export default function Rooms() {
   const rooms = (data ?? []).slice(0, 3);
 
   return (
-    <section id="rooms" className="bg-[#0b0b0b] py-28 text-white border-t border-[#262930]">
+    <section id="rooms" className="bg-slate-50 py-28 text-slate-800 border-t border-slate-200">
       <div className="container mx-auto px-4 md:px-8 max-w-[1400px] space-y-20">
         {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-[#262930] pb-8">
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-slate-200 pb-8">
           <div className="space-y-3">
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#c9a227]/10 border border-[#c9a227]/30 text-[#e5c76b] text-xs font-mono font-bold tracking-widest uppercase">
-              <Sparkles size={13} className="text-[#c9a227]" /> CURATED SUITES & VILLAS
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#c9a227]/10 border border-[#c9a227]/30 text-[#866A1C] text-xs font-mono font-bold tracking-widest uppercase">
+              <Sparkles size={13} className="text-[#c9a227]" /> CURATED SUITES &amp; VILLAS
             </div>
-            <h2 className="font-serif text-4xl sm:text-6xl text-white font-normal leading-tight">
+            <h2 className="font-serif text-3xl sm:text-4xl md:text-5xl lg:text-6xl text-slate-800 font-normal leading-tight">
               Select Your <span className="text-[#c9a227] italic font-serif">Sanctuary</span>.
             </h2>
           </div>
 
-          <p className="max-w-md text-xs sm:text-sm text-gray-400 font-light leading-relaxed">
+          <p className="max-w-md text-xs sm:text-sm text-slate-500 font-light leading-relaxed">
             Architectural suites engineered with spatial acoustic isolation, natural linen, and panoramic ocean vistas.
           </p>
         </div>
@@ -39,13 +41,13 @@ export default function Rooms() {
         {isLoading && (
           <div className="space-y-16">
             {[0, 1].map((i) => (
-              <div key={i} className="h-[60vh] animate-pulse bg-[#121316] rounded-3xl border border-[#262930]" />
+              <div key={i} className="h-[60vh] animate-pulse bg-slate-200 rounded-3xl border border-slate-200" />
             ))}
           </div>
         )}
 
         {error && (
-          <p className="text-red-400 text-sm">Failed to load live suite catalog. Please try again.</p>
+          <p className="text-red-500 text-sm">Failed to load live suite catalog. Please try again.</p>
         )}
 
         {/* Alternating Spatial Room Rows */}
@@ -59,7 +61,7 @@ export default function Rooms() {
         <div className="pt-8 text-center">
           <Link
             to="/rooms"
-            className="inline-flex items-center gap-2 px-8 py-4 bg-[#121316] hover:bg-[#1a1d24] text-[#e5c76b] font-mono font-bold text-xs uppercase tracking-widest rounded-xl border border-[#c9a227]/40 shadow-xl transition"
+            className="inline-flex items-center gap-2 px-8 py-4 bg-slate-800 hover:bg-slate-700 text-white font-mono font-bold text-xs uppercase tracking-widest rounded-xl border border-slate-700 shadow-xl transition"
           >
             Explore Complete Room Catalog <ArrowUpRight size={16} />
           </Link>
@@ -86,14 +88,14 @@ function RoomRow({ room, index }: { room: any; index: number }) {
       <Link
         to={`/rooms/${room.slug}`}
         data-cursor="EXPLORE"
-        className="group relative block aspect-[16/10] w-full lg:w-[65%] overflow-hidden rounded-3xl border border-[#262930] shadow-2xl"
+        className="group relative block aspect-[16/10] w-full lg:w-[65%] overflow-hidden rounded-3xl border border-slate-200 shadow-xl"
       >
         <img
-          src={room.images?.[0] || "https://images.unsplash.com/photo-1590490360182-c33d57733427?auto=format&fit=crop&w=1600&q=80"}
+          src={room.images?.[0] || "/gallery/hotel-50.jpg"}
           alt={room.name}
-          className="h-full w-full object-cover filter brightness-90 transition-transform duration-700 ease-out group-hover:scale-105"
+          className="h-full w-full object-cover filter brightness-95 transition-transform duration-700 ease-out group-hover:scale-105"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-[#0b0b0b] via-transparent to-transparent opacity-60" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent opacity-60" />
 
         <span className="pointer-events-none absolute bottom-4 left-6 font-serif text-[7rem] sm:text-[10rem] font-bold leading-none text-white/10">
           0{index + 1}
@@ -107,17 +109,17 @@ function RoomRow({ room, index }: { room: any; index: number }) {
       {/* 35% Information Column */}
       <div className="w-full lg:w-[35%] space-y-6">
         <div>
-          <span className="font-mono text-xs text-[#c9a227] tracking-[0.3em] uppercase block mb-1">
+          <span className="font-mono text-xs text-[#866A1C] tracking-[0.3em] uppercase block mb-1">
             SUITE 0{index + 1}
           </span>
-          <h3 className="font-serif text-3xl sm:text-4xl text-white font-normal">{room.name}</h3>
+          <h3 className="font-serif text-3xl sm:text-4xl text-slate-800 font-normal">{room.name}</h3>
         </div>
 
-        <p className="text-xs sm:text-sm text-gray-300 font-light leading-relaxed">
+        <p className="text-xs sm:text-sm text-slate-500 font-light leading-relaxed">
           {room.description}
         </p>
 
-        <div className="flex items-center gap-4 text-xs font-mono text-gray-400 pt-2 border-t border-[#262930]">
+        <div className="flex flex-wrap items-center gap-4 text-xs font-mono text-slate-400 pt-2 border-t border-slate-200">
           <span className="flex items-center gap-1.5">
             <BedDouble size={14} className="text-[#c9a227]" /> {room.bedType || "King Bed"}
           </span>
@@ -129,22 +131,33 @@ function RoomRow({ room, index }: { room: any; index: number }) {
           </span>
         </div>
 
-        <div className="flex items-center justify-between border-t border-[#262930] pt-6">
+        <div className="flex flex-wrap items-center justify-between gap-4 border-t border-slate-200 pt-6">
           <div>
-            <p className="font-mono font-bold text-2xl text-white">₹{room.basePrice}</p>
-            <p className="text-[10px] font-mono text-gray-400 uppercase tracking-widest">Per Night (Excl GST)</p>
+            <p className="font-mono font-bold text-2xl text-slate-800">₹{room.basePrice}</p>
+            <p className="text-[10px] font-mono text-slate-400 uppercase tracking-widest">Per Night (Excl GST)</p>
           </div>
 
-          <div className="flex gap-2">
+          <div className="flex gap-3">
+            <Dialog>
+              <DialogTrigger asChild>
+                <button className="flex min-h-[44px] items-center border border-slate-200 bg-white hover:bg-slate-50 px-4 py-2.5 text-xs font-mono font-semibold text-slate-600 hover:text-slate-800 rounded-xl transition shadow-sm">
+                  <Cuboid size={14} className="mr-2 text-[#c9a227]" /> 3D Tour
+                </button>
+              </DialogTrigger>
+              <DialogContent className="max-w-4xl p-0 overflow-hidden bg-transparent border-none shadow-2xl">
+                <DialogTitle className="sr-only">3D Room Tour</DialogTitle>
+                <Room3DViewer image={room.images?.[0] || "/gallery/hotel-50.jpg"} />
+              </DialogContent>
+            </Dialog>
             <Link
               to={`/rooms/${room.slug}`}
-              className="border border-[#262930] bg-[#1a1d24] hover:bg-[#262930] px-4 py-2.5 text-xs font-mono font-semibold text-gray-300 hover:text-white rounded-xl transition"
+              className="flex min-h-[44px] items-center border border-slate-200 bg-white hover:bg-slate-50 px-4 py-2.5 text-xs font-mono font-semibold text-slate-600 hover:text-slate-800 rounded-xl transition shadow-sm"
             >
               Details
             </Link>
             <Link
               to="/search"
-              className="bg-[#c9a227] hover:bg-[#e5c76b] px-5 py-2.5 text-xs font-mono font-bold text-black rounded-xl shadow-lg transition"
+              className="flex min-h-[44px] items-center bg-[#c9a227] hover:bg-[#b8911f] px-5 py-2.5 text-xs font-mono font-bold text-black rounded-xl shadow-md transition"
             >
               Reserve
             </Link>

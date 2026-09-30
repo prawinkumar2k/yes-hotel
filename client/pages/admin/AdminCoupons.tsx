@@ -165,7 +165,7 @@ export default function AdminCoupons() {
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle>{editingCoupon ? "Edit Coupon" : "Create Coupon"}</DialogTitle></DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium">Coupon Code</label>
                 <Input name="code" required minLength={3} defaultValue={editingCoupon?.code} className="uppercase font-mono" placeholder="SUMMER20" />
@@ -184,7 +184,7 @@ export default function AdminCoupons() {
               <Input name="description" required minLength={5} defaultValue={editingCoupon?.description} placeholder="Summer special discount" />
             </div>
 
-            <div className="grid grid-cols-2 gap-4 bg-gray-50 p-4 rounded-lg border border-gray-100">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-gray-50 p-4 rounded-lg border border-gray-100">
               <div className="space-y-2">
                 <label className="text-sm font-medium">Discount Type</label>
                 <select name="discountType" className="w-full border rounded-md p-2 text-sm" defaultValue={editingCoupon?.discountType || "PERCENTAGE"}>
@@ -206,7 +206,7 @@ export default function AdminCoupons() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium">Start Date</label>
                 <Input name="startDate" type="datetime-local" required defaultValue={editingCoupon?.startDate ? new Date(editingCoupon.startDate).toISOString().slice(0,16) : ""} />
@@ -217,7 +217,7 @@ export default function AdminCoupons() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium">Total Usage Limit <span className="text-gray-400 font-normal">(Optional)</span></label>
                 <Input name="usageLimit" type="number" min="1" defaultValue={editingCoupon?.usageLimit} placeholder="e.g. 100" />
@@ -241,3 +241,4 @@ export default function AdminCoupons() {
     </div>
   );
 }
+

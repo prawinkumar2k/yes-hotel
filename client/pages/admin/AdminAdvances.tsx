@@ -23,6 +23,7 @@ export default function AdminAdvances() {
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [advances, setAdvances] = useState<AdvanceItem[]>([]);
+  const [paymentChannels, setPaymentChannels] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState<"ALL" | "RECEIVED" | "ADJUSTED" | "REFUNDED">("ALL");
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -32,7 +33,7 @@ export default function AdminAdvances() {
   const [guestPhone, setGuestPhone] = useState("");
   const [guestEmail, setGuestEmail] = useState("");
   const [amount, setAmount] = useState("");
-  const [paymentMethod, setPaymentMethod] = useState("UPI");
+  const [paymentChannelId, setPaymentChannelId] = useState("");
   const [notes, setNotes] = useState("");
   const [submittingCreate, setSubmittingCreate] = useState(false);
 
@@ -64,8 +65,26 @@ export default function AdminAdvances() {
     }
   };
 
+  const fetchPaymentChannels = async () => {
+    try {
+      const token = getStoredAuthToken();
+      const res = await fetch("/api/payment-channels", {
+        headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      });
+      const json = await res.json();
+      if (json.success) {
+        const active = json.data?.filter((c: any) => c.isActive) || [];
+        setPaymentChannels(active);
+        if (active.length > 0) setPaymentChannelId(active[0]._id);
+      }
+    } catch (err: any) {
+      console.error(err);
+    }
+  };
+
   useEffect(() => {
     fetchAdvances();
+    fetchPaymentChannels();
   }, []);
 
   const handleCreateAdvance = async (e: React.FormEvent) => {
@@ -84,7 +103,7 @@ export default function AdminAdvances() {
           guestPhone,
           guestEmail,
           amount: parseFloat(amount),
-          method: paymentMethod,
+          paymentChannelId,
           notes,
         }),
       });
@@ -183,33 +202,33 @@ export default function AdminAdvances() {
       case "REFUNDED":
         return <span className="bg-blue-500/20 text-blue-300 border border-blue-500/30 text-[10px] px-2.5 py-0.5 rounded-full font-bold">Refunded</span>;
       default:
-        return <span className="bg-gray-800 text-gray-300 text-[10px] px-2.5 py-0.5 rounded-full font-bold">{status}</span>;
+        return <span className="bg-gray-800 text-gray-600 text-[10px] px-2.5 py-0.5 rounded-full font-bold">{status}</span>;
     }
   };
 
   if (loading && advances.length === 0) {
     return (
-      <div className="min-h-screen bg-[#0b0b0b] text-white p-12 flex flex-col items-center justify-center">
+      <div className="min-h-screen bg-gray-50 text-gray-800 p-12 flex flex-col items-center justify-center">
         <div className="inline-block animate-spin text-[#c9a227] text-3xl font-serif font-bold">YES HOTELS</div>
-        <p className="text-sm text-gray-400 mt-3 font-mono">Loading Financial Advance Ledger...</p>
+        <p className="text-sm text-gray-500 mt-3 font-mono">Loading Financial Advance Ledger...</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#0b0b0b] text-white p-4 md:p-6 space-y-6 max-w-[1600px] mx-auto">
+    <div className="min-h-screen bg-gray-50 text-gray-800 p-4 md:p-6 space-y-6 max-w-[1600px] mx-auto">
       {/* Top Header */}
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 bg-[#121316] p-6 rounded-2xl border border-[#262930] shadow-xl">
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 bg-white p-6 rounded-2xl border border-gray-200 shadow-xl">
         <div className="flex items-center gap-3">
           <div className="p-2.5 bg-[#c9a227]/10 rounded-xl border border-[#c9a227]/30 text-[#c9a227]">
             <CreditCard size={24} />
           </div>
           <div>
-            <h1 className="text-2xl font-serif font-bold text-white flex items-center gap-2">
+            <h1 className="text-2xl font-serif font-bold text-gray-800 flex items-center gap-2">
               Advance Payments & Escrow Ledger
               <span className="text-xs bg-[#c9a227]/20 text-[#e5c76b] px-2.5 py-0.5 rounded-full font-mono border border-[#c9a227]/30">FINANCE ENGINE</span>
             </h1>
-            <p className="text-xs text-gray-400 mt-0.5">
+            <p className="text-xs text-gray-500 mt-0.5">
               Pre-stay guest deposits, receipt generation, automated folio credit adjustments & refund audit control
             </p>
           </div>
@@ -224,7 +243,7 @@ export default function AdminAdvances() {
           </button>
           <button
             onClick={fetchAdvances}
-            className="flex items-center gap-2 px-4 py-2.5 bg-[#1a1d24] text-gray-300 hover:text-white rounded-xl transition text-xs font-semibold border border-[#262930]"
+            className="flex items-center gap-2 px-4 py-2.5 bg-gray-100 text-gray-600 hover:text-gray-800 rounded-xl transition text-xs font-semibold border border-gray-200"
           >
             <RefreshCw size={15} className={loading ? "animate-spin" : ""} /> Refresh
           </button>
@@ -233,52 +252,52 @@ export default function AdminAdvances() {
 
       {/* Financial KPI Fleet */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-[#121316] p-5 rounded-2xl border border-emerald-500/30 bg-emerald-500/5">
-          <div className="flex items-center justify-between text-emerald-400 mb-2">
+        <div className="bg-white p-5 rounded-2xl border border-emerald-500/30 bg-emerald-500/5">
+          <div className="flex items-center justify-between text-emerald-600 mb-2">
             <DollarSign size={20} />
-            <span className="text-[10px] font-bold uppercase tracking-wider bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded border border-emerald-500/30">Total Escrow Held</span>
+            <span className="text-[10px] font-bold uppercase tracking-wider whitespace-nowrap flex-shrink-0 bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded border border-emerald-500/30">Total Escrow Held</span>
           </div>
-          <p className="text-3xl font-serif font-bold text-white">₹{totalHeld.toLocaleString()}</p>
-          <p className="text-xs text-gray-400 mt-1">Available for Folio Adjustment</p>
+          <p className="text-3xl font-serif font-bold text-gray-800">₹{totalHeld.toLocaleString()}</p>
+          <p className="text-xs text-gray-500 mt-1">Available for Folio Adjustment</p>
         </div>
 
-        <div className="bg-[#121316] p-5 rounded-2xl border border-amber-500/30 bg-amber-500/5">
-          <div className="flex items-center justify-between text-amber-400 mb-2">
+        <div className="bg-white p-5 rounded-2xl border border-amber-500/30 bg-amber-500/5">
+          <div className="flex items-center justify-between text-amber-600 mb-2">
             <ArrowUpRight size={20} />
-            <span className="text-[10px] font-bold uppercase tracking-wider bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded border border-amber-500/30">Received Today</span>
+            <span className="text-[10px] font-bold uppercase tracking-wider whitespace-nowrap flex-shrink-0 bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded border border-amber-500/30">Received Today</span>
           </div>
-          <p className="text-3xl font-serif font-bold text-white">₹{totalIssuedToday.toLocaleString()}</p>
-          <p className="text-xs text-gray-400 mt-1">Fresh Pre-Stay Inflow</p>
+          <p className="text-3xl font-serif font-bold text-gray-800">₹{totalIssuedToday.toLocaleString()}</p>
+          <p className="text-xs text-gray-500 mt-1">Fresh Pre-Stay Inflow</p>
         </div>
 
-        <div className="bg-[#121316] p-5 rounded-2xl border border-purple-500/30 bg-purple-500/5">
-          <div className="flex items-center justify-between text-purple-400 mb-2">
+        <div className="bg-white p-5 rounded-2xl border border-purple-500/30 bg-purple-500/5">
+          <div className="flex items-center justify-between text-purple-600 mb-2">
             <CheckCircle2 size={20} />
-            <span className="text-[10px] font-bold uppercase tracking-wider bg-purple-500/20 text-purple-300 px-2 py-0.5 rounded border border-purple-500/30">Adjusted to Folios</span>
+            <span className="text-[10px] font-bold uppercase tracking-wider whitespace-nowrap flex-shrink-0 bg-purple-500/20 text-purple-300 px-2 py-0.5 rounded border border-purple-500/30">Adjusted to Folios</span>
           </div>
-          <p className="text-3xl font-serif font-bold text-white">₹{totalAdjusted.toLocaleString()}</p>
-          <p className="text-xs text-gray-400 mt-1">Consumed in Stay Invoices</p>
+          <p className="text-3xl font-serif font-bold text-gray-800">₹{totalAdjusted.toLocaleString()}</p>
+          <p className="text-xs text-gray-500 mt-1">Consumed in Stay Invoices</p>
         </div>
 
-        <div className="bg-[#121316] p-5 rounded-2xl border border-blue-500/30 bg-blue-500/5">
-          <div className="flex items-center justify-between text-blue-400 mb-2">
+        <div className="bg-white p-5 rounded-2xl border border-blue-500/30 bg-blue-500/5">
+          <div className="flex items-center justify-between text-blue-600 mb-2">
             <ArrowDownLeft size={20} />
-            <span className="text-[10px] font-bold uppercase tracking-wider bg-blue-500/20 text-blue-300 px-2 py-0.5 rounded border border-blue-500/30">Total Refunded</span>
+            <span className="text-[10px] font-bold uppercase tracking-wider whitespace-nowrap flex-shrink-0 bg-blue-500/20 text-blue-300 px-2 py-0.5 rounded border border-blue-500/30">Total Refunded</span>
           </div>
-          <p className="text-3xl font-serif font-bold text-white">₹{totalRefunded.toLocaleString()}</p>
-          <p className="text-xs text-gray-400 mt-1">Returned on Cancellations</p>
+          <p className="text-3xl font-serif font-bold text-gray-800">₹{totalRefunded.toLocaleString()}</p>
+          <p className="text-xs text-gray-500 mt-1">Returned on Cancellations</p>
         </div>
       </div>
 
       {/* Main Ledger Panel */}
-      <div className="bg-[#121316] rounded-2xl border border-[#262930] p-6 shadow-xl space-y-6">
+      <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-xl space-y-6">
         {/* Navigation Tabs & Search */}
-        <div className="flex flex-col md:flex-row items-center justify-between gap-4 border-b border-[#262930] pb-4">
+        <div className="flex flex-col md:flex-row items-center justify-between gap-4 border-b border-gray-200 pb-4">
           <div className="flex gap-4 overflow-x-auto w-full md:w-auto">
             <button
               onClick={() => setActiveTab("ALL")}
               className={`pb-2 text-xs md:text-sm font-semibold border-b-2 transition whitespace-nowrap ${
-                activeTab === "ALL" ? "border-[#c9a227] text-[#c9a227]" : "border-transparent text-gray-400 hover:text-white"
+                activeTab === "ALL" ? "border-[#c9a227] text-[#c9a227]" : "border-transparent text-gray-500 hover:text-gray-800"
               }`}
             >
               All Receipts ({advances.length})
@@ -286,7 +305,7 @@ export default function AdminAdvances() {
             <button
               onClick={() => setActiveTab("RECEIVED")}
               className={`pb-2 text-xs md:text-sm font-semibold border-b-2 transition whitespace-nowrap ${
-                activeTab === "RECEIVED" ? "border-emerald-500 text-emerald-400" : "border-transparent text-gray-400 hover:text-white"
+                activeTab === "RECEIVED" ? "border-emerald-500 text-emerald-600" : "border-transparent text-gray-500 hover:text-gray-800"
               }`}
             >
               Unadjusted Held
@@ -294,7 +313,7 @@ export default function AdminAdvances() {
             <button
               onClick={() => setActiveTab("ADJUSTED")}
               className={`pb-2 text-xs md:text-sm font-semibold border-b-2 transition whitespace-nowrap ${
-                activeTab === "ADJUSTED" ? "border-purple-500 text-purple-400" : "border-transparent text-gray-400 hover:text-white"
+                activeTab === "ADJUSTED" ? "border-purple-500 text-purple-600" : "border-transparent text-gray-500 hover:text-gray-800"
               }`}
             >
               Adjusted to Folio
@@ -302,7 +321,7 @@ export default function AdminAdvances() {
             <button
               onClick={() => setActiveTab("REFUNDED")}
               className={`pb-2 text-xs md:text-sm font-semibold border-b-2 transition whitespace-nowrap ${
-                activeTab === "REFUNDED" ? "border-blue-500 text-blue-400" : "border-transparent text-gray-400 hover:text-white"
+                activeTab === "REFUNDED" ? "border-blue-500 text-blue-600" : "border-transparent text-gray-500 hover:text-gray-800"
               }`}
             >
               Refunded Deposits
@@ -310,13 +329,13 @@ export default function AdminAdvances() {
           </div>
 
           <div className="relative w-full md:w-72">
-            <Search size={14} className="absolute left-3.5 top-3 text-gray-400" />
+            <Search size={14} className="absolute left-3.5 top-3 text-gray-500" />
             <input
               type="text"
               placeholder="Search receipt # or guest name..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-[#1a1d24] border border-[#262930] text-xs text-white placeholder-gray-500 pl-9 pr-3 py-2 rounded-xl focus:outline-none focus:border-[#c9a227]"
+              className="w-full bg-gray-100 border border-gray-200 text-xs text-gray-800 placeholder-gray-500 pl-9 pr-3 py-2 rounded-xl focus:outline-none focus:border-[#c9a227]"
             />
           </div>
         </div>
@@ -324,7 +343,7 @@ export default function AdminAdvances() {
         {/* Ledger Table */}
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs font-sans">
-            <thead className="bg-[#1a1d24] text-gray-400 text-xs uppercase font-mono border-b border-[#262930]">
+            <thead className="bg-gray-100 text-gray-500 text-xs uppercase font-mono border-b border-gray-200">
               <tr>
                 <th className="p-3.5 rounded-l-xl">Receipt # & Date</th>
                 <th className="p-3.5">Guest & Contact</th>
@@ -344,7 +363,7 @@ export default function AdminAdvances() {
                 </tr>
               ) : (
                 filteredAdvances.map((adv) => (
-                  <tr key={adv._id} className="hover:bg-[#1a1d24]/80 transition">
+                  <tr key={adv._id} className="hover:bg-gray-100/80 transition">
                     <td className="p-3.5">
                       <div className="font-mono font-bold text-[#c9a227]">{adv.advanceNumber}</div>
                       <div className="text-[10px] text-gray-500 font-mono mt-0.5">
@@ -352,15 +371,15 @@ export default function AdminAdvances() {
                       </div>
                     </td>
                     <td className="p-3.5">
-                      <div className="font-semibold text-white">{adv.guest?.fullName || "Guest"}</div>
-                      <div className="text-[11px] text-gray-400 font-mono">{adv.guest?.phone || "No phone"}</div>
+                      <div className="font-semibold text-gray-800">{adv.guest?.fullName || "Guest"}</div>
+                      <div className="text-[11px] text-gray-500 font-mono">{adv.guest?.phone || "No phone"}</div>
                     </td>
-                    <td className="p-3.5 font-mono font-bold text-white">₹{adv.amount.toLocaleString()}</td>
-                    <td className="p-3.5 font-mono font-bold text-emerald-400">
+                    <td className="p-3.5 font-mono font-bold text-gray-800">₹{adv.amount.toLocaleString()}</td>
+                    <td className="p-3.5 font-mono font-bold text-emerald-600">
                       ₹{adv.remainingBalance.toLocaleString()}
                     </td>
                     <td className="p-3.5">
-                      <span className="font-mono text-xs bg-[#1a1d24] px-2 py-1 rounded border border-[#262930]">
+                      <span className="font-mono text-xs bg-gray-100 px-2 py-1 rounded border border-gray-200">
                         {adv.method}
                       </span>
                     </td>
@@ -368,7 +387,7 @@ export default function AdminAdvances() {
                     <td className="p-3.5 text-right space-x-2">
                       <button
                         onClick={() => setPrintReceipt(adv)}
-                        className="inline-flex items-center gap-1 text-xs font-semibold bg-[#1a1d24] text-gray-300 hover:text-white px-2.5 py-1.5 rounded-lg border border-[#262930] hover:border-[#c9a227]/40 transition"
+                        className="inline-flex items-center gap-1 text-xs font-semibold bg-gray-100 text-gray-600 hover:text-gray-800 px-2.5 py-1.5 rounded-lg border border-gray-200 hover:border-[#c9a227]/40 transition"
                       >
                         <Printer size={13} className="text-[#c9a227]" /> Print
                       </button>
@@ -376,7 +395,7 @@ export default function AdminAdvances() {
                       {adv.remainingBalance > 0 && adv.status !== "REFUNDED" && (
                         <button
                           onClick={() => setRefundAdvance(adv)}
-                          className="inline-flex items-center gap-1 text-xs font-semibold text-red-400 hover:text-white bg-red-500/10 hover:bg-red-500/20 px-2.5 py-1.5 rounded-lg border border-red-500/30 transition"
+                          className="inline-flex items-center gap-1 text-xs font-semibold text-red-400 hover:text-gray-800 bg-red-500/10 hover:bg-red-500/20 px-2.5 py-1.5 rounded-lg border border-red-500/30 transition"
                         >
                           Issue Refund
                         </button>
@@ -393,56 +412,56 @@ export default function AdminAdvances() {
       {/* MODAL 1: RECEIVE ADVANCE */}
       {showCreateModal && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <form onSubmit={handleCreateAdvance} className="bg-[#121316] border border-[#262930] rounded-2xl max-w-md w-full p-6 space-y-5 shadow-2xl text-white">
-            <div className="flex justify-between items-center border-b border-[#262930] pb-4">
+          <form onSubmit={handleCreateAdvance} className="bg-white border border-gray-200 rounded-2xl max-w-md w-full p-6 space-y-5 shadow-2xl text-gray-800">
+            <div className="flex justify-between items-center border-b border-gray-200 pb-4">
               <h3 className="font-serif font-bold text-lg flex items-center gap-2">
                 <CreditCard className="text-[#c9a227]" size={20} /> Receive Pre-Stay Advance Payment
               </h3>
-              <button type="button" onClick={() => setShowCreateModal(false)} className="text-gray-400 hover:text-white">
+              <button type="button" onClick={() => setShowCreateModal(false)} className="text-gray-500 hover:text-gray-800">
                 <X size={20} />
               </button>
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-gray-300 mb-1">Guest Full Name *</label>
+              <label className="block text-xs font-semibold text-gray-600 mb-1">Guest Full Name *</label>
               <input
                 type="text"
                 required
                 value={guestName}
                 onChange={(e) => setGuestName(e.target.value)}
                 placeholder="e.g. Rajesh Kumar"
-                className="w-full bg-[#1a1d24] border border-[#262930] text-sm text-white rounded-xl p-2.5 focus:border-[#c9a227]"
+                className="w-full bg-gray-100 border border-gray-200 text-sm text-gray-800 rounded-xl p-2.5 focus:border-[#c9a227]"
               />
             </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-semibold text-gray-300 mb-1">Guest Phone *</label>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">Guest Phone *</label>
                 <input
                   type="text"
                   required
                   value={guestPhone}
                   onChange={(e) => setGuestPhone(e.target.value)}
                   placeholder="+91 9876543210"
-                  className="w-full bg-[#1a1d24] border border-[#262930] text-sm text-white rounded-xl p-2.5 focus:border-[#c9a227]"
+                  className="w-full bg-gray-100 border border-gray-200 text-sm text-gray-800 rounded-xl p-2.5 focus:border-[#c9a227]"
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-gray-300 mb-1">Guest Email *</label>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">Guest Email *</label>
                 <input
                   type="email"
                   required
                   value={guestEmail}
                   onChange={(e) => setGuestEmail(e.target.value)}
                   placeholder="guest@example.com"
-                  className="w-full bg-[#1a1d24] border border-[#262930] text-sm text-white rounded-xl p-2.5 focus:border-[#c9a227]"
+                  className="w-full bg-gray-100 border border-gray-200 text-sm text-gray-800 rounded-xl p-2.5 focus:border-[#c9a227]"
                 />
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-semibold text-gray-300 mb-1">Deposit Amount (₹) *</label>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">Deposit Amount (₹) *</label>
                 <input
                   type="number"
                   step="0.01"
@@ -450,40 +469,41 @@ export default function AdminAdvances() {
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
                   placeholder="10000"
-                  className="w-full bg-[#1a1d24] border border-[#262930] text-sm text-white font-mono font-bold rounded-xl p-2.5 focus:border-[#c9a227]"
+                  className="w-full bg-gray-100 border border-gray-200 text-sm text-gray-800 font-mono font-bold rounded-xl p-2.5 focus:border-[#c9a227]"
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-gray-300 mb-1">Payment Method</label>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">Payment Channel</label>
                 <select
-                  value={paymentMethod}
-                  onChange={(e) => setPaymentMethod(e.target.value)}
-                  className="w-full bg-[#1a1d24] border border-[#262930] text-sm text-white rounded-xl p-2.5 focus:border-[#c9a227]"
+                  value={paymentChannelId}
+                  onChange={(e) => setPaymentChannelId(e.target.value)}
+                  className="w-full bg-gray-100 border border-gray-200 text-sm text-gray-800 rounded-xl p-2.5 focus:border-[#c9a227]"
                 >
-                  <option value="UPI">UPI / GPay / QR</option>
-                  <option value="CARD">Credit / Debit Card</option>
-                  <option value="CASH">Cash in Hand</option>
-                  <option value="BANK_TRANSFER">Bank NEFT / RTGS</option>
+                  {paymentChannels.map((c: any) => (
+                    <option key={c._id} value={c._id}>
+                      {c.name} {c.provider ? `(${c.provider})` : ""}
+                    </option>
+                  ))}
                 </select>
               </div>
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-gray-300 mb-1">Notes / Booking Reference</label>
+              <label className="block text-xs font-semibold text-gray-600 mb-1">Notes / Booking Reference</label>
               <textarea
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 placeholder="Deposit notes or reservation number"
-                className="w-full bg-[#1a1d24] border border-[#262930] text-sm text-white rounded-xl p-2.5 focus:border-[#c9a227]"
+                className="w-full bg-gray-100 border border-gray-200 text-sm text-gray-800 rounded-xl p-2.5 focus:border-[#c9a227]"
                 rows={2}
               />
             </div>
 
-            <div className="flex gap-3 border-t border-[#262930] pt-4">
+            <div className="flex gap-3 border-t border-gray-200 pt-4">
               <button
                 type="button"
                 onClick={() => setShowCreateModal(false)}
-                className="flex-1 py-2 bg-[#1a1d24] text-gray-300 rounded-xl text-xs font-semibold"
+                className="flex-1 py-2 bg-gray-100 text-gray-600 rounded-xl text-xs font-semibold"
               >
                 Cancel
               </button>
@@ -502,37 +522,37 @@ export default function AdminAdvances() {
       {/* MODAL 2: PRINT RECEIPT */}
       {printReceipt && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-[#121316] border border-[#c9a227]/40 rounded-2xl max-w-md w-full p-6 space-y-5 shadow-2xl text-white">
-            <div className="flex justify-between items-center border-b border-[#262930] pb-4">
+          <div className="bg-white border border-[#c9a227]/40 rounded-2xl max-w-md w-full p-6 space-y-5 shadow-2xl text-gray-800">
+            <div className="flex justify-between items-center border-b border-gray-200 pb-4">
               <h3 className="font-serif font-bold text-lg flex items-center gap-2 text-[#c9a227]">
                 <Receipt size={20} /> YES HOTELS Advance Receipt
               </h3>
-              <button onClick={() => setPrintReceipt(null)} className="text-gray-400 hover:text-white">
+              <button onClick={() => setPrintReceipt(null)} className="text-gray-500 hover:text-gray-800">
                 <X size={20} />
               </button>
             </div>
 
-            <div className="bg-[#1a1d24] p-5 rounded-xl border border-[#262930] space-y-3 font-mono text-xs">
+            <div className="bg-gray-100 p-5 rounded-xl border border-gray-200 space-y-3 font-mono text-xs">
               <div className="text-center font-serif text-base font-bold text-[#c9a227]">YES HOTELS LUXURY SUITES</div>
-              <div className="text-center text-[10px] text-gray-400">Official Financial Escrow Deposit Receipt</div>
-              <div className="border-b border-[#262930] my-2" />
-              <div className="flex justify-between text-gray-400">
+              <div className="text-center text-[10px] text-gray-500">Official Financial Escrow Deposit Receipt</div>
+              <div className="border-b border-gray-200 my-2" />
+              <div className="flex justify-between text-gray-500">
                 <span>Receipt Number:</span>
-                <span className="text-white font-bold">{printReceipt.advanceNumber}</span>
+                <span className="text-gray-800 font-bold">{printReceipt.advanceNumber}</span>
               </div>
-              <div className="flex justify-between text-gray-400">
+              <div className="flex justify-between text-gray-500">
                 <span>Issued Date:</span>
-                <span className="text-white">{new Date(printReceipt.createdAt).toLocaleString()}</span>
+                <span className="text-gray-800">{new Date(printReceipt.createdAt).toLocaleString()}</span>
               </div>
-              <div className="flex justify-between text-gray-400">
+              <div className="flex justify-between text-gray-500">
                 <span>Guest Name:</span>
-                <span className="text-white font-bold">{printReceipt.guest?.fullName}</span>
+                <span className="text-gray-800 font-bold">{printReceipt.guest?.fullName}</span>
               </div>
-              <div className="flex justify-between text-gray-400">
+              <div className="flex justify-between text-gray-500">
                 <span>Payment Mode:</span>
-                <span className="text-white">{printReceipt.method}</span>
+                <span className="text-gray-800">{printReceipt.method}</span>
               </div>
-              <div className="border-t border-[#262930] pt-2 flex justify-between font-bold text-sm text-white">
+              <div className="border-t border-gray-200 pt-2 flex justify-between font-bold text-sm text-gray-800">
                 <span>Amount Received:</span>
                 <span className="text-[#c9a227]">₹{printReceipt.amount.toLocaleString()}</span>
               </div>
@@ -541,7 +561,7 @@ export default function AdminAdvances() {
             <div className="flex gap-3 pt-2">
               <button
                 onClick={() => setPrintReceipt(null)}
-                className="flex-1 py-2 bg-[#1a1d24] text-gray-300 rounded-xl text-xs font-semibold"
+                className="flex-1 py-2 bg-gray-100 text-gray-600 rounded-xl text-xs font-semibold"
               >
                 Close
               </button>

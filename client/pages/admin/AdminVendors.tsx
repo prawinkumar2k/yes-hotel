@@ -91,58 +91,58 @@ export default function AdminVendors() {
             <Truck className="text-emerald-600" size={24} />
             Vendor & Supplier Directory
           </h2>
-          <p className="text-sm text-gray-500 mt-1">Manage vendor contracts, GSTIN details, and procurement terms</p>
+          <p className="text-sm text-gray-800 font-medium mt-1">Manage vendor contracts, GSTIN details, and procurement terms</p>
         </div>
         <button
           onClick={() => setShowModal(true)}
-          className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors"
+          className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm font-bold transition-colors shadow-sm"
         >
           <Plus size={16} /> Register Vendor
         </button>
       </div>
 
       <div className="relative max-w-sm">
-        <Search className="absolute left-3 top-2.5 text-gray-400" size={16} />
+        <Search className="absolute left-3 top-2.5 text-gray-600" size={16} />
         <input
           type="text"
           placeholder="Search vendor by name, code, contact..."
           value={search}
           onChange={e => setSearch(e.target.value)}
-          className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+          className="w-full pl-9 pr-4 py-2 border border-gray-400 rounded-lg text-sm text-black font-medium focus:ring-2 focus:ring-emerald-500 focus:outline-none"
         />
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {filtered.map(vendor => (
-          <div key={vendor._id} className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm space-y-3">
+          <div key={vendor._id} className="bg-white p-5 rounded-xl border border-gray-300 shadow-sm space-y-3">
             <div className="flex items-start justify-between">
               <div>
-                <span className="font-mono text-xs text-gray-400 font-bold">{vendor.vendorCode}</span>
-                <h3 className="text-base font-bold text-gray-900 leading-snug">{vendor.name}</h3>
+                <span className="font-mono text-xs text-gray-700 font-bold">{vendor.vendorCode}</span>
+                <h3 className="text-base font-bold text-black leading-snug">{vendor.name}</h3>
               </div>
-              <span className="flex items-center gap-1 text-xs font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded">
+              <span className="flex items-center gap-1 text-xs font-bold text-amber-900 bg-amber-100 border border-amber-300 px-2 py-0.5 rounded">
                 <Star size={12} className="fill-amber-500 text-amber-500" /> {vendor.rating}.0
               </span>
             </div>
 
             {vendor.gstin && (
-              <div className="text-xs text-gray-500 font-mono">
-                GSTIN: <span className="text-gray-800 font-medium">{vendor.gstin}</span>
+              <div className="text-xs text-gray-800 font-mono font-medium">
+                GSTIN: <span className="text-black font-bold">{vendor.gstin}</span>
               </div>
             )}
 
-            <div className="space-y-1 text-xs text-gray-600 pt-1 border-t border-gray-100">
+            <div className="space-y-1 text-xs text-gray-800 font-medium pt-1 border-t border-gray-200">
               <div className="flex items-center gap-2">
-                <Mail size={12} className="text-gray-400" /> {vendor.email}
+                <Mail size={12} className="text-gray-600" /> {vendor.email}
               </div>
               <div className="flex items-center gap-2">
-                <Phone size={12} className="text-gray-400" /> {vendor.phone} ({vendor.contactPerson})
+                <Phone size={12} className="text-gray-600" /> {vendor.phone} ({vendor.contactPerson})
               </div>
             </div>
 
-            <div className="flex items-center justify-between pt-2 text-xs border-t border-gray-100">
-              <span className="text-gray-500">Terms: <strong className="text-gray-800">{vendor.paymentTerms}</strong></span>
-              <span className="bg-emerald-50 text-emerald-700 font-semibold px-2 py-0.5 rounded">Active Supplier</span>
+            <div className="flex items-center justify-between pt-2 text-xs border-t border-gray-200">
+              <span className="text-gray-800 font-medium">Terms: <strong className="text-black font-bold">{vendor.paymentTerms}</strong></span>
+              <span className="bg-emerald-100 text-emerald-900 border border-emerald-300 font-bold px-2 py-0.5 rounded">Active Supplier</span>
             </div>
           </div>
         ))}

@@ -12,6 +12,7 @@ export default function AdminInHouseList() {
       const res = await api.get("/reports/in-house-list");
       return res.data.data;
     },
+    refetchInterval: 5000, // Live auto-sync
   });
 
   const handlePrint = () => {
@@ -62,6 +63,8 @@ export default function AdminInHouseList() {
                   <th className="border border-gray-400 p-1 w-12">Plan</th>
                   <th className="border border-gray-400 p-1">Ex. Bed</th>
                   <th className="border border-gray-400 p-1 w-16">Food Bill</th>
+                  <th className="border border-gray-400 p-1 w-16">Discount</th>
+                  <th className="border border-gray-400 p-1 w-16">Code Used</th>
                   <th className="border border-gray-400 p-1 w-20">Checked in</th>
                   <th className="border border-gray-400 p-1 w-20">Check out</th>
                   <th className="border border-gray-400 p-1">No. of Nights</th>
@@ -84,6 +87,8 @@ export default function AdminInHouseList() {
                     <td className="border border-gray-400 p-1">{row.plan}</td>
                     <td className="border border-gray-400 p-1">{row.extraBed || "-"}</td>
                     <td className="border border-gray-400 p-1 text-right px-2">{row.foodBill > 0 ? row.foodBill : "-"}</td>
+                    <td className="border border-gray-400 p-1 text-right px-2 text-green-600">{row.discountAmount > 0 ? row.discountAmount : "-"}</td>
+                    <td className="border border-gray-400 p-1 font-mono">{row.appliedCoupon}</td>
                     <td className="border border-gray-400 p-1">{format(new Date(row.checkedIn), "dd/MM HH:mm")}</td>
                     <td className="border border-gray-400 p-1">{format(new Date(row.checkOut), "dd/MM")}</td>
                     <td className="border border-gray-400 p-1">{row.nights}</td>
@@ -97,6 +102,8 @@ export default function AdminInHouseList() {
                 {/* Print empty rows to fill the page if less than ~25 rows */}
                 {Array.from({ length: Math.max(0, 25 - data.length) }).map((_, i) => (
                   <tr key={`empty-${i}`} className="h-7">
+                    <td className="border border-gray-400 p-1"></td>
+                    <td className="border border-gray-400 p-1"></td>
                     <td className="border border-gray-400 p-1"></td>
                     <td className="border border-gray-400 p-1"></td>
                     <td className="border border-gray-400 p-1"></td>

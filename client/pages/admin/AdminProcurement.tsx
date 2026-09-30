@@ -106,30 +106,30 @@ export default function AdminProcurement() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+          <h2 className="text-xl sm:text-2xl font-bold text-gray-900 flex items-center gap-2">
             <ShoppingBag className="text-blue-600" size={24} />
-            Procurement & Purchase Orders
+            Buying & Supply Orders
           </h2>
-          <p className="text-sm text-gray-500 mt-1">Issue POs to vendors and auto-receive inventory via GRN</p>
+          <p className="text-sm text-gray-500 mt-1">Send purchase orders to suppliers and record incoming delivery receipts</p>
         </div>
         <button
           onClick={() => setShowCreate(true)}
-          className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors"
+          className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors w-full sm:w-auto justify-center"
         >
-          <Plus size={16} /> Create Purchase Order
+          <Plus size={16} /> Create Supply Order
         </button>
       </div>
 
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm table-scroll">
         <table className="w-full text-left text-sm text-gray-600">
           <thead className="bg-gray-50 text-xs uppercase text-gray-500 font-medium border-b border-gray-200">
             <tr>
-              <th className="px-4 py-3">PO Number</th>
-              <th className="px-4 py-3">Vendor</th>
-              <th className="px-4 py-3">Items Summary</th>
-              <th className="px-4 py-3">Total Amount</th>
+              <th className="px-4 py-3">Order Ref #</th>
+              <th className="px-4 py-3">Supplier Vendor</th>
+              <th className="px-4 py-3">Items Ordered</th>
+              <th className="px-4 py-3">Total Cost</th>
               <th className="px-4 py-3">Status</th>
               <th className="px-4 py-3 text-right">Actions</th>
             </tr>

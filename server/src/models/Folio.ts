@@ -22,6 +22,7 @@ export enum FolioStatus {
 }
 
 export interface IFolio extends Document {
+  propertyId: mongoose.Types.ObjectId;
   booking: mongoose.Types.ObjectId;
   guest: mongoose.Types.ObjectId;     // Guest document (CRM)
   room: mongoose.Types.ObjectId;
@@ -53,9 +54,10 @@ export interface IFolio extends Document {
 
 const FolioSchema = new Schema<IFolio>(
   {
+    propertyId: { type: Schema.Types.ObjectId, ref: "Property", required: true },
     booking: { type: Schema.Types.ObjectId, ref: "Booking", required: true, index: true },
     guest: { type: Schema.Types.ObjectId, ref: "Guest", required: true },
-    room: { type: Schema.Types.ObjectId, ref: "Room", required: true },
+    room: { type: Schema.Types.ObjectId, ref: "Room", required: false },
     checkInDate: { type: Date, required: true },
     checkOutDate: { type: Date, required: true },
     status: {

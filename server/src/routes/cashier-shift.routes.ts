@@ -1,4 +1,6 @@
 import { Router } from "express";
+import { requirePropertyAccess } from "../middleware/propertyAuth";
+import { requirePermission } from "../middleware/permissionAuth";
 import { protect, authorize } from "../middleware/auth.middleware";
 import {
   getCurrentShift,
@@ -8,11 +10,11 @@ import {
 } from "../controllers/cashier-shift.controller";
 
 const router = Router();
-const CASHIER_ROLES = ["ADMIN", "MANAGER", "RECEPTIONIST"];
+const CASHIER_ROLES = ["ADMIN", "MANAGER", "RECEPTIONIST", "CASHIER", "FINANCE"];
 
-router.get("/current", protect, authorize(...CASHIER_ROLES), getCurrentShift);
-router.get("/", protect, authorize(...CASHIER_ROLES), getAllShifts);
-router.post("/open", protect, authorize(...CASHIER_ROLES), openShift);
-router.post("/:id/close", protect, authorize(...CASHIER_ROLES), closeShift);
+router.get("/current", protect, requirePropertyAccess, requirePermission("CASHIER_SHIFTS", "VIEW"), getCurrentShift);
+router.get("/", protect, requirePropertyAccess, requirePermission("CASHIER_SHIFTS", "VIEW"), getAllShifts);
+router.post("/open", protect, requirePropertyAccess, requirePermission("CASHIER_SHIFTS", "CREATE"), openShift);
+router.post("/:id/close", protect, requirePropertyAccess, requirePermission("CASHIER_SHIFTS", "CREATE"), closeShift);
 
 export default router;

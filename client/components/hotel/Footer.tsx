@@ -17,18 +17,18 @@ export default function Footer() {
   const settings = data ?? FALLBACK;
 
   return (
-    <footer className="bg-[#0b0b0b] text-white border-t border-[#262930] pt-24 pb-12 relative overflow-hidden">
+    <footer className="bg-[#0b0b0b] text-white border-t border-[#262930] pt-16 md:pt-20 lg:pt-24 pb-8 md:pb-10 lg:pb-12 relative overflow-hidden">
       {/* Background Vignette */}
       <div className="absolute inset-0 bg-radial-vignette opacity-60 pointer-events-none" />
 
-      <div className="container mx-auto px-4 md:px-8 max-w-[1400px] relative z-10 space-y-20">
+      <div className="container mx-auto px-4 md:px-8 max-w-[1400px] relative z-10 space-y-12 md:space-y-16 lg:space-y-20">
         {/* Massive Film-End Typography Banner */}
-        <div className="text-center space-y-6 max-w-5xl mx-auto border-b border-[#262930] pb-20">
+        <div className="text-center space-y-6 max-w-5xl mx-auto border-b border-[#262930] pb-12 md:pb-16 lg:pb-20">
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#c9a227]/10 border border-[#c9a227]/30 text-[#e5c76b] text-xs font-mono font-bold tracking-widest uppercase">
             <Sparkles size={13} className="text-[#c9a227]" /> THE END OF ORDINARY
           </div>
 
-          <h2 className="font-serif text-5xl sm:text-7xl md:text-8xl font-normal tracking-tight text-white leading-none">
+          <h2 className="font-serif text-4xl sm:text-5xl md:text-7xl lg:text-8xl font-normal tracking-tight text-white leading-none">
             SAY YES TO <br />
             <span className="text-[#c9a227] italic font-serif">TIME WELL SPENT.</span>
           </h2>
@@ -36,7 +36,7 @@ export default function Footer() {
           <div className="pt-6">
             <Link
               to="/search"
-              className="inline-flex items-center gap-3 px-8 py-4 bg-[#c9a227] hover:bg-[#e5c76b] text-black font-serif font-bold text-xs uppercase tracking-widest rounded-2xl shadow-2xl transition hover:scale-105"
+              className="inline-flex items-center gap-3 min-h-[44px] px-6 md:px-8 py-3.5 md:py-4 bg-[#c9a227] hover:bg-[#e5c76b] text-black font-serif font-bold text-xs uppercase tracking-widest rounded-2xl shadow-2xl transition hover:scale-105"
             >
               Reserve Your Stay <ArrowRight size={16} />
             </Link>
@@ -44,7 +44,7 @@ export default function Footer() {
         </div>
 
         {/* Links & Information Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-12 font-mono text-xs">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8 md:gap-10 lg:gap-12 font-mono text-xs">
           {/* Brand Info */}
           <div className="md:col-span-2 space-y-4">
             <Link to="/" className="font-serif text-2xl font-bold tracking-wider text-white flex items-center gap-2">

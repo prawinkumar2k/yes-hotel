@@ -108,7 +108,7 @@ export default function ContactPage() {
             <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-hotel-gold-text">
               Contact
             </p>
-            <h1 className="mt-4 font-serif text-5xl leading-tight text-hotel-black md:text-6xl">
+            <h1 className="mt-4 font-serif text-4xl leading-tight text-hotel-black sm:text-5xl md:text-6xl">
               Let&apos;s plan your stay.
             </h1>
             <p className="mt-6 max-w-2xl text-base leading-relaxed text-hotel-black/65 md:text-lg">

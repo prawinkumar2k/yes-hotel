@@ -22,13 +22,13 @@ export default function Testimonials() {
         </Reveal>
 
         {isLoading ? (
-          <div className="mt-16 grid grid-cols-1 gap-8 lg:grid-cols-3">
+          <div className="mt-16 grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
             {Array(3).fill(0).map((_, i) => (
               <div key={i} className="animate-pulse bg-hotel-white h-56 border border-hotel-black/10" />
             ))}
           </div>
         ) : (
-          <div className="mt-16 grid grid-cols-1 gap-8 lg:grid-cols-3">
+          <div className="mt-16 grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
             {testimonials.slice(0, 6).map((t: any, i: number) => (
               <Reveal key={t._id} delay={i * 100} className="bg-hotel-white p-8 border border-hotel-black/10 flex flex-col justify-between">
                 <div>

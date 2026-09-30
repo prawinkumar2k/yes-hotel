@@ -5,7 +5,7 @@ import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Loader2, Search, Edit, Ban, CheckCircle, Eye } from "lucide-react";
+import { Loader2, Search, Edit, Ban, CheckCircle, Eye, UserPlus, Plus } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
@@ -15,6 +15,7 @@ export default function AdminGuests() {
   const [searchTerm, setSearchTerm] = useState("");
   const [page, setPage] = useState(1);
   const [isOpen, setIsOpen] = useState(false);
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editingGuest, setEditingGuest] = useState<any>(null);
   const [isViewOpen, setIsViewOpen] = useState(false);
   const [viewingGuest, setViewingGuest] = useState<any>(null);
@@ -35,6 +36,21 @@ export default function AdminGuests() {
       return res.data.data;
     },
     enabled: !!viewingGuest
+  });
+
+  const createMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const res = await api.post("/guests", data);
+      return res.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["guests"] });
+      toast({ title: "Success", description: "New guest registered successfully" });
+      setIsCreateOpen(false);
+    },
+    onError: (error: any) => {
+      toast({ title: "Registration Failed", description: error.response?.data?.message || "Failed to create guest profile", variant: "destructive" });
+    }
   });
 
   const updateMutation = useMutation({
@@ -77,26 +93,29 @@ export default function AdminGuests() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-serif text-hotel-black">Guest Management</h1>
-          <p className="text-hotel-black/60">Manage guest profiles, view history, and handle VIPs</p>
+          <h1 className="text-2xl sm:text-3xl font-serif text-hotel-black font-bold">Guest Management</h1>
+          <p className="text-hotel-black/60 text-sm">Manage guest profiles, view history, and handle VIPs</p>
         </div>
+        <Button onClick={() => setIsCreateOpen(true)} className="bg-hotel-gold text-black hover:bg-amber-600 font-bold w-full sm:w-auto">
+          <Plus className="w-4 h-4 mr-2" /> Register New Guest
+        </Button>
       </div>
 
       <div className="flex gap-4 mb-6">
-        <div className="relative flex-1 max-w-md">
+        <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
           <Input 
             placeholder="Search by name, email, or phone..." 
             value={searchTerm}
             onChange={(e) => { setSearchTerm(e.target.value); setPage(1); }}
-            className="pl-10"
+            className="pl-10 text-black font-medium"
           />
         </div>
       </div>
 
-      <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
+      <div className="bg-white rounded-lg shadow-sm border table-scroll">
         <table className="w-full text-sm text-left text-gray-900">
           <thead className="bg-gray-50 border-b">
             <tr>
@@ -187,13 +206,13 @@ export default function AdminGuests() {
                 }
               });
             }} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2"><label className="text-sm">Full Name</label><Input name="fullName" defaultValue={editingGuest.fullName} required /></div>
                 <div className="space-y-2"><label className="text-sm">Phone</label><Input name="phone" defaultValue={editingGuest.phone} required /></div>
               </div>
               <div className="space-y-2"><label className="text-sm">Email (Read-only)</label><Input value={editingGuest.email} disabled /></div>
               <div className="space-y-2"><label className="text-sm">Address</label><Input name="address" defaultValue={editingGuest.address} /></div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2"><label className="text-sm">City</label><Input name="city" defaultValue={editingGuest.city} /></div>
                 <div className="space-y-2"><label className="text-sm">Country</label><Input name="country" defaultValue={editingGuest.country} /></div>
               </div>
@@ -261,6 +280,25 @@ export default function AdminGuests() {
                 </div>
               )}
 
+              {/* ID Proof Photo Verification */}
+              {(viewData.guest?.idProofPhoto || viewData.bookings?.some((b: any) => b.idProofPhoto)) && (
+                <div className="bg-emerald-50 border border-emerald-200 p-4 rounded-lg flex items-center justify-between">
+                  <div>
+                    <p className="font-bold text-sm text-emerald-900 flex items-center gap-1.5">📷 Verified ID Proof Photo Attached</p>
+                    <p className="text-xs text-emerald-700">Official identity verification document collected at check-in</p>
+                  </div>
+                  <button
+                    onClick={() => {
+                      const proofUrl = viewData.guest?.idProofPhoto || viewData.bookings?.find((b: any) => b.idProofPhoto)?.idProofPhoto;
+                      if (proofUrl) window.open(proofUrl, "_blank");
+                    }}
+                    className="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded text-xs font-bold transition shadow-sm"
+                  >
+                    View ID Proof Photo
+                  </button>
+                </div>
+              )}
+
               <div>
                 <h3 className="font-bold mb-3 border-b pb-2">Recent Bookings</h3>
                 {viewData.bookings.length === 0 ? (
@@ -274,6 +312,14 @@ export default function AdminGuests() {
                           <div className="text-xs text-gray-500">
                             {format(new Date(booking.checkInDate), 'MMM d')} - {format(new Date(booking.checkOutDate), 'MMM d, yyyy')}
                           </div>
+                          {booking.idProofPhoto && (
+                            <button
+                              onClick={() => window.open(booking.idProofPhoto, "_blank")}
+                              className="text-[11px] text-indigo-600 hover:underline mt-1 font-semibold flex items-center gap-1"
+                            >
+                              📷 View Booking ID Proof
+                            </button>
+                          )}
                         </div>
                         <div className="text-right">
                           <div className="font-bold">₹{booking.totalAmount}</div>
@@ -309,6 +355,101 @@ export default function AdminGuests() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Manual Guest Registration Dialog */}
+      <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <UserPlus className="w-5 h-5 text-hotel-gold" />
+              Manual Guest Registration
+            </DialogTitle>
+          </DialogHeader>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              const fd = new FormData(e.currentTarget);
+              createMutation.mutate({
+                fullName: fd.get("fullName"),
+                email: fd.get("email"),
+                phone: fd.get("phone"),
+                address: fd.get("address"),
+                city: fd.get("city"),
+                country: fd.get("country"),
+                idType: fd.get("idType"),
+                idNumber: fd.get("idNumber"),
+                notes: fd.get("notes"),
+                isVip: fd.get("isVip") === "true",
+              });
+            }}
+            className="space-y-4 pt-2"
+          >
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-xs font-semibold uppercase text-gray-600">Full Name *</label>
+                <Input name="fullName" placeholder="e.g. Rahul Sharma" required />
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs font-semibold uppercase text-gray-600">Phone *</label>
+                <Input name="phone" placeholder="+91 9876543210" required />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-xs font-semibold uppercase text-gray-600">Email Address *</label>
+              <Input name="email" type="email" placeholder="rahul@example.com" required />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-xs font-semibold uppercase text-gray-600">ID Type</label>
+                <select name="idType" className="w-full border rounded-md p-2 text-sm">
+                  <option value="Aadhaar">Aadhaar Card</option>
+                  <option value="Passport">Passport</option>
+                  <option value="Driving License">Driving License</option>
+                  <option value="Voter ID">Voter ID</option>
+                </select>
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs font-semibold uppercase text-gray-600">ID Number</label>
+                <Input name="idNumber" placeholder="XXXX-XXXX-XXXX" />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-xs font-semibold uppercase text-gray-600">City</label>
+                <Input name="city" placeholder="Hyderabad" />
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs font-semibold uppercase text-gray-600">Country</label>
+                <Input name="country" defaultValue="India" />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-xs font-semibold uppercase text-gray-600">VIP Status</label>
+              <select name="isVip" className="w-full border rounded-md p-2 text-sm">
+                <option value="false">Standard Guest</option>
+                <option value="true">VIP Guest</option>
+              </select>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-xs font-semibold uppercase text-gray-600">Staff Notes</label>
+              <Input name="notes" placeholder="Special preferences or requirements..." />
+            </div>
+
+            <DialogFooter className="pt-4">
+              <Button type="button" variant="outline" onClick={() => setIsCreateOpen(false)}>Cancel</Button>
+              <Button type="submit" disabled={createMutation.isPending} className="bg-hotel-gold text-black font-bold">
+                {createMutation.isPending ? "Creating..." : "Create Guest Profile"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
+

@@ -32,9 +32,9 @@ export default function CursorFollower() {
     };
     const onLeaveWindow = () => setVisible(false);
 
-    window.addEventListener("mousemove", onMove);
-    window.addEventListener("mouseover", onOver);
-    document.documentElement.addEventListener("mouseleave", onLeaveWindow);
+    window.addEventListener("mousemove", onMove, { passive: true });
+    window.addEventListener("mouseover", onOver, { passive: true });
+    document.documentElement.addEventListener("mouseleave", onLeaveWindow, { passive: true });
 
     return () => {
       window.removeEventListener("mousemove", onMove);

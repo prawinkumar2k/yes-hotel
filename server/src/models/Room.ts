@@ -59,6 +59,7 @@ export enum SellStatus {
 }
 
 export interface IRoom extends Document {
+  propertyId: mongoose.Types.ObjectId;
   roomNumber: string;
   category: mongoose.Types.ObjectId;
   floor: string;
@@ -99,6 +100,7 @@ export interface IRoom extends Document {
 
 const RoomSchema = new Schema<IRoom>(
   {
+    propertyId: { type: Schema.Types.ObjectId, ref: "Property", required: true },
     roomNumber: { type: String, required: true, unique: true },
     category: { type: Schema.Types.ObjectId, ref: "RoomCategory", required: true },
     floor: { type: String, required: true },

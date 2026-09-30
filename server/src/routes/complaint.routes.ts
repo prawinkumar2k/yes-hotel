@@ -1,9 +1,15 @@
 import { Router } from "express";
-import { getComplaints, createComplaint, updateComplaintStatus } from "../controllers/complaint.controller";
+import { requirePropertyAccess } from "../middleware/propertyAuth";
+import { requirePermission } from "../middleware/permissionAuth";
+import { getComplaints, createComplaint, updateComplaintStatus, getMyComplaints, createMyComplaint } from "../controllers/complaint.controller";
 import { protect, authorize } from "../middleware/auth.middleware";
 import { UserRole } from "../models/User";
 
 const router = Router();
+
+// Customer facing routes
+router.get("/my", protect, getMyComplaints);
+router.post("/my", protect, createMyComplaint);
 
 // Staff-only: complaints carry guest PII (name/email/phone via the
 // getComplaints populate) and route to HOUSEKEEPING/MAINTENANCE/FRONT_DESK/

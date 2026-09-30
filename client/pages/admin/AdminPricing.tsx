@@ -195,7 +195,7 @@ export default function AdminPricing() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">Rule Name</label>
                 <input type="text" required value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full border border-gray-300 rounded px-3 py-2 focus:ring-1 focus:ring-hotel-gold" />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
                   <select required value={formData.roomCategory} onChange={e => setFormData({...formData, roomCategory: e.target.value})} className="w-full border border-gray-300 rounded px-3 py-2 focus:ring-1 focus:ring-hotel-gold">
@@ -213,7 +213,7 @@ export default function AdminPricing() {
                   </select>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Start Date (Optional)</label>
                   <input type="date" value={formData.startDate} onChange={e => setFormData({...formData, startDate: e.target.value})} className="w-full border border-gray-300 rounded px-3 py-2 focus:ring-1 focus:ring-hotel-gold" />
@@ -223,7 +223,7 @@ export default function AdminPricing() {
                   <input type="date" value={formData.endDate} onChange={e => setFormData({...formData, endDate: e.target.value})} className="w-full border border-gray-300 rounded px-3 py-2 focus:ring-1 focus:ring-hotel-gold" />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Price (₹)</label>
                   <input type="number" required min="0" value={formData.price} onChange={e => setFormData({...formData, price: Number(e.target.value)})} className="w-full border border-gray-300 rounded px-3 py-2 focus:ring-1 focus:ring-hotel-gold" />
@@ -255,3 +255,4 @@ export default function AdminPricing() {
     </div>
   );
 }
+

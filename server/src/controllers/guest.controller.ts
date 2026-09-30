@@ -5,6 +5,24 @@ import { Complaint } from "../models/Complaint";
 import { LoyaltyTransaction } from "../models/LoyaltyTransaction";
 import { z } from "zod";
 
+const createGuestSchema = z.object({
+  fullName: z.string().min(1, "Full name is required"),
+  email: z.string().email("Valid email is required"),
+  phone: z.string().min(1, "Phone is required"),
+  alternatePhone: z.string().optional(),
+  dateOfBirth: z.string().optional(),
+  gender: z.string().optional(),
+  address: z.string().optional(),
+  city: z.string().optional(),
+  state: z.string().optional(),
+  country: z.string().optional(),
+  nationality: z.string().optional(),
+  idType: z.string().optional(),
+  idNumber: z.string().optional(),
+  notes: z.string().optional(),
+  isVip: z.boolean().optional(),
+});
+
 const updateGuestSchema = z.object({
   fullName: z.string().min(1).optional(),
   phone: z.string().min(1).optional(),
@@ -22,6 +40,47 @@ const updateGuestSchema = z.object({
   isVip: z.boolean().optional(),
   isBlocked: z.boolean().optional(),
 });
+
+export const createGuest = async (req: Request, res: Response) => {
+  try {
+    const data = createGuestSchema.parse(req.body);
+    const existing = await Guest.findOne({ email: data.email.toLowerCase() });
+    if (existing) {
+      return res.status(400).json({ success: false, message: "A guest profile with this email already exists" });
+    }
+    const guest = await Guest.create({
+      ...data,
+      email: data.email.toLowerCase(),
+    });
+    return res.status(201).json({ success: true, data: guest });
+  } catch (error: any) {
+    if (error instanceof z.ZodError) return res.status(400).json({ success: false, message: (error as any).issues[0].message });
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const getMyGuestProfile = async (req: Request, res: Response) => {
+  try {
+    const user = (req as any).user;
+    if (!user || !user.email) return res.status(401).json({ success: false, message: "Unauthorized" });
+
+    const guest = await Guest.findOne({ email: user.email.toLowerCase() });
+    if (!guest) return res.status(404).json({ success: false, message: "Guest profile not found" });
+
+    // Include loyalty transactions
+    const loyaltyTransactions = await LoyaltyTransaction.find({ guest: guest._id }).sort({ date: -1 }).limit(20);
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        guest,
+        loyaltyTransactions
+      }
+    });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
 
 export const getGuests = async (req: Request, res: Response) => {
   try {

@@ -1,21 +1,24 @@
 import { useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { ArrowUp, LoaderCircle, Minus, RotateCcw, X } from "lucide-react";
 import { differenceInCalendarDays, format, parseISO } from "date-fns";
 import { checkRoomAvailability, type AvailableRoom } from "@/services/availabilityService";
 import { submitBookingEnquiry } from "@/services/bookingEnquiryService";
 import { getHotelInformation, hotelContact } from "@/services/chatService";
+import { saveBookingDetails, splitFullName } from "@/lib/bookingSession";
 import BookingFlow from "./BookingFlow";
 import BookingSummary from "./BookingSummary";
 import MessageList from "./MessageList";
 import QuickActions from "./QuickActions";
 import type { BookingState, ChatMessage } from "./types";
 
-type Step = "idle" | "checkin" | "checkout" | "guests" | "checking" | "guestName" | "phone" | "email" | "summary" | "submitted";
+type Step = "idle" | "checkin" | "checkout" | "guests" | "checking" | "guestName" | "guestLastName" | "phone" | "email" | "summary" | "submitted";
 type PendingAction = "Check Room Availability" | "Hotel Information" | "Contact YES Hotels" | null;
 const initialBooking: BookingState = { checkIn: "", checkOut: "", nights: 0, adults: 1, children: 0, childAges: [], rooms: 1, roomType: "", guestName: "", phone: "", email: "", availabilityStatus: "idle" };
 const newMessage = (sender: ChatMessage["sender"], text: string, extra: Partial<ChatMessage> = {}): ChatMessage => ({ id: `${Date.now()}-${Math.random()}`, sender, text, ...extra });
 
 export default function ChatWindow({ onMinimize, onClose }: { onMinimize: () => void; onClose: () => void }) {
+  const navigate = useNavigate();
   const [messages, setMessages] = useState<ChatMessage[]>([newMessage("assistant", "Welcome to YES Hotels. How can I help you today?")]);
   const [booking, setBooking] = useState<BookingState>(initialBooking);
   const [step, setStep] = useState<Step>("idle");
@@ -34,9 +37,14 @@ export default function ChatWindow({ onMinimize, onClose }: { onMinimize: () => 
   function beginActionWithContact(action: PendingAction) {
     if (!action) return;
     userSays(action);
+    // Already have what we need from earlier in this conversation — don't ask again.
+    if (booking.guestName && booking.phone) {
+      processPendingAction(action);
+      return;
+    }
     setPendingAction(action);
-    say("Before I continue, what is your full name?");
-    setStep("guestName");
+    if (!booking.guestName) { say("Before I continue, what is your first name?"); setStep("guestName"); }
+    else { say("What phone number should our team use?"); setStep("phone"); }
   }
 
   function processPendingAction(action: PendingAction) {
@@ -68,10 +76,63 @@ export default function ChatWindow({ onMinimize, onClose }: { onMinimize: () => 
       say(details.length ? details.join("\n") : "YES Hotels contact details have not been configured yet. Please use the Contact page on this website.");
       return;
     }
-    if (action === "Book on Website" || action === "Continue to Booking & Payment") { window.location.assign(hotelContact.bookingUrl); return; }
+    if (action === "Book on Website" || action === "Continue to Booking & Payment") { goToPayment(); return; }
     if (action === "Change Dates") { say("Let’s start again. Please select your check-in date."); setStep("checkin"); return; }
     if (action === "Try Another Room") { say("I’ll check the current inventory for the same dates again."); void checkAvailability(); return; }
-    if (action.startsWith("select-room:")) { const room = lastRooms.find((item) => item._id === action.slice(12)); if (room) { setBooking((current) => ({ ...current, roomType: room.name, roomCategoryId: room._id, pricePerNight: room.pricePerNight ?? room.basePrice, roomSubtotal: (room.pricePerNight ?? room.basePrice ?? 0) * current.nights * current.rooms, availabilityStatus: "available" })); say("Please share the guest’s full name."); setStep("guestName"); } }
+    if (action.startsWith("select-room:")) {
+      const room = lastRooms.find((item) => item._id === action.slice(12));
+      if (!room) return;
+      const next = {
+        ...booking,
+        roomType: room.name,
+        roomCategoryId: room._id,
+        pricePerNight: room.pricePerNight ?? room.basePrice,
+        roomSubtotal: (room.pricePerNight ?? room.basePrice ?? 0) * booking.nights * booking.rooms,
+        availabilityStatus: "available" as const,
+      };
+      setBooking(next);
+      // Skip re-asking for whatever contact details we already collected earlier in this chat.
+      if (next.guestName && next.phone) {
+        say("I still have your contact details from earlier. Please review your booking enquiry before sending it.");
+        setStep("summary");
+      } else if (next.guestName) {
+        say("What phone number should our team use?");
+        setStep("phone");
+      } else {
+        say("Please share the guest’s first name.");
+        setStep("guestName");
+      }
+    }
+  }
+
+  // Hands the already-collected guest details + room selection straight to
+  // the site's payment page, skipping the separate guest-details form
+  // entirely when nothing is missing — the whole point being fixed here.
+  function goToPayment() {
+    if (!booking.roomCategoryId) { navigate("/search"); return; }
+    const { firstName, lastName } = splitFullName(booking.guestName);
+    const guestDetails = { firstName, lastName, email: booking.email, phone: booking.phone };
+    // Save whatever contact info we already have — even if incomplete — so
+    // the guest-details form (if it still needs to render) pre-fills from
+    // this chat instead of falling back to a logged-in staff account.
+    saveBookingDetails({
+      category: booking.roomCategoryId,
+      checkIn: booking.checkIn,
+      checkOut: booking.checkOut,
+      adults: booking.adults,
+      children: booking.children,
+      guestDetails,
+      specialRequests: "",
+      idempotencyKey: window.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+    });
+    if (firstName && lastName && booking.phone && booking.email) {
+      navigate("/booking/payment");
+      return;
+    }
+    // Missing something (e.g. guest skipped email) — still skip the dead-end
+    // /search page and go straight to the guest-details form, pre-filled
+    // with whatever we do have.
+    navigate(`/booking/guest-details?category=${booking.roomCategoryId}&checkIn=${booking.checkIn}&checkOut=${booking.checkOut}&adults=${booking.adults}&children=${booking.children}`);
   }
 
   function handleDate(value: string) {
@@ -122,12 +183,26 @@ export default function ChatWindow({ onMinimize, onClose }: { onMinimize: () => 
     } catch { setBooking((current) => ({ ...current, availabilityStatus: "error" })); say("Sorry, we couldn't check live room availability right now. Please try again or continue through the YES Hotels booking website.", { kind: "error" }); setStep("idle"); }
   }
 
-  function handleGuestText(field: "guestName" | "phone" | "email", value: string) {
-    if (field === "guestName" && value.length < 2) return say("Please enter your full name so our team knows who to contact.");
+  function handleGuestText(field: "guestName" | "guestLastName" | "phone" | "email", value: string) {
+    if (field === "guestName") {
+      if (value.length < 2) return say("Please enter your first name so our team knows who to contact.");
+      setBooking((current) => ({ ...current, guestName: value }));
+      userSays(value);
+      say("And your last name?");
+      setStep("guestLastName");
+      return;
+    }
+    if (field === "guestLastName") {
+      if (value.length < 2) return say("Please enter your last name so our team knows who to contact.");
+      setBooking((current) => ({ ...current, guestName: `${current.guestName} ${value}`.trim() }));
+      userSays(value);
+      say("What phone number should our team use?");
+      setStep("phone");
+      return;
+    }
     if (field === "phone" && value.replace(/\D/g, "").length !== 10) return say("Please re-enter your phone number. It must contain exactly 10 digits.");
     setBooking((current) => ({ ...current, [field]: value })); userSays(field === "email" && !value ? "I prefer not to share an email" : value);
-    if (field === "guestName") { say("What phone number should our team use?"); setStep("phone"); }
-    else if (field === "phone") { say("What is your email address?"); setStep("email"); }
+    if (field === "phone") { say("What is your email address?"); setStep("email"); }
     else if (pendingAction) { processPendingAction(pendingAction); }
     else { say("Please review your booking enquiry before sending it."); setStep("summary"); }
   }
@@ -154,9 +229,9 @@ export default function ChatWindow({ onMinimize, onClose }: { onMinimize: () => 
     <header className="flex items-center justify-between bg-hotel-black px-4 py-3 text-hotel-white"><div><p className="font-serif text-lg">YES Hotels</p><p className="text-[10px] uppercase tracking-[0.18em] text-hotel-gold">Your Hotel Concierge</p></div><div className="flex items-center gap-1"><button type="button" aria-label="Restart concierge conversation" title="Restart conversation" onClick={reloadConversation} className="p-2 text-hotel-white/70 hover:text-hotel-gold"><RotateCcw size={16} /></button><button type="button" aria-label="Minimize concierge" onClick={onMinimize} className="p-2 text-hotel-white/70 hover:text-hotel-gold"><Minus size={17} /></button><button type="button" aria-label="Close concierge" onClick={onClose} className="p-2 text-hotel-white/70 hover:text-hotel-gold"><X size={17} /></button></div></header>
     <MessageList messages={messages} onQuickAction={handleAction} endRef={endRef} />
     {step === "checking" && <div className="flex items-center gap-2 border-t border-hotel-black/10 bg-hotel-white px-4 py-3 text-xs text-hotel-black/60"><LoaderCircle size={15} className="animate-spin text-hotel-gold" /> Checking live room availability...</div>}
-    {step === "checkin" || step === "checkout" || step === "guests" || step === "guestName" || step === "phone" || step === "email" ? <BookingFlow step={step} booking={booking} onDate={handleDate} onBack={handleDateBack} onGuests={handleGuests} onText={handleGuestText} requireEmail={Boolean(pendingAction)} /> : null}
+    {step === "checkin" || step === "checkout" || step === "guests" || step === "guestName" || step === "guestLastName" || step === "phone" || step === "email" ? <BookingFlow step={step} booking={booking} onDate={handleDate} onBack={handleDateBack} onGuests={handleGuests} onText={handleGuestText} requireEmail={Boolean(pendingAction)} /> : null}
     {step === "summary" && <BookingSummary booking={booking} onConfirm={confirmEnquiry} submitting={submitting} />}
-    {step === "submitted" && <button type="button" onClick={() => window.location.assign(hotelContact.bookingUrl)} className="m-4 bg-hotel-gold px-4 py-3 text-xs font-semibold uppercase tracking-[0.12em] text-hotel-black">Continue to Booking &amp; Payment</button>}
+    {step === "submitted" && <button type="button" onClick={goToPayment} className="m-4 bg-hotel-gold px-4 py-3 text-xs font-semibold uppercase tracking-[0.12em] text-hotel-black">Continue to Booking &amp; Payment</button>}
     {showQuick && <QuickActions onAction={handleAction} unavailable={booking.availabilityStatus === "unavailable"} />}
     {step === "idle" && !showQuick && <form className="flex gap-2 border-t border-hotel-black/10 bg-hotel-white p-3" onSubmit={(event) => { event.preventDefault(); if (input.trim()) { userSays(input.trim()); say("Please choose one of the options above so I can help with your stay."); setInput(""); } }}><input value={input} onChange={(event) => setInput(event.target.value)} placeholder="Ask your concierge" className="min-w-0 flex-1 bg-hotel-ivory px-3 py-2 text-sm outline-none" aria-label="Message YES Hotels concierge" /><button type="submit" aria-label="Send message" className="bg-hotel-black p-2 text-hotel-gold hover:bg-hotel-gold hover:text-hotel-black"><ArrowUp size={17} /></button></form>}
   </section>;

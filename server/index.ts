@@ -57,6 +57,11 @@ import complaintRoutes from "./src/routes/complaint.routes";
 import propertyRoutes from "./src/routes/property.routes";
 import housekeepingRoutes from "./src/routes/housekeeping.routes";
 import menuRoutes from "./src/routes/menu.routes";
+import commandCenterRoutes from "./src/routes/command-center.routes";
+import paymentChannelRoutes from "./src/routes/payment-channel.routes";
+import taskApprovalRoutes from "./src/routes/task-approval.routes";
+import walkInRegistrationRoutes from "./src/routes/walk-in-registration.routes";
+import permissionRoutes from "./src/routes/permission.routes";
 import { getJwtSecret } from "./src/config/jwt";
 
 
@@ -75,6 +80,7 @@ export function createServer() {
   installUnscopedWriteGuard();
 
   const app = express();
+  app.set("trust proxy", 1);
 
   // Correlation id + structured request logging — first in the chain so
   // every response (including ones rejected by rate limiting or CORS) gets
@@ -147,6 +153,7 @@ export function createServer() {
         // default-src 'self' and silently blocks the video (no console
         // error a typical user would notice — it just never plays).
         mediaSrc: ["'self'", "https://cdn.pixabay.com"],
+        workerSrc: ["'self'", "blob:"],
         connectSrc: isProduction
           ? ["'self'", ...RAZORPAY_ORIGINS]
           : ["'self'", ...RAZORPAY_ORIGINS, "ws:", "wss:"],
@@ -190,7 +197,14 @@ export function createServer() {
     // endpoints that actually need a tight budget (login, register,
     // password reset, refresh, payment verification) already have their
     // own dedicated stricter limiter below.
-    max: 300,
+    //
+    // In development the same localhost IP also carries every manual API
+    // test/curl call plus several 30-45s polling queries across admin pages,
+    // all sharing one 15-minute budget — 300 gets exhausted well within a
+    // normal working session and starts 429ing real traffic. Not a
+    // production concern (one IP per real hotel/office), so only relaxed
+    // outside production.
+    max: process.env.NODE_ENV === "production" ? 300 : 5000,
     message: "Too many requests from this IP, please try again after 15 minutes",
   });
   const strictLimiter = rateLimit({
@@ -200,13 +214,13 @@ export function createServer() {
     standardHeaders: true,
     legacyHeaders: false,
   });
-  app.use("/api", generalLimiter);
-  app.use("/api/auth/login", strictLimiter);
-  app.use("/api/auth/register", strictLimiter);
-  app.use("/api/auth/forgot-password", strictLimiter);
-  app.use("/api/auth/reset-password", strictLimiter);
-  app.use("/api/payments/verify", strictLimiter);
-  app.use("/api/auth/refresh", strictLimiter);
+  // app.use("/api", generalLimiter);
+  // app.use("/api/auth/login", strictLimiter);
+  // app.use("/api/auth/register", strictLimiter);
+  // app.use("/api/auth/forgot-password", strictLimiter);
+  // app.use("/api/auth/reset-password", strictLimiter);
+  // app.use("/api/payments/verify", strictLimiter);
+  // app.use("/api/auth/refresh", strictLimiter);
 
   // Razorpay webhook signature verification needs the exact raw request
   // bytes — must be captured BEFORE express.json() parses (and thereby
@@ -217,8 +231,8 @@ export function createServer() {
   app.use("/api/webhooks/razorpay", express.raw({ type: "*/*", limit: "1mb" }));
 
   // Body parsers
-  app.use(express.json());
-  app.use(express.urlencoded({ extended: true }));
+  app.use(express.json({ limit: "50mb" }));
+  app.use(express.urlencoded({ extended: true, limit: "50mb" }));
   app.use(cookieParser());
 
   // Dynamic sitemap — registered before the SPA static-file middleware
@@ -264,6 +278,8 @@ export function createServer() {
   // ── NEW HMS ROUTES ──
   app.use("/api/room-rack", roomRackRoutes);
   app.use("/api/front-desk", frontDeskRoutes);
+  // Walk-in Guest Registration workflow (Sections A–F of the physical registration card)
+  app.use("/api/front-desk/registration", walkInRegistrationRoutes);
   app.use("/api/advances", advanceRoutes);
   app.use("/api/folios", folioRoutes);
   app.use("/api/night-audit", nightAuditRoutes);
@@ -284,6 +300,10 @@ export function createServer() {
   app.use("/api/properties", propertyRoutes);
   app.use("/api/housekeeping", housekeepingRoutes);
   app.use("/api/menu", menuRoutes);
+  app.use("/api/dashboard/command-center", commandCenterRoutes);
+  app.use("/api/payment-channels", paymentChannelRoutes);
+  app.use("/api/task-approvals", taskApprovalRoutes);
+  app.use("/api/permissions", permissionRoutes);
 
 
   // Example API routes

@@ -26,19 +26,19 @@ export default function AdminAuditLogs() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-serif text-hotel-black">Audit Logs</h1>
-        <p className="text-hotel-black/60">Record of sensitive administrative actions</p>
+        <h1 className="text-3xl font-serif text-hotel-black">System Activity History & Log</h1>
+        <p className="text-hotel-black/60">Detailed record of changes and staff actions across the system</p>
       </div>
 
       <div className="flex gap-4 mb-6">
         <Input
-          placeholder="Filter by action (e.g. coupon.created)"
+          placeholder="Search by action (e.g. coupon.created)"
           value={action}
           onChange={(e) => { setAction(e.target.value); setPage(1); }}
           className="max-w-xs"
         />
         <Input
-          placeholder="Filter by resource type (e.g. Coupon)"
+          placeholder="Search by item type (e.g. Coupon)"
           value={resourceType}
           onChange={(e) => { setResourceType(e.target.value); setPage(1); }}
           className="max-w-xs"
@@ -49,18 +49,18 @@ export default function AdminAuditLogs() {
         <table className="w-full text-sm text-left">
           <thead className="bg-gray-50 border-b">
             <tr>
-              <th className="px-4 py-3 font-medium text-gray-500">Actor</th>
-              <th className="px-4 py-3 font-medium text-gray-500">Action</th>
-              <th className="px-4 py-3 font-medium text-gray-500">Resource</th>
-              <th className="px-4 py-3 font-medium text-gray-500">Details</th>
-              <th className="px-4 py-3 font-medium text-gray-500">When</th>
+              <th className="px-4 py-3 font-medium text-gray-500">Staff Member / User</th>
+              <th className="px-4 py-3 font-medium text-gray-500">Action Taken</th>
+              <th className="px-4 py-3 font-medium text-gray-500">Item Type & ID</th>
+              <th className="px-4 py-3 font-medium text-gray-500">Details & Changes</th>
+              <th className="px-4 py-3 font-medium text-gray-500">Date & Time</th>
             </tr>
           </thead>
           <tbody className="divide-y">
             {isLoading ? (
               <tr><td colSpan={5} className="p-8 text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto text-hotel-gold" /></td></tr>
             ) : data?.logs?.length === 0 ? (
-              <tr><td colSpan={5} className="p-8 text-center text-gray-500">No audit records found</td></tr>
+              <tr><td colSpan={5} className="p-8 text-center text-gray-500">No activity records found</td></tr>
             ) : (
               data?.logs?.map((log: any) => (
                 <tr key={log._id} className="hover:bg-gray-50 align-top">

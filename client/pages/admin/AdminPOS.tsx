@@ -27,11 +27,11 @@ interface Order {
 }
 
 const STATUS_CONFIG: Record<OrderStatus, { label: string; color: string; bg: string; border: string; next?: OrderStatus }> = {
-  KITCHEN_PENDING: { label: "Kitchen Pending", color: "text-amber-400", bg: "bg-amber-500/10", border: "border-amber-500/30", next: "PREPARING" },
-  PREPARING:       { label: "Preparing",       color: "text-blue-400",  bg: "bg-blue-500/10",  border: "border-blue-500/30",  next: "READY" },
-  READY:           { label: "Order Ready",      color: "text-emerald-400",bg: "bg-emerald-500/10",border: "border-emerald-500/30",next: "SERVED" },
-  SERVED:          { label: "Served",           color: "text-purple-400", bg: "bg-purple-500/10", border: "border-purple-500/30", next: "BILLED" },
-  BILLED:          { label: "Billed",           color: "text-gray-400",   bg: "bg-gray-800",     border: "border-gray-700" },
+  KITCHEN_PENDING: { label: "Kitchen Pending", color: "text-amber-600", bg: "bg-amber-500/10", border: "border-amber-500/30", next: "PREPARING" },
+  PREPARING:       { label: "Preparing",       color: "text-blue-600",  bg: "bg-blue-500/10",  border: "border-blue-500/30",  next: "READY" },
+  READY:           { label: "Order Ready",      color: "text-emerald-600",bg: "bg-emerald-500/10",border: "border-emerald-500/30",next: "SERVED" },
+  SERVED:          { label: "Served",           color: "text-purple-600", bg: "bg-purple-500/10", border: "border-purple-500/30", next: "BILLED" },
+  BILLED:          { label: "Billed",           color: "text-gray-500",   bg: "bg-gray-800",     border: "border-gray-700" },
   CANCELLED:       { label: "Cancelled",        color: "text-red-400",    bg: "bg-red-500/10",    border: "border-red-500/30" },
 };
 
@@ -197,37 +197,37 @@ export default function AdminPOS() {
 
   if (loading && orders.length === 0) {
     return (
-      <div className="min-h-screen bg-[#0b0b0b] text-white p-12 flex flex-col items-center justify-center">
+      <div className="min-h-screen bg-gray-50 text-gray-800 p-12 flex flex-col items-center justify-center">
         <div className="inline-block animate-spin text-[#c9a227] text-3xl font-serif font-bold">YES HOTELS</div>
-        <p className="text-sm text-gray-400 mt-3 font-mono">Connecting to Kitchen Display System (KDS)...</p>
+        <p className="text-sm text-gray-500 mt-3 font-mono">Connecting to Kitchen Display System (KDS)...</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#0b0b0b] text-white p-4 md:p-6 space-y-6 max-w-[1600px] mx-auto">
+    <div className="min-h-screen bg-gray-50 text-gray-800 p-4 md:p-6 space-y-6 max-w-[1600px] mx-auto">
       {/* Top Header */}
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 bg-[#121316] p-6 rounded-2xl border border-[#262930] shadow-xl">
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 bg-white p-6 rounded-2xl border border-gray-200 shadow-xl">
         <div className="flex items-center gap-3">
           <div className="p-2.5 bg-[#c9a227]/10 rounded-xl border border-[#c9a227]/30 text-[#c9a227]">
             <UtensilsCrossed size={24} />
           </div>
           <div>
-            <h1 className="text-2xl font-serif font-bold text-white flex items-center gap-2">
-              Restaurant POS & Kitchen Display Lanes (KDS)
-              <span className="text-xs bg-[#c9a227]/20 text-[#e5c76b] px-2.5 py-0.5 rounded-full font-mono border border-[#c9a227]/30">REAL-TIME F&B</span>
+            <h1 className="text-2xl font-serif font-bold text-gray-800 flex items-center gap-2">
+              Restaurant Billing & Kitchen Cooking Screen
+              <span className="text-xs bg-[#c9a227]/30 text-[#e5c76b] px-2.5 py-0.5 rounded-full font-mono border border-[#c9a227]/50 font-bold">FOOD & DRINK</span>
             </h1>
-            <p className="text-xs text-gray-400 mt-0.5">
-              Live touch terminal, KOT dispatch, room charge folios & kitchen production lane monitoring
+            <p className="text-xs text-gray-200 font-medium mt-0.5">
+              Take food & drink orders, send tickets to the kitchen, and charge to room bills or cash/card
             </p>
           </div>
         </div>
 
         <button
           onClick={fetchOrders}
-          className="flex items-center gap-2 px-4 py-2.5 bg-[#1a1d24] text-gray-300 hover:text-white rounded-xl transition text-xs font-semibold border border-[#262930]"
+          className="flex items-center gap-2 px-4 py-2.5 bg-gray-100 text-gray-800 hover:text-[#c9a227] rounded-xl transition text-xs font-bold border border-gray-200"
         >
-          <RefreshCw size={15} className={loading ? "animate-spin" : ""} /> Refresh KDS
+          <RefreshCw size={15} className={loading ? "animate-spin" : ""} /> Refresh Kitchen Screen
         </button>
       </div>
 
@@ -242,30 +242,30 @@ export default function AdminPOS() {
                 <span className={`text-[10px] font-bold uppercase tracking-wider ${cfg.color}`}>{cfg.label}</span>
                 <ChefHat size={16} className={cfg.color} />
               </div>
-              <p className="text-3xl font-serif font-bold text-white">{count}</p>
-              <p className="text-xs text-gray-400 mt-0.5">Active Dockets</p>
+              <p className="text-3xl font-serif font-bold text-gray-800">{count}</p>
+              <p className="text-xs text-gray-200 font-semibold mt-0.5">Active Orders</p>
             </div>
           );
         })}
       </div>
 
       {/* View Switcher Tabs */}
-      <div className="flex gap-3 border-b border-[#262930] pb-2">
+      <div className="flex gap-3 border-b border-gray-200 pb-2">
         <button
           onClick={() => setActiveTab("kds")}
           className={`px-4 py-2.5 rounded-xl text-xs font-bold transition flex items-center gap-2 ${
-            activeTab === "kds" ? "bg-[#c9a227] text-black shadow-lg" : "bg-[#121316] text-gray-400 hover:text-white border border-[#262930]"
+            activeTab === "kds" ? "bg-[#c9a227] text-black shadow-lg" : "bg-white text-gray-800 hover:text-[#c9a227] border border-gray-200"
           }`}
         >
-          <ChefHat size={16} /> Kitchen Production Lanes (KDS)
+          <ChefHat size={16} /> Kitchen Orders Screen
         </button>
         <button
           onClick={() => setActiveTab("new")}
           className={`px-4 py-2.5 rounded-xl text-xs font-bold transition flex items-center gap-2 ${
-            activeTab === "new" ? "bg-[#c9a227] text-black shadow-lg" : "bg-[#121316] text-gray-400 hover:text-white border border-[#262930]"
+            activeTab === "new" ? "bg-[#c9a227] text-black shadow-lg" : "bg-white text-gray-800 hover:text-[#c9a227] border border-gray-200"
           }`}
         >
-          <Plus size={16} /> Touch POS Terminal (New Order)
+          <Plus size={16} /> Take New Order (Cash Counter)
         </button>
       </div>
 
@@ -274,11 +274,11 @@ export default function AdminPOS() {
         <div className="space-y-6">
           {/* Status Filter Pills */}
           <div className="flex items-center gap-2 overflow-x-auto pb-1">
-            <span className="text-xs font-mono text-gray-400 uppercase tracking-wider mr-1">Filter Lane:</span>
+            <span className="text-xs font-mono text-gray-500 uppercase tracking-wider mr-1">Filter Lane:</span>
             <button
               onClick={() => setFilterStatus("ALL")}
               className={`px-3 py-1.5 text-xs font-semibold rounded-xl border transition ${
-                filterStatus === "ALL" ? "bg-[#c9a227] text-black border-[#c9a227]" : "bg-[#1a1d24] text-gray-300 border-[#262930]"
+                filterStatus === "ALL" ? "bg-[#c9a227] text-black border-[#c9a227]" : "bg-gray-100 text-gray-600 border-gray-200"
               }`}
             >
               All Lanes ({orders.length})
@@ -288,7 +288,7 @@ export default function AdminPOS() {
                 key={s}
                 onClick={() => setFilterStatus(s)}
                 className={`px-3 py-1.5 text-xs font-semibold rounded-xl border transition ${
-                  filterStatus === s ? "bg-[#c9a227] text-black border-[#c9a227]" : "bg-[#1a1d24] text-gray-300 border-[#262930]"
+                  filterStatus === s ? "bg-[#c9a227] text-black border-[#c9a227]" : "bg-gray-100 text-gray-600 border-gray-200"
                 }`}
               >
                 {STATUS_CONFIG[s].label}
@@ -297,7 +297,7 @@ export default function AdminPOS() {
           </div>
 
           {displayOrders.length === 0 ? (
-            <div className="bg-[#121316] rounded-2xl border border-[#262930] p-16 text-center text-gray-500">
+            <div className="bg-white rounded-2xl border border-gray-200 p-16 text-center text-gray-500">
               <ChefHat size={40} className="mx-auto text-gray-600 mb-2 opacity-50" />
               <p className="text-sm font-medium">No active kitchen dockets in this production lane.</p>
             </div>
@@ -307,16 +307,16 @@ export default function AdminPOS() {
                 const cfg = STATUS_CONFIG[order.status];
                 const isUpdating = updatingId === order._id;
                 return (
-                  <div key={order._id} className={`bg-[#121316] rounded-2xl border ${cfg.border} p-5 shadow-xl flex flex-col justify-between space-y-4`}>
+                  <div key={order._id} className={`bg-white rounded-2xl border ${cfg.border} p-5 shadow-xl flex flex-col justify-between space-y-4`}>
                     {/* Header */}
-                    <div className="space-y-2 border-b border-[#262930] pb-3">
+                    <div className="space-y-2 border-b border-gray-200 pb-3">
                       <div className="flex items-center justify-between">
                         <span className="font-mono text-lg font-bold text-[#c9a227]">{order.kotNumber}</span>
                         {getElapsedTimerBadge(order.createdAt)}
                       </div>
 
                       <div className="flex items-center justify-between text-xs font-semibold">
-                        <span className="text-white">
+                        <span className="text-gray-800">
                           {order.tableNumber ? `Table ${order.tableNumber}` : ""}
                           {order.roomNumber ? ` Room ${order.roomNumber}` : ""}
                           {!order.tableNumber && !order.roomNumber ? "Takeaway" : ""}
@@ -332,9 +332,9 @@ export default function AdminPOS() {
                     {/* Order Items Docket */}
                     <div className="space-y-2 flex-1 font-mono text-xs">
                       {order.items.map((item, i) => (
-                        <div key={i} className="flex justify-between items-center text-gray-200 bg-[#1a1d24] p-2 rounded-lg border border-[#262930]">
+                        <div key={i} className="flex justify-between items-center text-gray-200 bg-gray-100 p-2 rounded-lg border border-gray-200">
                           <span><strong className="text-[#c9a227]">{item.quantity}x</strong> {item.name}</span>
-                          <span className="text-gray-400">₹{item.totalPrice}</span>
+                          <span className="text-gray-500">₹{item.totalPrice}</span>
                         </div>
                       ))}
                       {order.notes && (
@@ -345,10 +345,10 @@ export default function AdminPOS() {
                     </div>
 
                     {/* Footer & Action Trigger */}
-                    <div className="border-t border-[#262930] pt-3 space-y-3">
+                    <div className="border-t border-gray-200 pt-3 space-y-3">
                       <div className="flex justify-between text-xs font-bold font-mono">
-                        <span className="text-gray-400">Docket Total:</span>
-                        <span className="text-white">₹{order.grandTotal.toLocaleString()}</span>
+                        <span className="text-gray-500">Docket Total:</span>
+                        <span className="text-gray-800">₹{order.grandTotal.toLocaleString()}</span>
                       </div>
 
                       {cfg.next && (
@@ -380,7 +380,7 @@ export default function AdminPOS() {
               <button
                 onClick={() => setSelectedCategory("ALL")}
                 className={`px-3 py-1.5 text-xs font-semibold rounded-xl border transition ${
-                  selectedCategory === "ALL" ? "bg-[#c9a227] text-black border-[#c9a227]" : "bg-[#121316] text-gray-300 border-[#262930]"
+                  selectedCategory === "ALL" ? "bg-[#c9a227] text-black border-[#c9a227]" : "bg-white text-gray-600 border-gray-200"
                 }`}
               >
                 All Menu Categories
@@ -390,7 +390,7 @@ export default function AdminPOS() {
                   key={cat}
                   onClick={() => setSelectedCategory(cat)}
                   className={`px-3 py-1.5 text-xs font-semibold rounded-xl border transition ${
-                    selectedCategory === cat ? "bg-[#c9a227] text-black border-[#c9a227]" : "bg-[#121316] text-gray-300 border-[#262930]"
+                    selectedCategory === cat ? "bg-[#c9a227] text-black border-[#c9a227]" : "bg-white text-gray-600 border-gray-200"
                   }`}
                 >
                   {cat.replace(/_/g, " ")}
@@ -400,12 +400,12 @@ export default function AdminPOS() {
 
             {/* Menu Items Cards */}
             {menuLoading ? (
-              <div className="text-center py-16 text-gray-400">
+              <div className="text-center py-16 text-gray-500">
                 <Loader2 size={32} className="animate-spin mx-auto mb-2" />
                 <p className="text-sm">Loading Menu Catalog...</p>
               </div>
             ) : filteredMenuItems.length === 0 ? (
-              <div className="bg-[#121316] p-12 text-center text-gray-500 rounded-2xl border border-[#262930]">
+              <div className="bg-white p-12 text-center text-gray-500 rounded-2xl border border-gray-200">
                 <UtensilsCrossed size={36} className="mx-auto mb-2 opacity-50" />
                 <p className="text-sm">No items found in this category.</p>
               </div>
@@ -416,7 +416,7 @@ export default function AdminPOS() {
                     key={item._id}
                     onClick={() => addToCart(item)}
                     disabled={!item.isAvailable}
-                    className={`bg-[#121316] border border-[#262930] rounded-2xl p-4 text-left transition-all hover:border-[#c9a227] shadow-lg flex flex-col justify-between ${
+                    className={`bg-white border border-gray-200 rounded-2xl p-4 text-left transition-all hover:border-[#c9a227] shadow-lg flex flex-col justify-between ${
                       item.isAvailable ? "hover:scale-[1.02]" : "opacity-40 cursor-not-allowed"
                     }`}
                   >
@@ -429,11 +429,11 @@ export default function AdminPOS() {
                         </span>
                         <span className="text-[10px] text-gray-500 font-mono">{item.category}</span>
                       </div>
-                      <p className="text-xs font-bold text-white line-clamp-2">{item.name}</p>
+                      <p className="text-xs font-bold text-gray-800 line-clamp-2">{item.name}</p>
                     </div>
-                    <div className="mt-3 flex items-center justify-between pt-2 border-t border-[#262930]">
+                    <div className="mt-3 flex items-center justify-between pt-2 border-t border-gray-200">
                       <span className="text-sm font-mono font-bold text-[#c9a227]">₹{item.price}</span>
-                      <span className="p-1 bg-[#1a1d24] text-gray-300 rounded-lg hover:text-white">
+                      <span className="p-1 bg-gray-100 text-gray-600 rounded-lg hover:text-gray-800">
                         <Plus size={14} />
                       </span>
                     </div>
@@ -445,14 +445,14 @@ export default function AdminPOS() {
 
           {/* Active Docket Cart */}
           <div className="lg:col-span-2">
-            <div className="bg-[#121316] rounded-2xl border border-[#262930] p-5 shadow-2xl space-y-5 sticky top-6">
-              <div className="flex items-center justify-between border-b border-[#262930] pb-3">
+            <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-2xl space-y-5 sticky top-6">
+              <div className="flex items-center justify-between border-b border-gray-200 pb-3">
                 <div className="flex items-center gap-2">
                   <ShoppingCart size={18} className="text-[#c9a227]" />
-                  <h3 className="font-serif text-sm font-bold text-white">Active Order Cart ({cart.length})</h3>
+                  <h3 className="font-serif text-sm font-bold text-gray-800">Active Order Cart ({cart.length})</h3>
                 </div>
                 {cart.length > 0 && (
-                  <button onClick={() => setCart([])} className="text-xs text-red-400 hover:text-white">
+                  <button onClick={() => setCart([])} className="text-xs text-red-400 hover:text-gray-800">
                     Clear Cart
                   </button>
                 )}
@@ -464,16 +464,16 @@ export default function AdminPOS() {
                   <p className="text-xs text-gray-500 text-center py-8">Select food & beverage items from menu grid to build KOT.</p>
                 ) : (
                   cart.map(item => (
-                    <div key={item.menuItemId} className="flex items-center justify-between bg-[#1a1d24] p-2.5 rounded-xl border border-[#262930]">
+                    <div key={item.menuItemId} className="flex items-center justify-between bg-gray-100 p-2.5 rounded-xl border border-gray-200">
                       <div className="flex-1">
-                        <div className="text-white font-sans font-semibold">{item.name}</div>
-                        <div className="text-[10px] text-gray-400">₹{item.unitPrice} each</div>
+                        <div className="text-gray-800 font-sans font-semibold">{item.name}</div>
+                        <div className="text-[10px] text-gray-500">₹{item.unitPrice} each</div>
                       </div>
                       <div className="flex items-center gap-2">
-                        <div className="flex items-center gap-1 bg-[#121316] rounded-lg border border-[#262930] px-1">
-                          <button onClick={() => updateQty(item.menuItemId, item.quantity - 1)} className="px-1.5 py-0.5 text-gray-400 hover:text-white">-</button>
-                          <span className="w-5 text-center font-bold text-white">{item.quantity}</span>
-                          <button onClick={() => updateQty(item.menuItemId, item.quantity + 1)} className="px-1.5 py-0.5 text-gray-400 hover:text-white">+</button>
+                        <div className="flex items-center gap-1 bg-white rounded-lg border border-gray-200 px-1">
+                          <button onClick={() => updateQty(item.menuItemId, item.quantity - 1)} className="px-1.5 py-0.5 text-gray-500 hover:text-gray-800">-</button>
+                          <span className="w-5 text-center font-bold text-gray-800">{item.quantity}</span>
+                          <button onClick={() => updateQty(item.menuItemId, item.quantity + 1)} className="px-1.5 py-0.5 text-gray-500 hover:text-gray-800">+</button>
                         </div>
                         <span className="w-14 text-right font-bold text-[#c9a227]">₹{item.quantity * item.unitPrice}</span>
                         <button onClick={() => removeFromCart(item.menuItemId)} className="text-gray-500 hover:text-red-400 pl-1">
@@ -487,16 +487,16 @@ export default function AdminPOS() {
 
               {/* Cart Financial Breakdown */}
               {cart.length > 0 && (
-                <div className="bg-[#1a1d24] p-3.5 rounded-xl border border-[#262930] space-y-1.5 text-xs font-mono">
-                  <div className="flex justify-between text-gray-400">
+                <div className="bg-gray-100 p-3.5 rounded-xl border border-gray-200 space-y-1.5 text-xs font-mono">
+                  <div className="flex justify-between text-gray-500">
                     <span>Subtotal:</span>
                     <span>₹{subtotal}</span>
                   </div>
-                  <div className="flex justify-between text-gray-400">
+                  <div className="flex justify-between text-gray-500">
                     <span>GST (Estimated):</span>
                     <span>₹{tax}</span>
                   </div>
-                  <div className="border-t border-[#262930] pt-1.5 flex justify-between font-bold text-sm text-white">
+                  <div className="border-t border-gray-200 pt-1.5 flex justify-between font-bold text-sm text-gray-800">
                     <span>Grand Total:</span>
                     <span className="text-[#c9a227]">₹{total}</span>
                   </div>
@@ -507,36 +507,36 @@ export default function AdminPOS() {
               <div className="space-y-3 pt-2">
                 <div className="grid grid-cols-2 gap-2">
                   <div>
-                    <label className="block text-xs font-semibold text-gray-300 mb-1">Table #</label>
+                    <label className="block text-xs font-semibold text-gray-600 mb-1">Table #</label>
                     <input
                       value={tableNum}
                       onChange={e => setTableNum(e.target.value)}
                       placeholder="e.g. T-04"
-                      className="w-full bg-[#1a1d24] border border-[#262930] text-xs text-white rounded-xl p-2 focus:border-[#c9a227]"
+                      className="w-full bg-gray-100 border border-gray-200 text-xs text-gray-800 rounded-xl p-2 focus:border-[#c9a227]"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-gray-300 mb-1">Room # (Room Svc)</label>
+                    <label className="block text-xs font-semibold text-gray-600 mb-1">Room # (Room Svc)</label>
                     <input
                       value={roomNum}
                       onChange={e => setRoomNum(e.target.value)}
                       placeholder="e.g. 201"
-                      className="w-full bg-[#1a1d24] border border-[#262930] text-xs text-white rounded-xl p-2 focus:border-[#c9a227]"
+                      className="w-full bg-gray-100 border border-gray-200 text-xs text-gray-800 rounded-xl p-2 focus:border-[#c9a227]"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-gray-300 mb-1">Order Modifiers & Instructions</label>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">Order Modifiers & Instructions</label>
                   <input
                     value={orderNotes}
                     onChange={e => setOrderNotes(e.target.value)}
                     placeholder="e.g. Extra spicy, no onions"
-                    className="w-full bg-[#1a1d24] border border-[#262930] text-xs text-white rounded-xl p-2 focus:border-[#c9a227]"
+                    className="w-full bg-gray-100 border border-gray-200 text-xs text-gray-800 rounded-xl p-2 focus:border-[#c9a227]"
                   />
                 </div>
 
-                <label className="flex items-center gap-2 text-xs font-semibold text-gray-300 cursor-pointer bg-[#1a1d24] p-2.5 rounded-xl border border-[#262930]">
+                <label className="flex items-center gap-2 text-xs font-semibold text-gray-600 cursor-pointer bg-gray-100 p-2.5 rounded-xl border border-gray-200">
                   <input
                     type="checkbox"
                     checked={chargeToFolio}

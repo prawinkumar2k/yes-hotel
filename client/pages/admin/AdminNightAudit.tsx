@@ -83,29 +83,29 @@ export default function AdminNightAudit() {
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
         <div>
           <h1 className="text-2xl font-serif font-bold text-gray-900 flex items-center gap-2">
-            <Moon className="text-purple-600" /> Automated Night Audit & Business Date Engine
+            <Moon className="text-purple-600" /> End-of-Day Daily Closing & System Reset
           </h1>
           <p className="text-sm text-gray-500 mt-1">
-            End-of-day operational closure, automated room charge posting, no-show processing & date rollover
+            Wrap up today's sales, automatically add nightly room charges to guest bills, and open a fresh new day
           </p>
         </div>
         <button
           onClick={fetchStatus}
           className="flex items-center gap-2 px-4 py-2 bg-hotel-black text-white rounded-lg hover:bg-gray-800 transition text-sm font-medium"
         >
-          <RefreshCw size={16} className={loading ? "animate-spin" : ""} /> Refresh Audit Status
+          <RefreshCw size={16} className={loading ? "animate-spin" : ""} /> Refresh Status
         </button>
       </div>
 
       {/* Current Business Date Banner */}
       <div className="bg-gradient-to-r from-purple-950 to-indigo-900 text-white p-6 rounded-2xl shadow-lg flex flex-col md:flex-row items-center justify-between gap-6">
         <div>
-          <span className="text-xs uppercase tracking-widest text-purple-300 font-semibold">Active Business Date</span>
+          <span className="text-xs uppercase tracking-widest text-purple-300 font-semibold">Today's Hotel Working Date</span>
           <h2 className="text-3xl font-serif font-bold mt-1 text-white">
             {data?.businessDate ? format(new Date(data.businessDate), "EEEE, MMMM dd, yyyy") : "Loading..."}
           </h2>
           <p className="text-xs text-purple-200 mt-2 flex items-center gap-2">
-            <ShieldCheck size={14} className="text-emerald-400" /> All posted transactions are linked to this operational date ledger
+            <ShieldCheck size={14} className="text-emerald-400" /> All charges and sales today are recorded under this date
           </p>
         </div>
 
@@ -113,14 +113,14 @@ export default function AdminNightAudit() {
           <span className={`px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider ${
             data?.isOpen ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40" : "bg-red-500/20 text-red-300 border border-red-500/40"
           }`}>
-            {data?.isOpen ? "Business Date Open" : "Business Date Closed"}
+            {data?.isOpen ? "Day Currently Open" : "Day Closed"}
           </span>
           <button
             onClick={() => setShowConfirmModal(true)}
             disabled={!checklist.isReadyForAudit || running}
             className="flex items-center gap-2 px-6 py-3 bg-hotel-gold hover:bg-amber-600 text-white font-bold rounded-xl shadow-md transition disabled:opacity-50 disabled:cursor-not-allowed text-sm"
           >
-            <Play size={16} /> Execute Night Audit
+            <Play size={16} /> Run Daily Closing
           </button>
         </div>
       </div>
@@ -130,9 +130,9 @@ export default function AdminNightAudit() {
         <div className="bg-amber-50 border border-amber-200 p-4 rounded-xl flex items-start gap-3 text-sm text-amber-900">
           <AlertTriangle className="text-amber-600 shrink-0 mt-0.5" size={20} />
           <div>
-            <p className="font-bold">Pre-Audit Action Required</p>
+            <p className="font-bold">Before You Run Daily Closing:</p>
             <p className="text-xs text-amber-800 mt-0.5">
-              Please process remaining pending arrivals ({checklist.pendingArrivals}) and departures ({checklist.pendingDepartures}) on the Front Desk Command Center before running the Night Audit.
+              Please check in arriving guests ({checklist.pendingArrivals}) and check out departing guests ({checklist.pendingDepartures}) on the Front Desk screen before closing today's records.
             </p>
           </div>
         </div>
@@ -143,7 +143,7 @@ export default function AdminNightAudit() {
         {/* Pending Arrivals */}
         <div className={`p-5 rounded-xl border bg-white shadow-sm space-y-2 ${checklist.pendingArrivals === 0 ? "border-emerald-200" : "border-amber-300"}`}>
           <div className="flex justify-between items-center text-gray-500">
-            <span className="text-xs font-semibold uppercase">Pending Arrivals</span>
+            <span className="text-xs font-semibold uppercase">Guests Arriving Today</span>
             {checklist.pendingArrivals === 0 ? <CheckCircle2 size={18} className="text-emerald-500" /> : <AlertTriangle size={18} className="text-amber-500" />}
           </div>
           <p className="text-3xl font-bold font-serif text-gray-900">{checklist.pendingArrivals}</p>
@@ -153,31 +153,31 @@ export default function AdminNightAudit() {
         {/* Pending Departures */}
         <div className={`p-5 rounded-xl border bg-white shadow-sm space-y-2 ${checklist.pendingDepartures === 0 ? "border-emerald-200" : "border-amber-300"}`}>
           <div className="flex justify-between items-center text-gray-500">
-            <span className="text-xs font-semibold uppercase">Pending Departures</span>
+            <span className="text-xs font-semibold uppercase">Guests Leaving Today</span>
             {checklist.pendingDepartures === 0 ? <CheckCircle2 size={18} className="text-emerald-500" /> : <AlertTriangle size={18} className="text-amber-500" />}
           </div>
           <p className="text-3xl font-bold font-serif text-gray-900">{checklist.pendingDepartures}</p>
-          <p className="text-xs text-gray-500">Checked-in guests due for checkout</p>
+          <p className="text-xs text-gray-500">Guests scheduled to check out</p>
         </div>
 
         {/* Active In-House Guests */}
         <div className="p-5 rounded-xl border border-purple-200 bg-purple-50/20 shadow-sm space-y-2">
           <div className="flex justify-between items-center text-purple-600">
-            <span className="text-xs font-semibold uppercase">In-House Guests</span>
+            <span className="text-xs font-semibold uppercase">Guests Staying Tonight</span>
             <Users size={18} />
           </div>
           <p className="text-3xl font-bold font-serif text-gray-900">{checklist.inHouseGuests}</p>
-          <p className="text-xs text-gray-500">Nightly tariff will be posted to folios</p>
+          <p className="text-xs text-gray-500">Nightly room charge will be added to their bill</p>
         </div>
 
         {/* Dirty Rooms */}
         <div className="p-5 rounded-xl border border-gray-200 bg-white shadow-sm space-y-2">
           <div className="flex justify-between items-center text-gray-500">
-            <span className="text-xs font-semibold uppercase">Dirty Rooms</span>
+            <span className="text-xs font-semibold uppercase">Rooms Needing Cleaning</span>
             <BedDouble size={18} />
           </div>
           <p className="text-3xl font-bold font-serif text-gray-900">{checklist.dirtyRooms}</p>
-          <p className="text-xs text-gray-500">Rooms awaiting housekeeping turnover</p>
+          <p className="text-xs text-gray-500">Rooms waiting to be cleaned by staff</p>
         </div>
       </div>
 
@@ -186,15 +186,15 @@ export default function AdminNightAudit() {
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl max-w-md w-full p-6 space-y-4 shadow-xl border border-gray-200">
             <h3 className="font-serif font-bold text-gray-900 text-lg flex items-center gap-2">
-              <Moon className="text-purple-600" /> Confirm Night Audit Execution
+              <Moon className="text-purple-600" /> Confirm Daily Closing
             </h3>
             <p className="text-sm text-gray-600">
-              Executing Night Audit will:
+              Running Daily Closing will:
             </p>
             <ul className="text-xs text-gray-700 space-y-1.5 list-disc pl-5">
-              <li>Post room tariff & tax lines to <strong>{checklist.inHouseGuests} in-house stay folios</strong>.</li>
-              <li>Auto-cancel remaining un-arrived reservations as NO_SHOW.</li>
-              <li>Close current business date and roll forward to tomorrow.</li>
+              <li>Add nightly room charges and tax to <strong>{checklist.inHouseGuests} guest bills</strong>.</li>
+              <li>Mark un-arrived guests as No-Show.</li>
+              <li>Close today's accounts and move system date to tomorrow.</li>
             </ul>
 
             <div className="flex gap-3 pt-3">
@@ -209,7 +209,7 @@ export default function AdminNightAudit() {
                 disabled={running}
                 className="flex-1 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm font-bold shadow-sm disabled:opacity-50"
               >
-                {running ? "Executing Audit..." : "Run Audit & Roll Date"}
+                {running ? "Closing Today..." : "Confirm & Start New Day"}
               </button>
             </div>
           </div>

@@ -76,13 +76,13 @@ export default function SearchPage() {
         
         {/* Search Bar */}
         <div className="mb-10 border border-hotel-black/10 bg-hotel-white p-4 shadow-sm sm:mb-12 sm:p-6">
-          <form onSubmit={handleSearch} className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
+          <form onSubmit={handleSearch} className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4 md:gap-6 items-end">
             <div className="md:col-span-1">
               <label htmlFor="search-checkin" className="block text-xs uppercase tracking-widest text-hotel-black/60 mb-2">Check In</label>
               <div className="relative">
                 <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-hotel-black/60" size={16} />
                 <input id="search-checkin" type="date" required min={format(new Date(), "yyyy-MM-dd")} value={checkIn} onChange={e => handleCheckInChange(e.target.value)}
-                  className="w-full bg-transparent border-b border-hotel-black/20 py-2 pl-10 focus:outline-none focus:border-hotel-gold text-sm" />
+                  className="w-full min-h-[44px] bg-transparent border-b border-hotel-black/20 py-2 pl-10 focus:outline-none focus:border-hotel-gold text-sm" />
               </div>
             </div>
             <div className="md:col-span-1">
@@ -90,7 +90,7 @@ export default function SearchPage() {
               <div className="relative">
                 <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-hotel-black/60" size={16} />
                 <input id="search-checkout" type="date" required min={format(addDays(new Date(checkIn), 1), "yyyy-MM-dd")} value={checkOut} onChange={e => setCheckOut(e.target.value)}
-                  className="w-full bg-transparent border-b border-hotel-black/20 py-2 pl-10 focus:outline-none focus:border-hotel-gold text-sm" />
+                  className="w-full min-h-[44px] bg-transparent border-b border-hotel-black/20 py-2 pl-10 focus:outline-none focus:border-hotel-gold text-sm" />
               </div>
             </div>
             <div className="md:col-span-1">
@@ -98,7 +98,7 @@ export default function SearchPage() {
               <div className="relative">
                 <Users className="absolute left-3 top-1/2 -translate-y-1/2 text-hotel-black/60" size={16} />
                 <select id="search-adults" value={adults} onChange={e => setAdults(Number(e.target.value))}
-                  className="w-full bg-transparent border-b border-hotel-black/20 py-2 pl-10 focus:outline-none focus:border-hotel-gold text-sm">
+                  className="w-full min-h-[44px] bg-transparent border-b border-hotel-black/20 py-2 pl-10 focus:outline-none focus:border-hotel-gold text-sm">
                   {[1,2,3,4,5].map(n => <option key={n} value={n}>{n} Adult{n>1?'s':''}</option>)}
                 </select>
               </div>
@@ -107,13 +107,13 @@ export default function SearchPage() {
               <label htmlFor="search-children" className="block text-xs uppercase tracking-widest text-hotel-black/60 mb-2">Children</label>
               <div className="relative">
                 <select id="search-children" value={children} onChange={e => setChildren(Number(e.target.value))}
-                  className="w-full bg-transparent border-b border-hotel-black/20 py-2 focus:outline-none focus:border-hotel-gold text-sm">
+                  className="w-full min-h-[44px] bg-transparent border-b border-hotel-black/20 py-2 focus:outline-none focus:border-hotel-gold text-sm">
                   {[0,1,2,3].map(n => <option key={n} value={n}>{n} Child{n!==1?'ren':''}</option>)}
                 </select>
               </div>
             </div>
-            <div className="md:col-span-1">
-              <GoldButton type="submit" className="w-full py-3">Check Availability</GoldButton>
+            <div className="sm:col-span-2 md:col-span-1">
+              <GoldButton type="submit" className="w-full min-h-[44px] py-3">Check Availability</GoldButton>
             </div>
           </form>
         </div>
@@ -182,7 +182,7 @@ export default function SearchPage() {
                         <p className="text-sm text-hotel-black/60">Total for {room.nights} night{room.nights > 1 ? 's' : ''}</p>
                         <p className="font-serif text-lg font-medium text-hotel-black">₹{room.totalPrice}</p>
                       </div>
-                      <button onClick={() => proceedToBooking(room._id)} className="w-full bg-hotel-black px-6 py-3 text-sm font-medium uppercase tracking-widest text-hotel-white transition-colors hover:bg-hotel-gold sm:w-auto sm:px-8">
+                      <button onClick={() => proceedToBooking(room._id)} className="w-full min-h-[44px] bg-hotel-black px-6 py-3 text-sm font-medium uppercase tracking-widest text-hotel-white transition-colors hover:bg-hotel-gold sm:w-auto sm:px-8">
                         Select Room
                       </button>
                     </div>

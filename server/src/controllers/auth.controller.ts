@@ -204,3 +204,30 @@ export const getMe = async (req: Request, res: Response) => {
     return res.status(500).json({ success: false, message: error.message });
   }
 };
+
+export const updateProfile = async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user?._id || (req as any).user?.id;
+    const { firstName, lastName, phone } = req.body;
+    
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ success: false, message: "User not found" });
+    
+    if (firstName) user.firstName = firstName;
+    if (lastName) user.lastName = lastName;
+    if (phone) user.phone = phone;
+    await user.save();
+    
+    if (user.role === "CUSTOMER") {
+      const { Guest } = await import("../models/Guest");
+      await Guest.updateOne(
+        { email: user.email }, 
+        { $set: { fullName: `${user.firstName} ${user.lastName}`.trim(), phone: user.phone } }
+      );
+    }
+    
+    return res.status(200).json({ success: true, data: user });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};

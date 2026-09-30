@@ -25,17 +25,17 @@ const FEATURES = [
 
 export default function WhyChooseUs() {
   return (
-    <section className="bg-hotel-ivory py-24 sm:py-32">
+    <section className="bg-hotel-ivory py-12 md:py-20 lg:py-32">
       <div className="container">
         <Reveal className="max-w-2xl">
-          <h2 className="font-serif text-4xl leading-tight text-hotel-black sm:text-5xl">
+          <h2 className="font-serif text-3xl leading-tight text-hotel-black sm:text-4xl lg:text-5xl">
             Made for every
             <br />
             kind of traveller.
           </h2>
         </Reveal>
 
-        <div className="mt-16 grid grid-cols-1 gap-10 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-10 md:mt-14 lg:mt-16 grid grid-cols-1 gap-8 sm:grid-cols-2 sm:gap-10 lg:grid-cols-4">
           {FEATURES.map((feature, i) => (
             <Reveal key={feature.number} delay={i * 100}>
               <span className="font-serif text-3xl text-hotel-gold/40">

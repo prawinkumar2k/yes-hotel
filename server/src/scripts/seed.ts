@@ -172,8 +172,8 @@ async function seed() {
       size: 320,
       amenities: ["Free Wi-Fi", "Air Conditioning", "Smart TV", "Mini Fridge", "Coffee Maker", "Work Desk", "In-room Safe", "Daily Housekeeping"],
       images: [
-        "https://images.unsplash.com/photo-1611892440504-42a792e24d32?auto=format&fit=crop&w=1200&q=80",
-        "https://images.unsplash.com/photo-1540518614846-7eded433c457?auto=format&fit=crop&w=1200&q=80",
+        "/gallery/hotel-22.jpg",
+        "/gallery/hotel-02.jpg",
       ],
     },
     {
@@ -186,8 +186,8 @@ async function seed() {
       size: 480,
       amenities: ["Free Wi-Fi", "Air Conditioning", "55\" Smart TV", "Minibar", "Coffee Maker", "Work Desk", "In-room Safe", "Premium Toiletries", "Bathtub & Shower", "City View"],
       images: [
-        "https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?auto=format&fit=crop&w=1200&q=80",
-        "https://images.unsplash.com/photo-1618773928121-c32242e63f39?auto=format&fit=crop&w=1200&q=80",
+        "/gallery/hotel-03.jpg",
+        "/gallery/hotel-04.jpg",
       ],
     },
     {
@@ -200,8 +200,8 @@ async function seed() {
       size: 620,
       amenities: ["Free Wi-Fi (1Gbps)", "Nespresso Machine", "65\" Smart TV", "Full Minibar", "Executive Lounge Access", "In-room Safe", "Rainfall Shower"],
       images: [
-        "https://images.unsplash.com/photo-1571896349842-33c89424de2d?auto=format&fit=crop&w=1200&q=80",
-        "https://images.unsplash.com/photo-1564501049412-61c2a3083791?auto=format&fit=crop&w=1200&q=80",
+        "/gallery/hotel-05.jpg",
+        "/gallery/hotel-06.jpg",
       ],
     },
     {
@@ -214,8 +214,8 @@ async function seed() {
       size: 1200,
       amenities: ["Free Wi-Fi (1Gbps)", "Butler Service", "Private Terrace", "Jacuzzi Bathtub", "Rainfall Shower", "75\" Smart TV"],
       images: [
-        "https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?auto=format&fit=crop&w=1200&q=80",
-        "https://images.unsplash.com/photo-1631049307264-da0ec9d70304?auto=format&fit=crop&w=1200&q=80",
+        "/gallery/hotel-07.jpg",
+        "/gallery/hotel-08.jpg",
       ],
     },
   ];
@@ -1038,21 +1038,21 @@ async function seed() {
   // ─── 17. GALLERY ──────────────────────────────────────────────────────────
   console.log("\n📦 Seeding gallery...");
   const GALLERY = [
-    { title: "Hotel Exterior at Dusk", category: GalleryCategory.EXTERIOR, imageUrl: "https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1200&q=80", altText: "YES Hotels exterior at dusk", featured: true, displayOrder: 1 },
-    { title: "The Lobby", category: GalleryCategory.HOTEL, imageUrl: "https://images.unsplash.com/photo-1445019980597-93fa8acb246c?auto=format&fit=crop&w=1200&q=80", altText: "Hotel lobby", featured: true, displayOrder: 2 },
-    { title: "Deluxe Room", category: GalleryCategory.ROOMS, imageUrl: "https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?auto=format&fit=crop&w=1200&q=80", altText: "Deluxe room interior", featured: false, displayOrder: 3 },
-    { title: "Signature Suite Living Area", category: GalleryCategory.ROOMS, imageUrl: "https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?auto=format&fit=crop&w=1200&q=80", altText: "Suite living area", featured: true, displayOrder: 4 },
-    { title: "Infinity Pool", category: GalleryCategory.EXTERIOR, imageUrl: "https://images.unsplash.com/photo-1571003123894-1f0594d2b5d9?auto=format&fit=crop&w=1200&q=80", altText: "Outdoor infinity pool", featured: true, displayOrder: 5 },
-    { title: "Spa Treatment Room", category: GalleryCategory.EXPERIENCE, imageUrl: "https://images.unsplash.com/photo-1544161515-4ab6ce6db874?auto=format&fit=crop&w=1200&q=80", altText: "Spa treatment room", featured: false, displayOrder: 6 },
-    { title: "Fine Dining Restaurant", category: GalleryCategory.DINING, imageUrl: "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=1200&q=80", altText: "Restaurant interior", featured: true, displayOrder: 7 },
-    { title: "Grand Ball Room", category: GalleryCategory.HOTEL, imageUrl: "https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&w=1200&q=80", altText: "Banquet ball room", featured: false, displayOrder: 8 },
-    { title: "Executive Room Workspace", category: GalleryCategory.ROOMS, imageUrl: "https://images.unsplash.com/photo-1571896349842-33c89424de2d?auto=format&fit=crop&w=1200&q=80", altText: "Executive room desk", featured: false, displayOrder: 9 },
-    { title: "Rooftop Lounge", category: GalleryCategory.DINING, imageUrl: "https://images.unsplash.com/photo-1572116469696-31de0f17cc34?auto=format&fit=crop&w=1200&q=80", altText: "Rooftop lounge at night", featured: true, displayOrder: 10 },
-    { title: "Fitness Centre", category: GalleryCategory.EXPERIENCE, imageUrl: "https://images.unsplash.com/photo-1571902943202-507ec2618e8f?auto=format&fit=crop&w=1200&q=80", altText: "Hotel gym", featured: false, displayOrder: 11 },
-    { title: "Standard Room", category: GalleryCategory.ROOMS, imageUrl: "https://images.unsplash.com/photo-1611892440504-42a792e24d32?auto=format&fit=crop&w=1200&q=80", altText: "Standard room interior", featured: false, displayOrder: 12 },
-    { title: "Garden Courtyard", category: GalleryCategory.EXTERIOR, imageUrl: "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?auto=format&fit=crop&w=1200&q=80", altText: "Landscaped garden courtyard", featured: false, displayOrder: 13 },
-    { title: "Bar & Lounge", category: GalleryCategory.DINING, imageUrl: "https://images.unsplash.com/photo-1546171753-97d7676e4602?auto=format&fit=crop&w=1200&q=80", altText: "Hotel bar", featured: false, displayOrder: 14 },
-    { title: "Wedding Setup, Grand Ball Room", category: GalleryCategory.HOTEL, imageUrl: "https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=1200&q=80", altText: "Wedding banquet setup", featured: false, displayOrder: 15 },
+    { title: "Hotel Exterior at Dusk", category: GalleryCategory.EXTERIOR, imageUrl: "/gallery/hotel-09.jpg", altText: "YES Hotels exterior at dusk", featured: true, displayOrder: 1 },
+    { title: "The Lobby", category: GalleryCategory.HOTEL, imageUrl: "/gallery/hotel-10.jpg", altText: "Hotel lobby", featured: true, displayOrder: 2 },
+    { title: "Deluxe Room", category: GalleryCategory.ROOMS, imageUrl: "/gallery/hotel-11.jpg", altText: "Deluxe room interior", featured: false, displayOrder: 3 },
+    { title: "Signature Suite Living Area", category: GalleryCategory.ROOMS, imageUrl: "/gallery/hotel-12.jpg", altText: "Suite living area", featured: true, displayOrder: 4 },
+    { title: "Infinity Pool", category: GalleryCategory.EXTERIOR, imageUrl: "/gallery/hotel-13.jpg", altText: "Outdoor infinity pool", featured: true, displayOrder: 5 },
+    { title: "Spa Treatment Room", category: GalleryCategory.EXPERIENCE, imageUrl: "/gallery/hotel-14.jpg", altText: "Spa treatment room", featured: false, displayOrder: 6 },
+    { title: "Fine Dining Restaurant", category: GalleryCategory.DINING, imageUrl: "/gallery/hotel-15.jpg", altText: "Restaurant interior", featured: true, displayOrder: 7 },
+    { title: "Grand Ball Room", category: GalleryCategory.HOTEL, imageUrl: "/gallery/hotel-16.jpg", altText: "Banquet ball room", featured: false, displayOrder: 8 },
+    { title: "Executive Room Workspace", category: GalleryCategory.ROOMS, imageUrl: "/gallery/hotel-17.jpg", altText: "Executive room desk", featured: false, displayOrder: 9 },
+    { title: "Rooftop Lounge", category: GalleryCategory.DINING, imageUrl: "/gallery/hotel-18.jpg", altText: "Rooftop lounge at night", featured: true, displayOrder: 10 },
+    { title: "Fitness Centre", category: GalleryCategory.EXPERIENCE, imageUrl: "/gallery/hotel-19.jpg", altText: "Hotel gym", featured: false, displayOrder: 11 },
+    { title: "Standard Room", category: GalleryCategory.ROOMS, imageUrl: "/gallery/hotel-20.jpg", altText: "Standard room interior", featured: false, displayOrder: 12 },
+    { title: "Garden Courtyard", category: GalleryCategory.EXTERIOR, imageUrl: "/gallery/hotel-21.jpg", altText: "Landscaped garden courtyard", featured: false, displayOrder: 13 },
+    { title: "Bar & Lounge", category: GalleryCategory.DINING, imageUrl: "/gallery/hotel-22.jpg", altText: "Hotel bar", featured: false, displayOrder: 14 },
+    { title: "Wedding Setup, Grand Ball Room", category: GalleryCategory.HOTEL, imageUrl: "/gallery/hotel-23.jpg", altText: "Wedding banquet setup", featured: false, displayOrder: 15 },
   ];
   for (const g of GALLERY) {
     const exists = await Gallery.findOne({ title: g.title });
@@ -1277,7 +1277,7 @@ async function seed() {
       key: "homepage-hero",
       title: "Say yes to\ntime well spent.",
       subtitle: "Thoughtful rooms and warm hospitality—beautifully brought together.",
-      images: ["https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=2000&q=80"],
+      images: ["/gallery/hotel-24.jpg"],
       metadata: { label: "A Signature Stay by YES Hotels" },
     },
     {
@@ -1285,7 +1285,7 @@ async function seed() {
       title: "Our Story",
       subtitle: "Redefining luxury hospitality since 2010.",
       description: "At YES Hotels, we believe that true luxury lies in the details. From the moment you step into our grand lobby, you are enveloped in an atmosphere of refined elegance.",
-      images: ["https://images.unsplash.com/photo-1542314831-c6a4d27df08f?auto=format&fit=crop&q=80"],
+      images: ["/gallery/hotel-25.jpg"],
     },
   ];
   for (const c of CONTENT) {

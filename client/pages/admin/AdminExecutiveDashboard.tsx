@@ -95,14 +95,14 @@ export default function AdminExecutiveDashboard() {
         </div>
       ) : (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <KPI title="Occupancy" value={`${summary?.occupancyPct ?? 0}%`}
+          <KPI title="Occupied Rooms" value={`${summary?.occupancyPct ?? 0}%`}
             sub={`${summary?.inHouseCount ?? 0} / ${summary?.totalRooms ?? 0} rooms`}
             icon={BedDouble} color="bg-indigo-500"
             trend={summary?.occupancyPct >= 70 ? "up" : "down"} />
-          <KPI title="ADR" value={fmt(summary?.adr ?? 0)}
+          <KPI title="Average Room Price Per Night" value={fmt(summary?.adr ?? 0)}
             sub="Avg Daily Rate (In-house)"
             icon={TrendingUp} color="bg-emerald-500" trend="neutral" />
-          <KPI title="RevPAR" value={fmt(summary?.revpar ?? 0)}
+          <KPI title="Revenue Per Available Room" value={fmt(summary?.revpar ?? 0)}
             sub="Revenue Per Available Room"
             icon={BarChart2} color="bg-violet-500" trend="neutral" />
           <KPI title="MTD Revenue" value={fmt(summary?.monthlyRevenue ?? 0)}

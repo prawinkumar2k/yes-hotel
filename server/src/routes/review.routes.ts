@@ -1,4 +1,6 @@
 import { Router } from "express";
+import { requirePropertyAccess } from "../middleware/propertyAuth";
+import { requirePermission } from "../middleware/permissionAuth";
 import { protect } from "../middleware/auth.middleware";
 import { createReview, getMyReviews, getApprovedReviews } from "../controllers/review.controller";
 

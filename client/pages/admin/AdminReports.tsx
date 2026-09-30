@@ -4,6 +4,9 @@ import { api } from "@/lib/api";
 import { Input } from "@/components/ui/input";
 import { Loader2 } from "lucide-react";
 import { format } from "date-fns";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import DaySummaryTab from "@/components/admin/reports/DaySummaryTab";
+import MonthlyMISTab from "@/components/admin/reports/MonthlyMISTab";
 
 function toInputDate(d: Date) {
   return d.toISOString().slice(0, 10);
@@ -41,7 +44,15 @@ export default function AdminReports() {
         <p className="text-hotel-black/60">Revenue, occupancy, and performance for a selected date range</p>
       </div>
 
-      <div className="flex gap-4 items-end mb-6">
+      <Tabs defaultValue="overview">
+        <TabsList className="mb-6">
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="day-summary">Day Summary</TabsTrigger>
+          <TabsTrigger value="monthly-mis">Monthly MIS & Cash</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="overview">
+          <div className="flex gap-4 items-end mb-6">
         <div>
           <label className="text-xs text-gray-500 block mb-1">From</label>
           <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
@@ -101,6 +112,16 @@ export default function AdminReports() {
           </p>
         </>
       )}
+        </TabsContent>
+
+        <TabsContent value="day-summary">
+          <DaySummaryTab />
+        </TabsContent>
+
+        <TabsContent value="monthly-mis">
+          <MonthlyMISTab />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

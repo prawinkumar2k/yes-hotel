@@ -18,6 +18,7 @@ export interface IGroupRoomBlock {
 }
 
 export interface IGroupBooking extends Document {
+  propertyId: mongoose.Types.ObjectId;
   groupName: string;
   groupCode: string;
   organiserName: string;

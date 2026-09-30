@@ -1,4 +1,5 @@
 import { useAuth } from "../../context/AuthContext";
+import { usePermissions } from "../../context/PermissionContext";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { useToast } from "@/components/ui/use-toast";
@@ -17,10 +18,13 @@ const ALL_STATUSES = ["AVAILABLE","RESERVED","OCCUPIED","CLEANING","MAINTENANCE"
 
 export default function AdminRooms() {
   const { user } = useAuth();
+  const { hasPermission } = usePermissions();
   const { toast } = useToast();
   const qc = useQueryClient();
   const [editingRoom, setEditingRoom] = useState<string | null>(null);
   const [newStatus, setNewStatus] = useState("");
+
+  const canEdit = hasPermission("ROOMS", "EDIT");
 
   const { data: rooms, isLoading } = useQuery({
     queryKey: ["adminRooms"],
@@ -98,8 +102,12 @@ export default function AdminRooms() {
                     )}
                   </td>
                   <td className="px-5 py-3">
-                    <button onClick={() => { setEditingRoom(room._id); setNewStatus(room.status); }}
-                      className="text-xs text-hotel-gold hover:underline">Change Status</button>
+                    {canEdit ? (
+                      <button onClick={() => { setEditingRoom(room._id); setNewStatus(room.status); }}
+                        className="text-xs text-hotel-gold hover:underline">Change Status</button>
+                    ) : (
+                      <span className="text-xs text-gray-400 cursor-not-allowed" title="Permission Denied">Change Status</span>
+                    )}
                   </td>
                 </tr>
               ))}

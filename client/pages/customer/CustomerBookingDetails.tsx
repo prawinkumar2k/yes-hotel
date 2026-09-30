@@ -120,6 +120,11 @@ export default function CustomerBookingDetails() {
             >
               <Download size={14} className="mr-2" /> Invoice
             </OutlineButton>
+            <Link to={`/customer/bookings/${id}/folio`}>
+              <OutlineButton className="text-xs py-2 h-auto text-hotel-gold border-hotel-gold hover:bg-hotel-gold/10 hover:text-hotel-gold">
+                View Folio
+              </OutlineButton>
+            </Link>
           </div>
         </div>
 

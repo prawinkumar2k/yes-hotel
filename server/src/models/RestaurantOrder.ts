@@ -19,6 +19,7 @@ export interface IOrderItem {
 }
 
 export interface IRestaurantOrder extends Document {
+  propertyId: mongoose.Types.ObjectId;
   kotNumber: string;
   tableNumber?: string;
   roomNumber?: string;

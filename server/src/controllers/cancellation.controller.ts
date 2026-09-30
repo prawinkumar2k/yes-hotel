@@ -7,10 +7,13 @@ import { releaseInventoryDays } from "../services/booking-safety.service";
 import { releaseCouponForCancelledBooking } from "../services/coupon.service";
 import { sendNotification } from "../services/notification.service";
 import { NotificationType } from "../models/NotificationLog";
+import { Payment, PaymentTxStatus } from "../models/Payment";
+import { Refund, RefundStatus } from "../models/Refund";
 
 // POST /api/bookings/:id/cancel
 export const cancelBooking = async (req: Request, res: Response) => {
   try {
+    const { reason } = req.body;
     const booking = await Booking.findById(req.params.id);
     if (!booking) return res.status(404).json({ success: false, message: "Booking not found" });
 
@@ -56,6 +59,71 @@ export const cancelBooking = async (req: Request, res: Response) => {
 
     if (booking.couponRedeemed) {
       await releaseCouponForCancelledBooking(booking._id.toString());
+    }
+
+    booking.cancellationReason = reason;
+
+    // Calculate Penalty Percentage
+    let penaltyPercentage = 0;
+    
+    if (reason && (reason.toLowerCase().includes("urgent") || reason.toLowerCase().includes("emergency"))) {
+      penaltyPercentage = 0; // Emergency = 0% penalty (Full refund)
+    } else {
+      const now = new Date();
+      const checkIn = new Date(booking.checkInDate);
+      
+      // Calculate hours until check-in. If booking was for today, hoursUntilCheckIn might be negative.
+      const hoursUntilCheckIn = (checkIn.getTime() - now.getTime()) / (1000 * 60 * 60);
+
+      if (hoursUntilCheckIn >= 48) {
+        penaltyPercentage = 0; // Free cancellation
+      } else if (hoursUntilCheckIn >= 24) {
+        penaltyPercentage = 50; // 50% penalty
+      } else {
+        penaltyPercentage = 100; // 100% penalty
+      }
+    }
+
+    const penaltyAmount = (booking.totalAmount * penaltyPercentage) / 100;
+    booking.cancellationPenalty = penaltyAmount;
+
+    // Automatic Refund logic
+    const payments = await Payment.find({ booking: booking._id, status: { $in: [PaymentTxStatus.COMPLETED, PaymentTxStatus.PARTIALLY_REFUNDED] } });
+    let totalRefunded = 0;
+    
+    // We only refund the portion of paidAmount that exceeds the penaltyAmount
+    let amountToRefundOverall = Math.max(0, (booking.paidAmount || 0) - penaltyAmount);
+
+    for (const payment of payments) {
+      if (amountToRefundOverall <= 0) break;
+
+      const availableToRefundOnThisPayment = payment.amount - payment.refundedAmount;
+      if (availableToRefundOnThisPayment > 0) {
+        const refundAmount = Math.min(amountToRefundOverall, availableToRefundOnThisPayment);
+        
+        // Mark payment as claimed
+        await Payment.updateOne(
+          { _id: payment._id },
+          { $inc: { refundedAmount: refundAmount } }
+        );
+        
+        const refund = new Refund({
+          booking: booking._id,
+          payment: payment._id,
+          amount: refundAmount,
+          reason: `Auto-refund (Penalty: ${penaltyPercentage}%). Reason: ${reason || 'N/A'}`,
+          status: RefundStatus.PROCESSING,
+          initiatedBy: req.user?.id || booking.customer,
+        });
+        await refund.save();
+        totalRefunded += refundAmount;
+        amountToRefundOverall -= refundAmount;
+      }
+    }
+    
+    if (totalRefunded > 0) {
+      booking.paidAmount = Math.max(0, (booking.paidAmount || 0) - totalRefunded);
+      booking.paymentStatus = booking.paidAmount === 0 ? "REFUNDED" : "PARTIAL" as any;
     }
 
     await booking.save();

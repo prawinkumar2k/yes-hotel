@@ -4,12 +4,12 @@ import GuestForm from "./GuestForm";
 import type { BookingState } from "./types";
 
 type Props = {
-  step: "checkin" | "checkout" | "guests" | "guestName" | "phone" | "email";
+  step: "checkin" | "checkout" | "guests" | "guestName" | "guestLastName" | "phone" | "email";
   booking: BookingState;
   onDate: (date: string) => void;
   onBack: () => void;
   onGuests: (values: Pick<BookingState, "adults" | "children" | "childAges" | "rooms">) => void;
-  onText: (field: "guestName" | "phone" | "email", value: string) => void;
+  onText: (field: "guestName" | "guestLastName" | "phone" | "email", value: string) => void;
   requireEmail?: boolean;
 };
 
@@ -19,7 +19,7 @@ export default function BookingFlow({ step, booking, onDate, onBack, onGuests, o
   if (step === "checkout") return <DatePicker label="Select check-out" min={booking.checkIn} onSubmit={onDate} onBack={onBack} />;
   if (step === "guests") return <GuestForm onSubmit={onGuests} />;
 
-  const labels = { guestName: "Full name", phone: "Phone number", email: "Email address (optional)" };
+  const labels = { guestName: "First name", guestLastName: "Last name", phone: "Phone number", email: "Email address (optional)" };
   return <form className="border-t border-hotel-black/10 bg-hotel-white px-4 py-3" onSubmit={(event) => { event.preventDefault(); onText(step, value.trim()); setValue(""); }}>
     <label htmlFor={`chat-${step}`} className="mb-2 block text-xs font-semibold uppercase tracking-[0.14em] text-hotel-black/60">{labels[step]}</label>
     <div className="flex gap-2">

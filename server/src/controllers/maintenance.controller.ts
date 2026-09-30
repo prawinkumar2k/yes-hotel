@@ -81,24 +81,50 @@ export const updateMaintenanceTicket = async (req: Request, res: Response) => {
   try {
     const data = updateTicketSchema.parse(req.body);
 
+    const existing = await MaintenanceTicket.findById(req.params.id);
+    if (!existing) return res.status(404).json({ success: false, message: "Ticket not found" });
+
+    const userRole = (req as any).user?.role || "";
+    const userId = (req as any).user?._id;
+    const isAdminOrManager = ["ADMIN", "MANAGER"].includes(userRole);
+    const isCompleting = data.status === MaintenanceStatus.RESOLVED || data.status === MaintenanceStatus.CLOSED;
+    const isCriticalOrHigh = existing.priority === MaintenancePriority.CRITICAL || existing.priority === MaintenancePriority.HIGH;
+
+    // Critical or High priority tasks MANDATE Admin/Manager approval to be completed
+    if (isCompleting && isCriticalOrHigh && !isAdminOrManager) {
+      return res.status(403).json({
+        success: false,
+        message: "Critical & High-priority tasks require Admin or Manager approval to be marked completed.",
+      });
+    }
+
+    const approvalData: any = {};
+    if (isCompleting && isAdminOrManager) {
+      approvalData.approvedBy = userId;
+      approvalData.approvedAt = new Date();
+    }
+
     const ticket = await MaintenanceTicket.findByIdAndUpdate(
       req.params.id,
-      { ...data, ...(data.status === MaintenanceStatus.RESOLVED && { resolvedAt: new Date() }) },
+      {
+        ...data,
+        ...approvalData,
+        ...(data.status === MaintenanceStatus.RESOLVED && { resolvedAt: new Date() }),
+      },
       { returnDocument: "after" }
-    ).populate("room", "roomNumber");
+    ).populate("room", "roomNumber").populate("approvedBy", "firstName lastName role");
 
     if (!ticket) return res.status(404).json({ success: false, message: "Ticket not found" });
 
     // If resolved, restore the room to whatever it actually was before this
     // ticket forced it into MAINTENANCE — NOT unconditionally AVAILABLE.
-    // Falls back to AVAILABLE only for legacy tickets predating this field.
     if (data.status === MaintenanceStatus.RESOLVED && ticket.room) {
       const restoreTo = ticket.roomStatusBeforeTicket ?? RoomStatus.AVAILABLE;
       await transitionRoomStatus((ticket.room as any)._id.toString(), restoreTo, {
         req,
         action: "room.maintenance_resolved",
         metadata: { maintenanceTicketId: ticket._id.toString() },
-      }).catch(() => undefined); // room may have moved on to a different state since (e.g. OUT_OF_SERVICE)
+      }).catch(() => undefined);
     }
 
     await createAuditLog({
@@ -106,7 +132,7 @@ export const updateMaintenanceTicket = async (req: Request, res: Response) => {
       action: "maintenance.ticket_updated",
       resourceType: "MaintenanceTicket",
       resourceId: ticket._id.toString(),
-      metadata: { status: ticket.status, priority: ticket.priority, room: (ticket.room as any)?.roomNumber },
+      metadata: { status: ticket.status, priority: ticket.priority, room: (ticket.room as any)?.roomNumber, approvedBy: userId },
     });
 
     return res.status(200).json({ success: true, data: ticket });

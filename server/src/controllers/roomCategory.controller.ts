@@ -10,6 +10,7 @@ const categorySchema = z.object({
   shortDescription: z.string().optional(),
   description: z.string().min(1, "Description is required"),
   basePrice: z.number().min(0),
+  hourlyPrice: z.number().min(0).optional(),
   capacity: z.object({
     adults: z.number().min(1),
     children: z.number().min(0),

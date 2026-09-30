@@ -21,6 +21,22 @@ export interface IHotelSettings extends Document {
   lateCheckOutFee?: number;
   maxOccupancyBuffer?: number;  // e.g. 5 = allow 5% overbooking (0 = strict)
 
+  // Occupancy Charges
+  extraPersonRate: number; // For extra person without extra bed
+  extraBedRate: number;    // For extra person with extra bed
+  childRateNoBed: number;  // For extra child (3-12) without extra bed
+  childRateWithBed: number; // For extra child (3-12) with extra bed
+
+  // Meal Plan Rates (per person per night)
+  mealPlanRates: {
+    EP: number; // European Plan (Room Only)
+    CP: number; // Continental Plan (Breakfast)
+    MAP: number; // Modified American Plan (Half Board)
+    AP: number; // American Plan (Full Board)
+    RO: number; // Room Only
+    BB: number; // Bed & Breakfast
+  };
+
   // Currency
   currency: string;         // e.g. "INR"
   currencySymbol: string;   // e.g. "₹"
@@ -28,9 +44,9 @@ export interface IHotelSettings extends Document {
   // Tax Configuration
   /** @deprecated Use cgstPercentage + sgstPercentage instead */
   gstPercentage: number;    // kept for backward compat — equals cgstPercentage + sgstPercentage
-  cgstPercentage: number;   // CGST rate (default 9)
-  sgstPercentage: number;   // SGST rate (default 9)
-  igstPercentage: number;   // IGST rate — applies for interstate guests (default 18)
+  cgstPercentage: number;   // CGST rate (default 2.5)
+  sgstPercentage: number;   // SGST rate (default 2.5)
+  igstPercentage: number;   // IGST rate — applies for interstate guests (default 5)
   taxInclusiveRates: boolean; // if true, room rates are tax-inclusive
 
   // Invoice settings
@@ -87,14 +103,28 @@ const HotelSettingsSchema = new Schema<IHotelSettings>(
     lateCheckOutFee: { type: Number, default: 0 },
     maxOccupancyBuffer: { type: Number, default: 0 },
 
+    extraPersonRate: { type: Number, default: 800 },
+    extraBedRate: { type: Number, default: 1200 },
+    childRateNoBed: { type: Number, default: 400 },
+    childRateWithBed: { type: Number, default: 600 },
+
+    mealPlanRates: {
+      EP: { type: Number, default: 0 },
+      CP: { type: Number, default: 500 },
+      MAP: { type: Number, default: 1000 },
+      AP: { type: Number, default: 1500 },
+      RO: { type: Number, default: 0 },
+      BB: { type: Number, default: 500 },
+    },
+
     currency: { type: String, required: true, default: "INR" },
     currencySymbol: { type: String, required: true, default: "₹" },
 
     // ── TAX ──
-    gstPercentage: { type: Number, required: true, default: 18 },  // backward compat
-    cgstPercentage: { type: Number, required: true, default: 9 },
-    sgstPercentage: { type: Number, required: true, default: 9 },
-    igstPercentage: { type: Number, required: true, default: 18 },
+    gstPercentage: { type: Number, required: true, default: 5 },  // backward compat
+    cgstPercentage: { type: Number, required: true, default: 2.5 },
+    sgstPercentage: { type: Number, required: true, default: 2.5 },
+    igstPercentage: { type: Number, required: true, default: 5 },
     taxInclusiveRates: { type: Boolean, default: false },
 
     // ── INVOICE ──

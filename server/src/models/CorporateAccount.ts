@@ -1,6 +1,7 @@
 import mongoose, { Document, Schema } from "mongoose";
 
 export interface ICorporateAccount extends Document {
+  propertyId: mongoose.Types.ObjectId;
   companyName: string;
   companyCode: string;
   gstNumber: string;
@@ -16,6 +17,7 @@ export interface ICorporateAccount extends Document {
 
 const CorporateAccountSchema = new Schema<ICorporateAccount>(
   {
+    propertyId: { type: Schema.Types.ObjectId, ref: "Property", required: true },
     companyName: { type: String, required: true },
     companyCode: { type: String, required: true, unique: true },
     gstNumber: { type: String, required: true },

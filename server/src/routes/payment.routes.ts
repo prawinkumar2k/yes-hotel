@@ -1,4 +1,6 @@
 import { Router } from "express";
+import { requirePropertyAccess } from "../middleware/propertyAuth";
+import { requirePermission } from "../middleware/permissionAuth";
 import { protect, authorize } from "../middleware/auth.middleware";
 import { UserRole } from "../models/User";
 import { createOrder, verifyPayment, getPaymentByBooking, getPayments, getPaymentById } from "../controllers/payment.controller";
@@ -12,12 +14,12 @@ router.post("/create-order", createOrder);
 router.post("/verify", verifyPayment);
 
 // Admin: view all payments
-router.get("/", protect, authorize(UserRole.ADMIN, UserRole.MANAGER), getPayments);
+router.get("/", protect, requirePropertyAccess, requirePermission("PAYMENTS", "VIEW"), getPayments);
 
 // Admin: get payment by ID
-router.get("/detail/:id", protect, authorize(UserRole.ADMIN, UserRole.MANAGER), getPaymentById);
+router.get("/detail/:id", protect, requirePropertyAccess, requirePermission("PAYMENTS", "VIEW"), getPaymentById);
 
 // Admin: view payment details for a booking (existing)
-router.get("/:bookingId", protect, authorize(UserRole.ADMIN, UserRole.MANAGER), getPaymentByBooking);
+router.get("/:bookingId", protect, requirePropertyAccess, requirePermission("PAYMENTS", "VIEW"), getPaymentByBooking);
 
 export default router;

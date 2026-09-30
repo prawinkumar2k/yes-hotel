@@ -12,7 +12,7 @@ import ScrollProgress from "@/components/hotel/ScrollProgress";
 
 export default function Index() {
   return (
-    <div className="min-h-screen bg-[#0b0b0b] text-white selection:bg-[#c9a227] selection:text-black">
+    <div className="min-h-screen bg-white text-slate-800 selection:bg-[#c9a227] selection:text-black">
       <ScrollProgress />
       <CursorFollower />
       <Navbar transparent={true} />

@@ -1,6 +1,7 @@
 import mongoose, { Document, Schema } from "mongoose";
 
 export interface IComplaint extends Document {
+  propertyId: mongoose.Types.ObjectId;
   guestId: mongoose.Types.ObjectId;
   bookingId?: mongoose.Types.ObjectId;
   roomNumber?: string;
@@ -16,6 +17,7 @@ export interface IComplaint extends Document {
 
 const ComplaintSchema = new Schema<IComplaint>(
   {
+    propertyId: { type: Schema.Types.ObjectId, ref: "Property", required: true },
     guestId: { type: Schema.Types.ObjectId, ref: "Guest", required: true },
     bookingId: { type: Schema.Types.ObjectId, ref: "Booking" },
     roomNumber: { type: String },

@@ -20,9 +20,7 @@
       property="og:description"
       content="YES HOTELS is a premium boutique hospitality brand. Discover thoughtfully designed rooms, warm hospitality and effortless booking."
     />
-    <!-- TODO: replace with a real production hero photo before launch — a
-         placeholder SVG will not render correctly in most OG/Twitter unfurls. -->
-    <meta property="og:image" content="/placeholder.svg" />
+    <meta property="og:image" content="/gallery/hotel-01.jpg" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="YES HOTELS — Say Yes to Time Well Spent" />
     <meta
@@ -40,7 +38,13 @@
 
   <body>
     <div id="root"></div>
-
+    <svg style="display: none;">
+      <defs>
+        <filter id="sharpen">
+          <feConvolveMatrix order="3 3" preserveAlpha="true" kernelMatrix="0 -1 0 -1 5 -1 0 -1 0" />
+        </filter>
+      </defs>
+    </svg>
     <script type="module" src="/client/main.tsx"></script>
   </body>
 </html>

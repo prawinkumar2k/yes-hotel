@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from "react";
-import Hero3D from "./Hero3D";
 import BookingBar from "./BookingBar";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 import { ArrowDown, Sparkles } from "lucide-react";
 
-const HERO_VIDEO_URL = "https://cdn.pixabay.com/video/2024/02/29/202392-918066367_tiny.mp4";
-const HERO_POSTER_IMAGE = "https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=2000&q=80";
+const HERO_VIDEO_URL = "/videos/yes-hotel-01.mp4";
+const HERO_POSTER_IMAGE = "/gallery/hotel-53.jpg";
 
 export default function Hero() {
   const reducedMotion = useReducedMotion();
@@ -17,14 +16,14 @@ export default function Hero() {
       const y = -(e.clientY / window.innerHeight) * 2 + 1;
       setPointer({ x, y });
     };
-    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mousemove", handleMouseMove, { passive: true });
     return () => window.removeEventListener("mousemove", handleMouseMove);
   }, []);
 
   return (
     <section
       id="home"
-      className="relative min-h-[100vh] w-full flex flex-col justify-between overflow-hidden bg-[#0b0b0b] text-white pt-28 pb-12"
+      className="relative min-h-[100vh] w-full flex flex-col justify-between overflow-hidden bg-[#0b0b0b] text-white pt-24 sm:pt-28 pb-8 sm:pb-12"
     >
       {/* LAYER 1: Background Video / Image */}
       {reducedMotion ? (
@@ -54,9 +53,6 @@ export default function Hero() {
 
       {/* LAYER 3: Soft Radial Vignette */}
       <div className="absolute inset-0 bg-radial-vignette pointer-events-none opacity-80" />
-
-      {/* LAYER 4: Interactive WebGL Spatial 3D Scene */}
-      {!reducedMotion && <Hero3D pointer={pointer} />}
 
       {/* LAYER 5 & 6: Floating Editorial Typography & Gold Metadata */}
       <div className="container relative z-20 mx-auto px-4 md:px-8 my-auto max-w-[1400px]">
@@ -99,13 +95,13 @@ export default function Hero() {
       <div className="container relative z-30 mx-auto px-4 md:px-8 max-w-[1400px] space-y-4">
         <BookingBar />
 
-        <div className="flex items-center justify-between text-xs font-mono text-gray-400 pt-2">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-2 text-xs font-mono text-gray-400 pt-2">
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-[#c9a227] animate-ping" />
             <span>01 / 06 · ARCHITECTURAL LANDING</span>
           </div>
 
-          <a href="#about" className="flex items-center gap-2 hover:text-[#c9a227] transition">
+          <a href="#about" className="flex items-center gap-2 min-h-[44px] hover:text-[#c9a227] transition">
             <span>SCROLL TO EXPLORE</span>
             <ArrowDown size={14} className="animate-bounce" />
           </a>

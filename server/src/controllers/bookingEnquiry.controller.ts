@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { z } from "zod";
-import { BookingEnquiry } from "../models/BookingEnquiry";
+import { BookingEnquiry, BookingEnquiryStatus } from "../models/BookingEnquiry";
 import { User, UserRole } from "../models/User";
 import { NotificationType } from "../models/NotificationLog";
 import { sendNotification } from "../services/notification.service";
@@ -77,5 +77,50 @@ export const submitBookingEnquiry = async (req: Request, res: Response) => {
     return res.status(201).json({ success: true, message: "Your booking enquiry has been sent to YES Hotels.", data: { id: enquiry._id } });
   } catch (error: any) {
     return res.status(500).json({ success: false, message: "We couldn't submit your enquiry right now. Please try again or contact YES Hotels directly." });
+  }
+};
+
+// GET /api/admin/booking-enquiries — admin
+export const getBookingEnquiries = async (req: Request, res: Response) => {
+  try {
+    const { page = "1", limit = "20", status } = req.query;
+    const p = parseInt(page as string);
+    const l = parseInt(limit as string);
+    const filter: Record<string, any> = {};
+    if (status && status !== "ALL") filter.status = status;
+
+    const [enquiries, total] = await Promise.all([
+      BookingEnquiry.find(filter).sort({ createdAt: -1 }).skip((p - 1) * l).limit(l),
+      BookingEnquiry.countDocuments(filter),
+    ]);
+    return res.status(200).json({ success: true, data: { enquiries, total, totalPages: Math.ceil(total / l), page: p } });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// PATCH /api/admin/booking-enquiries/:id/status — admin
+export const updateBookingEnquiryStatus = async (req: Request, res: Response) => {
+  try {
+    const { status } = req.body;
+    if (!Object.values(BookingEnquiryStatus).includes(status)) {
+      return res.status(400).json({ success: false, message: "Invalid status value" });
+    }
+    const enquiry = await BookingEnquiry.findByIdAndUpdate(req.params.id, { status }, { returnDocument: "after" });
+    if (!enquiry) return res.status(404).json({ success: false, message: "Enquiry not found" });
+    return res.status(200).json({ success: true, data: enquiry });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// DELETE /api/admin/booking-enquiries/:id — admin
+export const deleteBookingEnquiry = async (req: Request, res: Response) => {
+  try {
+    const enquiry = await BookingEnquiry.findByIdAndDelete(req.params.id);
+    if (!enquiry) return res.status(404).json({ success: false, message: "Enquiry not found" });
+    return res.status(200).json({ success: true, message: "Enquiry deleted" });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, message: error.message });
   }
 };

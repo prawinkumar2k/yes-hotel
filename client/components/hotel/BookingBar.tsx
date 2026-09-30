@@ -93,14 +93,14 @@ export default function BookingBar() {
         </button>
 
         {guestsOpen && (
-          <div className="absolute z-30 mt-3 w-64 space-y-4 rounded-xl border border-[#262930] bg-[#121316] p-5 shadow-2xl text-white">
+          <div className="absolute z-30 mt-3 w-64 max-w-[85vw] space-y-4 rounded-xl border border-[#262930] bg-[#121316] p-5 shadow-2xl text-white">
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold text-gray-300">Adults</span>
               <div className="flex items-center gap-3 font-mono">
                 <button
                   type="button"
                   onClick={() => setAdults((v) => Math.max(1, v - 1))}
-                  className="h-7 w-7 rounded border border-[#262930] bg-[#1a1d24] text-white hover:border-[#c9a227]"
+                  className="flex h-11 w-11 min-h-[44px] min-w-[44px] items-center justify-center rounded border border-[#262930] bg-[#1a1d24] text-white hover:border-[#c9a227] sm:h-7 sm:w-7 sm:min-h-0 sm:min-w-0"
                 >
                   −
                 </button>
@@ -108,7 +108,7 @@ export default function BookingBar() {
                 <button
                   type="button"
                   onClick={() => setAdults((v) => v + 1)}
-                  className="h-7 w-7 rounded border border-[#262930] bg-[#1a1d24] text-white hover:border-[#c9a227]"
+                  className="flex h-11 w-11 min-h-[44px] min-w-[44px] items-center justify-center rounded border border-[#262930] bg-[#1a1d24] text-white hover:border-[#c9a227] sm:h-7 sm:w-7 sm:min-h-0 sm:min-w-0"
                 >
                   +
                 </button>
@@ -120,7 +120,7 @@ export default function BookingBar() {
                 <button
                   type="button"
                   onClick={() => setChildren((v) => Math.max(0, v - 1))}
-                  className="h-7 w-7 rounded border border-[#262930] bg-[#1a1d24] text-white hover:border-[#c9a227]"
+                  className="flex h-11 w-11 min-h-[44px] min-w-[44px] items-center justify-center rounded border border-[#262930] bg-[#1a1d24] text-white hover:border-[#c9a227] sm:h-7 sm:w-7 sm:min-h-0 sm:min-w-0"
                 >
                   −
                 </button>
@@ -128,7 +128,7 @@ export default function BookingBar() {
                 <button
                   type="button"
                   onClick={() => setChildren((v) => v + 1)}
-                  className="h-7 w-7 rounded border border-[#262930] bg-[#1a1d24] text-white hover:border-[#c9a227]"
+                  className="flex h-11 w-11 min-h-[44px] min-w-[44px] items-center justify-center rounded border border-[#262930] bg-[#1a1d24] text-white hover:border-[#c9a227] sm:h-7 sm:w-7 sm:min-h-0 sm:min-w-0"
                 >
                   +
                 </button>
@@ -137,7 +137,7 @@ export default function BookingBar() {
             <button
               type="button"
               onClick={() => setGuestsOpen(false)}
-              className="w-full bg-[#c9a227] py-2 text-xs font-bold uppercase tracking-[0.2em] text-black rounded-lg"
+              className="min-h-[44px] w-full bg-[#c9a227] py-2 text-xs font-bold uppercase tracking-[0.2em] text-black rounded-lg"
             >
               Done
             </button>

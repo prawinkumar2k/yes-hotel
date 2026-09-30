@@ -24,6 +24,18 @@ const settingsSchema = z.object({
   metaTitle: z.string().optional(),
   metaDescription: z.string().optional(),
   ogImageUrl: z.string().optional(),
+  extraPersonRate: z.number().min(0).optional(),
+  extraBedRate: z.number().min(0).optional(),
+  childRateNoBed: z.number().min(0).optional(),
+  childRateWithBed: z.number().min(0).optional(),
+  mealPlanRates: z.object({
+    EP: z.number().min(0),
+    CP: z.number().min(0),
+    MAP: z.number().min(0),
+    AP: z.number().min(0),
+    RO: z.number().min(0),
+    BB: z.number().min(0),
+  }).optional(),
 });
 
 export const getSettings = async (req: Request, res: Response) => {
@@ -49,10 +61,24 @@ export const updateSettings = async (req: Request, res: Response) => {
     let settings = await HotelSettings.findOne();
     if (settings) {
       Object.assign(settings, data);
+      
+      // Auto-calculate split taxes if gstPercentage is provided
+      if (data.gstPercentage !== undefined) {
+        settings.cgstPercentage = data.gstPercentage / 2;
+        settings.sgstPercentage = data.gstPercentage / 2;
+        settings.igstPercentage = data.gstPercentage;
+      }
+      
       settings.updatedBy = (req as any).user.id;
       await settings.save();
     } else {
-      settings = new HotelSettings({ ...data, updatedBy: (req as any).user.id });
+      settings = new HotelSettings({ 
+        ...data, 
+        cgstPercentage: data.gstPercentage ? data.gstPercentage / 2 : 2.5,
+        sgstPercentage: data.gstPercentage ? data.gstPercentage / 2 : 2.5,
+        igstPercentage: data.gstPercentage || 5,
+        updatedBy: (req as any).user.id 
+      });
       await settings.save();
     }
     

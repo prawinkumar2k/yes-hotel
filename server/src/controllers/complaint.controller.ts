@@ -57,3 +57,42 @@ export const updateComplaintStatus: RequestHandler = async (req, res) => {
     res.status(400).json({ message: "Failed to update complaint" });
   }
 };
+
+export const getMyComplaints: RequestHandler = async (req, res) => {
+  try {
+    const userId = (req as any).user?._id || (req as any).user?.id;
+    const complaints = await Complaint.find({ guestId: userId }).sort({ createdAt: -1 });
+    res.json({ success: true, data: complaints });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const createMyComplaint: RequestHandler = async (req, res) => {
+  try {
+    const userId = (req as any).user?._id || (req as any).user?.id;
+    const { category, title, description, priority = "LOW" } = req.body;
+    
+    let slaHours = 24;
+    if (priority === "MEDIUM") slaHours = 4;
+    else if (priority === "HIGH") slaHours = 2;
+    else if (priority === "URGENT") slaHours = 0.5;
+
+    const slaBreachTime = new Date(Date.now() + slaHours * 60 * 60 * 1000);
+
+    const complaint = new Complaint({
+      guestId: userId,
+      category,
+      title,
+      description,
+      priority,
+      status: "OPEN",
+      department: "FRONT_DESK", // default routing
+      slaBreachTime,
+    });
+    await complaint.save();
+    res.status(201).json({ success: true, data: complaint });
+  } catch (error: any) {
+    res.status(400).json({ success: false, message: error.message });
+  }
+};

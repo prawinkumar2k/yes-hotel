@@ -8,10 +8,17 @@ import { Input } from "@/components/ui/input";
 import { Loader2, Plus, Edit, Shield, UserCog, UserCheck, UserMinus, Search, Key } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format } from "date-fns";
+import { AccessMatrix } from "@/components/admin/roles/AccessMatrix";
+import { usePermissions } from "@/context/PermissionContext";
 
 export default function AdminStaff() {
   const { toast } = useToast();
+  const { hasPermission } = usePermissions();
+  const canCreate = hasPermission("STAFF", "CREATE");
+  const canEdit = hasPermission("STAFF", "EDIT");
+  
   const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState("");
   const [deptFilter, setDeptFilter] = useState("");
@@ -104,26 +111,35 @@ export default function AdminStaff() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-serif text-white">Staff Management</h1>
-          <p className="text-zinc-400">Manage employee accounts, roles, and permissions</p>
+          <h1 className="text-3xl font-serif text-white font-bold">Staff Members & Access Permissions</h1>
+          <p className="text-gray-200 text-sm font-medium">Manage employee accounts, job roles, and staff permissions</p>
         </div>
-        <Button onClick={() => { setEditingStaff(null); setIsFormOpen(true); }} className="bg-hotel-gold hover:bg-yellow-500 text-hotel-black flex items-center gap-2">
-          <Plus className="w-4 h-4" /> Add Staff Member
-        </Button>
+        {canCreate && (
+          <Button onClick={() => { setEditingStaff(null); setIsFormOpen(true); }} className="bg-hotel-gold hover:bg-yellow-500 text-black font-bold flex items-center gap-2">
+            <Plus className="w-4 h-4" /> Add Staff Member
+          </Button>
+        )}
       </div>
 
-      <div className="flex flex-col md:flex-row gap-4 mb-6">
+      <Tabs defaultValue="directory" className="w-full">
+        <TabsList className="mb-6 bg-white border border-gray-200">
+          <TabsTrigger value="directory" className="data-[state=active]:bg-hotel-gold data-[state=active]:text-black">Staff Directory</TabsTrigger>
+          <TabsTrigger value="permissions" className="data-[state=active]:bg-hotel-gold data-[state=active]:text-black">Roles & Permissions</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="directory" className="mt-0">
+          <div className="flex flex-col md:flex-row gap-4 mb-6">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-700 h-4 w-4" />
           <Input 
             placeholder="Search by name, email..." 
             value={searchTerm}
             onChange={(e) => { setSearchTerm(e.target.value); setPage(1); }}
-            className="pl-10"
+            className="pl-10 text-black font-medium border-gray-400"
           />
         </div>
         <div className="flex gap-2">
-          <select className="border rounded-md px-3 py-2 text-sm text-gray-900 bg-white" value={roleFilter} onChange={(e) => { setRoleFilter(e.target.value); setPage(1); }}>
+          <select className="border border-gray-400 rounded-md px-3 py-2 text-sm text-black font-bold bg-white" value={roleFilter} onChange={(e) => { setRoleFilter(e.target.value); setPage(1); }}>
             <option value="">All Roles</option>
             <option value="ADMIN">Admin</option>
             <option value="MANAGER">Manager</option>
@@ -131,7 +147,7 @@ export default function AdminStaff() {
             <option value="HOUSEKEEPING">Housekeeping</option>
             <option value="MAINTENANCE">Maintenance</option>
           </select>
-          <select className="border rounded-md px-3 py-2 text-sm text-gray-900 bg-white" value={deptFilter} onChange={(e) => { setDeptFilter(e.target.value); setPage(1); }}>
+          <select className="border border-gray-400 rounded-md px-3 py-2 text-sm text-black font-bold bg-white" value={deptFilter} onChange={(e) => { setDeptFilter(e.target.value); setPage(1); }}>
             <option value="">All Departments</option>
             <option value="MANAGEMENT">Management</option>
             <option value="FRONT_DESK">Front Desk</option>
@@ -143,57 +159,61 @@ export default function AdminStaff() {
         </div>
       </div>
 
-      <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
+      <div className="bg-white rounded-lg shadow-sm border border-gray-300 overflow-hidden">
         <table className="w-full text-sm text-left">
-          <thead className="bg-gray-50 border-b">
+          <thead className="bg-gray-100 border-b border-gray-300">
             <tr>
-              <th className="px-4 py-3 font-medium text-gray-500">Employee</th>
-              <th className="px-4 py-3 font-medium text-gray-500">Role & Dept</th>
-              <th className="px-4 py-3 font-medium text-gray-500">Status</th>
-              <th className="px-4 py-3 font-medium text-gray-500">Last Login</th>
-              <th className="px-4 py-3 font-medium text-gray-500 text-right">Actions</th>
+              <th className="px-4 py-3 font-bold text-black uppercase text-xs">Employee</th>
+              <th className="px-4 py-3 font-bold text-black uppercase text-xs">Role & Dept</th>
+              <th className="px-4 py-3 font-bold text-black uppercase text-xs">Status</th>
+              <th className="px-4 py-3 font-bold text-black uppercase text-xs">Last Login</th>
+              <th className="px-4 py-3 font-bold text-black uppercase text-xs text-right">Actions</th>
             </tr>
           </thead>
-          <tbody className="divide-y">
+          <tbody className="divide-y divide-gray-200">
             {isLoading ? (
               <tr><td colSpan={5} className="p-8 text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto text-hotel-gold" /></td></tr>
             ) : data?.staff?.length === 0 ? (
-              <tr><td colSpan={5} className="p-8 text-center text-gray-500">No staff found</td></tr>
+              <tr><td colSpan={5} className="p-8 text-center text-gray-800 font-bold">No staff members found</td></tr>
             ) : (
               data?.staff?.map((s: any) => (
-                <tr key={s._id} className="hover:bg-gray-50 text-gray-900">
+                <tr key={s._id} className="hover:bg-amber-50/40 text-black">
                   <td className="px-4 py-3">
                     <div className="font-bold flex items-center gap-2">
-                      <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-gray-600 font-bold text-xs">
+                      <div className="w-8 h-8 rounded-full bg-slate-800 text-white flex items-center justify-center font-bold text-xs">
                         {s.firstName[0]}{s.lastName[0]}
                       </div>
                       <div>
-                        <div>{s.firstName} {s.lastName}</div>
-                        <div className="text-xs text-gray-500 font-normal">{s.email}</div>
+                        <div className="font-bold text-black text-sm">{s.firstName} {s.lastName}</div>
+                        <div className="text-xs text-gray-700 font-medium">{s.email}</div>
                       </div>
                     </div>
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex flex-col gap-1 items-start">
                       {getRoleBadge(s.role)}
-                      <span className="text-xs text-gray-500">{s.profile?.department || 'N/A'}</span>
+                      <span className="text-xs text-gray-800 font-bold">{s.profile?.department || 'N/A'}</span>
                     </div>
                   </td>
                   <td className="px-4 py-3">
                     {s.isActive ? (
-                      <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200"><UserCheck className="w-3 h-3 mr-1" /> Active</Badge>
+                      <Badge variant="outline" className="bg-green-100 text-green-900 border-green-300 font-bold"><UserCheck className="w-3 h-3 mr-1" /> Active</Badge>
                     ) : (
-                      <Badge variant="secondary" className="text-gray-500"><UserMinus className="w-3 h-3 mr-1" /> Inactive</Badge>
+                      <Badge variant="secondary" className="bg-gray-200 text-black font-bold"><UserMinus className="w-3 h-3 mr-1" /> Inactive</Badge>
                     )}
-                    <div className="text-xs text-gray-500 mt-1">{s.profile?.employmentStatus || ''}</div>
+                    <div className="text-xs text-gray-700 font-medium mt-1">{s.profile?.employmentStatus || ''}</div>
                   </td>
-                  <td className="px-4 py-3 text-xs text-gray-500">
+                  <td className="px-4 py-3 text-xs text-gray-800 font-semibold">
                     {s.lastLogin ? format(new Date(s.lastLogin), 'MMM d, yyyy HH:mm') : 'Never'}
                   </td>
                   <td className="px-4 py-3 text-right">
                     <div className="flex justify-end gap-2">
-                      <Button variant="ghost" size="icon" title="Reset Password" onClick={() => { setResetStaff(s); setIsResetOpen(true); }}><Key className="h-4 w-4" /></Button>
-                      <Button variant="ghost" size="icon" title="Edit" onClick={() => { setEditingStaff(s); setIsFormOpen(true); }}><Edit className="h-4 w-4" /></Button>
+                      {canEdit && (
+                        <>
+                          <Button variant="outline" size="icon" title="Reset Password" onClick={() => { setResetStaff(s); setIsResetOpen(true); }} className="border-gray-300 hover:bg-gray-100 text-black"><Key className="h-4 w-4" /></Button>
+                          <Button variant="outline" size="icon" title="Edit" onClick={() => { setEditingStaff(s); setIsFormOpen(true); }} className="border-gray-300 hover:bg-gray-100 text-black"><Edit className="h-4 w-4" /></Button>
+                        </>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -203,20 +223,25 @@ export default function AdminStaff() {
         </table>
         
         {data?.totalPages > 1 && (
-          <div className="p-4 border-t flex justify-between items-center">
-            <Button variant="outline" size="sm" disabled={page === 1} onClick={() => setPage(p => p - 1)}>Previous</Button>
-            <span className="text-sm text-gray-500">Page {page} of {data.totalPages}</span>
-            <Button variant="outline" size="sm" disabled={page === data.totalPages} onClick={() => setPage(p => p + 1)}>Next</Button>
+          <div className="p-4 border-t border-gray-300 flex justify-between items-center bg-gray-50">
+            <Button variant="outline" size="sm" disabled={page === 1} onClick={() => setPage(p => p - 1)} className="font-bold border-gray-400 text-black">Previous</Button>
+            <span className="text-sm font-bold text-black">Page {page} of {data.totalPages}</span>
+            <Button variant="outline" size="sm" disabled={page === data.totalPages} onClick={() => setPage(p => p + 1)} className="font-bold border-gray-400 text-black">Next</Button>
           </div>
         )}
       </div>
+      </TabsContent>
+      <TabsContent value="permissions" className="mt-0">
+        <AccessMatrix />
+      </TabsContent>
+      </Tabs>
 
       <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle>{editingStaff ? "Edit Staff Member" : "Add Staff Member"}</DialogTitle></DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
             <h4 className="font-semibold text-gray-900 border-b pb-2">Account Details</h4>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium">First Name</label>
                 <Input name="firstName" required defaultValue={editingStaff?.firstName} />
@@ -227,7 +252,7 @@ export default function AdminStaff() {
               </div>
             </div>
             {!editingStaff && (
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Email</label>
                   <Input name="email" type="email" required />
@@ -239,7 +264,7 @@ export default function AdminStaff() {
               </div>
             )}
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium">Role</label>
                 <select name="role" className="w-full border rounded-md p-2 text-sm" defaultValue={editingStaff?.role || "RECEPTIONIST"}>
@@ -260,7 +285,7 @@ export default function AdminStaff() {
             </div>
 
             <h4 className="font-semibold text-gray-900 border-b pb-2 mt-6">HR Profile</h4>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium">Department</label>
                 <select name="department" className="w-full border rounded-md p-2 text-sm" defaultValue={editingStaff?.profile?.department || "FRONT_DESK"}>
@@ -289,7 +314,7 @@ export default function AdminStaff() {
               <Input name="phone" defaultValue={editingStaff?.phone} />
             </div>
 
-            <div className="grid grid-cols-2 gap-4 bg-gray-50 p-4 rounded-lg">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-gray-50 p-4 rounded-lg">
               <div className="space-y-2">
                 <label className="text-sm font-medium">Emergency Contact Name</label>
                 <Input name="emergencyContactName" defaultValue={editingStaff?.profile?.emergencyContactName} />
@@ -337,3 +362,4 @@ export default function AdminStaff() {
     </div>
   );
 }
+

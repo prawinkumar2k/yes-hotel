@@ -44,7 +44,7 @@ function TiltImage({ src, alt, reducedMotion }: { src: string; alt: string; redu
         // the rotated image escape its overflow-hidden container's clip in
         // testing. Default (flat) transform-style clips correctly.
         style={reducedMotion ? undefined : { rotateX, rotateY }}
-        className="w-full h-[500px] object-cover group-hover:scale-105 transition-transform duration-700 will-change-transform"
+        className="w-full h-[280px] sm:h-[360px] md:h-[500px] object-cover group-hover:scale-105 transition-transform duration-700 will-change-transform"
       />
     </div>
   );
@@ -73,7 +73,7 @@ export default function RoomsPage() {
         transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
         className="py-20 px-6 text-center"
       >
-        <h1 className="font-serif text-5xl md:text-6xl text-hotel-black mb-6">Our Rooms & Suites</h1>
+        <h1 className="font-serif text-4xl sm:text-5xl md:text-6xl text-hotel-black mb-6">Our Rooms & Suites</h1>
         <p className="max-w-2xl mx-auto text-hotel-black/60 leading-relaxed">
           Experience uncompromising luxury in our meticulously designed rooms and suites.
           Every space is a sanctuary crafted to provide the ultimate in comfort and aesthetic pleasure.
@@ -117,11 +117,11 @@ export default function RoomsPage() {
                 <div className="flex items-center gap-2"><Wind size={16} className="text-hotel-gold"/> Climate Control</div>
               </div>
 
-              <div className="flex gap-4">
+              <div className="flex flex-wrap items-center gap-4">
                 <Link to="/search">
                   <GoldButton className="px-8 py-3">Book Now</GoldButton>
                 </Link>
-                <Link to={`/rooms/${cat.slug}`} className="flex items-center gap-2 text-sm uppercase tracking-widest font-semibold text-hotel-black hover:text-hotel-gold transition-colors">
+                <Link to={`/rooms/${cat.slug}`} className="flex min-h-[44px] items-center gap-2 text-sm uppercase tracking-widest font-semibold text-hotel-black hover:text-hotel-gold transition-colors">
                   Details <ArrowRight size={16} />
                 </Link>
               </div>

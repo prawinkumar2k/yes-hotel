@@ -59,7 +59,7 @@ export default function GalleryPage() {
       <Navbar transparent={false} />
       <div className="max-w-7xl mx-auto px-6 py-20">
         <div className="text-center mb-12">
-          <h1 className="font-serif text-5xl text-hotel-black mb-6">Gallery</h1>
+          <h1 className="font-serif text-4xl sm:text-5xl text-hotel-black mb-6">Gallery</h1>
           <p className="text-hotel-black/60 max-w-2xl mx-auto">
             A visual journey through the exceptional spaces, amenities, and experiences that define YES Hotels.
           </p>
@@ -71,7 +71,7 @@ export default function GalleryPage() {
             <button
               key={cat.value}
               onClick={() => setActiveCategory(cat.value)}
-              className={`px-5 py-2 rounded-full text-sm font-medium border transition-all duration-200 ${
+              className={`min-h-[44px] px-5 py-2 rounded-full text-sm font-medium border transition-all duration-200 ${
                 activeCategory === cat.value
                   ? "bg-hotel-gold border-hotel-gold text-hotel-black"
                   : "border-gray-300 text-gray-600 hover:border-hotel-gold hover:text-hotel-gold bg-white"
@@ -85,8 +85,8 @@ export default function GalleryPage() {
         {/* Gallery Grid */}
         {images.length === 0 && (
           <div className="text-center py-20">
-            <ImageOff className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-            <p className="text-gray-500">No images in this category yet.</p>
+            <ImageOff className="w-12 h-12 text-hotel-gold mx-auto mb-4" />
+            <p className="text-gray-900 font-bold text-lg">No photo samples found in this section yet.</p>
           </div>
         )}
 

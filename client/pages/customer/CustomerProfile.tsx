@@ -23,7 +23,7 @@ export default function CustomerProfile() {
     e.preventDefault();
     setSaving(true);
     try {
-      const res = await fetch("/api/users/profile", {
+      const res = await fetch("/api/auth/profile", {
         method: "PATCH",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${user?.token}` },
         body: JSON.stringify({ firstName: form.firstName, lastName: form.lastName, phone: form.phone }),

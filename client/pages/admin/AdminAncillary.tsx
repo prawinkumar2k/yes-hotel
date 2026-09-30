@@ -95,9 +95,9 @@ export default function AdminAncillary() {
         <div>
           <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
             <Sparkles className="text-hotel-gold" size={24} />
-            Ancillary Services
+            Extra Services & Amenities
           </h2>
-          <p className="text-sm text-gray-500 mt-1">Spa, transport, laundry, minibar and other guest services</p>
+          <p className="text-sm text-gray-500 mt-1">Spa, airport taxi, laundry, minibar and other guest services</p>
         </div>
         <div className="flex gap-2">
           <button onClick={fetchServices} className="flex items-center gap-2 border px-3 py-2 rounded-lg text-sm">
@@ -107,7 +107,7 @@ export default function AdminAncillary() {
             onClick={() => setShowModal(true)}
             className="flex items-center gap-2 bg-hotel-gold hover:bg-yellow-600 text-white px-4 py-2 rounded-lg text-sm font-semibold"
           >
-            <Plus size={16} /> Record Service
+            <Plus size={16} /> Add Extra Service
           </button>
         </div>
       </div>
@@ -134,7 +134,7 @@ export default function AdminAncillary() {
               <th className="text-right px-4 py-3">Amount</th>
               <th className="text-right px-4 py-3">Tax</th>
               <th className="text-right px-4 py-3">Total</th>
-              <th className="text-center px-4 py-3">Folio</th>
+              <th className="text-center px-4 py-3">Room Bill</th>
               <th className="text-left px-4 py-3">Date</th>
             </tr>
           </thead>
@@ -142,7 +142,7 @@ export default function AdminAncillary() {
             {loading ? (
               <tr><td colSpan={8} className="text-center py-8 text-gray-400">Loading...</td></tr>
             ) : services.length === 0 ? (
-              <tr><td colSpan={8} className="text-center py-8 text-gray-400">No ancillary services recorded.</td></tr>
+              <tr><td colSpan={8} className="text-center py-8 text-gray-400">No extra services recorded yet.</td></tr>
             ) : services.map(s => (
               <tr key={s._id}>
                 <td className="px-4 py-3">
@@ -159,7 +159,7 @@ export default function AdminAncillary() {
                 <td className="px-4 py-3 text-right text-gray-500">₹{s.taxAmount.toLocaleString("en-IN")}</td>
                 <td className="px-4 py-3 text-right font-semibold">₹{s.totalAmount.toLocaleString("en-IN")}</td>
                 <td className="px-4 py-3 text-center">
-                  {s.isChargedToFolio ? <span className="text-xs bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded font-semibold">Charged</span> : <span className="text-xs text-gray-400">—</span>}
+                  {s.isChargedToFolio ? <span className="text-xs bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded font-semibold">Added to Room Bill</span> : <span className="text-xs text-gray-400">—</span>}
                 </td>
                 <td className="px-4 py-3 text-xs text-gray-500">{format(new Date(s.createdAt), "MMM d, h:mm a")}</td>
               </tr>

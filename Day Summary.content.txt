@@ -1,0 +1,51 @@
+Page 1 of 2
+Night Auditor
+Misc.
+Sales   Room
+Credits
+OTA Credit
+HDFC UPI
+Paytm Card
+Mode  Cash
+Adv. Adjd.
+Final
+Partial
+Room Adv.
+Receipts Resrv. Adv.
+Auto
+Agency
+OTA
+Reserved
+Through Walkin
+No. of Inquiry
+No Show
+Status  Cancelled
+Pax
+Occupany Room
+Day Use
+Check Out
+Rooms  Check In
+Day:       Date:
+YH - Day Sales Summary
+----------------Page (0) Break----------------
+Page 2 of 2
+Night Auditor
+Remarks, If any
+Closing Balance (C/f)
+Total
+10
+9
+8
+7
+6
+5
+4
+3
+2
+1
+Today Cash Inward
+Opening Balance (B/d)
+S. No.    Party       Description      Debit    Credit
+Day:                 Date:
+CASH Sheet
+----------------Page (1) Break----------------

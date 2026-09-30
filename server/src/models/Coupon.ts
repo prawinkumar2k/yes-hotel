@@ -6,6 +6,7 @@ export enum DiscountType {
 }
 
 export interface ICoupon extends Document {
+  propertyId: mongoose.Types.ObjectId;
   code: string;
   description: string;
   discountType: DiscountType;
@@ -24,6 +25,7 @@ export interface ICoupon extends Document {
 
 const CouponSchema = new Schema<ICoupon>(
   {
+    propertyId: { type: Schema.Types.ObjectId, ref: "Property", required: true },
     code: { type: String, required: true, unique: true, uppercase: true, trim: true },
     description: { type: String, required: true },
     discountType: { type: String, enum: Object.values(DiscountType), required: true },

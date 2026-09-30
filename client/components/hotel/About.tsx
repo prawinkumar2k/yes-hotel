@@ -11,8 +11,8 @@ const FALLBACK = {
   description:
     "Created for those who value beautiful spaces and meaningful moments, YES Hotels brings nature, comfort and considered service into perfect balance.\n\nWhether it is a family weekend, celebration or focused business trip, every detail makes your time together feel effortless.",
   images: [
-    "https://images.unsplash.com/photo-1571896349842-33c89424de2d?auto=format&fit=crop&w=1800&q=80",
-    "https://images.unsplash.com/photo-1445019980597-93fa8acb246c?auto=format&fit=crop&w=900&q=80",
+    "/gallery/hotel-56.jpg",
+    "/gallery/hotel-57.jpg",
   ],
 };
 

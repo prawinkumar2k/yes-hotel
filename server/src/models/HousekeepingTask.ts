@@ -48,6 +48,7 @@ export enum HousekeepingTaskType {
 }
 
 export interface IHousekeepingTask extends Document {
+  propertyId: mongoose.Types.ObjectId;
   room: mongoose.Types.ObjectId;
   booking?: mongoose.Types.ObjectId;   // the booking that triggered this task
   taskType: HousekeepingTaskType;
@@ -57,6 +58,7 @@ export interface IHousekeepingTask extends Document {
   status: HousekeepingStatus;
   priority: HousekeepingPriority;
   notes?: string;
+  cleaningProofPhoto?: string;
 
   // Timestamps for each lifecycle step
   startedAt?: Date;
@@ -86,6 +88,7 @@ export interface IHousekeepingTask extends Document {
 
 const HousekeepingTaskSchema = new Schema<IHousekeepingTask>(
   {
+    propertyId: { type: Schema.Types.ObjectId, ref: "Property", required: true },
     room: { type: Schema.Types.ObjectId, ref: "Room", required: true },
     booking: { type: Schema.Types.ObjectId, ref: "Booking" },
     taskType: {
@@ -107,6 +110,7 @@ const HousekeepingTaskSchema = new Schema<IHousekeepingTask>(
       default: HousekeepingPriority.NORMAL,
     },
     notes: { type: String },
+    cleaningProofPhoto: { type: String },
     startedAt: { type: Date },
     completedAt: { type: Date },
     inspectionStartedAt: { type: Date },

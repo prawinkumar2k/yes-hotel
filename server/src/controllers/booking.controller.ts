@@ -11,6 +11,7 @@ import { logger } from "../services/logger.service";
 import { IllegalBookingTransitionError, transitionBookingStatus } from "../services/booking-state.service";
 import { transitionRoomStatus } from "../services/room-state.service";
 import { createAuditLog } from "../services/audit.service";
+import { generateBookingReference } from "../utils/booking-reference";
 import crypto from "crypto";
 import { z } from "zod";
 import { BookingIdempotency, BookingIdempotencyStatus } from "../models/BookingIdempotency";
@@ -262,7 +263,7 @@ export const createBooking = async (req: Request, res: Response) => {
           session,
         });
 
-        const bookingReference = `YES-${crypto.randomBytes(3).toString("hex").toUpperCase()}`;
+        const bookingReference = await generateBookingReference("OTA");
         const created = await Booking.create(
           [
             {
@@ -285,6 +286,17 @@ export const createBooking = async (req: Request, res: Response) => {
           { session }
         );
         booking = created[0];
+
+        // 3. Guarantee atomic folio creation
+        await createFolio(
+          {
+            bookingId: booking._id.toString(),
+            guestId: booking.customer ? booking.customer.toString() : booking._id.toString(),
+            checkInDate: booking.checkInDate,
+            checkOutDate: booking.checkOutDate,
+          },
+          { req, session }
+        );
 
         // Finalizing the idempotency record inside the same transaction closes
         // a second gap: without this, a crash between "booking committed" and
@@ -802,6 +814,7 @@ export const checkOut = async (req: Request, res: Response) => {
     advancePaymentId,
     paymentAmount,
     paymentMethod = "CASH",
+    paymentChannelId,
     refundAmount,
     forceBypassBalance = false,
     notes,
@@ -816,6 +829,10 @@ export const checkOut = async (req: Request, res: Response) => {
   // against on the booking-creation side.
   let folio: any = null;
   let roomNumber: string | undefined;
+  
+  const { resolvePaymentChannel } = await import("../utils/payment-channel.resolver");
+  const resolvedChannelId = await resolvePaymentChannel(paymentMethod, paymentChannelId);
+
   const session = await mongoose.startSession();
   try {
     await session.withTransaction(async () => {
@@ -872,6 +889,7 @@ export const checkOut = async (req: Request, res: Response) => {
             amount: Number(paymentAmount),
             date: new Date(),
             postedBy: actorId?.toString() || "CHECKOUT",
+            paymentChannelId: resolvedChannelId?.toString(),
             notes: notes || `Settled via ${paymentMethod} at checkout`,
           },
           { req, session }
@@ -941,6 +959,7 @@ export const checkOut = async (req: Request, res: Response) => {
           await HousekeepingTask.create(
             [
               {
+                propertyId: booking.propertyId || booking.property,
                 room: room._id,
                 status: HousekeepingStatus.DIRTY,
                 priority: HousekeepingPriority.HIGH,
@@ -957,6 +976,7 @@ export const checkOut = async (req: Request, res: Response) => {
     if (error instanceof CheckoutBalanceError) {
       return res.status(400).json({ success: false, message: error.message, balance: error.balance });
     }
+    console.error("Check-out Error:", error);
     return res.status(500).json({ success: false, message: error.message });
   } finally {
     await session.endSession();

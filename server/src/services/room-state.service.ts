@@ -104,6 +104,7 @@ export class IllegalHousekeepingTransitionError extends Error {
 const LEGAL_HOUSEKEEPING_TRANSITIONS: Record<HousekeepingRoomStatus, HousekeepingRoomStatus[]> = {
   [HousekeepingRoomStatus.CLEAN]: [
     HousekeepingRoomStatus.DIRTY,
+    HousekeepingRoomStatus.ASSIGNED, // Allow direct assignment to clean rooms for touch-ups
     HousekeepingRoomStatus.DND,
     HousekeepingRoomStatus.REFUSED_SERVICE,
   ],

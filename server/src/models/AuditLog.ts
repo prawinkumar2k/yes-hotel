@@ -7,6 +7,7 @@ export enum AuditActorType {
 }
 
 export interface IAuditLog extends Document {
+  propertyId: mongoose.Types.ObjectId;
   actorType: AuditActorType;
   actorId?: mongoose.Types.ObjectId;
   actorRole: string;
@@ -21,6 +22,7 @@ export interface IAuditLog extends Document {
 
 const AuditLogSchema = new Schema<IAuditLog>(
   {
+    propertyId: { type: Schema.Types.ObjectId, ref: "Property", required: true },
     actorType: {
       type: String,
       enum: Object.values(AuditActorType),

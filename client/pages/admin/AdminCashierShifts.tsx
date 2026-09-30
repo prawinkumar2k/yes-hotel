@@ -129,27 +129,27 @@ export default function AdminCashierShifts() {
 
   if (loading && historyShifts.length === 0) {
     return (
-      <div className="min-h-screen bg-[#0b0b0b] text-white p-12 flex flex-col items-center justify-center">
+      <div className="min-h-screen bg-gray-50 text-gray-800 p-12 flex flex-col items-center justify-center">
         <div className="inline-block animate-spin text-[#c9a227] text-3xl font-serif font-bold">YES HOTELS</div>
-        <p className="text-sm text-gray-400 mt-3 font-mono">Loading Cashier Drawer & Shift Audit...</p>
+        <p className="text-sm text-gray-500 mt-3 font-mono">Loading Cashier Drawer & Shift Audit...</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#0b0b0b] text-white p-4 md:p-6 space-y-6 max-w-[1600px] mx-auto">
+    <div className="min-h-screen bg-gray-50 text-gray-800 p-4 md:p-6 space-y-6 max-w-[1600px] mx-auto">
       {/* Top Header */}
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 bg-[#121316] p-6 rounded-2xl border border-[#262930] shadow-xl">
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 bg-white p-6 rounded-2xl border border-gray-200 shadow-xl">
         <div className="flex items-center gap-3">
           <div className="p-2.5 bg-[#c9a227]/10 rounded-xl border border-[#c9a227]/30 text-[#c9a227]">
             <DollarSign size={24} />
           </div>
           <div>
-            <h1 className="text-2xl font-serif font-bold text-white flex items-center gap-2">
+            <h1 className="text-2xl font-serif font-bold text-gray-800 flex items-center gap-2">
               Cashier Shift & Cash Drawer Reconciliation
               <span className="text-xs bg-[#c9a227]/20 text-[#e5c76b] px-2.5 py-0.5 rounded-full font-mono border border-[#c9a227]/30">AUDIT CONTROL</span>
             </h1>
-            <p className="text-xs text-gray-400 mt-0.5">
+            <p className="text-xs text-gray-500 mt-0.5">
               Opening float initialization, live collection audit, blind drawer counting & variance management
             </p>
           </div>
@@ -157,53 +157,53 @@ export default function AdminCashierShifts() {
 
         <button
           onClick={fetchShifts}
-          className="flex items-center gap-2 px-4 py-2.5 bg-[#1a1d24] text-gray-300 hover:text-white rounded-xl transition text-xs font-semibold border border-[#262930]"
+          className="flex items-center gap-2 px-4 py-2.5 bg-gray-100 text-gray-600 hover:text-gray-800 rounded-xl transition text-xs font-semibold border border-gray-200"
         >
           <RefreshCw size={15} className={loading ? "animate-spin" : ""} /> Sync Shift Status
         </button>
       </div>
 
       {/* Active Shift Flight Deck Card */}
-      <div className="bg-[#121316] rounded-2xl border border-[#262930] p-6 shadow-xl space-y-6">
-        <div className="flex items-center justify-between border-b border-[#262930] pb-4">
+      <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-xl space-y-6">
+        <div className="flex items-center justify-between border-b border-gray-200 pb-4">
           <div className="flex items-center gap-2">
             <Clock size={20} className="text-[#c9a227]" />
-            <h2 className="text-lg font-serif font-bold text-white">Active Cashier Shift Terminal</h2>
+            <h2 className="text-lg font-serif font-bold text-gray-800">Active Cashier Shift Terminal</h2>
           </div>
           {currentShift ? (
             <span className="bg-emerald-500/20 text-emerald-300 px-3 py-1 rounded-full text-xs font-bold font-mono flex items-center gap-1.5 border border-emerald-500/30">
               <CheckCircle2 size={14} /> SHIFT OPEN (#{currentShift.shiftNumber})
             </span>
           ) : (
-            <span className="bg-gray-800 text-gray-400 px-3 py-1 rounded-full text-xs font-mono font-semibold border border-[#262930]">
+            <span className="bg-gray-800 text-gray-500 px-3 py-1 rounded-full text-xs font-mono font-semibold border border-gray-200">
               NO ACTIVE SHIFT OPEN
             </span>
           )}
         </div>
 
         {currentShift ? (
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 bg-[#1a1d24] p-6 rounded-2xl border border-emerald-500/30 bg-emerald-500/5">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 bg-gray-100 p-6 rounded-2xl border border-emerald-500/30 bg-emerald-500/5">
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 text-xs">
               <div>
-                <span className="text-gray-400 block font-mono">Shift Started</span>
-                <span className="font-bold text-white text-sm mt-0.5 block font-mono">
+                <span className="text-gray-500 block font-mono">Shift Started</span>
+                <span className="font-bold text-gray-800 text-sm mt-0.5 block font-mono">
                   {format(new Date(currentShift.openedAt), "hh:mm a, MMM dd")}
                 </span>
               </div>
               <div>
-                <span className="text-gray-400 block font-mono">Opening Cash Float</span>
-                <span className="font-bold text-white text-sm mt-0.5 block font-mono">
+                <span className="text-gray-500 block font-mono">Opening Cash Float</span>
+                <span className="font-bold text-gray-800 text-sm mt-0.5 block font-mono">
                   ₹{currentShift.openingFloat.toLocaleString()}
                 </span>
               </div>
               <div>
-                <span className="text-gray-400 block font-mono">Expected Drawer Total</span>
-                <span className="font-bold text-emerald-400 text-sm mt-0.5 block font-mono">
+                <span className="text-gray-500 block font-mono">Expected Drawer Total</span>
+                <span className="font-bold text-emerald-600 text-sm mt-0.5 block font-mono">
                   ₹{(currentShift.expectedCash || currentShift.openingFloat).toLocaleString()}
                 </span>
               </div>
               <div>
-                <span className="text-gray-400 block font-mono">Active Cashier</span>
+                <span className="text-gray-500 block font-mono">Active Cashier</span>
                 <span className="font-bold text-[#c9a227] text-sm mt-0.5 block">
                   {currentShift.cashier?.name || "Front Desk Cashier"}
                 </span>
@@ -212,7 +212,7 @@ export default function AdminCashierShifts() {
 
             <button
               onClick={() => setShowCloseModal(true)}
-              className="px-6 py-3 bg-red-600 hover:bg-red-500 text-white rounded-xl text-xs font-bold shadow-lg transition flex items-center justify-center gap-2 whitespace-nowrap"
+              className="px-6 py-3 bg-red-600 hover:bg-red-500 text-gray-800 rounded-xl text-xs font-bold shadow-lg transition flex items-center justify-center gap-2 whitespace-nowrap"
             >
               <Lock size={15} /> Reconcile & Close Shift
             </button>
@@ -220,7 +220,7 @@ export default function AdminCashierShifts() {
         ) : (
           <div className="text-center py-10 space-y-4">
             <ShieldCheck size={40} className="mx-auto text-gray-600 opacity-60" />
-            <p className="text-sm text-gray-400 font-medium">
+            <p className="text-sm text-gray-500 font-medium">
               You must open a cashier shift to accept payments and manage room folios.
             </p>
             <button
@@ -234,12 +234,12 @@ export default function AdminCashierShifts() {
       </div>
 
       {/* Shift Audit History Log */}
-      <div className="bg-[#121316] rounded-2xl border border-[#262930] p-6 shadow-xl space-y-4">
-        <h3 className="font-serif font-bold text-white text-base">Historical Cashier Shift Audit Log</h3>
+      <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-xl space-y-4">
+        <h3 className="font-serif font-bold text-gray-800 text-base">Historical Cashier Shift Audit Log</h3>
 
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs font-sans">
-            <thead className="bg-[#1a1d24] text-gray-400 text-xs uppercase font-mono border-b border-[#262930]">
+            <thead className="bg-gray-100 text-gray-500 text-xs uppercase font-mono border-b border-gray-200">
               <tr>
                 <th className="p-3.5 rounded-l-xl">Shift #</th>
                 <th className="p-3.5">Cashier</th>
@@ -261,14 +261,14 @@ export default function AdminCashierShifts() {
                 </tr>
               ) : (
                 historyShifts.map((s) => (
-                  <tr key={s._id} className="hover:bg-[#1a1d24]/80 transition">
+                  <tr key={s._id} className="hover:bg-gray-100/80 transition">
                     <td className="p-3.5 font-bold text-[#c9a227]">{s.shiftNumber}</td>
-                    <td className="p-3.5 font-sans font-medium text-white">{s.cashier?.name || "Staff"}</td>
-                    <td className="p-3.5 text-gray-400">{format(new Date(s.openedAt), "MMM dd, hh:mm a")}</td>
-                    <td className="p-3.5 text-gray-400">{s.closedAt ? format(new Date(s.closedAt), "MMM dd, hh:mm a") : "—"}</td>
-                    <td className="p-3.5 text-right text-white">₹{s.openingFloat.toLocaleString()}</td>
-                    <td className="p-3.5 text-right text-white">₹{(s.expectedCash || 0).toLocaleString()}</td>
-                    <td className="p-3.5 text-right text-white">
+                    <td className="p-3.5 font-sans font-medium text-gray-800">{s.cashier?.name || "Staff"}</td>
+                    <td className="p-3.5 text-gray-500">{format(new Date(s.openedAt), "MMM dd, hh:mm a")}</td>
+                    <td className="p-3.5 text-gray-500">{s.closedAt ? format(new Date(s.closedAt), "MMM dd, hh:mm a") : "—"}</td>
+                    <td className="p-3.5 text-right text-gray-800">₹{s.openingFloat.toLocaleString()}</td>
+                    <td className="p-3.5 text-right text-gray-800">₹{(s.expectedCash || 0).toLocaleString()}</td>
+                    <td className="p-3.5 text-right text-gray-800">
                       {s.actualCashCounted !== undefined ? `₹${s.actualCashCounted.toLocaleString()}` : "—"}
                     </td>
                     <td
@@ -276,8 +276,8 @@ export default function AdminCashierShifts() {
                         (s.cashVariance || 0) < 0
                           ? "text-red-400"
                           : (s.cashVariance || 0) > 0
-                          ? "text-amber-400"
-                          : "text-emerald-400"
+                          ? "text-amber-600"
+                          : "text-emerald-600"
                       }`}
                     >
                       {s.cashVariance !== undefined ? `₹${s.cashVariance.toLocaleString()}` : "—"}
@@ -287,7 +287,7 @@ export default function AdminCashierShifts() {
                         className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
                           s.status === "OPEN"
                             ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/30"
-                            : "bg-gray-800 text-gray-300 border-[#262930]"
+                            : "bg-gray-800 text-gray-600 border-gray-200"
                         }`}
                       >
                         {s.status}
@@ -304,18 +304,18 @@ export default function AdminCashierShifts() {
       {/* MODAL 1: OPEN SHIFT */}
       {showOpenModal && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <form onSubmit={handleOpenShift} className="bg-[#121316] border border-[#262930] rounded-2xl max-w-md w-full p-6 space-y-5 shadow-2xl text-white">
-            <div className="flex justify-between items-center border-b border-[#262930] pb-4">
+          <form onSubmit={handleOpenShift} className="bg-white border border-gray-200 rounded-2xl max-w-md w-full p-6 space-y-5 shadow-2xl text-gray-800">
+            <div className="flex justify-between items-center border-b border-gray-200 pb-4">
               <h3 className="font-serif font-bold text-lg flex items-center gap-2">
-                <DollarSign className="text-emerald-400" size={20} /> Open Cashier Shift
+                <DollarSign className="text-emerald-600" size={20} /> Open Cashier Shift
               </h3>
-              <button type="button" onClick={() => setShowOpenModal(false)} className="text-gray-400 hover:text-white">
+              <button type="button" onClick={() => setShowOpenModal(false)} className="text-gray-500 hover:text-gray-800">
                 <X size={20} />
               </button>
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-gray-300 mb-1">Opening Cash Float (₹) *</label>
+              <label className="block text-xs font-semibold text-gray-600 mb-1">Opening Cash Float (₹) *</label>
               <input
                 type="number"
                 step="0.01"
@@ -323,29 +323,29 @@ export default function AdminCashierShifts() {
                 value={openingFloat}
                 onChange={(e) => setOpeningFloat(e.target.value)}
                 placeholder="5000"
-                className="w-full bg-[#1a1d24] border border-[#262930] text-sm text-white font-mono font-bold rounded-xl p-2.5 focus:border-[#c9a227]"
+                className="w-full bg-gray-100 border border-gray-200 text-sm text-gray-800 font-mono font-bold rounded-xl p-2.5 focus:border-[#c9a227]"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-gray-300 mb-1">Shift Notes</label>
+              <label className="block text-xs font-semibold text-gray-600 mb-1">Shift Notes</label>
               <input
                 type="text"
                 value={openNotes}
                 onChange={(e) => setOpenNotes(e.target.value)}
                 placeholder="Morning shift opening float verified"
-                className="w-full bg-[#1a1d24] border border-[#262930] text-sm text-white rounded-xl p-2.5 focus:border-[#c9a227]"
+                className="w-full bg-gray-100 border border-gray-200 text-sm text-gray-800 rounded-xl p-2.5 focus:border-[#c9a227]"
               />
             </div>
 
-            <div className="flex gap-3 border-t border-[#262930] pt-4">
-              <button type="button" onClick={() => setShowOpenModal(false)} className="flex-1 py-2 bg-[#1a1d24] text-gray-300 rounded-xl text-xs font-semibold">
+            <div className="flex gap-3 border-t border-gray-200 pt-4">
+              <button type="button" onClick={() => setShowOpenModal(false)} className="flex-1 py-2 bg-gray-100 text-gray-600 rounded-xl text-xs font-semibold">
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={submittingOpen}
-                className="flex-1 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold shadow-lg disabled:opacity-50"
+                className="flex-1 py-2 bg-emerald-600 hover:bg-emerald-500 text-gray-800 rounded-xl text-xs font-bold shadow-lg disabled:opacity-50"
               >
                 {submittingOpen ? "Opening..." : "Confirm Open"}
               </button>
@@ -357,18 +357,18 @@ export default function AdminCashierShifts() {
       {/* MODAL 2: CLOSE SHIFT */}
       {showCloseModal && currentShift && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <form onSubmit={handleCloseShift} className="bg-[#121316] border border-[#262930] rounded-2xl max-w-md w-full p-6 space-y-5 shadow-2xl text-white">
-            <div className="flex justify-between items-center border-b border-[#262930] pb-4">
+          <form onSubmit={handleCloseShift} className="bg-white border border-gray-200 rounded-2xl max-w-md w-full p-6 space-y-5 shadow-2xl text-gray-800">
+            <div className="flex justify-between items-center border-b border-gray-200 pb-4">
               <h3 className="font-serif font-bold text-lg flex items-center gap-2">
                 <Lock className="text-red-400" size={20} /> Close Shift #{currentShift.shiftNumber}
               </h3>
-              <button type="button" onClick={() => setShowCloseModal(false)} className="text-gray-400 hover:text-white">
+              <button type="button" onClick={() => setShowCloseModal(false)} className="text-gray-500 hover:text-gray-800">
                 <X size={20} />
               </button>
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-gray-300 mb-1">Actual Cash Counted in Drawer (₹) *</label>
+              <label className="block text-xs font-semibold text-gray-600 mb-1">Actual Cash Counted in Drawer (₹) *</label>
               <input
                 type="number"
                 step="0.01"
@@ -376,18 +376,18 @@ export default function AdminCashierShifts() {
                 value={actualCounted}
                 onChange={(e) => setActualCounted(e.target.value)}
                 placeholder="5000"
-                className="w-full bg-[#1a1d24] border border-[#262930] text-sm text-white font-mono font-bold rounded-xl p-2.5 focus:border-red-500"
+                className="w-full bg-gray-100 border border-gray-200 text-sm text-gray-800 font-mono font-bold rounded-xl p-2.5 focus:border-red-500"
               />
             </div>
 
             {actualCounted && (
-              <div className="p-3 bg-[#1a1d24] border border-[#262930] rounded-xl text-xs flex justify-between font-mono font-semibold">
-                <span className="text-gray-400">Calculated Variance:</span>
+              <div className="p-3 bg-gray-100 border border-gray-200 rounded-xl text-xs flex justify-between font-mono font-semibold">
+                <span className="text-gray-500">Calculated Variance:</span>
                 <span
                   className={
                     parseFloat(actualCounted) - (currentShift.expectedCash || currentShift.openingFloat) < 0
                       ? "text-red-400 font-bold"
-                      : "text-emerald-400 font-bold"
+                      : "text-emerald-600 font-bold"
                   }
                 >
                   ₹{(parseFloat(actualCounted) - (currentShift.expectedCash || currentShift.openingFloat)).toFixed(2)}
@@ -396,24 +396,24 @@ export default function AdminCashierShifts() {
             )}
 
             <div>
-              <label className="block text-xs font-semibold text-gray-300 mb-1">Shift Closing Audit Notes</label>
+              <label className="block text-xs font-semibold text-gray-600 mb-1">Shift Closing Audit Notes</label>
               <input
                 type="text"
                 value={closeNotes}
                 onChange={(e) => setCloseNotes(e.target.value)}
                 placeholder="Cash counted & handed over to manager"
-                className="w-full bg-[#1a1d24] border border-[#262930] text-sm text-white rounded-xl p-2.5 focus:border-red-500"
+                className="w-full bg-gray-100 border border-gray-200 text-sm text-gray-800 rounded-xl p-2.5 focus:border-red-500"
               />
             </div>
 
-            <div className="flex gap-3 border-t border-[#262930] pt-4">
-              <button type="button" onClick={() => setShowCloseModal(false)} className="flex-1 py-2 bg-[#1a1d24] text-gray-300 rounded-xl text-xs font-semibold">
+            <div className="flex gap-3 border-t border-gray-200 pt-4">
+              <button type="button" onClick={() => setShowCloseModal(false)} className="flex-1 py-2 bg-gray-100 text-gray-600 rounded-xl text-xs font-semibold">
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={submittingClose}
-                className="flex-1 py-2 bg-red-600 hover:bg-red-500 text-white rounded-xl text-xs font-bold shadow-lg disabled:opacity-50"
+                className="flex-1 py-2 bg-red-600 hover:bg-red-500 text-gray-800 rounded-xl text-xs font-bold shadow-lg disabled:opacity-50"
               >
                 {submittingClose ? "Closing..." : "Close & Reconcile"}
               </button>

@@ -1,7 +1,7 @@
 import type { Config } from "tailwindcss";
 
 export default {
-  darkMode: ["class"],
+  darkMode: "class",
   content: ["./client/**/*.{ts,tsx}"],
   prefix: "",
   theme: {
@@ -19,22 +19,21 @@ export default {
       },
       colors: {
         hotel: {
-          black: "#0B0B0B",
-          charcoal: "#151515",
+          black: "#111827", // Dark Navy / Charcoal
+          charcoal: "#111827", // Standardized to Dark Navy
           gold: "#C9A227",
-          // A darkened gold reserved for TEXT rendered on light backgrounds
-          // (white/ivory) — the brand gold (#C9A227) is only ~2.2-2.4:1
-          // against those, well under WCAG AA's 4.5:1 for text. Verified
-          // (see README) at 5.13:1 on white and 4.75:1 on ivory. Not a
-          // replacement for `hotel-gold` generally — buttons, icons, and
-          // borders using the brighter gold are unaffected; this token is
-          // only for text where accessibility::color-contrast actually
-          // applies.
           "gold-text": "#866A1C",
           champagne: "#E5C76B",
-          ivory: "#F8F6F0",
+          ivory: "#FAF9F6", // Warm Ivory
           white: "#FFFFFF",
-          gray: "#A8A8A8",
+          gray: "#F3F4F6", // Secondary neutral
+        },
+        semantic: {
+          success: "#15803D",
+          warning: "#D97706",
+          error: "#DC2626",
+          info: "#2563EB",
+          special: "#7C3AED",
         },
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",

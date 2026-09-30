@@ -11,6 +11,8 @@ export default function AdminRoomCategories() {
   const qc = useQueryClient();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<any>(null);
+  
+  const canEdit = user?.role === "ADMIN" || user?.role === "SUPER_ADMIN";
 
   // Form state
   const [formData, setFormData] = useState({
@@ -19,6 +21,7 @@ export default function AdminRoomCategories() {
     shortDescription: "",
     description: "",
     basePrice: 0,
+    hourlyPrice: 0,
     capacityAdults: 2,
     capacityChildren: 0,
     bedType: "",
@@ -100,6 +103,7 @@ export default function AdminRoomCategories() {
         shortDescription: category.shortDescription || "",
         description: category.description,
         basePrice: category.basePrice,
+        hourlyPrice: category.hourlyPrice || 0,
         capacityAdults: category.capacity.adults,
         capacityChildren: category.capacity.children,
         bedType: category.bedType || "",
@@ -109,7 +113,7 @@ export default function AdminRoomCategories() {
     } else {
       setEditingCategory(null);
       setFormData({
-        name: "", slug: "", shortDescription: "", description: "", basePrice: 0,
+        name: "", slug: "", shortDescription: "", description: "", basePrice: 0, hourlyPrice: 0,
         capacityAdults: 2, capacityChildren: 0, bedType: "", amenities: "", isActive: true,
       });
     }
@@ -137,18 +141,21 @@ export default function AdminRoomCategories() {
       <div className="max-w-7xl mx-auto p-6">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-bold text-gray-800">Room Categories</h1>
-          <button onClick={() => openModal()} className="flex items-center gap-2 bg-hotel-gold text-hotel-black px-4 py-2 rounded font-medium hover:bg-yellow-500 transition-colors">
-            <Plus size={18} /> Add Category
-          </button>
+          {canEdit && (
+            <button onClick={() => openModal()} className="flex items-center gap-2 bg-hotel-gold text-hotel-black px-4 py-2 rounded font-medium hover:bg-yellow-500 transition-colors">
+              <Plus size={18} /> Add Category
+            </button>
+          )}
         </div>
 
         <div className="bg-white rounded shadow-sm overflow-hidden">
           <table className="w-full text-sm text-gray-900">
             <thead className="bg-gray-50 border-b border-gray-100">
               <tr>
-                {["Name", "Slug", "Base Price", "Capacity", "Status", "Actions"].map(h => (
+                {["Name", "Slug", "Base Price", "Capacity", "Status"].map(h => (
                   <th key={h} className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">{h}</th>
                 ))}
+                {canEdit && <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Actions</th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
@@ -169,14 +176,16 @@ export default function AdminRoomCategories() {
                       {cat.isActive ? "Active" : "Inactive"}
                     </span>
                   </td>
-                  <td className="px-5 py-4 flex items-center gap-3">
-                    <button onClick={() => openModal(cat)} className="text-blue-600 hover:text-blue-800" title="Edit">
-                      <Edit size={16} />
-                    </button>
-                    <button onClick={() => { if(confirm("Delete this category?")) deleteMutation.mutate(cat._id); }} className="text-red-600 hover:text-red-800" title="Delete">
-                      {deleteMutation.isPending && deleteMutation.variables === cat._id ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
-                    </button>
-                  </td>
+                  {canEdit && (
+                    <td className="px-5 py-4 flex items-center gap-3">
+                      <button onClick={() => openModal(cat)} className="text-blue-600 hover:text-blue-800" title="Edit">
+                        <Edit size={16} />
+                      </button>
+                      <button onClick={() => { if(confirm("Delete this category?")) deleteMutation.mutate(cat._id); }} className="text-red-600 hover:text-red-800" title="Delete">
+                        {deleteMutation.isPending && deleteMutation.variables === cat._id ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
+                      </button>
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>
@@ -193,7 +202,7 @@ export default function AdminRoomCategories() {
               <button onClick={closeModal} className="text-gray-400 hover:text-gray-600 text-2xl leading-none">&times;</button>
             </div>
             <form onSubmit={handleSubmit} className="p-6 space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
                   <input type="text" required value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-1 focus:ring-hotel-gold" />
@@ -211,10 +220,14 @@ export default function AdminRoomCategories() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">Full Description</label>
                 <textarea required rows={3} value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-1 focus:ring-hotel-gold"></textarea>
               </div>
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-4 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Base Price (₹)</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Nightly Price (₹)</label>
                   <input type="number" required min="0" value={formData.basePrice} onChange={e => setFormData({...formData, basePrice: Number(e.target.value)})} className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-1 focus:ring-hotel-gold" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Hourly Price (₹)</label>
+                  <input type="number" required min="0" value={formData.hourlyPrice} onChange={e => setFormData({...formData, hourlyPrice: Number(e.target.value)})} className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-1 focus:ring-hotel-gold" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Adults Capacity</label>
@@ -225,7 +238,7 @@ export default function AdminRoomCategories() {
                   <input type="number" required min="0" value={formData.capacityChildren} onChange={e => setFormData({...formData, capacityChildren: Number(e.target.value)})} className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-1 focus:ring-hotel-gold" />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Bed Type</label>
                   <input type="text" placeholder="e.g. 1 King Bed" value={formData.bedType} onChange={e => setFormData({...formData, bedType: e.target.value})} className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-1 focus:ring-hotel-gold" />
@@ -256,3 +269,4 @@ export default function AdminRoomCategories() {
     </div>
   );
 }
+

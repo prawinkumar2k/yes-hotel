@@ -233,11 +233,15 @@ export const confirmDemoBooking = async (req: Request, res: Response) => {
       }
     }
 
+    const { resolvePaymentChannel } = await import("../utils/payment-channel.resolver");
+    const cashChannelId = await resolvePaymentChannel("CASH");
+
     await Payment.create({
       booking: booking._id,
       amount: booking.totalAmount,
       currency: "INR",
       method: PaymentMethod.CASH,
+      paymentChannel: cashChannelId,
       transactionId: `DEMO-${booking.bookingReference}`,
       status: PaymentTxStatus.COMPLETED,
     });

@@ -84,9 +84,11 @@ export default function CustomerDashboard() {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-12">
           {[
             { label: "My Bookings", to: "/customer/bookings", desc: "View and manage all your reservations" },
+            { label: "Service Requests", to: "/customer/requests", desc: "File requests or complaints for your stay" },
             { label: "My Profile", to: "/customer/profile", desc: "Update your personal information" },
             { label: "Payment History", to: "/customer/payments", desc: "Track all your payments and invoices" },
             { label: "My Reviews", to: "/customer/reviews", desc: "Leave reviews for your completed stays" },
+            { label: "Loyalty & Rewards", to: "/customer/loyalty", desc: "View your points and tier status" },
           ].map(({ label, to, desc }) => (
             <Link key={to} to={to} className="bg-hotel-white border border-hotel-black/10 p-6 flex items-center justify-between hover:border-hotel-gold transition-colors group">
               <div>

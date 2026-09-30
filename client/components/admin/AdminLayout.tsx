@@ -1,6 +1,7 @@
 import React, { ReactNode, useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
+import { usePermissions } from "../../context/PermissionContext";
 import {
   LayoutDashboard, CalendarDays, BedDouble, Users, CreditCard,
   BarChart3, Settings, Home, Wrench, LogIn, LogOut, MenuIcon, X,
@@ -20,7 +21,7 @@ interface NavItem {
   label: string;
   to: string;
   icon: any;
-  roles: string[];
+  pageKey: string;
   badge?: string | number;
 }
 
@@ -29,13 +30,11 @@ interface NavSection {
   items: NavItem[];
 }
 
-const ADMIN_ROLES = ["ADMIN", "MANAGER", "RECEPTIONIST"];
-const STAFF_ROLES = ["ADMIN", "MANAGER", "RECEPTIONIST", "HOUSEKEEPING", "MAINTENANCE"];
-const FINANCE_ROLES = ["ADMIN", "MANAGER", "RECEPTIONIST"];
-const EXEC_ROLES = ["ADMIN", "MANAGER"];
 
-export default function AdminLayout({ children, title }: { children: ReactNode; title?: string }) {
+
+export default function AdminLayout({ children, title, hidePadding }: { children: ReactNode; title?: string; hidePadding?: boolean }) {
   const { user, logout } = useAuth();
+  const { hasPageAccess } = usePermissions();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -48,10 +47,11 @@ export default function AdminLayout({ children, title }: { children: ReactNode; 
   // Expanded sections state (default all open)
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({
     "MAIN": true,
-    "FRONT OFFICE": true,
-    "HOUSEKEEPING": true,
-    "RESTAURANT / POS": true,
-    "FINANCE": true,
+    "FRONT DESK & GUESTS": true,
+    "CLEANING & ROOMS": true,
+    "MAINTENANCE & REPAIRS": true,
+    "RESTAURANT & FOOD BILLING": true,
+    "ACCOUNTS & MONEY": true,
   });
 
   const toggleSection = (title: string) => {
@@ -81,7 +81,7 @@ export default function AdminLayout({ children, title }: { children: ReactNode; 
       const json = await res.json();
       return json.success ? json.data : null;
     },
-    enabled: ADMIN_ROLES.includes(user?.role || ""),
+    enabled: hasPageAccess("FRONT_DESK"),
     refetchInterval: 45000,
   });
 
@@ -90,117 +90,87 @@ export default function AdminLayout({ children, title }: { children: ReactNode; 
   const dirtyCount = frontDeskSummary?.counts?.dirtyRooms || 0;
   const inHouseCount = frontDeskSummary?.counts?.inHouse || 0;
 
+  // New chatbot-collected enquiries awaiting front-desk follow-up
+  const { data: newEnquiriesData } = useQuery({
+    queryKey: ["sidebarNewEnquiries"],
+    queryFn: async () => {
+      const token = getStoredAuthToken();
+      const res = await fetch("/api/admin/booking-enquiries?status=NEW&limit=1", {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      const json = await res.json();
+      return json.success ? json.data : null;
+    },
+    enabled: hasPageAccess("FRONT_DESK"),
+    refetchInterval: 45000,
+  });
+  const newEnquiriesCount = newEnquiriesData?.total || 0;
+
   const NAV_SECTIONS: NavSection[] = [
     {
       title: "MAIN",
       items: [
-        { label: "Dashboard", to: "/admin/dashboard", icon: LayoutDashboard, roles: ADMIN_ROLES },
-        { label: "Executive Command", to: "/admin/executive", icon: Monitor, roles: EXEC_ROLES },
+        { label: "Dashboard", to: "/admin/dashboard", icon: LayoutDashboard, pageKey: "DASHBOARD.ADMIN" },
       ],
     },
     {
-      title: "FRONT OFFICE",
+      title: "OPERATIONS",
       items: [
-        { label: "Front Desk Hub", to: "/admin/front-desk", icon: Home, roles: ADMIN_ROLES, badge: arrivalsCount > 0 ? arrivalsCount : undefined },
-        { label: "Visual Room Rack", to: "/admin/room-rack", icon: BedDouble, roles: ADMIN_ROLES },
-        { label: "Reservations", to: "/admin/bookings", icon: CalendarDays, roles: ADMIN_ROLES },
-        { label: "Express Check-In", to: "/admin/check-in", icon: LogIn, roles: ADMIN_ROLES },
-        { label: "Express Check-Out", to: "/admin/check-out", icon: LogOut, roles: ADMIN_ROLES, badge: departuresCount > 0 ? departuresCount : undefined },
-        { label: "In-House Guests", to: "/admin/in-house-list", icon: FileText, roles: ADMIN_ROLES, badge: inHouseCount > 0 ? inHouseCount : undefined },
-        { label: "Guest Directory", to: "/admin/guests", icon: Users, roles: ADMIN_ROLES },
-        { label: "Stay Calendar", to: "/admin/calendar", icon: CalendarDays, roles: ADMIN_ROLES },
+        { label: "Front Desk", to: "/admin/front-desk", icon: Home, pageKey: "FRONT_DESK", badge: arrivalsCount > 0 ? arrivalsCount : undefined },
+        { label: "Rooms", to: "/admin/rooms", icon: BedDouble, pageKey: "ROOMS" },
+        { label: "Reservations", to: "/admin/bookings", icon: CalendarDays, pageKey: "BOOKINGS" },
+        { label: "Guests", to: "/admin/guests", icon: Users, pageKey: "GUESTS" },
+        { label: "Housekeeping", to: "/admin/housekeeping", icon: Sparkles, pageKey: "HOUSEKEEPING", badge: dirtyCount > 0 ? dirtyCount : undefined },
+        { label: "Maintenance", to: "/admin/maintenance", icon: Wrench, pageKey: "MAINTENANCE" },
       ],
     },
     {
-      title: "HOUSEKEEPING",
+      title: "MONEY",
       items: [
-        { label: "Housekeeping Board", to: "/admin/housekeeping", icon: Sparkles, roles: STAFF_ROLES, badge: dirtyCount > 0 ? `${dirtyCount} Dirty` : undefined },
-        { label: "Mobile Staff HK", to: "/staff/mobile-housekeeping", icon: Smartphone, roles: ["ADMIN", "MANAGER", "HOUSEKEEPING"] },
+        { label: "Guest Bills", to: "/admin/accounting", icon: FileText, pageKey: "ACCOUNTING" },
+        { label: "Payments", to: "/admin/payments", icon: CreditCard, pageKey: "PAYMENTS" },
+        { label: "Advance Payments", to: "/admin/advances", icon: CreditCard, pageKey: "ADVANCES" },
+        { label: "Cashier", to: "/admin/cashier-shifts", icon: DollarSign, pageKey: "CASHIER_SHIFTS" },
+        { label: "Reports", to: "/admin/reports", icon: BarChart3, pageKey: "REPORTS_LAYOUT" },
       ],
     },
     {
-      title: "MAINTENANCE",
+      title: "STOCK",
       items: [
-        { label: "Maintenance Tickets", to: "/admin/maintenance", icon: Wrench, roles: STAFF_ROLES },
+        { label: "Inventory", to: "/admin/inventory", icon: Package, pageKey: "INVENTORY" },
+        { label: "Purchasing", to: "/admin/procurement", icon: ShoppingBag, pageKey: "PROCUREMENT" },
+        { label: "Suppliers", to: "/admin/vendors", icon: Truck, pageKey: "VENDORS" },
       ],
     },
     {
-      title: "RESTAURANT / POS",
+      title: "BUSINESS",
       items: [
-        { label: "POS Terminal & KDS", to: "/admin/pos", icon: UtensilsCrossed, roles: ADMIN_ROLES },
-        { label: "Menu Management", to: "/admin/menu", icon: UtensilsCrossed, roles: EXEC_ROLES },
-        { label: "Banquets & Events", to: "/admin/banquets", icon: PartyPopper, roles: ADMIN_ROLES },
+        { label: "Corporate Accounts", to: "/admin/corporate-accounts", icon: Building2, pageKey: "CORPORATE_ACCOUNTS" },
+        { label: "Groups & Events", to: "/admin/group-bookings", icon: Users, pageKey: "GROUP_BOOKINGS" },
+        { label: "Complaints", to: "/admin/complaints", icon: AlertCircle, pageKey: "COMPLAINTS" },
       ],
     },
     {
-      title: "FINANCE",
+      title: "CONTROL",
       items: [
-        { label: "Advance Payments", to: "/admin/advances", icon: CreditCard, roles: FINANCE_ROLES },
-        { label: "Cashier Shifts", to: "/admin/cashier-shifts", icon: DollarSign, roles: FINANCE_ROLES },
-        { label: "Payments Ledger", to: "/admin/payments", icon: CreditCard, roles: EXEC_ROLES },
-        { label: "Refunds", to: "/admin/refunds", icon: RotateCcw, roles: EXEC_ROLES },
-        { label: "General Ledger", to: "/admin/accounting", icon: Landmark, roles: EXEC_ROLES },
-        { label: "Night Audit", to: "/admin/night-audit", icon: Moon, roles: EXEC_ROLES },
-      ],
-    },
-    {
-      title: "INVENTORY",
-      items: [
-        { label: "Stock & Stores", to: "/admin/inventory", icon: Package, roles: ["ADMIN", "MANAGER", "HOUSEKEEPING"] },
-        { label: "Vendors Directory", to: "/admin/vendors", icon: Truck, roles: EXEC_ROLES },
-        { label: "Procurement (PO)", to: "/admin/procurement", icon: ShoppingBag, roles: EXEC_ROLES },
-      ],
-    },
-    {
-      title: "REVENUE",
-      items: [
-        { label: "Rate Plans", to: "/admin/rate-plans", icon: Tag, roles: EXEC_ROLES },
-        { label: "Dynamic Pricing", to: "/admin/pricing", icon: CreditCard, roles: EXEC_ROLES },
-        { label: "Room Categories", to: "/admin/room-categories", icon: BedDouble, roles: EXEC_ROLES },
-        { label: "Room Master", to: "/admin/rooms", icon: BedDouble, roles: ADMIN_ROLES },
-        { label: "OTA Channel Manager", to: "/admin/multi-property", icon: Globe, roles: ["ADMIN"] },
-      ],
-    },
-    {
-      title: "GROUPS & CRM",
-      items: [
-        { label: "Corporate Accounts", to: "/admin/corporate-accounts", icon: Building2, roles: EXEC_ROLES },
-        { label: "Group Bookings (MICE)", to: "/admin/group-bookings", icon: Users, roles: ADMIN_ROLES },
-        { label: "Ancillary Services", to: "/admin/ancillary", icon: Sparkles, roles: ADMIN_ROLES },
-        { label: "Complaints & Recovery", to: "/admin/complaints", icon: AlertCircle, roles: EXEC_ROLES },
-        { label: "Guest Reviews", to: "/admin/reviews", icon: Star, roles: EXEC_ROLES },
-        { label: "Coupons & Promos", to: "/admin/coupons", icon: Ticket, roles: EXEC_ROLES },
-      ],
-    },
-    {
-      title: "REPORTS",
-      items: [
-        { label: "Analytics & Reports", to: "/admin/reports", icon: BarChart3, roles: EXEC_ROLES },
-      ],
-    },
-    {
-      title: "ADMINISTRATION",
-      items: [
-        { label: "Staff & RBAC", to: "/admin/staff", icon: Users, roles: EXEC_ROLES },
-        { label: "Audit Logs", to: "/admin/audit-logs", icon: ScrollText, roles: EXEC_ROLES },
-        { label: "Content CMS", to: "/admin/content", icon: FileText, roles: ["ADMIN"] },
-        { label: "Hotel Settings", to: "/admin/settings", icon: Settings, roles: ["ADMIN"] },
+        { label: "Approvals", to: "/admin/task-approvals", icon: ShieldCheck, pageKey: "TASK_APPROVALS", badge: "Pending" },
+        { label: "Staff & Permissions", to: "/admin/staff", icon: Users, pageKey: "STAFF" },
+        { label: "Audit History", to: "/admin/audit-logs", icon: ScrollText, pageKey: "AUDIT_LOGS" },
+        { label: "Hotel Settings", to: "/admin/settings", icon: Settings, pageKey: "SETTINGS" },
       ],
     },
   ];
 
-  const userRole = user?.role || "GUEST";
-
-  // Filter sections and items based on role
+  // Filter sections and items based on effective permissions
   const filteredSections = NAV_SECTIONS.map((section) => ({
     ...section,
-    items: section.items.filter((item) => item.roles.includes(userRole)),
+    items: section.items.filter((item) => hasPageAccess(item.pageKey)),
   })).filter((section) => section.items.length > 0);
 
   const totalBadgeCount = (arrivalsCount > 0 ? 1 : 0) + (departuresCount > 0 ? 1 : 0) + (dirtyCount > 0 ? 1 : 0);
 
   return (
-    <div className="h-screen overflow-hidden bg-[#0c0d0e] text-zinc-100 flex selection:bg-hotel-gold selection:text-black">
+    <div className="admin-panel h-screen overflow-hidden bg-slate-50 text-slate-800 flex selection:bg-hotel-gold selection:text-black">
       {/* Command Palette */}
       <CommandPalette open={commandPaletteOpen} onOpenChange={setCommandPaletteOpen} />
 
@@ -212,24 +182,24 @@ export default function AdminLayout({ children, title }: { children: ReactNode; 
 
       {/* Sidebar Desktop & Mobile Drawer */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 bg-[#121316] border-r border-white/10 transform transition-all duration-300 ease-in-out ${
+        className={`fixed inset-y-0 left-0 z-50 bg-white border-r border-slate-200 shadow-sm transform transition-all duration-300 ease-in-out ${
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         } lg:translate-x-0 lg:static flex flex-col ${
           collapsed ? "w-20" : "w-64"
         }`}
       >
         {/* Brand Header */}
-        <div className="p-4 border-b border-white/10 flex items-center justify-between">
+        <div className="p-4 border-b border-slate-100 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2.5 overflow-hidden">
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-hotel-gold to-amber-700 flex items-center justify-center font-serif font-black text-black text-sm shrink-0 shadow-sm">
               Y
             </div>
             {!collapsed && (
               <div className="flex flex-col">
-                <span className="font-serif text-sm tracking-widest text-hotel-gold uppercase font-bold">
+                <span className="font-serif text-sm tracking-widest text-black uppercase font-bold">
                   YES HOTELS
                 </span>
-                <span className="text-[10px] text-zinc-400 tracking-wider uppercase">
+                <span className="text-[10px] text-slate-700 tracking-wider uppercase font-semibold">
                   Hotel Operating System
                 </span>
               </div>
@@ -238,14 +208,14 @@ export default function AdminLayout({ children, title }: { children: ReactNode; 
           <div className="flex items-center">
             <button
               onClick={() => setCollapsed(!collapsed)}
-              className="hidden lg:flex p-1.5 text-zinc-400 hover:text-white rounded-md hover:bg-white/5 transition"
+              className="hidden lg:flex p-1.5 text-slate-700 hover:text-black rounded-md hover:bg-slate-200 transition"
               title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
             >
               <SlidersHorizontal size={14} />
             </button>
             <button
               onClick={() => setSidebarOpen(false)}
-              className="lg:hidden p-1.5 text-zinc-400 hover:text-white"
+              className="lg:hidden p-1.5 text-slate-700 hover:text-black"
             >
               <X size={18} />
             </button>
@@ -254,18 +224,18 @@ export default function AdminLayout({ children, title }: { children: ReactNode; 
 
         {/* Global Quick Action in Sidebar */}
         {!collapsed && (
-          <div className="p-3 border-b border-white/5">
+          <div className="p-3 border-b border-slate-200">
             <button
               onClick={() => setQuickActionOpen(true)}
-              className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-lg bg-hotel-gold/10 hover:bg-hotel-gold/20 text-hotel-gold border border-hotel-gold/30 text-xs font-semibold tracking-wide transition shadow-xs"
+              className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-lg bg-amber-100 hover:bg-amber-200 text-black border border-amber-300 text-xs font-bold tracking-wide transition shadow-xs"
             >
-              <Plus size={14} /> Quick Operation
+              <Plus size={14} className="text-black" /> Quick Operation
             </button>
           </div>
         )}
 
         {/* Navigation Modules */}
-        <nav className="flex-1 overflow-y-auto p-2.5 space-y-4 scrollbar-thin scrollbar-thumb-zinc-800">
+        <nav className="flex-1 overflow-y-auto p-2.5 space-y-4">
           {filteredSections.map((section) => {
             const isOpen = openSections[section.title] ?? true;
 
@@ -274,10 +244,10 @@ export default function AdminLayout({ children, title }: { children: ReactNode; 
                 {!collapsed && (
                   <button
                     onClick={() => toggleSection(section.title)}
-                    className="w-full flex items-center justify-between px-2 py-1 text-[11px] font-semibold uppercase tracking-wider text-zinc-400 hover:text-zinc-200 transition"
+                    className="w-full flex items-center justify-between px-2 py-1 text-[11px] font-bold uppercase tracking-wider text-slate-900 hover:text-black transition"
                   >
                     <span>{section.title}</span>
-                    {isOpen ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+                    {isOpen ? <ChevronDown size={12} className="text-slate-900" /> : <ChevronRight size={12} className="text-slate-900" />}
                   </button>
                 )}
 
@@ -288,20 +258,20 @@ export default function AdminLayout({ children, title }: { children: ReactNode; 
 
                       return (
                         <Link
-                          key={to}
+                          key={label}
                           to={to}
                           onClick={() => setSidebarOpen(false)}
                           title={collapsed ? label : undefined}
-                          className={`flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium transition-all ${
+                          className={`flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-bold transition-all ${
                             active
-                              ? "bg-hotel-gold/15 text-hotel-gold border border-hotel-gold/30 shadow-xs font-semibold"
-                              : "text-zinc-400 hover:text-white hover:bg-white/5"
+                              ? "bg-amber-100 text-black border border-amber-300 shadow-xs font-bold"
+                              : "text-slate-900 hover:text-black hover:bg-slate-100 font-semibold"
                           } ${collapsed ? "justify-center px-2" : ""}`}
                         >
-                          <Icon size={16} className={`shrink-0 ${active ? "text-hotel-gold" : "text-zinc-400"}`} />
+                          <Icon size={16} className={`shrink-0 ${active ? "text-amber-800" : "text-slate-700"}`} />
                           {!collapsed && <span className="truncate flex-1">{label}</span>}
                           {!collapsed && badge && (
-                            <span className="text-[10px] bg-hotel-gold/20 text-hotel-gold px-1.5 py-0.5 rounded font-bold">
+                            <span className="text-[10px] bg-amber-200 text-black px-1.5 py-0.5 rounded font-bold border border-amber-300">
                               {badge}
                             </span>
                           )}
@@ -316,17 +286,17 @@ export default function AdminLayout({ children, title }: { children: ReactNode; 
         </nav>
 
         {/* User Footer */}
-        <div className="p-3 border-t border-white/10 bg-black/20 flex items-center justify-between">
+        <div className="p-3 border-t border-slate-200 bg-slate-100 flex items-center justify-between">
           <div className="flex items-center gap-2.5 overflow-hidden">
-            <div className="w-8 h-8 rounded-full bg-zinc-800 border border-white/10 flex items-center justify-center font-bold text-xs text-hotel-gold shrink-0">
+            <div className="w-8 h-8 rounded-full bg-amber-200 border border-amber-300 flex items-center justify-center font-bold text-xs text-black shrink-0">
               {user?.firstName?.[0] || "U"}
             </div>
             {!collapsed && (
               <div className="flex flex-col min-w-0">
-                <span className="text-xs font-semibold text-zinc-200 truncate">
+                <span className="text-xs font-bold text-slate-900 truncate">
                   {user?.firstName} {user?.lastName}
                 </span>
-                <span className="text-[10px] text-hotel-gold font-mono">{userRole}</span>
+                <span className="text-[10px] text-black font-bold font-mono uppercase">{user?.role || "GUEST"}</span>
               </div>
             )}
           </div>
@@ -336,7 +306,7 @@ export default function AdminLayout({ children, title }: { children: ReactNode; 
               navigate("/");
             }}
             title="Sign Out"
-            className="p-1.5 text-zinc-400 hover:text-red-400 hover:bg-red-500/10 rounded transition"
+            className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded transition"
           >
             <LogOut size={15} />
           </button>
@@ -346,32 +316,32 @@ export default function AdminLayout({ children, title }: { children: ReactNode; 
       {/* Mobile Drawer Overlay */}
       {sidebarOpen && (
         <div
-          className="fixed inset-0 bg-black/70 backdrop-blur-xs z-40 lg:hidden"
+          className="fixed inset-0 bg-black/40 backdrop-blur-xs z-40 lg:hidden"
           onClick={() => setSidebarOpen(false)}
         />
       )}
 
       {/* Main Workspace Frame */}
-      <div className="flex-1 flex flex-col min-w-0 bg-[#0c0d0e]">
+      <div className="flex-1 flex flex-col min-w-0 bg-slate-50">
         {/* Universal Topbar */}
-        <header className="sticky top-0 z-30 bg-[#121316]/90 backdrop-blur-md border-b border-white/10 px-4 py-3 sm:px-6 flex items-center justify-between gap-3">
+        <header className="sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b border-slate-200 shadow-xs px-4 py-3 sm:px-6 flex items-center justify-between gap-3">
           {/* Left: Mobile Toggle, Property & Breadcrumbs */}
           <div className="flex items-center gap-3 min-w-0">
             <button
               onClick={() => setSidebarOpen(true)}
-              className="lg:hidden p-1 text-zinc-400 hover:text-white"
+              className="lg:hidden p-1 text-slate-400 hover:text-slate-700"
             >
               <MenuIcon size={20} />
             </button>
             <div className="flex flex-col min-w-0">
-              <div className="flex items-center gap-2 text-[11px] text-zinc-400">
-                <span className="font-semibold text-hotel-gold flex items-center gap-1">
+              <div className="flex items-center gap-2 text-[11px] text-slate-400">
+                <span className="font-semibold text-hotel-gold-text flex items-center gap-1">
                   <Building2 size={12} /> YES HOTELS Hyderabad
                 </span>
                 <span>/</span>
-                <span className="truncate">{title || "Command Center"}</span>
+                <span className="truncate text-slate-500">{title || "Command Center"}</span>
               </div>
-              <h1 className="font-serif font-bold text-base sm:text-lg text-white truncate">
+              <h1 className="font-serif font-bold text-base sm:text-lg text-slate-800 truncate">
                 {title || "Hotel Command Center"}
               </h1>
             </div>
@@ -381,13 +351,13 @@ export default function AdminLayout({ children, title }: { children: ReactNode; 
           <div className="hidden md:flex flex-1 max-w-md mx-4">
             <button
               onClick={() => setCommandPaletteOpen(true)}
-              className="w-full flex items-center justify-between px-3.5 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-xs text-zinc-400 transition"
+              className="w-full flex items-center justify-between px-3.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 border border-slate-200 text-xs text-slate-400 transition"
             >
               <div className="flex items-center gap-2">
-                <Search size={14} className="text-zinc-400" />
+                <Search size={14} className="text-slate-400" />
                 <span>Quick search (guest, room, booking, folio)...</span>
               </div>
-              <kbd className="hidden sm:inline-block px-1.5 py-0.5 rounded bg-white/10 text-[10px] text-zinc-300 font-mono">
+              <kbd className="hidden sm:inline-block px-1.5 py-0.5 rounded bg-slate-200 text-[10px] text-slate-500 font-mono">
                 Ctrl K
               </kbd>
             </button>
@@ -396,8 +366,8 @@ export default function AdminLayout({ children, title }: { children: ReactNode; 
           {/* Right: Operational Status, Alerts, Quick Actions */}
           <div className="flex items-center gap-2 sm:gap-3 shrink-0">
             {/* Business Date Pill */}
-            <div className="hidden xl:flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-mono">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            <div className="hidden xl:flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-mono">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
               <span>BD: {new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}</span>
             </div>
 
@@ -412,7 +382,7 @@ export default function AdminLayout({ children, title }: { children: ReactNode; 
             {/* Command Search Mobile Icon */}
             <button
               onClick={() => setCommandPaletteOpen(true)}
-              className="md:hidden p-2 rounded-lg text-zinc-400 hover:text-white hover:bg-white/5 transition"
+              className="md:hidden p-2 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition"
               title="Search"
             >
               <Search size={18} />
@@ -421,18 +391,18 @@ export default function AdminLayout({ children, title }: { children: ReactNode; 
             {/* Operational Alerts Bell */}
             <button
               onClick={() => setNotificationOpen(true)}
-              className="relative p-2 rounded-lg text-zinc-400 hover:text-white hover:bg-white/5 transition"
+              className="relative p-2 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition"
               title="Operational Alerts"
             >
               <Bell size={18} />
               {totalBadgeCount > 0 && (
-                <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-amber-400 ring-2 ring-[#121316]" />
+                <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-amber-400 ring-2 ring-white" />
               )}
             </button>
 
             {/* User Avatar */}
-            <div className="flex items-center gap-2 pl-2 border-l border-white/10">
-              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-hotel-gold/30 to-amber-700/30 border border-hotel-gold/40 flex items-center justify-center font-serif font-bold text-xs text-hotel-gold">
+            <div className="flex items-center gap-2 pl-2 border-l border-slate-200">
+              <div className="w-8 h-8 rounded-full bg-amber-100 border border-amber-200 flex items-center justify-center font-serif font-bold text-xs text-hotel-gold-text">
                 {user?.firstName?.[0] || "A"}
               </div>
             </div>
@@ -440,10 +410,53 @@ export default function AdminLayout({ children, title }: { children: ReactNode; 
         </header>
 
         {/* Page Content Body */}
-        <main className="flex-1 overflow-auto p-4 sm:p-6 lg:p-8">
+        <main className={`flex-1 overflow-auto ${hidePadding ? "" : "p-4 sm:p-6 lg:p-8"}`}>
           {children}
         </main>
       </div>
+
+      {/* ── Mobile Bottom Navigation Bar (phones & tablets only) ── */}
+      <nav className="mobile-bottom-nav items-center justify-around px-2 py-1 safe-area-pb">
+        <Link
+          to="/admin/dashboard"
+          onClick={() => setSidebarOpen(false)}
+          className={`flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl text-[10px] font-bold transition ${location.pathname === "/admin/dashboard" ? "text-amber-700 bg-amber-50" : "text-slate-600"}`}
+        >
+          <LayoutDashboard size={20} />
+          <span>Dashboard</span>
+        </Link>
+        <Link
+          to="/admin/front-desk"
+          onClick={() => setSidebarOpen(false)}
+          className={`flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl text-[10px] font-bold transition ${location.pathname === "/admin/front-desk" ? "text-amber-700 bg-amber-50" : "text-slate-600"}`}
+        >
+          <Home size={20} />
+          <span>Front Desk</span>
+        </Link>
+        <Link
+          to="/admin/room-rack"
+          onClick={() => setSidebarOpen(false)}
+          className={`flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl text-[10px] font-bold transition ${location.pathname === "/admin/room-rack" ? "text-amber-700 bg-amber-50" : "text-slate-600"}`}
+        >
+          <BedDouble size={20} />
+          <span>Rooms</span>
+        </Link>
+        <Link
+          to="/admin/housekeeping"
+          onClick={() => setSidebarOpen(false)}
+          className={`flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl text-[10px] font-bold transition ${location.pathname === "/admin/housekeeping" ? "text-amber-700 bg-amber-50" : "text-slate-600"}`}
+        >
+          <Sparkles size={20} />
+          <span>Cleaning</span>
+        </Link>
+        <button
+          onClick={() => setSidebarOpen(true)}
+          className="flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl text-[10px] font-bold text-slate-600 transition"
+        >
+          <MenuIcon size={20} />
+          <span>More</span>
+        </button>
+      </nav>
     </div>
   );
 }

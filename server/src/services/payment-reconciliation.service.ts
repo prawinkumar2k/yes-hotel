@@ -101,11 +101,15 @@ export async function finalizePaymentSuccess(
   if (!booking) return { alreadyProcessed: false, bookingNotFound: true, booking: null };
 
   try {
+    const { resolvePaymentChannel } = await import("../utils/payment-channel.resolver");
+    const razorpayChannelId = await resolvePaymentChannel("RAZORPAY");
+
     await Payment.create({
       booking: booking._id,
       amount: booking.totalAmount,
       currency: "INR",
       method: PaymentMethod.RAZORPAY,
+      paymentChannel: razorpayChannelId,
       razorpayOrderId,
       razorpayPaymentId,
       razorpaySignature,

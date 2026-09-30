@@ -5,11 +5,21 @@ export enum UserRole {
   RECEPTIONIST = "RECEPTIONIST",
   HOUSEKEEPING = "HOUSEKEEPING",
   MAINTENANCE = "MAINTENANCE",
+  CASHIER = "CASHIER",
+  FINANCE = "FINANCE",
+  EVENTS = "EVENTS",
+  INVENTORY = "INVENTORY",
+  PROCUREMENT = "PROCUREMENT",
+  RESTAURANT = "RESTAURANT",
+  SUPERVISOR = "SUPERVISOR",
   MANAGER = "MANAGER",
   ADMIN = "ADMIN",
+  SUPER_ADMIN = "SUPER_ADMIN",
 }
 
 export interface IUser extends Document {
+  propertyId?: mongoose.Types.ObjectId;
+  propertyIds?: mongoose.Types.ObjectId[];
   firstName: string;
   lastName: string;
   email: string;
@@ -26,6 +36,8 @@ export interface IUser extends Document {
 
 const UserSchema = new Schema<IUser>(
   {
+    propertyId: { type: Schema.Types.ObjectId, ref: "Property" },
+    propertyIds: [{ type: Schema.Types.ObjectId, ref: "Property" }],
     firstName: { type: String, required: true, trim: true },
     lastName: { type: String, required: true, trim: true },
     email: { type: String, required: true, unique: true, lowercase: true, trim: true },

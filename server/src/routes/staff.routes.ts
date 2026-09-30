@@ -1,4 +1,6 @@
 import { Router } from "express";
+import { requirePropertyAccess } from "../middleware/propertyAuth";
+import { requirePermission } from "../middleware/permissionAuth";
 import { protect, authorize } from "../middleware/auth.middleware";
 import { UserRole } from "../models/User";
 import { getStaffList, createStaff, updateStaff, resetStaffPassword } from "../controllers/staff.controller";

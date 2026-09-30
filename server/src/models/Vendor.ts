@@ -1,6 +1,7 @@
 import mongoose, { Schema, Document } from "mongoose";
 
 export interface IVendor extends Document {
+  propertyId: mongoose.Types.ObjectId;
   vendorCode: string;
   name: string;
   gstin?: string;
@@ -18,6 +19,7 @@ export interface IVendor extends Document {
 
 const VendorSchema: Schema = new Schema(
   {
+    propertyId: { type: Schema.Types.ObjectId, ref: "Property", required: true },
     vendorCode: { type: String, required: true, unique: true, uppercase: true, trim: true },
     name: { type: String, required: true, trim: true },
     gstin: { type: String, trim: true, uppercase: true },

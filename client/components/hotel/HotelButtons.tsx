@@ -14,7 +14,7 @@ export function GoldButton({
 }: CommonProps &
   ButtonHTMLAttributes<HTMLButtonElement> & { href?: string }) {
   const classes = cn(
-    "inline-flex items-center justify-center gap-2 whitespace-nowrap bg-hotel-gold px-8 py-4 text-xs font-semibold uppercase tracking-[0.2em] text-hotel-black transition-all duration-300 hover:bg-hotel-champagne active:scale-[0.98]",
+    "inline-flex items-center justify-center gap-2 whitespace-nowrap min-h-[44px] bg-hotel-gold px-6 py-3.5 text-xs font-bold uppercase tracking-[0.2em] text-black transition-all duration-300 hover:bg-amber-600 hover:text-white active:scale-[0.98] sm:px-8 sm:py-4 shadow-sm",
     className,
   );
 
@@ -45,10 +45,10 @@ export function OutlineButton({
     light?: boolean;
   }) {
   const classes = cn(
-    "inline-flex items-center justify-center gap-2 whitespace-nowrap border px-8 py-4 text-xs font-semibold uppercase tracking-[0.2em] transition-all duration-300 active:scale-[0.98]",
+    "inline-flex items-center justify-center gap-2 whitespace-nowrap min-h-[44px] border-2 px-6 py-3.5 text-xs font-bold uppercase tracking-[0.2em] transition-all duration-300 active:scale-[0.98] sm:px-8 sm:py-4 shadow-xs",
     light
-      ? "border-hotel-white/40 text-hotel-white hover:border-hotel-white hover:bg-hotel-white/10"
-      : "border-hotel-black/30 text-hotel-black hover:border-hotel-black hover:bg-hotel-black/5",
+      ? "border-white bg-black/40 text-white hover:border-white hover:bg-white hover:text-black font-bold"
+      : "border-black bg-white text-black hover:bg-black hover:text-white font-bold",
     className,
   );
 

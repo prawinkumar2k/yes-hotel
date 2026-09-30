@@ -20,6 +20,11 @@ async function refreshAccessToken(): Promise<string | null> {
           return null;
         }
         const currentUser = getStoredAuthUser();
+        if (currentUser && json.data._id && currentUser._id !== json.data._id) {
+          clearStoredAuthUser();
+          window.location.reload();
+          return null;
+        }
         setStoredAuthUser({ ...(currentUser as any), ...json.data });
         return json.data.token as string;
       } catch {
@@ -83,6 +88,7 @@ const request = async (
 export const api = {
   get: (url: string) => request("GET", url),
   post: (url: string, data?: any, options?: { headers?: Record<string, string> }) => request("POST", url, data, options),
+  put: (url: string, data?: any, options?: { headers?: Record<string, string> }) => request("PUT", url, data, options),
   patch: (url: string, data?: any, options?: { headers?: Record<string, string> }) => request("PATCH", url, data, options),
   delete: (url: string) => request("DELETE", url),
 };

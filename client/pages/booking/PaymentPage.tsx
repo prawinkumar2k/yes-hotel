@@ -229,8 +229,8 @@ export default function PaymentPage() {
   return (
     <div className="min-h-screen bg-hotel-ivory pt-24">
       <Navbar transparent={false} />
-      <div className="max-w-4xl mx-auto px-6 py-12">
-        <div className="flex items-center justify-center gap-4 text-xs font-medium uppercase tracking-widest mb-12">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8 md:py-12">
+        <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-2 sm:gap-x-4 text-[10px] sm:text-xs font-medium uppercase tracking-widest mb-8 md:mb-12">
           <span className="text-hotel-black/60">1. Select Room</span>
           <ChevronRight size={14} className="text-hotel-black/20" />
           <span className="text-hotel-black/60">2. Guest Details</span>
@@ -238,12 +238,12 @@ export default function PaymentPage() {
           <span className="text-hotel-gold">3. Payment</span>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-10">
           <div>
-            <h2 className="font-serif text-2xl text-hotel-black mb-6">Secure Payment</h2>
-            <div className="bg-hotel-white border border-hotel-black/10 p-8 shadow-sm">
+            <h2 className="font-serif text-xl sm:text-2xl text-hotel-black mb-6">Secure Payment</h2>
+            <div className="bg-hotel-white border border-hotel-black/10 p-4 sm:p-6 md:p-8 shadow-sm">
               <div className="flex items-center gap-3 text-sm text-green-700 bg-green-50 p-4 mb-6 rounded border border-green-200">
-                <ShieldCheck size={20} />
+                <ShieldCheck size={20} className="shrink-0" />
                 <p>Your payment is secured by Razorpay with 256-bit encryption.</p>
               </div>
 
@@ -257,14 +257,14 @@ export default function PaymentPage() {
               <div className="mb-8 space-y-3 text-sm text-hotel-black/70">
                 <p className="font-medium text-hotel-black">Payment via Razorpay</p>
                 <p>Accepted: Credit/Debit Card, UPI, Net Banking, Wallets</p>
-                <div className="flex gap-3 mt-4">
-                  {["VISA", "MC", "UPI", "NB"].map(m => (
+                <div className="flex flex-wrap gap-3 mt-4">
+                  {["VISA", "MC", "Unified Payments Interface", "NB"].map(m => (
                     <span key={m} className="border border-hotel-black/20 px-2 py-1 text-[10px] font-bold tracking-widest text-hotel-black/60 rounded">{m}</span>
                   ))}
                 </div>
               </div>
 
-              <GoldButton onClick={handlePayNow} disabled={isProcessing} className="w-full py-4 text-base">
+              <GoldButton onClick={handlePayNow} disabled={isProcessing} className="w-full min-h-[44px] py-4 text-base">
                 {isProcessing
                   ? <span className="flex items-center justify-center gap-2"><Loader2 className="animate-spin" size={18} /> Processing...</span>
                   : `Pay ₹${totalAmount.toLocaleString("en-IN")}`}
@@ -277,7 +277,7 @@ export default function PaymentPage() {
           </div>
 
           <div>
-            <div className="bg-hotel-black text-hotel-white p-8">
+            <div className="bg-hotel-black text-hotel-white p-4 sm:p-6 md:p-8">
               <h3 className="font-serif text-xl text-hotel-gold mb-6">Order Summary</h3>
 
               <div className="space-y-4 text-sm text-hotel-white/80 border-b border-hotel-white/10 pb-6 mb-6">
@@ -299,26 +299,26 @@ export default function PaymentPage() {
 
               <div className="mb-6">
                 {appliedCoupon ? (
-                  <div className="flex items-center justify-between bg-hotel-white/10 px-4 py-3 text-sm">
+                  <div className="flex flex-wrap items-center justify-between gap-2 bg-hotel-white/10 px-4 py-3 text-sm">
                     <span className="text-hotel-gold font-medium tracking-wide">{appliedCoupon.code} applied</span>
-                    <button onClick={handleRemoveCoupon} className="text-hotel-white/50 hover:text-hotel-white text-xs underline">
+                    <button onClick={handleRemoveCoupon} className="min-h-[44px] px-2 text-hotel-white/50 hover:text-hotel-white text-xs underline">
                       Remove
                     </button>
                   </div>
                 ) : (
                   <div>
-                    <div className="flex gap-2">
+                    <div className="flex flex-col sm:flex-row gap-2">
                       <input
                         type="text"
                         value={couponInput}
                         onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
                         placeholder="Coupon code"
-                        className="flex-1 bg-transparent border border-hotel-white/20 px-3 py-2 text-sm text-hotel-white placeholder:text-hotel-white/40 focus:outline-none focus:border-hotel-gold"
+                        className="flex-1 min-h-[44px] bg-transparent border border-hotel-white/20 px-3 py-2 text-sm text-hotel-white placeholder:text-hotel-white/40 focus:outline-none focus:border-hotel-gold"
                       />
                       <button
                         onClick={handleApplyCoupon}
                         disabled={couponState === "checking" || !couponInput.trim()}
-                        className="px-4 py-2 text-xs uppercase tracking-widest border border-hotel-gold text-hotel-gold hover:bg-hotel-gold hover:text-hotel-black transition-colors disabled:opacity-40"
+                        className="min-h-[44px] px-4 py-2 text-xs uppercase tracking-widest border border-hotel-gold text-hotel-gold hover:bg-hotel-gold hover:text-hotel-black transition-colors disabled:opacity-40"
                       >
                         {couponState === "checking" ? "..." : "Apply"}
                       </button>

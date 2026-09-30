@@ -13,6 +13,7 @@ const updateTaskSchema = z.object({
   priority: z.nativeEnum(HousekeepingPriority).optional(),
   notes: z.string().optional(),
   assignedTo: z.string().optional(),
+  cleaningProofPhoto: z.string().optional(),
 });
 
 export const getHousekeepingTasks = async (req: Request, res: Response) => {
@@ -53,8 +54,26 @@ export const updateHousekeepingTask = async (req: Request, res: Response) => {
     const data = updateTaskSchema.parse(req.body);
     const actorId = (req as any).user?.id || (req as any).user?._id;
 
-    const existingTask = await HousekeepingTask.findById(req.params.id).populate("room", "roomNumber floor");
-    if (!existingTask) return res.status(404).json({ success: false, message: "Task not found" });
+    const rawTaskId = req.params.id;
+    let taskId = Array.isArray(rawTaskId) ? rawTaskId[0] : String(rawTaskId);
+    let existingTask;
+
+    if (taskId.startsWith("virtual-")) {
+      const roomId = taskId.replace("virtual-", "");
+      const room = await Room.findById(roomId);
+      if (!room) return res.status(404).json({ success: false, message: "Room not found" });
+      
+      existingTask = await HousekeepingTask.create({
+        room: roomId,
+        status: HousekeepingStatus.DIRTY,
+        priority: HousekeepingPriority.NORMAL,
+      });
+      existingTask = await HousekeepingTask.findById(existingTask._id).populate("room", "roomNumber floor");
+      taskId = existingTask!._id.toString();
+    } else {
+      existingTask = await HousekeepingTask.findById(taskId).populate("room", "roomNumber floor");
+      if (!existingTask) return res.status(404).json({ success: false, message: "Task not found" });
+    }
 
     // Apply the room-side transition FIRST, through the single source of
     // truth for legal housekeeping transitions, so this admin/desktop task
@@ -88,7 +107,7 @@ export const updateHousekeepingTask = async (req: Request, res: Response) => {
     }
 
     const task = await HousekeepingTask.findByIdAndUpdate(
-      req.params.id,
+      taskId,
       { ...data, ...(data.status === HousekeepingStatus.INSPECTED && { completedAt: new Date() }) },
       { returnDocument: "after" }
     ).populate("room", "roomNumber floor");

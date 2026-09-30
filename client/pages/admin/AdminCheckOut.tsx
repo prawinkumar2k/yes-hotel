@@ -26,7 +26,7 @@ export default function AdminCheckOut() {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [selectedBooking, setSelectedBooking] = useState<any>(null);
-  const [paymentMethod, setPaymentMethod] = useState<string>("CASH");
+  const [paymentChannelId, setPaymentChannelId] = useState<string>("");
   const [paymentAmountInput, setPaymentAmountInput] = useState<string>("");
   const [advanceToAdjust, setAdvanceToAdjust] = useState<number>(0);
   const [selectedAdvanceId, setSelectedAdvanceId] = useState<string>("");
@@ -42,6 +42,20 @@ export default function AdminCheckOut() {
         user?.token
       ),
   });
+
+  const { data: channelsData } = useQuery({
+    queryKey: ["paymentChannels"],
+    queryFn: () => apiFetch(`/api/payment-channels`, user?.token),
+  });
+  const paymentChannels = channelsData?.data?.filter((c: any) => c.isActive) || [];
+
+  useEffect(() => {
+    if (paymentChannels.length > 0 && !paymentChannelId) {
+      const defaultCash = paymentChannels.find((c: any) => c.type === "CASH");
+      if (defaultCash) setPaymentChannelId(defaultCash._id);
+      else setPaymentChannelId(paymentChannels[0]._id);
+    }
+  }, [paymentChannels, paymentChannelId]);
 
   // Query checkout preview for selected booking
   const { data: previewData, isLoading: isLoadingPreview, refetch: refetchPreview } = useQuery({
@@ -95,7 +109,7 @@ export default function AdminCheckOut() {
   const handleProcessCheckout = () => {
     const payload: any = {
       notes: checkoutNotes,
-      paymentMethod,
+      paymentChannelId,
     };
 
     if (advanceToAdjust > 0) {
@@ -303,16 +317,17 @@ export default function AdminCheckOut() {
                           </p>
                           <div className="grid grid-cols-2 gap-3">
                             <div>
-                              <label className="text-xs text-gray-600 block mb-1">Payment Method</label>
+                              <label className="text-xs text-gray-600 block mb-1">Payment Channel</label>
                               <select
-                                value={paymentMethod}
-                                onChange={e => setPaymentMethod(e.target.value)}
+                                value={paymentChannelId}
+                                onChange={e => setPaymentChannelId(e.target.value)}
                                 className="w-full px-3 py-1.5 border border-gray-200 rounded text-sm bg-white"
                               >
-                                <option value="CASH">Cash</option>
-                                <option value="UPI">UPI (GPay / PhonePe / Paytm)</option>
-                                <option value="CARD">Credit / Debit Card</option>
-                                <option value="BANK_TRANSFER">NEFT / Bank Transfer</option>
+                                {paymentChannels.map((c: any) => (
+                                  <option key={c._id} value={c._id}>
+                                    {c.name} {c.provider ? `(${c.provider})` : ""}
+                                  </option>
+                                ))}
                               </select>
                             </div>
                             <div>

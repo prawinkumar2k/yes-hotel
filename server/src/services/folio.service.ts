@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 import { Folio, IFolio, FolioStatus } from "../models/Folio";
+import { Booking } from "../models/Booking";
 import { FolioLine, FolioLineType, FolioLineDirection, LINE_TYPE_DIRECTION } from "../models/FolioLine";
 import { HotelSettings } from "../models/HotelSettings";
 import { createAuditLog } from "./audit.service";
@@ -27,9 +28,9 @@ export async function calculateTaxBreakdown(
   opts: { interstate?: boolean } = {}
 ): Promise<TaxBreakdown> {
   const settings = await HotelSettings.findOne().sort({ updatedAt: -1 }).lean();
-  const cgstRate = settings?.cgstPercentage ?? 9;
-  const sgstRate = settings?.sgstPercentage ?? 9;
-  const igstRate = settings?.igstPercentage ?? 18;
+  const cgstRate = settings?.cgstPercentage ?? 2.5;
+  const sgstRate = settings?.sgstPercentage ?? 2.5;
+  const igstRate = settings?.igstPercentage ?? 5;
 
   const base = Math.max(0, taxableAmount);
 
@@ -62,10 +63,24 @@ export async function calculateTaxBreakdown(
 // FOLIO CREATION
 // ─────────────────────────────────────────────────────────────────────────────
 
+async function ensurePropertyId(folio: IFolio, bookingId: string, req?: Request, session?: mongoose.ClientSession) {
+  if (folio.propertyId) return;
+  if (req && (req as any).propertyId) {
+    folio.propertyId = (req as any).propertyId;
+    return;
+  }
+  const bookingQuery = Booking.findById(bookingId).select("propertyId");
+  if (session) bookingQuery.session(session);
+  const booking = await bookingQuery.lean();
+  if (booking && booking.propertyId) {
+    folio.propertyId = booking.propertyId;
+  }
+}
+
 export interface CreateFolioParams {
   bookingId: string;
   guestId: string;
-  roomId: string;
+  roomId?: string;
   checkInDate: Date;
   checkOutDate: Date;
 }
@@ -86,6 +101,8 @@ export async function createFolio(
     checkOutDate: params.checkOutDate,
     status: FolioStatus.OPEN,
   });
+
+  await ensurePropertyId(folio, params.bookingId, opts.req, opts.session);
 
   if (opts.session) {
     await folio.save({ session: opts.session });
@@ -127,6 +144,8 @@ export interface PostChargeParams {
   advancePaymentId?: string;
   /** For REVERSAL lines: the FolioLine being reversed */
   reversedLineId?: string;
+  /** For PAYMENT lines: the configured PaymentChannel used */
+  paymentChannelId?: string;
 }
 
 /**
@@ -172,6 +191,7 @@ export async function postCharge(
         businessDate: params.businessDate,
         notes: params.notes,
         paymentId: params.paymentId,
+        paymentChannelId: params.paymentChannelId,
         advancePaymentId: params.advancePaymentId,
         reversedLineId: params.reversedLineId,
       },
@@ -219,6 +239,8 @@ export async function postCharge(
   folio.balance = folio.totalCharges + folio.totalTax - folio.totalDiscounts - folio.totalPaid - folio.totalAdvanceAdjusted;
   folio.balance = Math.round(folio.balance * 100) / 100;
 
+  await ensurePropertyId(folio, params.bookingId, opts.req, opts.session);
+
   await folio.save({ session: opts.session });
 
   await createAuditLog({
@@ -261,6 +283,7 @@ export async function finalizeFolio(
   }
 
   folio.status = FolioStatus.FINALIZED;
+  await ensurePropertyId(folio, folio.booking.toString(), opts.req, opts.session);
   await folio.save({ session: opts.session });
 
   await createAuditLog({
@@ -296,6 +319,7 @@ export async function settleFolio(
   folio.invoiceGeneratedAt = new Date();
   folio.closedAt = new Date();
   folio.closedBy = new mongoose.Types.ObjectId(opts.closedBy);
+  await ensurePropertyId(folio, folio.booking.toString(), opts.req, opts.session);
   await folio.save({ session: opts.session });
 
   await createAuditLog({

@@ -21,6 +21,7 @@ export enum BusinessDateState {
 }
 
 export interface IBusinessDate extends Document {
+  propertyId: mongoose.Types.ObjectId;
   date: Date;           // the hotel business date (midnight UTC)
   state: BusinessDateState;
   isCurrentDate: boolean; // true for exactly one document at any time
@@ -57,6 +58,7 @@ export interface IBusinessDate extends Document {
 
 const BusinessDateSchema = new Schema<IBusinessDate>(
   {
+    propertyId: { type: Schema.Types.ObjectId, ref: "Property", required: true },
     date: { type: Date, required: true },
     state: {
       type: String,
