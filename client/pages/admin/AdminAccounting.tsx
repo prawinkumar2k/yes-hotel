@@ -113,15 +113,6 @@ export default function AdminAccounting() {
             <p className="text-xs text-gray-500 uppercase font-semibold">Net Collections Collected</p>
             <p className="text-2xl font-bold text-blue-700 mt-1">₹{data.summary.netCollections.toLocaleString()}</p>
           </div>
-          <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
-            <p className="text-xs text-gray-500 uppercase font-semibold">GL Balance Check</p>
-            <div className="flex items-center gap-2 mt-1">
-              <span className={`text-lg font-bold ${data.balanceSheetCheck.isBalanced ? "text-emerald-600" : "text-red-600"}`}>
-                {data.balanceSheetCheck.isBalanced ? "Balanced (0 Diff)" : "Imbalance Detected"}
-              </span>
-              <CheckCircle2 className="text-emerald-500" size={20} />
-            </div>
-          </div>
         </div>
       )}
 

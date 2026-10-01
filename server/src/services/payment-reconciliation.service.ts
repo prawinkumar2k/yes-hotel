@@ -105,6 +105,7 @@ export async function finalizePaymentSuccess(
     const razorpayChannelId = await resolvePaymentChannel("RAZORPAY");
 
     await Payment.create({
+      propertyId: bookingBefore.propertyId,
       booking: booking._id,
       amount: booking.totalAmount,
       currency: "INR",

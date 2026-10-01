@@ -20,7 +20,7 @@ import { CashierShift } from "../models/CashierShift";
  * Overview stats for the admin Reports page (client/pages/admin/AdminReports.tsx).
  *
  * Rewritten from a stub that ignored dateFrom/dateTo entirely and returned
- * only {totalBookings, checkedInBookings, totalRooms, totalAdvanceHeld} —
+ * only {totalBookings, checkedInBookings, totalRooms, totalAdvanceHeld} â€”
  * the frontend has always expected revenue/adr/revPAR/occupancyRate/
  * cancellationRate/categoryPerformance/range, none of which the stub
  * provided, so this page has been throwing a runtime TypeError
@@ -28,7 +28,7 @@ import { CashierShift } from "../models/CashierShift";
  * every load. Confirmed live during this audit.
  *
  * "Bookings in range" = bookings whose stay starts (checkInDate) in
- * [dateFrom, dateTo] — the standard "arrivals for period" framing for this
+ * [dateFrom, dateTo] â€” the standard "arrivals for period" framing for this
  * kind of dashboard. Revenue/ADR/RevPAR exclude CANCELLED bookings.
  */
 export const getReportsOverview = async (req: Request, res: Response) => {
@@ -560,37 +560,47 @@ export const getInHouseList = async (_req: Request, res: Response) => {
 };
 
 /**
- * GET /api/reports/day-summary
+ * GET /api/reports/day-summary?date=YYYY-MM-DD
  * Replicates the "YH - Day Sales Summary" and "CASH Sheet" PDF structure.
+ * Accepts optional ?date param (defaults to today).
  */
 export const getDaySummary = async (req: Request, res: Response) => {
   try {
-    const todayStart = new Date();
-    todayStart.setHours(0, 0, 0, 0);
-    const todayEnd = new Date();
-    todayEnd.setHours(23, 59, 59, 999);
-    const todayQuery = { $gte: todayStart, $lte: todayEnd };
+    // Support ?date=YYYY-MM-DD param (default: today)
+    const targetDate = req.query.date ? new Date(req.query.date as string) : new Date();
+    const dayStart = new Date(targetDate);
+    dayStart.setHours(0, 0, 0, 0);
+    const dayEnd = new Date(targetDate);
+    dayEnd.setHours(23, 59, 59, 999);
+    const dayQuery: any = { $gte: dayStart, $lte: dayEnd };
+    if (req.propertyId) {
+      dayQuery.propertyId = req.propertyId;
+    }
 
-    // 1. Fetch relevant bookings for today
-    const checkIns = await Booking.find({ checkInDate: todayQuery });
-    const checkOuts = await Booking.find({ checkOutDate: todayQuery });
-    const dayUses = await Booking.find({ stayType: "HOURLY", createdAt: todayQuery });
+    // 1. Fetch relevant bookings for the day
+    // We add propertyId to the queries.
+    const propertyMatch = req.propertyId ? { propertyId: req.propertyId } : {};
     
-    // Total occupied rooms (Checked In status)
-    const activeBookings = await Booking.find({ status: BookingStatus.CHECKED_IN });
+    const [checkIns, checkOuts, dayUses, activeBookings, cancelledCount, noShowCount, totalRooms] = await Promise.all([
+      Booking.find({ ...propertyMatch, checkInDate: dayQuery }),
+      Booking.find({ ...propertyMatch, checkOutDate: dayQuery }),
+      Booking.find({ ...propertyMatch, stayType: "HOURLY", createdAt: dayQuery }),
+      Booking.find({ ...propertyMatch, status: BookingStatus.CHECKED_IN }),
+      Booking.countDocuments({ ...propertyMatch, status: BookingStatus.CANCELLED, updatedAt: dayQuery }),
+      Booking.countDocuments({ ...propertyMatch, status: BookingStatus.NO_SHOW, updatedAt: dayQuery }),
+      Room.countDocuments(propertyMatch),
+    ]);
+
     const totalPax = activeBookings.reduce((sum, b) => sum + (b.adults || 1) + (b.children || 0), 0);
 
-    const cancelled = await Booking.countDocuments({ status: BookingStatus.CANCELLED, cancelledAt: todayQuery });
-    const noShows = await Booking.countDocuments({ status: BookingStatus.NO_SHOW, noShowAt: todayQuery });
-    
-    // Through channels (Walkin, OTA, Agency, Auto)
+    // Through channels
     const walkins = checkIns.filter(b => b.source === "WALK_IN").length;
     const otas = checkIns.filter(b => b.source === "OTA").length;
     const agencies = checkIns.filter(b => b.source === "CORPORATE").length;
-    
-    // 2. Fetch payments for today
-    const todayPayments = await Payment.find({ createdAt: todayQuery });
-    
+
+    // 2. Fetch payments for the day
+    const todayPayments = await Payment.find({ ...propertyMatch, createdAt: dayQuery });
+
     let resrvAdv = 0, roomAdv = 0, partial = 0, final = 0, advAdjd = 0;
     const paymentModes: Record<string, number> = {
       CASH: 0, UPI: 0, CARD: 0, PAYTM: 0, HDFC: 0, OTA_CREDIT: 0
@@ -598,7 +608,6 @@ export const getDaySummary = async (req: Request, res: Response) => {
 
     todayPayments.forEach(p => {
       const anyP = p as any;
-      // Very basic bucketing for the summary
       if (anyP.purpose === "ADVANCE") {
         const b = checkIns.find(cb => cb._id.toString() === p.booking?.toString());
         if (b) roomAdv += p.amount;
@@ -608,8 +617,8 @@ export const getDaySummary = async (req: Request, res: Response) => {
       } else {
         partial += p.amount;
       }
-      
-      const mode = p.method.toUpperCase();
+
+      const mode = (p.method || 'UNKNOWN').toUpperCase();
       if (paymentModes[mode] !== undefined) paymentModes[mode] += p.amount;
       else if (mode.includes("UPI")) paymentModes.UPI += p.amount;
       else if (mode.includes("CARD")) paymentModes.CARD += p.amount;
@@ -630,42 +639,62 @@ export const getDaySummary = async (req: Request, res: Response) => {
       };
     });
 
+    const roomSalesTotal = paymentModes.CASH + paymentModes.UPI + paymentModes.CARD + paymentModes.PAYTM;
+
     return res.json({
       success: true,
       data: {
-        date: new Date().toISOString(),
+        date: dayStart.toISOString(),
+        // -- Flat fields expected by DaySummaryTab --
+        totalRooms,
+        checkIns: checkIns.length,
+        checkOuts: checkOuts.length,
+        dayUses: dayUses.length,
+        occupiedRooms: activeBookings.length,
+        totalPax,
+        cancelled: cancelledCount,
+        noShows: noShowCount,
+        inquiries: 0,
+        walkins,
+        otas,
+        agencies,
+        resrvAdv,
+        roomAdv,
+        partial,
+        final,
+        advAdjd,
+        paymentModes,
+        salesRoom: roomSalesTotal,
+        misc: 0,
+        // -- Aliases used by DaySummaryReport.tsx --
+        checkIn: checkIns.length,
+        checkOut: checkOuts.length,
+        dayUse: dayUses.length,
+        occupancy: activeBookings.length,
+        pax: totalPax,
+        noShow: noShowCount,
+        walkin: walkins,
+        ota: otas,
+        agency: agencies,
+        auto: 0,
+        cash: paymentModes.CASH,
+        paytm: paymentModes.PAYTM,
+        hdfcUpi: paymentModes.UPI + paymentModes.HDFC,
+        otaCredit: paymentModes.OTA_CREDIT,
+        credits: resrvAdv + roomAdv + partial + final,
+        roomSales: roomSalesTotal,
+        miscSales: 0,
+        // -- Nested structure (kept for CashSheetReport backward compat) --
         page1: {
-          rooms: {
-            checkIn: checkIns.length,
-            checkOut: checkOuts.length,
-            dayUse: dayUses.length
-          },
-          occupancy: {
-            room: activeBookings.length,
-            pax: totalPax
-          },
-          status: {
-            cancelled,
-            noShow: noShows,
-            noOfInquiry: 0 // Stub
-          },
-          through: {
-            walkin: walkins,
-            ota: otas,
-            agency: agencies,
-            auto: 0
-          },
-          receipts: {
-            resrvAdv,
-            roomAdv,
-            partial,
-            final,
-            advAdjd
-          },
+          rooms: { checkIn: checkIns.length, checkOut: checkOuts.length, dayUse: dayUses.length },
+          occupancy: { room: activeBookings.length, pax: totalPax },
+          status: { cancelled: cancelledCount, noShow: noShowCount, noOfInquiry: 0 },
+          through: { walkin: walkins, ota: otas, agency: agencies, auto: 0 },
+          receipts: { resrvAdv, roomAdv, partial, final, advAdjd },
           modes: paymentModes
         },
         page2: {
-          openingBalance: 0, // Stub - would come from CashierShift
+          openingBalance: 0,
           todayCashInward,
           transactions: cashTransactions,
           total: todayCashInward,
@@ -828,8 +857,8 @@ export const getDynamicReport = async (req: Request, res: Response) => {
         };
 
         table = [
-          { Metric: "Room Revenue", Value: `₹${roomRevenue.toLocaleString('en-IN')}` },
-          { Metric: "F&B Revenue", Value: `₹${restaurantRevenue.toLocaleString('en-IN')}` },
+          { Metric: "Room Revenue", Value: `â‚¹${roomRevenue.toLocaleString('en-IN')}` },
+          { Metric: "F&B Revenue", Value: `â‚¹${restaurantRevenue.toLocaleString('en-IN')}` },
           { Metric: "Pending Arrivals", Value: arrivals },
           { Metric: "Pending Departures", Value: departures }
         ];

@@ -264,9 +264,12 @@ export const createBooking = async (req: Request, res: Response) => {
         });
 
         const bookingReference = await generateBookingReference("OTA");
+        const defaultProp = await mongoose.model("Property").findOne();
+        
         const created = await Booking.create(
           [
             {
+              propertyId: defaultProp ? defaultProp._id : undefined,
               bookingReference,
               customer: req.user?.id ?? undefined,
               guestDetails,

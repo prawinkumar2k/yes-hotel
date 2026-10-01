@@ -6,16 +6,17 @@ export default function DaySummaryReport() {
   const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
 
   const { data, isLoading } = useQuery({
-    queryKey: ["report", "daily-summary", date],
+    queryKey: ["report", "day-summary", date],
     queryFn: async () => {
       const token = getStoredAuthToken();
-      const res = await fetch(`/api/reports/daily-summary?date=${date}`, {
+      const res = await fetch(`/api/reports/day-summary?date=${date}`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
       const json = await res.json();
       return json.success ? json.data : null;
     }
   });
+
 
   return (
     <div className="bg-white p-8 rounded shadow-sm border border-gray-200 overflow-x-auto w-full max-w-4xl mx-auto">
@@ -236,6 +237,83 @@ export default function DaySummaryReport() {
           </div>
           <div className="text-right text-xs">
             Page 1 of 2
+          </div>
+        </div>
+      </div>
+
+      {/* PAGE 2 - CASH SHEET */}
+      <div className="print:m-0 mt-8 p-4 border-2 border-gray-800 text-black text-sm bg-white print:break-before-page" style={{ fontFamily: 'monospace' }}>
+        <div className="flex justify-between mb-4 border-b-2 border-gray-800 pb-2">
+          <div className="font-bold">CASH Sheet</div>
+          <div>Day: {new Date(date).toLocaleDateString('en-US', { weekday: 'short' })}</div>
+          <div>Date: {date}</div>
+        </div>
+
+        <table className="w-full mb-8 border-collapse">
+          <thead>
+            <tr className="border-b-2 border-gray-800">
+              <th className="py-2 text-left w-16">S. No.</th>
+              <th className="py-2 text-left">Party</th>
+              <th className="py-2 text-left">Description</th>
+              <th className="py-2 text-right w-32">Debit</th>
+              <th className="py-2 text-right w-32">Credit</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td className="py-2 border-b border-gray-300"></td>
+              <td className="py-2 border-b border-gray-300 font-bold">Opening Balance (B/d)</td>
+              <td className="py-2 border-b border-gray-300"></td>
+              <td className="py-2 border-b border-gray-300 text-right">0.00</td>
+              <td className="py-2 border-b border-gray-300 text-right"></td>
+            </tr>
+            <tr>
+              <td className="py-2 border-b border-gray-300"></td>
+              <td className="py-2 border-b border-gray-300 font-bold">Today Cash Inward</td>
+              <td className="py-2 border-b border-gray-300"></td>
+              <td className="py-2 border-b border-gray-300 text-right"></td>
+              <td className="py-2 border-b border-gray-300 text-right">{data?.cash || '0.00'}</td>
+            </tr>
+            {/* Blank rows 1 to 10 */}
+            {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((num) => (
+              <tr key={num}>
+                <td className="py-2 border-b border-gray-200">{num}</td>
+                <td className="py-2 border-b border-gray-200"></td>
+                <td className="py-2 border-b border-gray-200"></td>
+                <td className="py-2 border-b border-gray-200"></td>
+                <td className="py-2 border-b border-gray-200"></td>
+              </tr>
+            ))}
+            <tr>
+              <td className="py-2 border-b border-gray-300"></td>
+              <td className="py-2 border-b border-gray-300 font-bold">Total</td>
+              <td className="py-2 border-b border-gray-300"></td>
+              <td className="py-2 border-b border-gray-300 text-right">0.00</td>
+              <td className="py-2 border-b border-gray-300 text-right">{data?.cash || '0.00'}</td>
+            </tr>
+            <tr>
+              <td className="py-2 border-b-2 border-gray-800"></td>
+              <td className="py-2 border-b-2 border-gray-800 font-bold">Closing Balance (C/f)</td>
+              <td className="py-2 border-b-2 border-gray-800"></td>
+              <td className="py-2 border-b-2 border-gray-800 text-right">{data?.cash || '0.00'}</td>
+              <td className="py-2 border-b-2 border-gray-800 text-right"></td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div className="mb-12">
+          <div className="font-bold mb-8">Remarks, If any</div>
+          <div className="border-b border-gray-400 w-full mb-8"></div>
+          <div className="border-b border-gray-400 w-full"></div>
+        </div>
+
+        <div className="flex justify-between pt-8 border-t-2 border-gray-800">
+          <div>
+            <div className="border-b border-black w-48 mb-2"></div>
+            <div className="text-center font-bold">Night Auditor</div>
+          </div>
+          <div className="text-right text-xs">
+            Page 2 of 2
           </div>
         </div>
       </div>

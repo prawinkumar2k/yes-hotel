@@ -83,7 +83,6 @@ export default function AdminSettings() {
             <TabsTrigger value="booking" className="font-bold data-[state=active]:bg-hotel-gold data-[state=active]:text-black">Booking Policies</TabsTrigger>
             <TabsTrigger value="mealplans" className="font-bold data-[state=active]:bg-hotel-gold data-[state=active]:text-black">Meal Plan Tariffs</TabsTrigger>
             <TabsTrigger value="occupancy" className="font-bold data-[state=active]:bg-hotel-gold data-[state=active]:text-black">Occupancy Tariffs</TabsTrigger>
-            <TabsTrigger value="social" className="font-bold data-[state=active]:bg-hotel-gold data-[state=active]:text-black">Social & Search</TabsTrigger>
           </TabsList>
 
           <TabsContent value="general" className="space-y-4">
@@ -219,43 +218,7 @@ export default function AdminSettings() {
             </div>
           </TabsContent>
 
-          <TabsContent value="social" className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <label className="text-sm font-bold text-black block">Instagram URL</label>
-                <Input name="instagramUrl" defaultValue={settings?.instagramUrl} className="border-gray-400 text-black font-medium" />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-bold text-black block">Facebook URL</label>
-                <Input name="facebookUrl" defaultValue={settings?.facebookUrl} className="border-gray-400 text-black font-medium" />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-bold text-black block">YouTube URL</label>
-                <Input name="youtubeUrl" defaultValue={settings?.youtubeUrl} className="border-gray-400 text-black font-medium" />
-              </div>
-              
-              <div className="col-span-2 pt-4 border-t border-gray-300">
-                <h3 className="font-bold text-black mb-4 text-base">Search & Share Info</h3>
-              </div>
-              
-              <div className="space-y-2">
-                <label className="text-sm font-bold text-black block">Search Title (Meta Title)</label>
-                <Input name="metaTitle" defaultValue={settings?.metaTitle} className="border-gray-400 text-black font-medium" />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-bold text-black block">Social Preview Image Link</label>
-                <Input name="ogImageUrl" defaultValue={settings?.ogImageUrl} className="border-gray-400 text-black font-medium" />
-              </div>
-              <div className="space-y-2 col-span-2">
-                <label className="text-sm font-bold text-black block">Search Summary (Meta Description)</label>
-                <textarea 
-                  name="metaDescription" 
-                  className="w-full border border-gray-400 rounded-md p-2 text-sm text-black font-medium min-h-[80px]" 
-                  defaultValue={settings?.metaDescription}
-                />
-              </div>
-            </div>
-          </TabsContent>
+
         </Tabs>
 
         <div className="mt-8 pt-6 border-t border-gray-300 flex justify-end">

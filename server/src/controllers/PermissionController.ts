@@ -91,7 +91,8 @@ export const getEffectivePermissions = async (req: AuthenticatedRequest, res: Re
     
     // Security: Only allow users to fetch their own permissions unless they have PERMISSIONS.VIEW
     // For simplicity right now, just ensure it's their own ID or they are a SUPER_ADMIN or ADMIN.
-    if (req.user?.id !== userId && req.user?.role !== "SUPER_ADMIN" && req.user?.role !== "ADMIN") {
+    const reqUserId = req.user?.id || req.user?._id?.toString();
+    if (reqUserId !== userId && req.user?.role !== "SUPER_ADMIN" && req.user?.role !== "ADMIN") {
       return res.status(403).json({ message: 'Forbidden: Cannot fetch permissions for another user' });
     }
 

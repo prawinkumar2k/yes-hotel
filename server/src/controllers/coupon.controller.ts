@@ -34,8 +34,11 @@ export const createCoupon = async (req: Request, res: Response) => {
     const existing = await Coupon.findOne({ code: data.code });
     if (existing) return res.status(400).json({ success: false, message: "Coupon code already exists" });
 
+    const propertyId = (req as any).propertyId || (req as any).user?.propertyId || (req as any).user?.propertyIds?.[0];
+
     const coupon = new Coupon({
       ...data,
+      propertyId,
       createdBy: (req as any).user.id
     });
     await coupon.save();
@@ -54,6 +57,7 @@ export const createCoupon = async (req: Request, res: Response) => {
     return res.status(500).json({ success: false, message: error.message });
   }
 };
+
 
 export const updateCoupon = async (req: Request, res: Response) => {
   try {

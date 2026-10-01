@@ -21,13 +21,31 @@ export class PermissionService {
     const user = await User.findById(userId);
     if (!user) throw new Error("User not found");
 
-    // 1. If Super Admin, return full access
-    if (user.role === "SUPER_ADMIN") {
+    // 1. If Super Admin or Admin, return full access
+    if (user.role === "SUPER_ADMIN" || user.role === "ADMIN") {
       const allPages = await PageResource.find({ isActive: true });
+      const allRolePermKeys = await RolePermission.distinct("pageKey");
+      
       const fullAccess: PermissionCache = {};
+      const allActions = ["VIEW", "CREATE", "EDIT", "DELETE", "APPROVE", "REJECT", "EXPORT", "PRINT"];
+      
       allPages.forEach(p => {
-        fullAccess[p.key] = p.actions;
+        fullAccess[p.key] = p.actions && p.actions.length > 0 ? p.actions : allActions;
       });
+      
+      allRolePermKeys.forEach(key => {
+        if (!fullAccess[key]) {
+          fullAccess[key] = allActions;
+        }
+      });
+      
+      const manualKeys = ["REPORTS_LAYOUT", "COUPONS", "TASK_APPROVALS", "CORPORATE_ACCOUNTS", "GROUP_BOOKINGS", "INVENTORY", "PROCUREMENT", "VENDORS"];
+      manualKeys.forEach(key => {
+        if (!fullAccess[key]) {
+          fullAccess[key] = allActions;
+        }
+      });
+      
       return fullAccess;
     }
 

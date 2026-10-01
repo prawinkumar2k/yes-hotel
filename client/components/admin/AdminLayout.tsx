@@ -147,7 +147,7 @@ export default function AdminLayout({ children, title, hidePadding }: { children
       items: [
         { label: "Corporate Accounts", to: "/admin/corporate-accounts", icon: Building2, pageKey: "CORPORATE_ACCOUNTS" },
         { label: "Groups & Events", to: "/admin/group-bookings", icon: Users, pageKey: "GROUP_BOOKINGS" },
-        { label: "Complaints", to: "/admin/complaints", icon: AlertCircle, pageKey: "COMPLAINTS" },
+        { label: "Coupons", to: "/admin/coupons", icon: Tag, pageKey: "COUPONS" },
       ],
     },
     {

@@ -237,6 +237,7 @@ export const confirmDemoBooking = async (req: Request, res: Response) => {
     const cashChannelId = await resolvePaymentChannel("CASH");
 
     await Payment.create({
+      propertyId: booking.propertyId,
       booking: booking._id,
       amount: booking.totalAmount,
       currency: "INR",
@@ -322,7 +323,10 @@ export const getPayments = async (req: Request, res: Response) => {
     const p = Math.max(1, parseInt(page as string) || 1);
     const l = Math.max(1, parseInt(limit as string) || 15);
 
+    const propertyId = (req as any).propertyId;
+
     const match: any = {};
+    if (propertyId) match.propertyId = propertyId;
     if (status) match.status = status;
     if (method) match.method = method;
     if (dateFrom || dateTo) {
@@ -382,15 +386,17 @@ export const getPayments = async (req: Request, res: Response) => {
     const sanitizedPayments = result?.data ?? [];
     const total = result?.totalCount?.[0]?.count ?? 0;
 
-    const statsData = await Payment.aggregate([
-      {
-        $group: {
-          _id: "$status",
-          totalAmount: { $sum: "$amount" },
-          count: { $sum: 1 }
-        }
+    const statsPipeline: any[] = [];
+    if (propertyId) statsPipeline.push({ $match: { propertyId } });
+    statsPipeline.push({
+      $group: {
+        _id: "$status",
+        totalAmount: { $sum: "$amount" },
+        count: { $sum: 1 }
       }
-    ]);
+    });
+    
+    const statsData = await Payment.aggregate(statsPipeline);
 
     const stats = {
       totalCollected: 0,
