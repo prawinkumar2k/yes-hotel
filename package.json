@@ -17,6 +17,8 @@
     "test:reset-db": "tsx server/src/scripts/reset-test-db.ts",
     "backup": "tsx server/src/scripts/backup.ts",
     "restore": "tsx server/src/scripts/restore.ts",
+    "db:backup": "node scripts/db-backup.mjs",
+    "db:restore": "node scripts/db-restore.mjs",
     "format.fix": "prettier --write .",
     "typecheck": "tsc",
     "seed": "tsx server/src/scripts/seed.ts"

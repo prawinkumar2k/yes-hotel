@@ -49,3 +49,6 @@ playwright/.cache/
 .mcp.json
 AGENT.md
 CLAUDE.md
+
+# local database backups (db:backup)
+backups/
