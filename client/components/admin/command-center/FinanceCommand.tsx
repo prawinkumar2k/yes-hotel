@@ -11,7 +11,7 @@ export function FinanceCommand({ finance }: { finance: any }) {
             <Landmark size={18} />
           </div>
           <div>
-            <h3 className="font-serif font-bold text-base text-white">Financial Control</h3>
+            <h3 className="font-serif font-bold text-base text-white whitespace-nowrap">Financial Control</h3>
             <p className="text-[11px] text-zinc-400">Folios, Advances & Payables</p>
           </div>
         </div>

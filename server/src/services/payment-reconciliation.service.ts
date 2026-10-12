@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import { Booking, BookingStatus, PaymentStatus } from "../models/Booking";
 import { Payment, PaymentMethod, PaymentTxStatus } from "../models/Payment";
 import { redeemCouponForBooking } from "./coupon.service";
@@ -105,7 +106,7 @@ export async function finalizePaymentSuccess(
     const razorpayChannelId = await resolvePaymentChannel("RAZORPAY");
 
     await Payment.create({
-      propertyId: bookingBefore.propertyId,
+      propertyId: bookingBefore.propertyId || (bookingBefore as any).property || new mongoose.Types.ObjectId(),
       booking: booking._id,
       amount: booking.totalAmount,
       currency: "INR",

@@ -14,7 +14,7 @@ export function FrontOfficeCommand({ inHouse }: any) {
             </div>
             <div>
               <h3 className="font-serif font-bold text-base text-white">In-House Guests</h3>
-              <p className="text-[11px] text-zinc-400">Active resident guests ({inHouse?.length || 0})</p>
+              <p className="text-[11px] text-zinc-400">Active resident guests ({inHouse?.guests?.length || 0})</p>
             </div>
           </div>
           <Link to="/admin/in-house-list" className="text-xs text-hotel-gold hover:underline font-semibold whitespace-nowrap flex-shrink-0">
@@ -22,11 +22,22 @@ export function FrontOfficeCommand({ inHouse }: any) {
           </Link>
         </div>
 
+        {inHouse?.stats && (
+          <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 mb-4 border-b border-white/5 pb-4">
+            <div className="bg-black/40 rounded p-2 text-center border border-white/5"><div className="text-[10px] text-zinc-500 uppercase">Exp. Arr</div><div className="text-sm font-bold text-white">{inHouse.stats.expectedArrivals}</div></div>
+            <div className="bg-black/40 rounded p-2 text-center border border-white/5"><div className="text-[10px] text-zinc-500 uppercase">Act. Arr</div><div className="text-sm font-bold text-white">{inHouse.stats.actualArrivals}</div></div>
+            <div className="bg-black/40 rounded p-2 text-center border border-white/5"><div className="text-[10px] text-zinc-500 uppercase">Exp. Dep</div><div className="text-sm font-bold text-white">{inHouse.stats.expectedDepartures}</div></div>
+            <div className="bg-black/40 rounded p-2 text-center border border-white/5"><div className="text-[10px] text-zinc-500 uppercase">Act. Dep</div><div className="text-sm font-bold text-white">{inHouse.stats.actualCheckouts}</div></div>
+            <div className="bg-black/40 rounded p-2 text-center border border-white/5"><div className="text-[10px] text-zinc-500 uppercase">No Shows</div><div className="text-sm font-bold text-white">{inHouse.stats.noShows}</div></div>
+            <div className="bg-black/40 rounded p-2 text-center border border-white/5"><div className="text-[10px] text-zinc-500 uppercase">Cancels</div><div className="text-sm font-bold text-white">{inHouse.stats.cancellations}</div></div>
+          </div>
+        )}
+
         <div className="flex-1 space-y-2.5 overflow-y-auto max-h-72">
-          {(!inHouse || inHouse.length === 0) ? (
+          {(!inHouse?.guests || inHouse.guests.length === 0) ? (
             <p className="text-xs text-zinc-500 text-center py-10">No guests currently in-house.</p>
           ) : (
-            inHouse.map((h: any) => (
+            inHouse.guests.map((h: any) => (
               <div key={h._id} className="p-3 rounded-xl bg-black/40 border border-white/5 hover:border-hotel-gold/30 transition flex items-center justify-between gap-3">
                 <div className="min-w-0">
                   <div className="flex items-center gap-1.5">

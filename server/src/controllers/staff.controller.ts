@@ -78,6 +78,7 @@ export const getStaffList = async (req: Request, res: Response) => {
       success: true,
       data: {
         staff: paginated,
+        users: paginated,
         total,
         totalPages: Math.ceil(total / l),
         page: p

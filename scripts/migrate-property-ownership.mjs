@@ -15,19 +15,19 @@ async function runMigration() {
   const db = mongoose.connection.db;
   const propertiesCollection = db.collection('properties');
   
-  let defaultProperty = await propertiesCollection.findOne({ code: 'YES-HYD' });
+  let defaultProperty = await propertiesCollection.findOne({ code: 'YES-BLR' }) || await propertiesCollection.findOne();
   if (!defaultProperty) {
-    console.log('Default property not found. Creating YES HOTELS HYDERABAD...');
+    console.log('Default property not found. Creating YES HOTELS BENGALURU...');
     const res = await propertiesCollection.insertOne({
-      name: 'YES HOTELS HYDERABAD',
-      code: 'YES-HYD',
-      addressLine1: 'Hitech City',
-      city: 'Hyderabad',
-      state: 'Telangana',
-      pincode: '500081',
+      name: 'YES HOTELS BENGALURU',
+      code: 'YES-BLR',
+      addressLine1: '100 Feet Road, Indiranagar',
+      city: 'Bengaluru',
+      state: 'Karnataka',
+      pincode: '560038',
       country: 'India',
-      phone: '1234567890',
-      email: 'hyd@yeshotels.com',
+      phone: '+91 80 4567 8900',
+      email: 'bangalore@yeshotels.com',
       isActive: true,
       createdAt: new Date(),
       updatedAt: new Date(),

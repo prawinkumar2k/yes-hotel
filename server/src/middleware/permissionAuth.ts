@@ -16,9 +16,14 @@ export const requirePermission = (pageKey: string, action: string = "VIEW") => {
         return res.status(401).json({ message: "Unauthorized: No user context" });
       }
 
+      // 1. Super Admin and Admin have unrestricted access
+      if (user.role === "SUPER_ADMIN" || user.role === "ADMIN") {
+        return next();
+      }
+
       const userId = user._id || user.id;
 
-      const hasPerm = await PermissionService.hasPermission(userId, propertyId, pageKey, action);
+      const hasPerm = await PermissionService.hasPermission(userId, propertyId, pageKey, action, user.role);
 
       if (!hasPerm) {
         return res.status(403).json({ 
@@ -29,7 +34,10 @@ export const requirePermission = (pageKey: string, action: string = "VIEW") => {
       next();
     } catch (error: any) {
       console.error("Permission Authorization Error:", error);
-      res.status(500).json({ message: "Internal server error during permission check", error: error.message, stack: error.stack });
+      if (error?.message === "User not found") {
+        return res.status(401).json({ message: "User session expired or user not found. Please log in again." });
+      }
+      res.status(500).json({ message: "Internal server error during permission check", error: error.message });
     }
   };
 };

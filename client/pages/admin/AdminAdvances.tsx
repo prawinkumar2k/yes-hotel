@@ -273,7 +273,7 @@ export default function AdminAdvances() {
         <div className="bg-white p-5 rounded-2xl border border-purple-500/30 bg-purple-500/5">
           <div className="flex items-center justify-between text-purple-600 mb-2">
             <CheckCircle2 size={20} />
-            <span className="text-[10px] font-bold uppercase tracking-wider whitespace-nowrap flex-shrink-0 bg-purple-500/20 text-purple-300 px-2 py-0.5 rounded border border-purple-500/30">Adjusted to Folios</span>
+            <span className="text-[10px] font-bold uppercase tracking-wider whitespace-nowrap flex-shrink-0 bg-purple-500/20 text-purple-300 px-2 py-0.5 rounded border border-purple-500/30">Adjusted</span>
           </div>
           <p className="text-3xl font-serif font-bold text-gray-800">₹{totalAdjusted.toLocaleString()}</p>
           <p className="text-xs text-gray-500 mt-1">Consumed in Stay Invoices</p>
@@ -282,10 +282,21 @@ export default function AdminAdvances() {
         <div className="bg-white p-5 rounded-2xl border border-blue-500/30 bg-blue-500/5">
           <div className="flex items-center justify-between text-blue-600 mb-2">
             <ArrowDownLeft size={20} />
-            <span className="text-[10px] font-bold uppercase tracking-wider whitespace-nowrap flex-shrink-0 bg-blue-500/20 text-blue-300 px-2 py-0.5 rounded border border-blue-500/30">Total Refunded</span>
+            <span className="text-[10px] font-bold uppercase tracking-wider whitespace-nowrap flex-shrink-0 bg-blue-500/20 text-blue-300 px-2 py-0.5 rounded border border-blue-500/30">Refunded / Cancelled</span>
           </div>
-          <p className="text-3xl font-serif font-bold text-gray-800">₹{totalRefunded.toLocaleString()}</p>
-          <p className="text-xs text-gray-500 mt-1">Returned on Cancellations</p>
+          <p className="text-3xl font-serif font-bold text-gray-800">₹{totalRefunded.toLocaleString()} / ₹{advances.filter(a => a.status === "VOIDED").reduce((acc, curr) => acc + (curr.amount || 0), 0).toLocaleString()}</p>
+          <p className="text-xs text-gray-500 mt-1">Returned or Voided</p>
+        </div>
+        
+        <div className="bg-white p-5 rounded-2xl border border-gray-200 lg:col-span-4 flex justify-between items-center text-xs">
+          <span className="font-bold text-gray-600">By Channel:</span>
+          <div className="flex gap-4">
+            {Object.entries(advances.reduce((acc, a) => { acc[a.method] = (acc[a.method] || 0) + a.amount; return acc; }, {} as Record<string, number>)).map(([method, amount]) => (
+              <span key={method} className="bg-gray-100 px-2 py-1 rounded border border-gray-200">
+                <span className="font-semibold">{method}:</span> ₹{amount.toLocaleString()}
+              </span>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -347,23 +358,25 @@ export default function AdminAdvances() {
               <tr>
                 <th className="p-3.5 rounded-l-xl">Receipt # & Date</th>
                 <th className="p-3.5">Guest & Contact</th>
+                <th className="p-3.5">Booking / Stay</th>
                 <th className="p-3.5">Initial Amount</th>
                 <th className="p-3.5">Remaining Escrow</th>
                 <th className="p-3.5">Payment Method</th>
                 <th className="p-3.5">Escrow Status</th>
+                <th className="p-3.5">Receiving Staff</th>
                 <th className="p-3.5 text-right rounded-r-xl">Receipt Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#262930]/60 text-gray-200">
               {filteredAdvances.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="p-12 text-center text-gray-500">
+                  <td colSpan={9} className="p-12 text-center text-gray-500">
                     No advance payment receipts found matching your criteria.
                   </td>
                 </tr>
               ) : (
-                filteredAdvances.map((adv) => (
-                  <tr key={adv._id} className="hover:bg-gray-100/80 transition">
+                filteredAdvances.map((adv: any) => (
+                  <tr key={adv._id} className="hover:bg-gray-100/80 transition text-gray-800">
                     <td className="p-3.5">
                       <div className="font-mono font-bold text-[#c9a227]">{adv.advanceNumber}</div>
                       <div className="text-[10px] text-gray-500 font-mono mt-0.5">
@@ -373,6 +386,16 @@ export default function AdminAdvances() {
                     <td className="p-3.5">
                       <div className="font-semibold text-gray-800">{adv.guest?.fullName || "Guest"}</div>
                       <div className="text-[11px] text-gray-500 font-mono">{adv.guest?.phone || "No phone"}</div>
+                    </td>
+                    <td className="p-3.5">
+                      {adv.booking ? (
+                        <>
+                          <div className="font-mono font-bold">{adv.booking.bookingReference}</div>
+                          <div className="text-[10px] text-gray-500">{new Date(adv.booking.checkInDate).toLocaleDateString()} - {new Date(adv.booking.checkOutDate).toLocaleDateString()}</div>
+                        </>
+                      ) : (
+                        <div className="text-gray-400 italic">Unallocated</div>
+                      )}
                     </td>
                     <td className="p-3.5 font-mono font-bold text-gray-800">₹{adv.amount.toLocaleString()}</td>
                     <td className="p-3.5 font-mono font-bold text-emerald-600">
@@ -384,6 +407,9 @@ export default function AdminAdvances() {
                       </span>
                     </td>
                     <td className="p-3.5">{getStatusBadge(adv.status)}</td>
+                    <td className="p-3.5 text-[11px]">
+                      {adv.receivedBy ? `${adv.receivedBy.firstName} ${adv.receivedBy.lastName}` : "System"}
+                    </td>
                     <td className="p-3.5 text-right space-x-2">
                       <button
                         onClick={() => setPrintReceipt(adv)}
@@ -535,6 +561,7 @@ export default function AdminAdvances() {
             <div className="bg-gray-100 p-5 rounded-xl border border-gray-200 space-y-3 font-mono text-xs">
               <div className="text-center font-serif text-base font-bold text-[#c9a227]">YES HOTELS LUXURY SUITES</div>
               <div className="text-center text-[10px] text-gray-500">Official Financial Escrow Deposit Receipt</div>
+              <div className="text-center text-[10px] text-gray-600 font-bold mb-2">GSTIN: 36AAGCY4264M1Z8</div>
               <div className="border-b border-gray-200 my-2" />
               <div className="flex justify-between text-gray-500">
                 <span>Receipt Number:</span>
@@ -552,9 +579,12 @@ export default function AdminAdvances() {
                 <span>Payment Mode:</span>
                 <span className="text-gray-800">{printReceipt.method}</span>
               </div>
-              <div className="border-t border-gray-200 pt-2 flex justify-between font-bold text-sm text-gray-800">
+              <div className="border-t border-gray-200 pt-2 mt-2 flex justify-between font-bold text-sm text-gray-800">
                 <span>Amount Received:</span>
-                <span className="text-[#c9a227]">₹{printReceipt.amount.toLocaleString()}</span>
+                <div className="text-right">
+                  <div className="text-[#c9a227]">₹{printReceipt.amount.toLocaleString()}</div>
+                  <div className="text-[9px] text-gray-400 font-normal mt-0.5">(Inclusive of applicable GST)</div>
+                </div>
               </div>
             </div>
 

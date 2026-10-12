@@ -29,26 +29,32 @@ export default function AdminMonthlyMIS() {
       headerName: "Date", 
       valueFormatter: (p: any) => p.value ? format(parseISO(p.value), "dd-MMM-yyyy") : "TOTAL",
       pinned: "left", 
-      width: 120 
+      width: 140 
     },
-    { field: "day", headerName: "Day", width: 80, pinned: "left" },
-    { field: "cash", headerName: "CASH", width: 100 },
-    { field: "card", headerName: "Card", width: 100 },
-    { field: "paytm", headerName: "PAYTM", width: 100 },
-    { field: "upi", headerName: "UPI", width: 100 },
-    { field: "ota", headerName: "OTA", width: 100 },
-    { field: "dayTotal", headerName: "Day Total", width: 120, cellStyle: { backgroundColor: '#fef3c7', fontWeight: 'bold' } },
-    { field: "refunds", headerName: "Refunds", width: 100, cellStyle: { color: 'red' } },
-    { field: "expenses", headerName: "Expenses", width: 100, cellStyle: { color: 'red' } },
-    { field: "grandTotal", headerName: "Grand Total", width: 120, cellStyle: { backgroundColor: '#dcfce7', fontWeight: 'bold' } },
-    { field: "salesRoom", headerName: "Room Sales", width: 120 },
-    { field: "salesFb", headerName: "F&B Sales", width: 120 },
-    { field: "salesTotal", headerName: "Sales Total", width: 120, cellStyle: { backgroundColor: '#dbeafe', fontWeight: 'bold' } },
-    { field: "advances", headerName: "Advances", width: 100 },
+    { field: "day", headerName: "Day", width: 90, pinned: "left" },
+    { field: "cash", headerName: "CASH", width: 120 },
+    { field: "card", headerName: "Card", width: 120 },
+    { field: "paytm", headerName: "PAYTM", width: 120 },
+    { field: "upi", headerName: "UPI", width: 120 },
+    { field: "ota", headerName: "All OTAs", width: 120 },
+    { field: "otaMmt", headerName: "MakeMyTrip", width: 120 },
+    { field: "otaAgoda", headerName: "Agoda", width: 120 },
+    { field: "otaBooking", headerName: "Booking.com", width: 120 },
+    { field: "otaGoibibo", headerName: "GoIbibo", width: 120 },
+    { field: "dayTotal", headerName: "Day Total", width: 140, cellStyle: { backgroundColor: '#fef3c7', fontWeight: 'bold' } },
+    { field: "refunds", headerName: "Refunds", width: 130, cellStyle: { color: 'red' } },
+    { field: "expenses", headerName: "Expenses", width: 130, cellStyle: { color: 'red' } },
+    { field: "grandTotal", headerName: "Grand Total", width: 140, cellStyle: { backgroundColor: '#dcfce7', fontWeight: 'bold' } },
+    { field: "salesRoom", headerName: "Room Sales", width: 140 },
+    { field: "salesFb", headerName: "F&B Sales", width: 140 },
+    { field: "salesTotal", headerName: "Sales Total", width: 140, cellStyle: { backgroundColor: '#dbeafe', fontWeight: 'bold' } },
+    { field: "advances", headerName: "All Advances", width: 130 },
+    { field: "advancesAdj", headerName: "Adjusted Adv", width: 130 },
+    { field: "advancesUnadj", headerName: "Unadjusted Adv", width: 130 },
     { 
       field: "difference", 
-      headerName: "Differ.", 
-      width: 120,
+      headerName: "Difference", 
+      width: 140,
       cellStyle: (params: any) => {
         if (params.value < 0) return { color: 'red', fontWeight: 'bold' };
         if (params.value > 0) return { color: 'green', fontWeight: 'bold' };
@@ -61,6 +67,7 @@ export default function AdminMonthlyMIS() {
     sortable: true,
     filter: true,
     resizable: true,
+    minWidth: 100,
   }), []);
 
   const handlePrint = () => {
@@ -77,6 +84,10 @@ export default function AdminMonthlyMIS() {
       paytm: reportData.reduce((s: number, r: any) => s + r.paytm, 0),
       upi: reportData.reduce((s: number, r: any) => s + r.upi, 0),
       ota: reportData.reduce((s: number, r: any) => s + r.ota, 0),
+      otaMmt: reportData.reduce((s: number, r: any) => s + r.otaMmt, 0),
+      otaAgoda: reportData.reduce((s: number, r: any) => s + r.otaAgoda, 0),
+      otaBooking: reportData.reduce((s: number, r: any) => s + r.otaBooking, 0),
+      otaGoibibo: reportData.reduce((s: number, r: any) => s + r.otaGoibibo, 0),
       dayTotal: reportData.reduce((s: number, r: any) => s + r.dayTotal, 0),
       refunds: reportData.reduce((s: number, r: any) => s + r.refunds, 0),
       expenses: reportData.reduce((s: number, r: any) => s + r.expenses, 0),
@@ -85,6 +96,8 @@ export default function AdminMonthlyMIS() {
       salesFb: reportData.reduce((s: number, r: any) => s + r.salesFb, 0),
       salesTotal: reportData.reduce((s: number, r: any) => s + r.salesTotal, 0),
       advances: reportData.reduce((s: number, r: any) => s + r.advances, 0),
+      advancesAdj: reportData.reduce((s: number, r: any) => s + r.advancesAdj, 0),
+      advancesUnadj: reportData.reduce((s: number, r: any) => s + r.advancesUnadj, 0),
       difference: reportData.reduce((s: number, r: any) => s + r.difference, 0),
     }];
   }, [reportData]);

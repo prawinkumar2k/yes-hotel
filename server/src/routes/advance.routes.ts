@@ -61,12 +61,15 @@ router.get("/", requirePropertyAccess, requirePermission("ADVANCES", "VIEW"), as
     try {
       const { bookingId, guestId, status } = req.query;
       const filter: Record<string, any> = {};
+      const propId = (req as any).propertyId || (req as any).user?.propertyId;
+      if (propId) filter.propertyId = propId;
       if (bookingId) filter.booking = bookingId as string;
       if (guestId) filter.guest = guestId as string;
       if (status) filter.status = status as string;
       const advances = await AdvancePayment.find(filter)
         .populate("guest", "fullName email phone")
         .populate("booking", "bookingReference checkInDate checkOutDate")
+        .populate("receivedBy", "firstName lastName")
         .sort({ receivedAt: -1 })
         .lean();
       return res.json({ success: true, data: advances });

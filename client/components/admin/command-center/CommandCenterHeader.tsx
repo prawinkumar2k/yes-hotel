@@ -1,5 +1,5 @@
 import React from "react";
-import { RefreshCw, BedDouble, LogIn, CalendarDays } from "lucide-react";
+import { RefreshCw, BedDouble, LogIn, LogOut, CalendarDays } from "lucide-react";
 import { Link } from "react-router-dom";
 import { format } from "date-fns";
 
@@ -40,6 +40,13 @@ export function CommandCenterHeader({ user, onRefresh, isRefreshing }: { user: a
           >
             <LogIn size={14} />
             <span>Express Check-In</span>
+          </Link>
+          <Link
+            to="/admin/check-out"
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-blue-500/15 hover:bg-blue-500/25 text-blue-400 border border-blue-500/30 text-xs font-semibold transition"
+          >
+            <LogOut size={14} />
+            <span>Express Check-Out</span>
           </Link>
           <Link
             to="/admin/room-rack"

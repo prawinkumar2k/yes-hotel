@@ -44,7 +44,8 @@ const LEGAL_TRANSITIONS: Record<RoomStatus, RoomStatus[]> = {
   // against an occupied room (mid-stay issue), and resolving it must restore
   // OCCUPIED rather than incorrectly freeing the room.
   [RoomStatus.MAINTENANCE]: [RoomStatus.AVAILABLE, RoomStatus.OCCUPIED, RoomStatus.OUT_OF_SERVICE],
-  [RoomStatus.OUT_OF_SERVICE]: [RoomStatus.MAINTENANCE, RoomStatus.AVAILABLE],
+  [RoomStatus.OUT_OF_SERVICE]: [RoomStatus.MAINTENANCE, RoomStatus.AVAILABLE, RoomStatus.OUT_OF_ORDER],
+  [RoomStatus.OUT_OF_ORDER]: [RoomStatus.MAINTENANCE, RoomStatus.AVAILABLE, RoomStatus.OUT_OF_SERVICE],
 };
 
 export function isLegalRoomTransition(from: RoomStatus, to: RoomStatus): boolean {
@@ -105,54 +106,83 @@ const LEGAL_HOUSEKEEPING_TRANSITIONS: Record<HousekeepingRoomStatus, Housekeepin
   [HousekeepingRoomStatus.CLEAN]: [
     HousekeepingRoomStatus.DIRTY,
     HousekeepingRoomStatus.ASSIGNED, // Allow direct assignment to clean rooms for touch-ups
+    HousekeepingRoomStatus.CLEANING, // Allow direct cleaning of clean room (touch-up, sanitization, deep clean)
+    HousekeepingRoomStatus.INSPECTION, // Allow supervisor inspection
     HousekeepingRoomStatus.DND,
     HousekeepingRoomStatus.REFUSED_SERVICE,
   ],
   [HousekeepingRoomStatus.DIRTY]: [
     HousekeepingRoomStatus.ASSIGNED,
     HousekeepingRoomStatus.CLEANING,  // direct start without assignment
+    HousekeepingRoomStatus.CLEAN,     // supervisor or admin direct override to clean
+    HousekeepingRoomStatus.INSPECTION,
+    HousekeepingRoomStatus.DND,
+    HousekeepingRoomStatus.REFUSED_SERVICE,
   ],
   [HousekeepingRoomStatus.ASSIGNED]: [
     HousekeepingRoomStatus.CLEANING,
     HousekeepingRoomStatus.DIRTY,     // unassigned
+    HousekeepingRoomStatus.CLEAN,     // supervisor direct mark clean
+    HousekeepingRoomStatus.INSPECTION,
+    HousekeepingRoomStatus.DND,
+    HousekeepingRoomStatus.REFUSED_SERVICE,
   ],
   [HousekeepingRoomStatus.CLEANING]: [
     HousekeepingRoomStatus.CLEANING_COMPLETED,
     HousekeepingRoomStatus.DIRTY,     // housekeeper paused/cancelled
+    HousekeepingRoomStatus.CLEAN,     // direct mark clean
+    HousekeepingRoomStatus.INSPECTION,
+    HousekeepingRoomStatus.DND,
+    HousekeepingRoomStatus.REFUSED_SERVICE,
   ],
   [HousekeepingRoomStatus.CLEANING_COMPLETED]: [
     HousekeepingRoomStatus.INSPECTION,
     HousekeepingRoomStatus.INSPECTED,  // if inspection not required by hotel config
+    HousekeepingRoomStatus.WAITING_FOR_RELEASE,
     HousekeepingRoomStatus.CLEAN,      // if neither inspection nor manual release required
     HousekeepingRoomStatus.DIRTY,      // sent back for re-clean without formal inspection
   ],
   [HousekeepingRoomStatus.INSPECTION]: [
     HousekeepingRoomStatus.INSPECTED,
     HousekeepingRoomStatus.INSPECTION_FAILED,
+    HousekeepingRoomStatus.WAITING_FOR_RELEASE,
+    HousekeepingRoomStatus.CLEAN,
+    HousekeepingRoomStatus.DIRTY,
   ],
   [HousekeepingRoomStatus.INSPECTION_FAILED]: [
     HousekeepingRoomStatus.DIRTY,     // sent back to start cleaning again
     HousekeepingRoomStatus.ASSIGNED,  // re-assigned for re-clean
+    HousekeepingRoomStatus.CLEANING,  // restart cleaning
+    HousekeepingRoomStatus.CLEAN,
   ],
   [HousekeepingRoomStatus.INSPECTED]: [
     HousekeepingRoomStatus.WAITING_FOR_RELEASE,
     HousekeepingRoomStatus.CLEAN,     // if manual release not required
+    HousekeepingRoomStatus.DIRTY,
+    HousekeepingRoomStatus.CLEANING,
   ],
   [HousekeepingRoomStatus.WAITING_FOR_RELEASE]: [
     HousekeepingRoomStatus.CLEAN,     // after authorized manual release
     HousekeepingRoomStatus.DIRTY,     // re-dirted (e.g. early arrival prep)
+    HousekeepingRoomStatus.CLEANING,
   ],
   [HousekeepingRoomStatus.READY]: [
     HousekeepingRoomStatus.DIRTY,
+    HousekeepingRoomStatus.CLEAN,
+    HousekeepingRoomStatus.CLEANING,
     HousekeepingRoomStatus.DND,
   ],
   [HousekeepingRoomStatus.DND]: [
     HousekeepingRoomStatus.DIRTY,
     HousekeepingRoomStatus.CLEAN,
+    HousekeepingRoomStatus.CLEANING,
+    HousekeepingRoomStatus.ASSIGNED,
   ],
   [HousekeepingRoomStatus.REFUSED_SERVICE]: [
     HousekeepingRoomStatus.DIRTY,
     HousekeepingRoomStatus.CLEAN,
+    HousekeepingRoomStatus.CLEANING,
+    HousekeepingRoomStatus.ASSIGNED,
   ],
 };
 
@@ -160,7 +190,7 @@ export function isLegalHousekeepingTransition(
   from: HousekeepingRoomStatus,
   to: HousekeepingRoomStatus
 ): boolean {
-  if (from === to) return false;
+  if (from === to) return true; // Idempotent updates are safe and allowed
   return (LEGAL_HOUSEKEEPING_TRANSITIONS[from] ?? []).includes(to);
 }
 
@@ -226,6 +256,8 @@ export async function transitionHousekeepingStatus(
   // status is governed by other flows entirely.
   if (to === HousekeepingRoomStatus.CLEAN && room.status === RoomStatus.CLEANING) {
     updateFields.status = RoomStatus.AVAILABLE;
+  } else if (to === HousekeepingRoomStatus.CLEANING && room.status === RoomStatus.AVAILABLE && room.occupancyStatus === OccupancyStatus.VACANT) {
+    updateFields.status = RoomStatus.CLEANING;
   }
 
   Object.assign(room, updateFields);

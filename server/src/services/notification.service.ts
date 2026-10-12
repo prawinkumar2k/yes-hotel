@@ -1,3 +1,4 @@
+import nodemailer from "nodemailer";
 import { NotificationLog, NotificationType, NotificationStatus } from "../models/NotificationLog";
 import { enqueueJob } from "./job-queue.service";
 import { logger } from "./logger.service";
@@ -14,8 +15,6 @@ export function getTransporter() {
   if (!user || !pass) return null;
 
   try {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const nodemailer = require("nodemailer");
     cachedTransporter = nodemailer.createTransport({
       service: process.env.EMAIL_SERVICE || "gmail",
       auth: { user, pass },

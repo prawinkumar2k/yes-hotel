@@ -4,7 +4,7 @@ import { useAuth } from "../../context/AuthContext";
 import { useToast } from "@/components/ui/use-toast";
 import { Link } from "react-router-dom";
 import { format } from "date-fns";
-import { LogOut, Search, User, Calendar, Loader2, ArrowLeft, LogIn, Receipt, CreditCard, Sparkles, CheckCircle2, AlertCircle } from "lucide-react";
+import { LogOut, Search, User, Calendar, Loader2, ArrowLeft, LogIn, Receipt, CreditCard, Sparkles, CheckCircle2, AlertCircle, Printer, FileCheck2 } from "lucide-react";
 import { getStoredAuthToken } from "../../lib/authStorage";
 
 async function apiFetch(url: string, token?: string, method = "GET", body?: any) {
@@ -33,6 +33,7 @@ export default function AdminCheckOut() {
   const [checkoutNotes, setCheckoutNotes] = useState("");
   const [confirmed, setConfirmed] = useState(false);
   const [lastInvoice, setLastInvoice] = useState<string | null>(null);
+  const [lastBookingId, setLastBookingId] = useState<string | null>(null);
 
   const { data: bookingsData, isLoading } = useQuery({
     queryKey: ["checkOutBookings", search],
@@ -92,6 +93,7 @@ export default function AdminCheckOut() {
     onSuccess: (data) => {
       if (data.success) {
         setLastInvoice(data.invoiceNumber || "SETTLED");
+        setLastBookingId(selectedBooking?._id || null);
         toast({
           title: "✅ Check-Out Completed",
           description: `${selectedBooking?.guestDetails.firstName} has been checked out. Official Invoice #${data.invoiceNumber || "N/A"} issued.`,
@@ -150,12 +152,23 @@ export default function AdminCheckOut() {
 
       {lastInvoice && (
         <div className="max-w-6xl mx-auto mt-4 px-6">
-          <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 flex items-center justify-between text-emerald-800">
+          <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 flex flex-wrap items-center justify-between gap-3 text-emerald-800">
             <div className="flex items-center gap-2">
               <CheckCircle2 size={20} className="text-emerald-600" />
               <span>Latest Checkout settled successfully. GST Invoice Number: <strong>{lastInvoice}</strong></span>
             </div>
-            <button onClick={() => setLastInvoice(null)} className="text-xs bg-emerald-100 hover:bg-emerald-200 px-3 py-1 rounded-lg">Dismiss</button>
+            <div className="flex items-center gap-2">
+              {lastBookingId && (
+                <Link
+                  to={`/admin/bookings/${lastBookingId}/folio-print`}
+                  target="_blank"
+                  className="text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3 py-1.5 rounded-lg flex items-center gap-1.5 shadow-sm transition"
+                >
+                  <Printer size={14} /> Print Official GST Invoice
+                </Link>
+              )}
+              <button onClick={() => { setLastInvoice(null); setLastBookingId(null); }} className="text-xs bg-emerald-100 hover:bg-emerald-200 px-3 py-1.5 rounded-lg font-medium">Dismiss</button>
+            </div>
           </div>
         </div>
       )}
@@ -216,13 +229,35 @@ export default function AdminCheckOut() {
           <div>
             {selectedBooking ? (
               <div className="bg-white rounded-lg border border-gray-200 overflow-hidden shadow-sm">
-                <div className="bg-red-50 border-b border-red-100 px-6 py-4 flex items-center justify-between">
+                <div className="bg-red-50 border-b border-red-100 px-6 py-4 flex flex-wrap items-center justify-between gap-3">
                   <h2 className="font-semibold text-red-900 flex items-center gap-2">
-                    <Receipt size={18} /> Folio & Tax Invoice Settlement
+                    <Receipt size={18} /> Folio &amp; Tax Invoice Settlement
                   </h2>
-                  <span className="text-xs font-mono bg-red-100 text-red-800 px-2 py-0.5 rounded font-bold">
-                    Room {selectedBooking.assignedRoom?.roomNumber || "N/A"}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <Link
+                      to={`/admin/bookings/${selectedBooking._id}/grc-print`}
+                      target="_blank"
+                      className="text-xs bg-white border border-gray-300 hover:bg-gray-100 text-gray-800 px-2.5 py-1 rounded font-bold transition flex items-center gap-1 shadow-sm"
+                    >
+                      <FileCheck2 size={13} /> Print GRC
+                    </Link>
+                    <Link
+                      to={`/admin/bookings/${selectedBooking._id}/folio-print`}
+                      target="_blank"
+                      className="text-xs bg-black hover:bg-gray-800 text-[#c9a227] px-2.5 py-1 rounded font-bold transition flex items-center gap-1 shadow-sm"
+                    >
+                      <Printer size={13} /> GST Invoice
+                    </Link>
+                    <Link
+                      to={`/admin/bookings/${selectedBooking._id}`}
+                      className="text-xs bg-white border border-gray-300 hover:bg-gray-100 text-indigo-700 px-2.5 py-1 rounded font-bold transition"
+                    >
+                      Edit Folio
+                    </Link>
+                    <span className="text-xs font-mono bg-red-100 text-red-800 px-2 py-0.5 rounded font-bold">
+                      Room {selectedBooking.assignedRoom?.roomNumber || "N/A"}
+                    </span>
+                  </div>
                 </div>
 
                 <div className="p-6 space-y-6">

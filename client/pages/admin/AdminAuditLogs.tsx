@@ -74,18 +74,27 @@ export default function AdminAuditLogs() {
                     </div>
                     <div className="text-gray-500 text-xs">{log.actorRole}</div>
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-3 whitespace-nowrap">
                     <Badge variant="outline">{log.action}</Badge>
                   </td>
                   <td className="px-4 py-3 text-gray-500">
                     {log.resourceType}
                     {log.resourceId && <div className="text-xs text-gray-400">{log.resourceId}</div>}
                   </td>
-                  <td className="px-4 py-3 max-w-xs">
-                    {log.metadata && (
-                      <pre className="text-xs text-gray-500 whitespace-pre-wrap break-all">
-                        {JSON.stringify(log.metadata)}
-                      </pre>
+                  <td className="px-4 py-3 min-w-[250px]">
+                    {log.metadata && typeof log.metadata === 'object' && (
+                      <div className="flex flex-col gap-1 text-[11px] leading-tight">
+                        {Object.entries(log.metadata).map(([key, value]) => (
+                          <div key={key} className="bg-gray-50/80 rounded px-2 py-1.5 flex items-start border border-gray-100">
+                            <span className="font-semibold text-gray-600 w-24 shrink-0 break-words capitalize">
+                              {key.replace(/([A-Z])/g, ' $1').trim()}
+                            </span>
+                            <span className="text-gray-800 break-all ml-2 flex-1 font-mono font-medium">
+                              {typeof value === 'object' ? JSON.stringify(value) : String(value)}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
                     )}
                   </td>
                   <td className="px-4 py-3 text-gray-500 whitespace-nowrap">

@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { FolioLine, FolioLineType, FolioLineDirection } from "../models/FolioLine";
-import { Booking, BookingStatus } from "../models/Booking";
+import { Booking, BookingStatus, PaymentStatus } from "../models/Booking";
 import { Room, HousekeepingRoomStatus } from "../models/Room";
 import { AdvancePayment } from "../models/AdvancePayment";
 import { RestaurantOrder } from "../models/RestaurantOrder";
@@ -10,8 +10,7 @@ import { Payment } from "../models/Payment";
 import { Folio } from "../models/Folio";
 import { HousekeepingTask } from "../models/HousekeepingTask";
 import { MaintenanceTicket, MaintenanceStatus } from "../models/MaintenanceTicket";
-import { InventoryItem } from "../models/InventoryItem";
-import { PurchaseOrder } from "../models/PurchaseOrder";
+
 import { CorporateAccount } from "../models/CorporateAccount";
 import { CashierShift } from "../models/CashierShift";
 
@@ -470,18 +469,62 @@ export const getExecutiveSummary = async (_req: Request, res: Response) => {
 /**
  * GET /api/reports/in-house-list
  * Replicates the physical "Guest In-House List" logbook structure.
+ * Once entered, guests are NEVER removed upon checkout; their actual
+ * checkout time and settlement details are updated.
  */
-export const getInHouseList = async (_req: Request, res: Response) => {
+export const getInHouseList = async (req: Request, res: Response) => {
   try {
-    const activeBookings = await Booking.find({ status: BookingStatus.CHECKED_IN })
+    const dateParam = req.query.date as string;
+    const targetDate = dateParam ? new Date(dateParam) : new Date();
+
+    const startOfDay = new Date(targetDate);
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(targetDate);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    // Active in-house stays + any guests who checked out today or were in-house today.
+    // Once entered in the physical logbook, entries are NEVER deleted upon checkout!
+    const bookings = await Booking.find({
+      $or: [
+        { status: BookingStatus.CHECKED_IN },
+        {
+          status: BookingStatus.CHECKED_OUT,
+          $or: [
+            { checkedOutAt: { $gte: startOfDay, $lte: endOfDay } },
+            { checkOutDate: { $gte: startOfDay, $lte: endOfDay } },
+            { checkedInAt: { $gte: startOfDay, $lte: endOfDay } },
+            { checkInDate: { $gte: startOfDay, $lte: endOfDay } },
+          ],
+        },
+      ],
+    })
       .populate("assignedRoom", "roomNumber")
-      .populate("company", "name")
       .lean();
 
+    const companyIds = bookings.map((b: any) => b.company).filter(Boolean);
+    const corporateMap = new Map<string, string>();
+    if (companyIds.length > 0) {
+      try {
+        const companies = await CorporateAccount.find({ _id: { $in: companyIds } }).lean();
+        companies.forEach((c: any) => corporateMap.set(c._id.toString(), c.companyName));
+      } catch (e) {
+        // Fallback gracefully
+      }
+    }
+
     const data = await Promise.all(
-      activeBookings.map(async (booking) => {
+      bookings.map(async (booking: any) => {
         // Aggregate folio details (Extra Bed, Food Bill, Advance, Payments)
-        const folioLines = booking.folio ? await FolioLine.find({ folio: booking.folio }).lean() : [];
+        let folioLines: any[] = [];
+        try {
+          if (booking.folio) {
+            folioLines = await FolioLine.find({ $or: [{ folio: booking.folio }, { booking: booking._id }] }).lean();
+          } else {
+            folioLines = await FolioLine.find({ booking: booking._id }).lean();
+          }
+        } catch (e) {
+          folioLines = [];
+        }
         
         let extraBedCount = 0;
         let foodBill = 0;
@@ -490,68 +533,92 @@ export const getInHouseList = async (_req: Request, res: Response) => {
         const paymentModes = new Set<string>();
         let balance = 0;
 
-        folioLines.forEach((line) => {
+        folioLines.forEach((line: any) => {
           if (line.lineType === FolioLineType.EXTRA_BED && line.direction === FolioLineDirection.DEBIT) {
             extraBedCount++;
           } else if (line.lineType === FolioLineType.RESTAURANT && line.direction === FolioLineDirection.DEBIT) {
-            foodBill += line.amount;
+            foodBill += (line.amount || 0);
           } else if (line.lineType === FolioLineType.ADVANCE_ADJUSTMENT && line.direction === FolioLineDirection.CREDIT) {
-            advance += line.amount;
+            advance += (line.amount || 0);
           } else if (line.lineType === FolioLineType.PAYMENT && line.direction === FolioLineDirection.CREDIT) {
-            settled += line.amount;
-            if (line.notes) paymentModes.add(line.notes.split(" ")[0]); // Assuming notes starts with method e.g. "CASH payment"
+            settled += (line.amount || 0);
+            if (line.notes) paymentModes.add(line.notes.split(" ")[0]);
           }
 
-          if (line.direction === FolioLineDirection.DEBIT) balance += line.amount;
-          else if (line.direction === FolioLineDirection.CREDIT) balance -= line.amount;
+          if (line.direction === FolioLineDirection.DEBIT) balance += (line.amount || 0);
+          else if (line.direction === FolioLineDirection.CREDIT) balance -= (line.amount || 0);
         });
 
-        // Also check Payments directly for settled and payment modes if needed, but FolioLine is source of truth for the folio
-        const payments = await Payment.find({ booking: booking._id }).lean();
-        payments.forEach(p => {
-            paymentModes.add(p.method);
-        });
+        try {
+          const payments = await Payment.find({ booking: booking._id }).lean();
+          payments.forEach((p: any) => {
+            if (p.method) paymentModes.add(p.method);
+          });
+        } catch (e) {
+          // ignore
+        }
 
-        let advanceTotal = 0;
-        const advances = await AdvancePayment.find({ booking: booking._id }).lean();
-        advances.forEach(a => advanceTotal += a.amount);
-        advance = Math.max(advance, advanceTotal); // Just in case it's not adjusted yet
+        try {
+          let advanceTotal = 0;
+          const advances = await AdvancePayment.find({ booking: booking._id }).lean();
+          advances.forEach((a: any) => advanceTotal += (a.amount || 0));
+          advance = Math.max(advance, advanceTotal);
+        } catch (e) {
+          // ignore
+        }
+
+        if (settled === 0 && (booking.paidAmount || 0) > 0) {
+          settled = booking.paidAmount;
+        }
+
+        if (booking.status === BookingStatus.CHECKED_OUT && (booking.paymentStatus === PaymentStatus.PAID || booking.paymentStatus === "PAID")) {
+          balance = 0;
+        }
 
         // Calculate nights
-        const checkin = new Date(booking.checkInDate);
-        const checkout = new Date(booking.checkOutDate);
-        const nights = Math.max(1, Math.round((checkout.getTime() - checkin.getTime()) / (1000 * 60 * 60 * 24)));
+        const checkIn = booking.checkInDate ? new Date(booking.checkInDate) : new Date();
+        const checkOut = booking.checkOutDate ? new Date(booking.checkOutDate) : new Date();
+        const nights = Math.max(1, Math.round((checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24)) || 1);
 
-        // Tariff = Base Room Charge per night (approx)
-        const tariff = booking.totalAmount / nights;
+        // Tariff = Base Room Charge per night
+        const tariff = booking.ratePerNight ?? (nights > 0 ? Math.round((booking.totalAmount || 0) / nights) : 0);
+
+        const checkInTimeDisplay = booking.checkedInAt || booking.checkInDate;
+        const checkOutTimeDisplay = booking.status === BookingStatus.CHECKED_OUT
+          ? (booking.checkedOutAt || booking.checkOutDate)
+          : booking.checkOutDate;
+
+        const companyName = booking.company ? corporateMap.get(booking.company.toString()) : null;
+        const companyGroup = companyName || booking.guestDetails?.organization || booking.groupId?.toString() || booking.source || "Direct";
 
         return {
           _id: booking._id,
-          grcNo: booking.bookingReference,
-          roomNo: (booking.assignedRoom as any)?.roomNumber || "Unassigned",
-          guestName: `${booking.guestDetails.firstName} ${booking.guestDetails.lastName}`.trim(),
-          companyGroup: (booking.company as any)?.name || booking.groupId?.toString() || booking.source,
+          status: booking.status,
+          grcNo: booking.bookingReference || "—",
+          roomNo: booking.assignedRoom?.roomNumber || "—",
+          guestName: `${booking.guestDetails?.firstName || ""} ${booking.guestDetails?.lastName || ""}`.trim() || "Guest",
+          companyGroup,
           adults: booking.adults || 1,
           childKids: booking.children || 0,
-          tariff: Math.round(tariff),
-          plan: booking.ratePlan || "EP",
-          extraBed: extraBedCount,
-          foodBill: Math.round(foodBill),
-          checkedIn: booking.checkInDate,
-          checkOut: booking.checkOutDate,
+          tariff: Math.round(tariff || 0),
+          plan: booking.ratePlan || booking.mealPlan || "EP",
+          extraBed: extraBedCount || (booking.extraPersonsWithBed ? 1 : 0),
+          foodBill: Math.round(foodBill || 0),
+          checkedIn: checkInTimeDisplay,
+          checkOut: checkOutTimeDisplay,
           nights,
-          advance: Math.round(advance),
-          balance: Math.round(balance),
-          settled: Math.round(settled),
-          paymentMode: Array.from(paymentModes).join(", ") || "-",
+          advance: Math.round(advance || 0),
+          balance: Math.max(0, Math.round(balance || 0)),
+          settled: Math.round(settled || 0),
+          paymentMode: Array.from(paymentModes).join(", ") || booking.paymentMethod || "-",
           discountAmount: booking.discountAmount || 0,
           appliedCoupon: booking.appliedCoupon || "-",
         };
       })
     );
 
-    // Sort by Room Number
-    data.sort((a, b) => a.roomNo.localeCompare(b.roomNo, undefined, { numeric: true }));
+    // Sort by Room Number safely
+    data.sort((a, b) => String(a.roomNo || "").localeCompare(String(b.roomNo || ""), undefined, { numeric: true }));
 
     return res.json({ success: true, data });
   } catch (error: any) {
@@ -573,13 +640,13 @@ export const getDaySummary = async (req: Request, res: Response) => {
     const dayEnd = new Date(targetDate);
     dayEnd.setHours(23, 59, 59, 999);
     const dayQuery: any = { $gte: dayStart, $lte: dayEnd };
-    if (req.propertyId) {
-      dayQuery.propertyId = req.propertyId;
+    if ((req as any).propertyId) {
+      dayQuery.propertyId = (req as any).propertyId;
     }
 
     // 1. Fetch relevant bookings for the day
     // We add propertyId to the queries.
-    const propertyMatch = req.propertyId ? { propertyId: req.propertyId } : {};
+    const propertyMatch = (req as any).propertyId ? { propertyId: (req as any).propertyId } : {};
     
     const [checkIns, checkOuts, dayUses, activeBookings, cancelledCount, noShowCount, totalRooms] = await Promise.all([
       Booking.find({ ...propertyMatch, checkInDate: dayQuery }),
@@ -735,15 +802,21 @@ export const getMonthlyMIS = async (req: Request, res: Response) => {
         upi: 0,
         paytm: 0,
         ota: 0,
+        otaMmt: 0,
+        otaAgoda: 0,
+        otaBooking: 0,
+        otaGoibibo: 0,
         refunds: 0,
         expenses: 0,
         salesRoom: 0,
         salesFb: 0,
         advances: 0,
+        advancesAdj: 0,
+        advancesUnadj: 0,
       };
     }
 
-    const payments = await Payment.find(query);
+    const payments = await Payment.find(query).populate("booking");
     payments.forEach(p => {
       const anyP = p as any;
       const day = new Date(anyP.createdAt).getDate();
@@ -754,11 +827,30 @@ export const getMonthlyMIS = async (req: Request, res: Response) => {
       else if (method.includes("CARD")) dailyData[day].card += amount;
       else if (method.includes("UPI")) dailyData[day].upi += amount;
       else if (method.includes("PAYTM")) dailyData[day].paytm += amount;
-      else dailyData[day].ota += amount;
+      else {
+        dailyData[day].ota += amount;
+        // Check what OTA it is
+        const otaName = (anyP.booking?.otaName || "").toUpperCase();
+        if (otaName.includes("MAKEMYTRIP") || otaName.includes("MMT")) dailyData[day].otaMmt += amount;
+        else if (otaName.includes("AGODA")) dailyData[day].otaAgoda += amount;
+        else if (otaName.includes("BOOKING")) dailyData[day].otaBooking += amount;
+        else if (otaName.includes("GOIBIBO")) dailyData[day].otaGoibibo += amount;
+      }
 
       if (anyP.purpose === "ADVANCE") {
         dailyData[day].advances += amount;
+        dailyData[day].advancesUnadj += amount; // We'll assume unadjusted for raw Payment advances unless updated below
       }
+    });
+
+    const advances = await AdvancePayment.find({ receivedAt: { $gte: startOfMonth, $lte: endOfMonth } });
+    advances.forEach(a => {
+      const day = new Date(a.receivedAt).getDate();
+      const amt = a.amount;
+      const adj = a.totalAdjusted || 0;
+      dailyData[day].advances += amt;
+      dailyData[day].advancesAdj += adj;
+      dailyData[day].advancesUnadj += (amt - adj);
     });
 
     const folios = await FolioLine.find({ ...query, direction: FolioLineDirection.DEBIT });
@@ -1172,30 +1264,7 @@ export const getDynamicReport = async (req: Request, res: Response) => {
         }));
         break;
       }
-      case "inventory": {
-        const items = await InventoryItem.find().lean();
-        kpis = { TotalItems: items.length, LowStock: items.filter((i: any) => i.quantity <= i.minThreshold).length };
-        table = items.map((i: any) => ({
-           Item: i.name,
-           Category: i.category,
-           Quantity: i.quantity,
-           Threshold: i.minThreshold,
-           Unit: i.unit
-        }));
-        break;
-      }
-      case "procurement": {
-        const orders = await PurchaseOrder.find(createdAtQuery).lean();
-        kpis = { TotalPOs: orders.length, TotalAmount: orders.reduce((acc, o: any) => acc + (o.totalAmount || 0), 0) };
-        table = orders.map((o: any) => ({
-           PONumber: o.poNumber || o._id,
-           Vendor: o.vendor ? String(o.vendor) : 'Unknown',
-           Status: o.status,
-           Total: o.totalAmount,
-           Date: o.createdAt
-        }));
-        break;
-      }
+
       case "corporate": {
         const accounts = await CorporateAccount.find().lean();
         kpis = { TotalAccounts: accounts.length };

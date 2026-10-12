@@ -4,6 +4,7 @@ import { Booking, BookingStatus, PaymentStatus } from "../models/Booking";
 import { Room, RoomStatus, OccupancyStatus, HousekeepingRoomStatus, SellStatus } from "../models/Room";
 import { RoomCategory } from "../models/RoomCategory";
 import { Payment } from "../models/Payment";
+import { Property } from "../models/Property";
 import { HousekeepingTask, HousekeepingStatus, HousekeepingPriority, HousekeepingTaskType } from "../models/HousekeepingTask";
 import { validateAndCalculateCoupon } from "../services/coupon.service";
 import { calculateBookingTotals } from "../services/pricing.service";
@@ -24,6 +25,8 @@ import { AdvancePayment, AdvancePaymentStatus } from "../models/AdvancePayment";
 import { adjustAdvance } from "../services/advance.service";
 import { BookingEvent, BookingEventType } from "../models/BookingEvent";
 import { BookingInventoryDay } from "../models/BookingInventoryDay";
+import { ensureAndSeedFolioForBooking } from "./folio.controller";
+import { BookingEnquiry, BookingEnquiryStatus } from "../models/BookingEnquiry";
 
 const guestDetailsSchema = z.object({
   firstName: z.string().trim().min(1, "Guest first name is required"),
@@ -264,12 +267,13 @@ export const createBooking = async (req: Request, res: Response) => {
         });
 
         const bookingReference = await generateBookingReference("OTA");
-        const defaultProp = await mongoose.model("Property").findOne();
+        const defaultProp = await Property.findOne().lean();
+        const propertyId = (req as any).propertyId || (req.user as any)?.propertyId || defaultProp?._id || new mongoose.Types.ObjectId();
         
         const created = await Booking.create(
           [
             {
-              propertyId: defaultProp ? defaultProp._id : undefined,
+              propertyId,
               bookingReference,
               customer: req.user?.id ?? undefined,
               guestDetails,
@@ -289,17 +293,6 @@ export const createBooking = async (req: Request, res: Response) => {
           { session }
         );
         booking = created[0];
-
-        // 3. Guarantee atomic folio creation
-        await createFolio(
-          {
-            bookingId: booking._id.toString(),
-            guestId: booking.customer ? booking.customer.toString() : booking._id.toString(),
-            checkInDate: booking.checkInDate,
-            checkOutDate: booking.checkOutDate,
-          },
-          { req, session }
-        );
 
         // Finalizing the idempotency record inside the same transaction closes
         // a second gap: without this, a crash between "booking committed" and
@@ -356,6 +349,31 @@ export const createBooking = async (req: Request, res: Response) => {
     }
 
     await syncGuestOnBookingCreated(guestDetails);
+
+    // Auto-convert matching open enquiries to CONVERTED
+    try {
+      const matchConditions: any[] = [];
+      if (guestDetails.phone) matchConditions.push({ phone: guestDetails.phone });
+      if (guestDetails.email) matchConditions.push({ email: guestDetails.email.toLowerCase() });
+      if (matchConditions.length > 0) {
+        await BookingEnquiry.updateMany(
+          {
+            status: { $in: [BookingEnquiryStatus.NEW, BookingEnquiryStatus.CONTACTED, BookingEnquiryStatus.FOLLOW_UP, BookingEnquiryStatus.AWAITING_RESPONSE] },
+            $or: matchConditions,
+          },
+          {
+            $set: {
+              status: BookingEnquiryStatus.CONVERTED,
+              bookingStage: "BOOKING_COMPLETED",
+              convertedToBookingId: booking._id,
+              convertedAt: new Date(),
+            },
+          }
+        );
+      }
+    } catch (enqErr: any) {
+      logger.warn("booking.enquiry_autoconvert_failed", { error: enqErr?.message });
+    }
 
     await createAuditLog({
       req,
@@ -731,16 +749,19 @@ export const getCheckoutPreview = async (req: Request, res: Response) => {
   try {
     const booking = await Booking.findById(req.params.id)
       .populate("assignedRoom", "roomNumber floor category")
-      .populate("roomCategory", "name basePrice")
-      .lean();
+      .populate("roomCategory", "name basePrice");
 
     if (!booking) return res.status(404).json({ success: false, message: "Booking not found" });
 
-    // Find open or finalized folio
-    let folio = await Folio.findOne({
-      booking: booking._id,
-      status: { $in: [FolioStatus.OPEN, FolioStatus.FINALIZED] },
-    }).lean();
+    const actorId = (req as any).user?.id || (req as any).user?._id || "SYSTEM";
+    let folio: any = await ensureAndSeedFolioForBooking(booking, actorId, req);
+
+    if (!folio) {
+      folio = await Folio.findOne({
+        booking: booking._id,
+        status: { $in: [FolioStatus.OPEN, FolioStatus.FINALIZED] },
+      }).lean();
+    }
 
     let lines: any[] = [];
     if (folio) {
@@ -804,6 +825,7 @@ export const checkOut = async (req: Request, res: Response) => {
   if (!booking) return res.status(404).json({ success: false, message: "Booking not found" });
 
   const actorId = (req as any).user?.id || (req as any).user?._id;
+  await ensureAndSeedFolioForBooking(booking, actorId?.toString() || "CHECKOUT", req);
 
   if (booking.status !== BookingStatus.CHECKED_IN) {
     return res.status(400).json({
@@ -921,7 +943,27 @@ export const checkOut = async (req: Request, res: Response) => {
 
       // 4. Financial Invariant Check: Verify Folio Balance is settled
       if (folio) {
-        const balanceCheck = await recomputeFolioBalance(folio._id.toString(), { session });
+        let balanceCheck = await recomputeFolioBalance(folio._id.toString(), { session });
+        
+        // Auto-settle excess advance / surplus credit if balance is negative
+        if (balanceCheck.balance < -1 && !refundAmount) {
+          const excessRefund = Math.abs(balanceCheck.balance);
+          await postCharge(
+            {
+              folioId: folio._id.toString(),
+              bookingId: booking._id.toString(),
+              lineType: FolioLineType.REFUND,
+              description: "Checkout Settlement (Excess Advance Refund)",
+              amount: excessRefund,
+              date: new Date(),
+              postedBy: actorId?.toString() || "CHECKOUT",
+              notes: notes || "Surplus advance balance settled at checkout",
+            },
+            { req, session }
+          );
+          balanceCheck = await recomputeFolioBalance(folio._id.toString(), { session });
+        }
+
         if (Math.abs(balanceCheck.balance) > 1 && !forceBypassBalance) {
           throw new CheckoutBalanceError(balanceCheck.balance);
         }
@@ -958,11 +1000,13 @@ export const checkOut = async (req: Request, res: Response) => {
           await room.save({ session });
           roomNumber = room.roomNumber;
 
+          const resolvedPropId = booking.propertyId || booking.property || room.propertyId || (folio as any)?.propertyId || (await Property.findOne().session(session).lean())?._id;
+
           // Housekeeping task generation
           await HousekeepingTask.create(
             [
               {
-                propertyId: booking.propertyId || booking.property,
+                propertyId: resolvedPropId,
                 room: room._id,
                 status: HousekeepingStatus.DIRTY,
                 priority: HousekeepingPriority.HIGH,

@@ -59,7 +59,7 @@ export function HotelPulse({ pulseData, revenue, housekeeping, arrivals }: any) 
       </div>
 
       {/* Arrivals Pulse */}
-      <div className="bg-[#121316] rounded-xl border border-white/10 p-4 relative overflow-hidden group hover:border-emerald-500/40 transition cursor-pointer" onClick={() => navigate("/admin/front-desk")}>
+      <div className="bg-[#121316] rounded-xl border border-white/10 p-4 relative overflow-hidden group hover:border-emerald-500/40 transition cursor-pointer" onClick={() => navigate("/admin/check-in")}>
         <div className="flex items-center justify-between text-zinc-400 mb-2">
           <span className="text-[11px] font-bold uppercase tracking-wide whitespace-nowrap overflow-hidden text-ellipsis text-emerald-400">Arrivals</span>
           <LogIn size={16} className="text-emerald-400" />
@@ -83,15 +83,6 @@ export function HotelPulse({ pulseData, revenue, housekeeping, arrivals }: any) 
         <p className="text-[10px] text-zinc-400 mt-2 font-mono">{pulseData.ooo} OOO | {pulseData.oos} OOS</p>
       </div>
       
-      <div className="bg-[#121316] rounded-xl border border-white/10 p-4 relative overflow-hidden group hover:border-hotel-gold/40 transition cursor-pointer" onClick={() => navigate("/admin/front-desk")}>
-        <div className="flex items-center justify-between text-zinc-400 mb-2">
-          <span className="text-[11px] font-bold uppercase tracking-wide whitespace-nowrap overflow-hidden text-ellipsis">Sellable</span>
-          <Users size={16} className="text-hotel-gold" />
-        </div>
-        <div className="flex items-baseline gap-1.5">
-          <span className="font-sans text-2xl font-bold text-white tabular-nums">{pulseData.sellableRooms || 0}</span>
-        </div>
-      </div>
     </div>
   );
 }

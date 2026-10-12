@@ -438,14 +438,30 @@ function FolioSection({ bookingId, userToken }: { bookingId: string; userToken?:
           </h3>
           <p className="text-xs text-gray-500 mt-0.5">Append-only financial audit trail for this reservation stay.</p>
         </div>
-        {folio.status === "OPEN" && (
-          <button
-            onClick={() => setShowPostModal(true)}
-            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold shadow-sm transition"
+        <div className="flex flex-wrap gap-2">
+          <Link
+            to={`/admin/bookings/${bookingId}/grc-print`}
+            target="_blank"
+            className="px-3.5 py-2 bg-white border border-gray-300 text-gray-800 hover:bg-gray-50 rounded-lg text-xs font-bold shadow-sm transition"
           >
-            + Post Charge to Folio
-          </button>
-        )}
+            Print GRC (Card)
+          </Link>
+          <Link
+            to={`/admin/bookings/${bookingId}/folio-print`}
+            target="_blank"
+            className="px-3.5 py-2 bg-black text-[#c9a227] hover:bg-gray-800 rounded-lg text-xs font-bold shadow-sm transition"
+          >
+            Print GST Invoice
+          </Link>
+          {folio.status === "OPEN" && (
+            <button
+              onClick={() => setShowPostModal(true)}
+              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold shadow-sm transition"
+            >
+              + Post Charge
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Live Financial Totals */}
@@ -522,7 +538,6 @@ function FolioSection({ bookingId, userToken }: { bookingId: string; userToken?:
                 className="w-full text-xs border rounded p-2 focus:ring-1 focus:ring-indigo-500"
               >
                 <option value="ROOM_CHARGE">ROOM_CHARGE — Nightly Tariff</option>
-                <option value="RESTAURANT">RESTAURANT — Room Service / KOT</option>
                 <option value="LAUNDRY">LAUNDRY — Express Laundry Service</option>
                 <option value="MINIBAR">MINIBAR — Minibar Refreshments</option>
                 <option value="ADDON">ADDON — Spa / Activity / Tour</option>

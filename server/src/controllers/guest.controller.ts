@@ -88,19 +88,107 @@ export const getGuests = async (req: Request, res: Response) => {
     const p = parseInt(page as string);
     const l = parseInt(limit as string);
 
-    const query: any = {};
-    if (search) {
-      query.$text = { $search: search as string };
+    // Auto-sync: Discover any guests from Bookings that do not yet have a profile
+    try {
+      const recentBookingGuests = await Booking.find({
+        $or: [
+          { "guestDetails.email": { $exists: true, $ne: "" } },
+          { "guestDetails.phone": { $exists: true, $ne: "" } },
+        ],
+      })
+        .select("guestDetails totalAmount checkInDate checkOutDate")
+        .sort({ createdAt: -1 })
+        .limit(100)
+        .lean();
+
+      for (const b of recentBookingGuests) {
+        const email = b.guestDetails?.email?.toLowerCase()?.trim();
+        const phone = b.guestDetails?.phone?.trim();
+        if (!email && !phone) continue;
+
+        const orConditions: any[] = [];
+        if (email) orConditions.push({ email });
+        if (phone) orConditions.push({ phone });
+
+        const exists = await Guest.findOne({ $or: orConditions });
+        if (!exists) {
+          const fullName = `${b.guestDetails.firstName || ""} ${b.guestDetails.lastName || ""}`.trim() || "Guest";
+          await Guest.create({
+            fullName,
+            email: email || `${phone || "guest"}@yeshotels.local`,
+            phone: phone || "—",
+            address: b.guestDetails.address || "",
+            city: b.guestDetails.city || "",
+            state: b.guestDetails.state || "",
+            country: b.guestDetails.country || "India",
+            idType: b.guestDetails.idType,
+            idNumber: b.guestDetails.idNumber,
+            totalBookings: 1,
+            totalSpend: b.totalAmount || 0,
+            lastStay: b.checkOutDate || b.checkInDate,
+          });
+        }
+      }
+    } catch {
+      // Ignore background sync errors so user request always succeeds
     }
 
-    const [guests, total] = await Promise.all([
+    const query: any = {};
+    if (search && String(search).trim() !== "") {
+      const searchRegex = new RegExp(String(search).trim(), "i");
+      query.$or = [
+        { fullName: searchRegex },
+        { email: searchRegex },
+        { phone: searchRegex },
+      ];
+    }
+
+    const [rawGuests, total] = await Promise.all([
       Guest.find(query)
         .select("-idNumber -idType") // don't expose sensitive info in list
-        .sort(search ? { score: { $meta: "textScore" } } : { createdAt: -1 })
+        .sort({ createdAt: -1 })
         .skip((p - 1) * l)
         .limit(l),
       Guest.countDocuments(query)
     ]);
+
+    const guests = await Promise.all(
+      rawGuests.map(async (g) => {
+        if (!g.totalSpend || g.totalSpend === 0 || !g.lastStay) {
+          const guestBookings = await Booking.find({
+            $or: [
+              { "guestDetails.email": g.email },
+              ...(g.phone ? [{ "guestDetails.phone": g.phone }, { "guestDetails.phoneNumber": g.phone }] : []),
+            ],
+          }).select("totalAmount checkInDate checkOutDate").lean();
+
+          if (guestBookings.length > 0) {
+            const calculatedSpend = guestBookings.reduce((sum, b: any) => sum + (b.totalAmount || b.totalPrice || 0), 0);
+            const latestStay = guestBookings.reduce((latest: Date | null, b: any) => {
+              const d = b.checkOutDate ? new Date(b.checkOutDate) : (b.checkInDate ? new Date(b.checkInDate) : null);
+              if (!d) return latest;
+              return !latest || d > latest ? d : latest;
+            }, null);
+
+            const resolvedSpend = calculatedSpend > 0 ? calculatedSpend : (g.totalSpend || 0);
+            const resolvedCount = Math.max(g.totalBookings || 0, guestBookings.length);
+
+            await Guest.findByIdAndUpdate(g._id, {
+              totalSpend: resolvedSpend,
+              totalBookings: resolvedCount,
+              ...(latestStay ? { lastStay: latestStay } : {}),
+            });
+
+            const gObj = g.toObject ? g.toObject() : { ...g };
+            gObj.totalSpend = resolvedSpend;
+            gObj.totalBookings = resolvedCount;
+            if (latestStay) gObj.lastStay = latestStay;
+            return gObj;
+          }
+        }
+        return g;
+      })
+    );
 
     return res.status(200).json({
       success: true,
@@ -121,12 +209,61 @@ export const getGuestById = async (req: Request, res: Response) => {
     const guest = await Guest.findById(req.params.id);
     if (!guest) return res.status(404).json({ success: false, message: "Guest not found" });
 
-    // Fetch booking history
-    const bookings = await Booking.find({ "guestDetails.email": guest.email })
+    // Fetch booking history matching email or phone
+    const bookings = await Booking.find({
+      $or: [
+        { "guestDetails.email": guest.email },
+        ...(guest.phone ? [
+          { "guestDetails.phone": guest.phone },
+          { "guestDetails.phoneNumber": guest.phone },
+        ] : []),
+      ]
+    })
       .populate("roomCategory", "name")
       .populate("assignedRoom", "roomNumber")
       .sort({ createdAt: -1 })
-      .limit(10);
+      .limit(50);
+
+    // Live calculation of guest stats from real bookings
+    const totalBookingsCount = Math.max(guest.totalBookings || 0, bookings.length);
+    const calculatedSpend = bookings.reduce((sum, b: any) => {
+      const bTotal = b.totalAmount || b.totalPrice || 0;
+      return sum + bTotal;
+    }, 0);
+    const resolvedSpend = calculatedSpend > 0 ? calculatedSpend : (guest.totalSpend || 0);
+
+    const latestStayDate = bookings.reduce((latest: Date | null, b: any) => {
+      const d = b.checkOutDate ? new Date(b.checkOutDate) : (b.checkInDate ? new Date(b.checkInDate) : null);
+      if (!d) return latest;
+      return !latest || d > latest ? d : latest;
+    }, guest.lastStay ? new Date(guest.lastStay) : null);
+
+    const calculatedPoints = (guest.loyaltyPoints && guest.loyaltyPoints > 0)
+      ? guest.loyaltyPoints
+      : Math.floor(resolvedSpend / 100);
+
+    // Synchronize to guest document if needed
+    let hasChanges = false;
+    if (guest.totalSpend !== resolvedSpend) {
+      guest.totalSpend = resolvedSpend;
+      hasChanges = true;
+    }
+    if (guest.totalBookings !== totalBookingsCount) {
+      guest.totalBookings = totalBookingsCount;
+      hasChanges = true;
+    }
+    if (latestStayDate && (!guest.lastStay || guest.lastStay.getTime() !== latestStayDate.getTime())) {
+      guest.lastStay = latestStayDate;
+      hasChanges = true;
+    }
+    if ((!guest.loyaltyPoints || guest.loyaltyPoints === 0) && calculatedPoints > 0) {
+      guest.loyaltyPoints = calculatedPoints;
+      hasChanges = true;
+    }
+
+    if (hasChanges) {
+      await guest.save();
+    }
 
     // Fetch complaints
     const complaints = await Complaint.find({ guestId: guest._id })

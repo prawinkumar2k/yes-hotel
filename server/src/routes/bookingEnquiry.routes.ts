@@ -5,7 +5,7 @@ import { submitBookingEnquiry } from "../controllers/bookingEnquiry.controller";
 const router = Router();
 const enquiryLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 5,
+  max: process.env.NODE_ENV === "production" ? 60 : 300,
   message: { success: false, message: "Too many enquiries from this IP. Please try again later." },
 });
 

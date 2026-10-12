@@ -1,7 +1,6 @@
-import mongoose, { Schema, Document } from "mongoose";
+import mongoose, { Document, Schema } from "mongoose";
 
 export interface IVendor extends Document {
-  propertyId: mongoose.Types.ObjectId;
   vendorCode: string;
   name: string;
   gstin?: string;
@@ -9,26 +8,23 @@ export interface IVendor extends Document {
   email: string;
   phone: string;
   address?: string;
-  paymentTerms: string; // e.g. "Net 30", "COD", "Advance"
-  rating: number; // 1-5 scale
+  paymentTerms: string;
+  rating: number;
   isActive: boolean;
   notes?: string;
-  createdAt: Date;
-  updatedAt: Date;
 }
 
-const VendorSchema: Schema = new Schema(
+const VendorSchema = new Schema<IVendor>(
   {
-    propertyId: { type: Schema.Types.ObjectId, ref: "Property", required: true },
-    vendorCode: { type: String, required: true, unique: true, uppercase: true, trim: true },
-    name: { type: String, required: true, trim: true },
-    gstin: { type: String, trim: true, uppercase: true },
-    contactPerson: { type: String, required: true, trim: true },
-    email: { type: String, required: true, trim: true, lowercase: true },
-    phone: { type: String, required: true, trim: true },
+    vendorCode: { type: String, required: true, unique: true },
+    name: { type: String, required: true },
+    gstin: { type: String },
+    contactPerson: { type: String, required: true },
+    email: { type: String, required: true },
+    phone: { type: String, required: true },
     address: { type: String },
     paymentTerms: { type: String, default: "Net 30" },
-    rating: { type: Number, default: 5, min: 1, max: 5 },
+    rating: { type: Number, default: 5 },
     isActive: { type: Boolean, default: true },
     notes: { type: String },
   },

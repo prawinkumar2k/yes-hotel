@@ -55,7 +55,8 @@ export const getFrontDeskSummary = async (req: Request, res: Response) => {
         checkInDate: { $gte: todayStart, $lte: todayEnd },
       })
         .populate("assignedRoom", "roomNumber floor")
-        .select("bookingReference guestDetails checkInDate checkOutDate assignedRoom paymentStatus isVipGuest source adults children specialRequests")
+        .populate("roomCategory", "name")
+        .select("bookingReference groupId billNumber guestDetails checkInDate checkOutDate assignedRoom roomCategory paymentStatus paidAmount totalAmount ratePerNight isVipGuest source adults children specialRequests")
         .sort({ checkInDate: 1 })
         .lean(),
 
@@ -65,14 +66,16 @@ export const getFrontDeskSummary = async (req: Request, res: Response) => {
         checkOutDate: { $gte: todayStart, $lte: todayEnd },
       })
         .populate("assignedRoom", "roomNumber floor")
-        .select("bookingReference guestDetails checkInDate checkOutDate assignedRoom paymentStatus paidAmount totalAmount isVipGuest folio")
+        .populate("roomCategory", "name")
+        .select("bookingReference groupId billNumber guestDetails checkInDate checkOutDate assignedRoom roomCategory paymentStatus paidAmount totalAmount ratePerNight isVipGuest folio")
         .sort({ checkOutDate: 1 })
         .lean(),
 
       // Currently in-house
       Booking.find({ status: BookingStatus.CHECKED_IN })
         .populate("assignedRoom", "roomNumber floor")
-        .select("bookingReference guestDetails checkInDate checkOutDate assignedRoom paymentStatus isVipGuest source")
+        .populate("roomCategory", "name")
+        .select("bookingReference groupId billNumber guestDetails checkInDate checkOutDate assignedRoom roomCategory paymentStatus paidAmount totalAmount ratePerNight isVipGuest source numberOfNights")
         .lean(),
 
       // Dirty rooms (need housekeeping)

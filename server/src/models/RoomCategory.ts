@@ -11,6 +11,7 @@ export interface IRoomCategory extends Document {
     adults: number;
     children: number;
   };
+  size?: number;
   bedType?: string;
   amenities: string[];
   images: string[];
@@ -32,6 +33,7 @@ const RoomCategorySchema = new Schema<IRoomCategory>(
       adults: { type: Number, required: true, default: 2 },
       children: { type: Number, required: true, default: 0 },
     },
+    size: { type: Number },
     bedType: { type: String },
     amenities: [{ type: String }],
     images: [{ type: String }],

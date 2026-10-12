@@ -52,6 +52,7 @@ async function createTempInventory() {
   });
 
   await Room.create({
+    propertyId: new mongoose.Types.ObjectId(),
     roomNumber: `T-${stamp}`,
     floor: "9",
     category: category._id,
@@ -524,6 +525,7 @@ describe("booking concurrency and idempotency", () => {
     const category = await createTempInventory();
     const couponCode = `NOPE-${randomUUID().slice(0, 8)}`.toUpperCase();
     await Coupon.create({
+      propertyId: new mongoose.Types.ObjectId(),
       code: couponCode,
       description: "Test coupon with a high minimum",
       discountType: DiscountType.FIXED,

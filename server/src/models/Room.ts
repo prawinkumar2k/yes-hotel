@@ -13,6 +13,7 @@ export enum RoomStatus {
   CLEANING = "CLEANING",
   MAINTENANCE = "MAINTENANCE",
   OUT_OF_SERVICE = "OUT_OF_SERVICE",
+  OUT_OF_ORDER = "OUT_OF_ORDER",
 }
 
 /**

@@ -4,44 +4,55 @@ import { api } from "@/lib/api";
 import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { Loader2, Eye, Trash2 } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Loader2, Plus, Search, Filter, MessageSquare, Briefcase, Phone, Mail, Calendar, Eye, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
+import { Link, useNavigate } from "react-router-dom";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 
-const STATUSES = ["ALL", "NEW", "CONTACTED", "CLOSED"];
-
-const STATUS_STYLES: Record<string, string> = {
+const STATUSES = ["ALL", "NEW", "CONTACTED", "FOLLOW_UP", "QUOTATION_SENT", "AWAITING_RESPONSE", "CONVERTED", "LOST", "CANCELLED"];
+const STATUS_COLORS: Record<string, string> = {
   NEW: "bg-blue-50 text-blue-700 border-blue-200",
-  CONTACTED: "bg-amber-50 text-amber-700 border-amber-200",
-  CLOSED: "bg-green-50 text-green-700 border-green-200",
+  CONTACTED: "bg-purple-50 text-purple-700 border-purple-200",
+  FOLLOW_UP: "bg-amber-50 text-amber-700 border-amber-200",
+  QUOTATION_SENT: "bg-indigo-50 text-indigo-700 border-indigo-200",
+  AWAITING_RESPONSE: "bg-orange-50 text-orange-700 border-orange-200",
+  CONVERTED: "bg-green-50 text-green-700 border-green-200",
+  LOST: "bg-red-50 text-red-700 border-red-200",
+  CANCELLED: "bg-gray-50 text-gray-700 border-gray-200",
+};
+
+const BOOKING_STAGE_MAP: Record<string, { label: string; color: string; desc: string }> = {
+  PAYMENT_PENDING: { label: "Payment Pending", color: "bg-amber-100 text-amber-800 border-amber-300 font-semibold", desc: "Booking process started, payment not completed" },
+  GUEST_DETAILS_ENTERED: { label: "Guest Details Entered", color: "bg-blue-100 text-blue-800 border-blue-300", desc: "Form filled on booking site" },
+  CHATBOT_ROOM_SELECTED: { label: "Room Selected", color: "bg-indigo-100 text-indigo-800 border-indigo-300", desc: "Room chosen in chatbot concierge" },
+  CHATBOT_CONTACT_COLLECTED: { label: "Chatbot Lead", color: "bg-purple-100 text-purple-800 border-purple-300", desc: "Contact captured via chatbot" },
+  CHATBOT_STARTED: { label: "Chatbot Started", color: "bg-gray-100 text-gray-700 border-gray-300", desc: "Initiated concierge interaction" },
+  ENQUIRY_CONFIRMED: { label: "Enquiry Confirmed", color: "bg-cyan-100 text-cyan-800 border-cyan-300", desc: "Manual enquiry submitted" },
+  BOOKING_COMPLETED: { label: "Booking Completed", color: "bg-emerald-100 text-emerald-800 border-emerald-300 font-semibold", desc: "Reservation finalized" },
+  ABANDONED_CHECKOUT: { label: "Abandoned Checkout", color: "bg-rose-100 text-rose-800 border-rose-300", desc: "Dropped off at checkout" },
 };
 
 export default function AdminEnquiries() {
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [status, setStatus] = useState("ALL");
+  const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
-  const [viewing, setViewing] = useState<any>(null);
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
 
   const { data, isLoading } = useQuery({
-    queryKey: ["booking-enquiries", page, status],
+    queryKey: ["booking-enquiries", page, status, search],
     queryFn: async () => {
-      const res = await api.get(`/admin/booking-enquiries?page=${page}&limit=15${status !== "ALL" ? `&status=${status}` : ""}`);
+      const params = new URLSearchParams({
+        page: page.toString(),
+        limit: "15",
+        ...(status !== "ALL" && { status }),
+        ...(search && { search }),
+      });
+      const res = await api.get(`/admin/booking-enquiries?${params}`);
       return res.data.data;
-    },
-  });
-
-  const updateStatusMutation = useMutation({
-    mutationFn: async ({ id, newStatus }: { id: string; newStatus: string }) => {
-      const res = await api.patch(`/admin/booking-enquiries/${id}/status`, { status: newStatus });
-      return res.data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["booking-enquiries"] });
-      toast({ title: "Success", description: "Enquiry status updated" });
-    },
-    onError: (error: any) => {
-      toast({ title: "Error", description: error.response?.data?.message || "Failed to update status", variant: "destructive" });
     },
   });
 
@@ -59,142 +70,346 @@ export default function AdminEnquiries() {
     },
   });
 
-  const handleView = (enq: any) => {
-    setViewing(enq);
-    if (enq.status === "NEW") {
-      updateStatusMutation.mutate({ id: enq._id, newStatus: "CONTACTED" });
-    }
-  };
-
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-serif text-white">Booking Enquiries</h1>
-        <p className="text-zinc-400">Leads collected by the website concierge chatbot, ready for front-desk follow-up</p>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h1 className="text-3xl font-serif text-hotel-black">Booking Enquiries</h1>
+          <p className="text-gray-500 mt-1">Manage leads, quotations, and booking conversions</p>
+        </div>
+        <Button onClick={() => setIsCreateOpen(true)} className="bg-hotel-gold hover:bg-hotel-gold/90 text-white">
+          <Plus className="h-4 w-4 mr-2" />
+          New Enquiry
+        </Button>
       </div>
 
-      <div className="flex gap-2 mb-6">
-        {STATUSES.map((s) => (
-          <Button
-            key={s}
-            variant={status === s ? "default" : "outline"}
-            size="sm"
-            onClick={() => {
-              setStatus(s);
+      {data?.stats && (
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+          <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+            <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Total</p>
+            <p className="text-2xl font-serif text-hotel-black">{data.stats.totalAll}</p>
+          </div>
+          <div className="bg-blue-50 p-4 rounded-xl border border-blue-100 shadow-sm">
+            <p className="text-xs font-medium text-blue-600 uppercase tracking-wider mb-1">New</p>
+            <p className="text-2xl font-serif text-blue-900">{data.stats.newCount}</p>
+          </div>
+          <div className="bg-amber-50 p-4 rounded-xl border border-amber-100 shadow-sm">
+            <p className="text-xs font-medium text-amber-600 uppercase tracking-wider mb-1">Follow-up</p>
+            <p className="text-2xl font-serif text-amber-900">{data.stats.followUpCount}</p>
+          </div>
+          <div className="bg-indigo-50 p-4 rounded-xl border border-indigo-100 shadow-sm">
+            <p className="text-xs font-medium text-indigo-600 uppercase tracking-wider mb-1">Quoted</p>
+            <p className="text-2xl font-serif text-indigo-900">{data.stats.quotationCount}</p>
+          </div>
+          <div className="bg-green-50 p-4 rounded-xl border border-green-100 shadow-sm">
+            <p className="text-xs font-medium text-green-600 uppercase tracking-wider mb-1">Converted</p>
+            <p className="text-2xl font-serif text-green-900">{data.stats.convertedCount}</p>
+          </div>
+          <div className="bg-red-50 p-4 rounded-xl border border-red-100 shadow-sm">
+            <p className="text-xs font-medium text-red-600 uppercase tracking-wider mb-1">Overdue</p>
+            <p className="text-2xl font-serif text-red-900">{data.stats.overdue}</p>
+          </div>
+        </div>
+      )}
+
+      <div className="flex flex-col md:flex-row gap-4 justify-between">
+        <div className="flex flex-wrap gap-2">
+          {STATUSES.map((s) => (
+            <Button
+              key={s}
+              variant={status === s ? "default" : "outline"}
+              size="sm"
+              onClick={() => {
+                setStatus(s);
+                setPage(1);
+              }}
+              className={status === s ? "bg-hotel-black text-white hover:bg-gray-800" : "bg-white"}
+            >
+              {s.replace(/_/g, " ")}
+            </Button>
+          ))}
+        </div>
+        <div className="relative w-full md:w-72">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <Input 
+            placeholder="Search name, phone, email..." 
+            value={search}
+            onChange={(e) => {
+              setSearch(e.target.value);
               setPage(1);
             }}
-          >
-            {s}
-          </Button>
-        ))}
+            className="pl-9 bg-white"
+          />
+        </div>
       </div>
 
-      <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
-        <table className="w-full text-sm text-left text-gray-900">
-          <thead className="bg-gray-50 border-b">
-            <tr>
-              <th className="px-4 py-3 font-medium text-gray-500">Guest</th>
-              <th className="px-4 py-3 font-medium text-gray-500">Stay</th>
-              <th className="px-4 py-3 font-medium text-gray-500">Guests / Rooms</th>
-              <th className="px-4 py-3 font-medium text-gray-500">Received</th>
-              <th className="px-4 py-3 font-medium text-gray-500">Status</th>
-              <th className="px-4 py-3 font-medium text-gray-500 text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y">
-            {isLoading ? (
-              <tr><td colSpan={6} className="p-8 text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto text-hotel-gold" /></td></tr>
-            ) : data?.enquiries?.length === 0 ? (
-              <tr><td colSpan={6} className="p-8 text-center text-gray-500">No enquiries found</td></tr>
-            ) : (
-              data?.enquiries?.map((enq: any) => (
-                <tr key={enq._id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3">
-                    <div className="font-medium text-hotel-black">{enq.guestName}</div>
-                    <div className="text-gray-500 text-xs">{enq.phone}{enq.email ? ` · ${enq.email}` : ""}</div>
-                  </td>
-                  <td className="px-4 py-3">
-                    {format(new Date(enq.checkIn), "MMM d")} — {format(new Date(enq.checkOut), "MMM d, yyyy")}
-                    <div className="text-gray-500 text-xs">{enq.nights} night{enq.nights === 1 ? "" : "s"} · {enq.roomType}</div>
-                  </td>
-                  <td className="px-4 py-3">
-                    {enq.adults} adult{enq.adults === 1 ? "" : "s"}{enq.children > 0 ? `, ${enq.children} child${enq.children === 1 ? "" : "ren"}` : ""}
-                    <div className="text-gray-500 text-xs">{enq.rooms} room{enq.rooms === 1 ? "" : "s"}</div>
-                  </td>
-                  <td className="px-4 py-3 text-gray-500">{format(new Date(enq.createdAt), "MMM d, yyyy")}</td>
-                  <td className="px-4 py-3">
-                    <Badge variant="outline" className={STATUS_STYLES[enq.status]}>{enq.status}</Badge>
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    <div className="flex justify-end gap-2">
-                      <Button variant="ghost" size="icon" onClick={() => handleView(enq)} title="View"><Eye className="h-4 w-4" /></Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => {
-                          if (confirm("Delete this enquiry permanently?")) {
-                            deleteMutation.mutate(enq._id);
-                          }
-                        }}
-                        title="Delete"
-                      >
-                        <Trash2 className="h-4 w-4 text-red-600" />
-                      </Button>
+      <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm text-left">
+            <thead className="bg-gray-50/80 border-b text-gray-500 font-medium text-xs uppercase tracking-wider">
+              <tr>
+                <th className="px-6 py-4">Enquiry</th>
+                <th className="px-6 py-4">Guest Contact</th>
+                <th className="px-6 py-4">Requirements</th>
+                <th className="px-6 py-4">Stage of Booking</th>
+                <th className="px-6 py-4">Status & Next Step</th>
+                <th className="px-6 py-4 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {isLoading ? (
+                <tr><td colSpan={6} className="p-8 text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto text-hotel-gold" /></td></tr>
+              ) : data?.enquiries?.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="p-12 text-center">
+                    <div className="mx-auto w-12 h-12 bg-gray-50 rounded-full flex items-center justify-center mb-3">
+                      <MessageSquare className="h-6 w-6 text-gray-400" />
                     </div>
+                    <p className="text-gray-500 font-medium">No enquiries found</p>
+                    <p className="text-gray-400 text-sm mt-1">Try adjusting your search or filters</p>
                   </td>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+              ) : (
+                data?.enquiries?.map((enq: any) => {
+                  const stage = BOOKING_STAGE_MAP[enq.bookingStage] || {
+                    label: enq.bookingStage ? enq.bookingStage.replace(/_/g, " ") : "Lead Captured",
+                    color: "bg-gray-100 text-gray-700 border-gray-300",
+                    desc: "In progress",
+                  };
+                  return (
+                    <tr key={enq._id} className="hover:bg-gray-50/80 transition-colors group cursor-pointer" onClick={(e) => {
+                      // Prevent navigation if clicking actions
+                      if ((e.target as HTMLElement).closest('.actions-cell')) return;
+                      navigate(`/admin/enquiries/${enq._id}`);
+                    }}>
+                      <td className="px-6 py-4">
+                        <div className="font-medium text-hotel-black">{enq.enquiryNumber}</div>
+                        <div className="text-gray-500 flex items-center mt-1">
+                          {enq.enquiryType === 'GROUP' || enq.enquiryType === 'EVENT' ? (
+                            <><Briefcase className="w-3 h-3 mr-1" /> {enq.enquiryType}</>
+                          ) : (
+                            <span className="text-xs font-medium px-1.5 py-0.5 rounded bg-gray-100 text-gray-600">{enq.source}</span>
+                          )}
+                        </div>
+                        <div className="text-gray-400 text-xs mt-1">{format(new Date(enq.createdAt), "dd MMM yy")}</div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="font-medium text-hotel-black">{enq.guestName}</div>
+                        <div className="text-gray-500 flex items-center gap-2 mt-1">
+                          <Phone className="w-3 h-3" /> {enq.phone}
+                        </div>
+                        {enq.email && (
+                          <div className="text-gray-500 flex items-center gap-2 mt-0.5">
+                            <Mail className="w-3 h-3" /> <span className="truncate max-w-[150px]">{enq.email}</span>
+                          </div>
+                        )}
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="text-hotel-black flex items-center gap-1.5">
+                          <Calendar className="w-3.5 h-3.5 text-gray-400" />
+                          {format(new Date(enq.checkIn), "dd MMM")} - {format(new Date(enq.checkOut), "dd MMM")}
+                        </div>
+                        <div className="text-gray-500 mt-1">
+                          {enq.rooms} {enq.roomType} · {enq.adults}A {enq.children}C
+                        </div>
+                        {enq.convertedToBookingId && (
+                          <div className="mt-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-50 text-green-700 border border-green-200">
+                            Res: {enq.convertedToBookingId.bookingReference}
+                          </div>
+                        )}
+                      </td>
+                      <td className="px-6 py-4">
+                        <Badge variant="outline" className={`font-medium border ${stage.color}`}>
+                          {stage.label}
+                        </Badge>
+                        <p className="text-[11px] text-gray-500 mt-1 max-w-[180px] leading-tight">{stage.desc}</p>
+                      </td>
+                      <td className="px-6 py-4">
+                        <Badge variant="outline" className={`font-medium ${STATUS_COLORS[enq.status] || STATUS_COLORS.NEW}`}>
+                          {enq.status.replace(/_/g, " ")}
+                        </Badge>
+                        {enq.nextFollowUpDate && enq.status !== 'CONVERTED' && enq.status !== 'LOST' && enq.status !== 'CANCELLED' && (
+                          <div className={`text-xs mt-2 font-medium ${new Date(enq.nextFollowUpDate) < new Date() ? 'text-red-600' : 'text-amber-600'}`}>
+                            Follow-up: {format(new Date(enq.nextFollowUpDate), "dd MMM, HH:mm")}
+                          </div>
+                        )}
+                      </td>
+                    <td className="px-6 py-4 text-right actions-cell">
+                      <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Button variant="ghost" size="icon" onClick={() => navigate(`/admin/enquiries/${enq._id}`)} title="View Details">
+                          <Eye className="h-4 w-4 text-gray-500 hover:text-hotel-black" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => {
+                            if (confirm("Delete this enquiry permanently?")) {
+                              deleteMutation.mutate(enq._id);
+                            }
+                          }}
+                          title="Delete"
+                          disabled={enq.status === 'CONVERTED'}
+                        >
+                          <Trash2 className="h-4 w-4 text-red-500 hover:text-red-700" />
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              }))}
+            </tbody>
+          </table>
+        </div>
 
         {data?.totalPages > 1 && (
-          <div className="p-4 border-t flex justify-between items-center">
+          <div className="p-4 border-t flex justify-between items-center bg-gray-50/50">
             <Button variant="outline" size="sm" disabled={page === 1} onClick={() => setPage((p) => p - 1)}>Previous</Button>
-            <span className="text-sm text-gray-500">Page {page} of {data.totalPages}</span>
+            <span className="text-sm font-medium text-gray-500">Page {page} of {data.totalPages}</span>
             <Button variant="outline" size="sm" disabled={page === data.totalPages} onClick={() => setPage((p) => p + 1)}>Next</Button>
           </div>
         )}
       </div>
 
-      <Dialog open={!!viewing} onOpenChange={(open) => !open && setViewing(null)}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader><DialogTitle>Enquiry from {viewing?.guestName}</DialogTitle></DialogHeader>
-          {viewing && (
-            <div className="space-y-4">
-              <div className="rounded-lg bg-gray-50 p-4 text-sm space-y-2">
-                <p><span className="font-medium text-hotel-black">Name:</span> {viewing.guestName}</p>
-                <p><span className="font-medium text-hotel-black">Phone:</span> {viewing.phone}</p>
-                <p><span className="font-medium text-hotel-black">Email:</span> {viewing.email || "Not provided"}</p>
-                <p><span className="font-medium text-hotel-black">Check-in:</span> {format(new Date(viewing.checkIn), "d MMMM yyyy")}</p>
-                <p><span className="font-medium text-hotel-black">Check-out:</span> {format(new Date(viewing.checkOut), "d MMMM yyyy")}</p>
-                <p><span className="font-medium text-hotel-black">Stay:</span> {viewing.nights} night{viewing.nights === 1 ? "" : "s"}</p>
-                <p><span className="font-medium text-hotel-black">Guests:</span> {viewing.adults} adult{viewing.adults === 1 ? "" : "s"}, {viewing.children} child{viewing.children === 1 ? "" : "ren"}</p>
-                <p><span className="font-medium text-hotel-black">Rooms:</span> {viewing.rooms} · {viewing.roomType}</p>
-                {viewing.roomSubtotal != null && (
-                  <p><span className="font-medium text-hotel-black">Est. Room Subtotal:</span> ₹{viewing.roomSubtotal.toLocaleString("en-IN")}</p>
-                )}
-                <p className="text-gray-500 text-xs pt-1">Received {format(new Date(viewing.createdAt), "MMM d, yyyy 'at' h:mm a")}</p>
+      <CreateEnquiryDialog open={isCreateOpen} onOpenChange={setIsCreateOpen} />
+    </div>
+  );
+}
+
+function CreateEnquiryDialog({ open, onOpenChange }: { open: boolean, onOpenChange: (open: boolean) => void }) {
+  const { toast } = useToast();
+  const [loading, setLoading] = useState(false);
+  const [formData, setFormData] = useState({
+    guestName: "", phone: "", email: "", checkIn: "", checkOut: "",
+    adults: 1, children: 0, rooms: 1, roomType: "Deluxe Room",
+    enquiryType: "INDIVIDUAL", source: "PHONE", notes: ""
+  });
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      await api.post("/admin/booking-enquiries", formData);
+      toast({ title: "Success", description: "Enquiry created successfully" });
+      queryClient.invalidateQueries({ queryKey: ["booking-enquiries"] });
+      onOpenChange(false);
+    } catch (error: any) {
+      toast({ title: "Error", description: error.response?.data?.message || "Failed to create enquiry", variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="font-serif text-2xl">New Enquiry</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-6 mt-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-700">Guest Name <span className="text-red-500">*</span></label>
+              <Input required value={formData.guestName} onChange={e => setFormData({...formData, guestName: e.target.value})} />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-700">Phone <span className="text-red-500">*</span></label>
+              <Input required type="tel" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-700">Email</label>
+              <Input type="email" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-700">Source</label>
+              <select 
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background"
+                value={formData.source} onChange={e => setFormData({...formData, source: e.target.value})}
+              >
+                <option value="PHONE">Phone Call</option>
+                <option value="EMAIL">Email</option>
+                <option value="WALK_IN">Walk In</option>
+                <option value="WEBSITE">Website (Direct)</option>
+                <option value="OTA">OTA</option>
+                <option value="CORPORATE">Corporate</option>
+                <option value="REFERRAL">Referral</option>
+                <option value="OTHER">Other</option>
+              </select>
+            </div>
+            
+            <div className="col-span-2 pt-4 border-t">
+              <h4 className="text-sm font-medium text-hotel-black mb-4">Stay Details</h4>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-700">Check In <span className="text-red-500">*</span></label>
+              <Input required type="date" value={formData.checkIn} onChange={e => setFormData({...formData, checkIn: e.target.value})} />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-700">Check Out <span className="text-red-500">*</span></label>
+              <Input required type="date" value={formData.checkOut} onChange={e => setFormData({...formData, checkOut: e.target.value})} />
+            </div>
+
+            <div className="grid grid-cols-3 gap-2 col-span-2">
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700">Rooms</label>
+                <Input type="number" min="1" value={formData.rooms} onChange={e => setFormData({...formData, rooms: parseInt(e.target.value)})} />
               </div>
-              <div className="flex gap-2 flex-wrap">
-                {STATUSES.filter((s) => s !== "ALL").map((s) => (
-                  <Button
-                    key={s}
-                    size="sm"
-                    variant={viewing.status === s ? "default" : "outline"}
-                    onClick={() => {
-                      updateStatusMutation.mutate({ id: viewing._id, newStatus: s });
-                      setViewing({ ...viewing, status: s });
-                    }}
-                  >
-                    Mark {s}
-                  </Button>
-                ))}
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700">Adults</label>
+                <Input type="number" min="1" value={formData.adults} onChange={e => setFormData({...formData, adults: parseInt(e.target.value)})} />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700">Children</label>
+                <Input type="number" min="0" value={formData.children} onChange={e => setFormData({...formData, children: parseInt(e.target.value)})} />
               </div>
             </div>
-          )}
-        </DialogContent>
-      </Dialog>
-    </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-700">Room Type</label>
+              <select 
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background"
+                value={formData.roomType} onChange={e => setFormData({...formData, roomType: e.target.value})}
+              >
+                <option value="Deluxe Room">Deluxe Room</option>
+                <option value="Premium Room">Premium Room</option>
+                <option value="Executive Suite">Executive Suite</option>
+                <option value="Presidential Suite">Presidential Suite</option>
+                <option value="To be assigned">To be assigned</option>
+              </select>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-700">Enquiry Type</label>
+              <select 
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background"
+                value={formData.enquiryType} onChange={e => setFormData({...formData, enquiryType: e.target.value})}
+              >
+                <option value="INDIVIDUAL">Individual Stay</option>
+                <option value="CORPORATE">Corporate</option>
+                <option value="GROUP">Group</option>
+                <option value="EVENT">Event</option>
+                <option value="BANQUET">Banquet</option>
+              </select>
+            </div>
+
+            <div className="col-span-2 space-y-2 pt-2">
+              <label className="text-sm font-medium text-gray-700">Initial Notes</label>
+              <textarea 
+                className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background"
+                placeholder="Any special requirements or notes from the initial contact..."
+                value={formData.notes} onChange={e => setFormData({...formData, notes: e.target.value})}
+              />
+            </div>
+          </div>
+          
+          <DialogFooter className="pt-4 border-t">
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+            <Button type="submit" disabled={loading} className="bg-hotel-black text-white hover:bg-gray-800">
+              {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+              Create Enquiry
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }

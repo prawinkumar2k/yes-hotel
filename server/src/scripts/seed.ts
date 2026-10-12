@@ -22,8 +22,7 @@ import { CashierShift, CashierShiftStatus } from "../models/CashierShift";
 import { RestaurantOrder, OrderStatus } from "../models/RestaurantOrder";
 import { HousekeepingTask, HousekeepingStatus, HousekeepingPriority, HousekeepingTaskType } from "../models/HousekeepingTask";
 import { MaintenanceTicket, MaintenancePriority, MaintenanceStatus } from "../models/MaintenanceTicket";
-import { Vendor } from "../models/Vendor";
-import { InventoryItem, ItemCategory } from "../models/InventoryItem";
+
 import { Review, ReviewStatus } from "../models/Review";
 import { MenuItem, MenuItemCategory, FoodType } from "../models/MenuItem";
 import { RatePlan, MealPlanType } from "../models/RatePlan";
@@ -35,7 +34,6 @@ import { Complaint } from "../models/Complaint";
 import { Payment, PaymentMethod, PaymentTxStatus } from "../models/Payment";
 import { AdvancePayment, AdvancePaymentStatus, AdvancePaymentMethod } from "../models/AdvancePayment";
 import { Refund, RefundStatus } from "../models/Refund";
-import { PurchaseOrder, PurchaseOrderStatus } from "../models/PurchaseOrder";
 
 const MONGODB_URI = process.env.MONGODB_URI || "mongodb://127.0.0.1:27017/yes_hotels";
 
@@ -66,7 +64,7 @@ const LAST_NAMES = [
   "Agarwal", "Menon", "Pillai", "Bose",
 ] as const;
 const CITIES = [
-  "Mumbai", "Delhi", "Bengaluru", "Hyderabad", "Chennai", "Pune", "Kolkata",
+  "Mumbai", "Delhi", "Bengaluru", "Mysuru", "Chennai", "Pune", "Kolkata",
   "Ahmedabad", "Jaipur", "Kochi", "Goa", "Chandigarh",
 ] as const;
 const INDIA = "India";
@@ -87,21 +85,21 @@ async function seed() {
 
   // ─── 1. PROPERTY ────────────────────────────────────────────────────────────
   console.log("\n🏢 Seeding property...");
-  let property = await Property.findOne({ code: "YES-HYD" });
+  let property = await Property.findOne({ code: "YES-BLR" }) || await Property.findOne();
   if (!property) {
     property = await Property.create({
       name: "YES Hotels Main Resort & Spa",
-      code: "YES-HYD",
+      code: "YES-BLR",
       legalName: "YES Hospitality Private Limited",
-      gstin: "36AAACY1234F1Z5",
+      gstin: "29AAACY1234F1Z5",
       pan: "AAACY1234F",
-      addressLine1: "Plot 42, Jubilee Hills Road No. 36",
-      city: "Hyderabad",
-      state: "Telangana",
-      pincode: "500033",
+      addressLine1: "100 Feet Road, Indiranagar",
+      city: "Bengaluru",
+      state: "Karnataka",
+      pincode: "560038",
       country: "India",
-      phone: "+91 40 4567 8900",
-      email: "hyderabad@yeshotels.com",
+      phone: "+91 80 4567 8900",
+      email: "bangalore@yeshotels.com",
       website: "https://yeshotels.com",
       starRating: 5,
       totalRooms: 13,
@@ -110,9 +108,17 @@ async function seed() {
       isActive: true,
       isHeadOffice: true,
     });
-    console.log("  ✅ Created property: YES Hotels Main Resort & Spa (YES-HYD)");
+    console.log("  ✅ Created property: YES Hotels Main Resort & Spa (YES-BLR)");
   } else {
-    console.log("  ⏭  Property exists: YES-HYD");
+    property.code = "YES-BLR";
+    property.city = "Bengaluru";
+    property.state = "Karnataka";
+    property.addressLine1 = "100 Feet Road, Indiranagar";
+    property.pincode = "560038";
+    property.phone = "+91 80 4567 8900";
+    property.email = "bangalore@yeshotels.com";
+    await property.save();
+    console.log("  ✅ Property updated to: YES-BLR (Bengaluru)");
   }
 
   // ─── 2. USERS ───────────────────────────────────────────────────────────────
@@ -222,13 +228,12 @@ async function seed() {
 
   const categoryMap: Record<string, mongoose.Types.ObjectId> = {};
   for (const cat of CATEGORIES) {
-    let category = await RoomCategory.findOne({ slug: cat.slug });
-    if (!category) {
-      category = await RoomCategory.create({ ...cat, isActive: true });
-      console.log(`  ✅ Created category: ${cat.name} (₹${cat.basePrice}/night)`);
-    } else {
-      console.log(`  ⏭  Category exists: ${cat.name}`);
-    }
+    let category = await RoomCategory.findOneAndUpdate(
+      { slug: cat.slug },
+      { ...cat, isActive: true },
+      { upsert: true, new: true }
+    );
+    console.log(`  ✅ Upserted category: ${cat.name} (₹${cat.basePrice}/night, ${cat.size || 'N/A'} sq.ft)`);
     categoryMap[cat.slug] = category._id as mongoose.Types.ObjectId;
   }
 
@@ -265,6 +270,7 @@ async function seed() {
         roomNumber: r.roomNumber,
         floor: r.floor,
         category: categoryMap[r.slug],
+        propertyId: property._id,
         status: RoomStatus.AVAILABLE,
       });
       console.log(`  ✅ Created room: ${r.roomNumber} (Floor ${r.floor}) — ${r.slug}`);
@@ -294,7 +300,7 @@ async function seed() {
         roomCategoryId: categoryMap[ch.roomSlug],
         channel: ch.channel,
         channelRoomTypeId: ch.externalId,
-        channelPropertyId: "YES-HYD-PROP",
+        channelPropertyId: "YES-BLR-PROP",
         isActive: true,
         markupPercent: ch.markup,
         lastSyncedAt: new Date(),
@@ -315,7 +321,7 @@ async function seed() {
   for (const ca of CORPORATE_ACCOUNTS) {
     let corpAccount = await CorporateAccount.findOne({ companyCode: ca.companyCode });
     if (!corpAccount) {
-      corpAccount = await CorporateAccount.create({ ...ca, isActive: true });
+      corpAccount = await CorporateAccount.create({ ...ca, propertyId: property._id, isActive: true });
       console.log(`  ✅ Created Corporate Account: ${ca.companyName}`);
     }
     corpAccountMap[ca.companyCode] = corpAccount._id as mongoose.Types.ObjectId;
@@ -349,7 +355,7 @@ async function seed() {
   for (const g of GUESTS) {
     let guest = await Guest.findOne({ email: g.email });
     if (!guest) {
-      guest = await Guest.create({ ...g, totalBookings: 1 + (g.loyaltyPoints % 5), totalSpend: 5000 + (g.loyaltyPoints * 8) });
+      guest = await Guest.create({ ...g, propertyId: property._id, totalBookings: 1 + (g.loyaltyPoints % 5), totalSpend: 5000 + (g.loyaltyPoints * 8) });
       console.log(`  ✅ Created Guest: ${g.fullName} [${g.loyaltyTier}]`);
     }
     guestMap[g.email] = guest._id as mongoose.Types.ObjectId;
@@ -400,6 +406,7 @@ async function seed() {
     await Room.findByIdAndUpdate(roomMap["201"], { status: RoomStatus.OCCUPIED });
 
     const folio1 = await Folio.create({
+      propertyId: property._id,
       booking: b1._id,
       guest: guestMap["rahul.sharma@example.com"],
       room: roomMap["201"],
@@ -660,6 +667,7 @@ async function seed() {
     if (exists) continue;
     const method = pick(PAYMENT_METHODS, i);
     await Payment.create({
+      propertyId: property._id,
       booking: booking._id,
       amount: booking.totalAmount,
       currency: "INR",
@@ -683,6 +691,7 @@ async function seed() {
     const amount = 3000 + (i % 5) * 1500;
     const adjusted = i % 3 === 0 ? amount : 0;
     await AdvancePayment.create({
+      propertyId: property._id,
       advanceNumber: advNumber,
       guest: guestId,
       amount,
@@ -707,6 +716,7 @@ async function seed() {
       {},
       { upsert: false }
     ) || await Payment.create({
+      propertyId: property._id,
       booking: cancelledBooking._id,
       amount: cancelledBooking.totalAmount,
       currency: "INR",
@@ -734,6 +744,7 @@ async function seed() {
   let shift = await CashierShift.findOne({ shiftNumber: "CS-2026-001" });
   if (!shift && receptionId) {
     await CashierShift.create({
+      propertyId: property._id,
       shiftNumber: "CS-2026-001",
       cashier: receptionId,
       openedAt: new Date(),
@@ -752,6 +763,7 @@ async function seed() {
   let order1 = await RestaurantOrder.findOne({ kotNumber: "KOT-101" });
   if (!order1) {
     await RestaurantOrder.create({
+      propertyId: property._id,
       kotNumber: "KOT-101",
       roomNumber: "201",
       bookingId: b1?._id,
@@ -780,6 +792,7 @@ async function seed() {
     const subtotal = k.items.reduce((s, it) => s + it.totalPrice, 0);
     const tax = Math.round(subtotal * 0.05);
     await RestaurantOrder.create({
+      propertyId: property._id,
       kotNumber: k.num,
       roomNumber: k.room,
       items: k.items,
@@ -798,6 +811,7 @@ async function seed() {
   let hkTask = await HousekeepingTask.findOne({ notes: "Routine Checkout Cleaning for Room 401" });
   if (!hkTask) {
     await HousekeepingTask.create({
+      propertyId: property._id,
       room: roomMap["401"],
       taskType: HousekeepingTaskType.CHECKOUT_CLEAN,
       assignedTo: hkUserId,
@@ -819,6 +833,7 @@ async function seed() {
     const exists = await HousekeepingTask.findOne({ notes: note });
     if (exists) continue;
     await HousekeepingTask.create({
+      propertyId: property._id,
       room: roomMap[roomNumber],
       taskType: pick(HK_TYPES, i),
       assignedTo: pick(housekeeperIds.length ? housekeeperIds : [hkUserId!], i),
@@ -837,6 +852,7 @@ async function seed() {
   let ticket = await MaintenanceTicket.findOne({ issueTitle: "AC Cooling Insufficient" });
   if (!ticket) {
     await MaintenanceTicket.create({
+      propertyId: property._id,
       room: roomMap["103"],
       issueTitle: "AC Cooling Insufficient",
       description: "Guest reported AC thermostat not dropping below 24 degrees.",
@@ -861,6 +877,7 @@ async function seed() {
     if (exists) continue;
     const status = pick(TICKET_STATUSES, i);
     await MaintenanceTicket.create({
+      propertyId: property._id,
       room: roomMap[roomNumber],
       issueTitle: title,
       description: `Guest/staff reported: ${title.toLowerCase()}.`,
@@ -873,76 +890,8 @@ async function seed() {
   }
   console.log(`  ✅ Created ${ticketExtraCount} additional maintenance tickets`);
 
-  // ─── 13. VENDORS & INVENTORY ──────────────────────────────────────────────
-  console.log("\n📦 Seeding vendors & inventory...");
-  const VENDORS = [
-    { vendorCode: "VEND-001", name: "Fresh Foods & Spices Pvt Ltd", gstin: "36AAACF1122D1Z3", contactPerson: "Suresh Kumar", email: "orders@freshfoods.in", phone: "+91 98444 55667", paymentTerms: "Net 30", rating: 5 },
-    { vendorCode: "VEND-002", name: "Royal Linen Supplies", gstin: "36AAACR3344E1Z4", contactPerson: "Meena Iyer", email: "sales@royallinen.in", phone: "+91 98555 66778", paymentTerms: "Net 15", rating: 4 },
-    { vendorCode: "VEND-003", name: "Sparkle Housekeeping Chemicals", gstin: "36AAACS5566F1Z5", contactPerson: "Anil Kumar", email: "orders@sparklechem.in", phone: "+91 98666 77889", paymentTerms: "Net 30", rating: 4 },
-    { vendorCode: "VEND-004", name: "Prime Beverages Distributors", gstin: "36AAACP7788G1Z6", contactPerson: "Farhan Sheikh", email: "sales@primebev.in", phone: "+91 98777 88990", paymentTerms: "Net 45", rating: 5 },
-  ];
-  const vendorMap: Record<string, mongoose.Types.ObjectId> = {};
-  for (const v of VENDORS) {
-    let vendor = await Vendor.findOne({ vendorCode: v.vendorCode });
-    if (!vendor) {
-      vendor = await Vendor.create({ ...v, isActive: true });
-      console.log(`  ✅ Created Vendor: ${v.name}`);
-    }
-    vendorMap[v.vendorCode] = vendor._id as mongoose.Types.ObjectId;
-  }
 
-  const INVENTORY = [
-    { itemCode: "INV-COFFEE", name: "Arabica Coffee Beans (1kg)", category: ItemCategory.FOOD_INGREDIENT, unit: "kg", minStockLevel: 5, currentStock: 25, unitCost: 850 },
-    { itemCode: "INV-TOWEL-BAT", name: "Bath Towel 700 GSM White", category: ItemCategory.LINEN, unit: "pcs", minStockLevel: 20, currentStock: 150, unitCost: 450 },
-    { itemCode: "INV-SHAMPOO", name: "Herbal Shampoo 50ml", category: ItemCategory.GUEST_AMENITY, unit: "pcs", minStockLevel: 50, currentStock: 300, unitCost: 35 },
-    { itemCode: "INV-BEDSHEET", name: "Cotton Bedsheet King Size", category: ItemCategory.LINEN, unit: "pcs", minStockLevel: 15, currentStock: 8, unitCost: 950 },
-    { itemCode: "INV-GLASS-CLEAN", name: "Glass Cleaner 5L", category: ItemCategory.CLEANING_SUPPLY, unit: "ltr", minStockLevel: 10, currentStock: 4, unitCost: 220 },
-    { itemCode: "INV-SOAP", name: "Guest Soap Bar 25g", category: ItemCategory.GUEST_AMENITY, unit: "pcs", minStockLevel: 100, currentStock: 620, unitCost: 12 },
-    { itemCode: "INV-MILK", name: "Full Cream Milk (1L)", category: ItemCategory.FOOD_INGREDIENT, unit: "ltr", minStockLevel: 20, currentStock: 12, unitCost: 68 },
-    { itemCode: "INV-PILLOW", name: "Hypoallergenic Pillow", category: ItemCategory.LINEN, unit: "pcs", minStockLevel: 15, currentStock: 40, unitCost: 650 },
-  ];
-  const inventoryMap: Record<string, mongoose.Types.ObjectId> = {};
-  for (const inv of INVENTORY) {
-    let item = await InventoryItem.findOne({ itemCode: inv.itemCode });
-    if (!item) {
-      item = await InventoryItem.create({ ...inv, isActive: true, storeLocation: "Main Store" });
-      console.log(`  ✅ Created Inventory Item: ${inv.name}`);
-    }
-    inventoryMap[inv.itemCode] = item._id as mongoose.Types.ObjectId;
-  }
 
-  // ─── 13b. PURCHASE ORDERS ──────────────────────────────────────────────────
-  console.log("\n📑 Seeding purchase orders...");
-  const PURCHASE_ORDERS = [
-    { poNumber: "PO-2026-001", vendorCode: "VEND-001", vendorName: "Fresh Foods & Spices Pvt Ltd", items: [{ code: "INV-COFFEE", qty: 20, cost: 850 }, { code: "INV-MILK", qty: 100, cost: 68 }], status: PurchaseOrderStatus.COMPLETED },
-    { poNumber: "PO-2026-002", vendorCode: "VEND-002", vendorName: "Royal Linen Supplies", items: [{ code: "INV-BEDSHEET", qty: 30, cost: 950 }, { code: "INV-TOWEL-BAT", qty: 50, cost: 450 }], status: PurchaseOrderStatus.ISSUED },
-    { poNumber: "PO-2026-003", vendorCode: "VEND-003", vendorName: "Sparkle Housekeeping Chemicals", items: [{ code: "INV-GLASS-CLEAN", qty: 25, cost: 220 }], status: PurchaseOrderStatus.PARTIALLY_RECEIVED },
-    { poNumber: "PO-2026-004", vendorCode: "VEND-004", vendorName: "Prime Beverages Distributors", items: [{ code: "INV-MILK", qty: 150, cost: 68 }], status: PurchaseOrderStatus.DRAFT },
-  ];
-  for (const po of PURCHASE_ORDERS) {
-    const exists = await PurchaseOrder.findOne({ poNumber: po.poNumber });
-    if (exists) continue;
-    const items = po.items.map((it) => ({
-      item: inventoryMap[it.code],
-      itemName: INVENTORY.find((i) => i.itemCode === it.code)!.name,
-      quantity: it.qty,
-      unitCost: it.cost,
-      totalCost: it.qty * it.cost,
-      receivedQuantity: po.status === PurchaseOrderStatus.COMPLETED ? it.qty : 0,
-    }));
-    await PurchaseOrder.create({
-      poNumber: po.poNumber,
-      vendor: vendorMap[po.vendorCode],
-      vendorName: po.vendorName,
-      items,
-      totalAmount: items.reduce((s, it) => s + it.totalCost, 0),
-      status: po.status,
-      issuedDate: daysAgo(10),
-      expectedDeliveryDate: daysFromNow(5),
-      createdBy: adminId,
-    });
-    console.log(`  ✅ Created Purchase Order: ${po.poNumber}`);
-  }
 
   // ─── 14. FAQS ─────────────────────────────────────────────────────────────
   console.log("\n📦 Seeding FAQs...");
@@ -1029,7 +978,7 @@ async function seed() {
     for (const c of COUPONS) {
       const exists = await Coupon.findOne({ code: c.code });
       if (!exists) {
-        await Coupon.create({ ...c, startDate: new Date(), expiryDate: oneYearOut, isActive: true, createdBy: adminId });
+        await Coupon.create({ ...c, propertyId: property._id, startDate: new Date(), expiryDate: oneYearOut, isActive: true, createdBy: adminId });
         console.log(`  ✅ Created coupon: ${c.code}`);
       }
     }
@@ -1104,7 +1053,7 @@ async function seed() {
   for (const rp of RATE_PLANS) {
     const exists = await RatePlan.findOne({ code: rp.code });
     if (!exists) {
-      await RatePlan.create({ ...rp, isActive: true });
+      await RatePlan.create({ ...rp, propertyId: property._id, isActive: true });
       console.log(`  ✅ Created Rate Plan: ${rp.name}`);
     }
   }
@@ -1255,6 +1204,7 @@ async function seed() {
     const slaBreachTime = new Date(reportedAt);
     slaBreachTime.setHours(slaBreachTime.getHours() + 24);
     await Complaint.create({
+      propertyId: property._id,
       guestId: guestIds[i % guestIds.length],
       roomNumber: pick(ALL_ROOM_NUMBERS, i),
       department: pick(COMPLAINT_DEPTS, i),

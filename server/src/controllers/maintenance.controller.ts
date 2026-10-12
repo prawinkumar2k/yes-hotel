@@ -1,4 +1,5 @@
 import { Request, Response } from "express";
+import mongoose from "mongoose";
 import { z } from "zod";
 import { MaintenanceTicket, MaintenanceStatus, MaintenancePriority } from "../models/MaintenanceTicket";
 import { Room, RoomStatus } from "../models/Room";
@@ -47,7 +48,14 @@ export const createMaintenanceTicket = async (req: Request, res: Response) => {
     const roomBefore = await Room.findById(data.roomId);
     if (!roomBefore) return res.status(404).json({ success: false, message: "Room not found" });
 
+    const propertyId =
+      roomBefore.propertyId ||
+      (req as any).propertyId ||
+      (req.user as any)?.propertyId ||
+      new mongoose.Types.ObjectId();
+
     const ticket = await MaintenanceTicket.create({
+      propertyId,
       room: data.roomId,
       issueTitle: data.issueTitle,
       description: data.description,

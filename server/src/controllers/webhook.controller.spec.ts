@@ -46,8 +46,15 @@ async function createTestBooking(overrides: Partial<any> = {}) {
     children: 0,
     totalAmount: 1500,
     taxAmount: 0,
+    propertyId: new mongoose.Types.ObjectId(),
+    property: new mongoose.Types.ObjectId(),
+    source: "WALK_IN" as any,
+    bookingType: "INDIVIDUAL" as any,
+    stayType: "NIGHTLY" as any,
     status: BookingStatus.PENDING,
     paymentStatus: PaymentStatus.UNPAID,
+    registrationStatus: "DRAFT" as any,
+    signatureStatus: "NOT_COLLECTED" as any,
     ...overrides,
   });
 }
@@ -140,6 +147,7 @@ describe("handleRazorpayWebhook", () => {
     await Payment.create({
       booking: booking._id,
       amount: booking.totalAmount,
+      propertyId: booking.property || new mongoose.Types.ObjectId(),
       currency: "INR",
       method: PaymentMethod.RAZORPAY,
       razorpayOrderId: `order_test_${booking._id}`,
@@ -243,6 +251,7 @@ describe("handleRazorpayWebhook", () => {
     const payment = await Payment.create({
       booking: booking._id,
       amount: booking.totalAmount,
+      propertyId: booking.property || new mongoose.Types.ObjectId(),
       currency: "INR",
       method: PaymentMethod.RAZORPAY,
       razorpayOrderId: `order_test_${booking._id}`,
@@ -276,6 +285,7 @@ describe("handleRazorpayWebhook", () => {
     const payment = await Payment.create({
       booking: booking._id,
       amount: booking.totalAmount,
+      propertyId: booking.property || new mongoose.Types.ObjectId(),
       currency: "INR",
       method: PaymentMethod.RAZORPAY,
       razorpayOrderId: `order_test_${booking._id}`,

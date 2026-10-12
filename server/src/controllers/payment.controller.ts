@@ -1,4 +1,5 @@
 import { Request, Response } from "express";
+import mongoose from "mongoose";
 import crypto from "crypto";
 import { Booking, BookingStatus, PaymentStatus } from "../models/Booking";
 import { Payment, PaymentMethod, PaymentTxStatus } from "../models/Payment";
@@ -237,7 +238,7 @@ export const confirmDemoBooking = async (req: Request, res: Response) => {
     const cashChannelId = await resolvePaymentChannel("CASH");
 
     await Payment.create({
-      propertyId: booking.propertyId,
+      propertyId: booking.propertyId || (booking as any).property || new mongoose.Types.ObjectId(),
       booking: booking._id,
       amount: booking.totalAmount,
       currency: "INR",

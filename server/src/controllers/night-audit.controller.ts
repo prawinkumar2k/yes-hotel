@@ -5,7 +5,8 @@ import { Booking, BookingStatus } from "../models/Booking";
 import { Room } from "../models/Room";
 import { Folio, FolioStatus } from "../models/Folio";
 import { postCharge } from "../services/folio.service";
-import { FolioLineType } from "../models/FolioLine";
+import { FolioLine, FolioLineType } from "../models/FolioLine";
+import { AdvancePayment } from "../models/AdvancePayment";
 import { CashierShift, CashierShiftStatus } from "../models/CashierShift";
 import { createAuditLog } from "../services/audit.service";
 import { transitionBookingStatus } from "../services/booking-state.service";
@@ -13,11 +14,11 @@ import { releaseInventoryDays } from "../services/booking-safety.service";
 
 /**
  * GET /api/night-audit/status
- * Returns current business date status and pre-audit validation checklist.
+ * Returns current business date status, property operational context, and pre-audit validation checklist.
  */
 export const getNightAuditStatus = async (_req: Request, res: Response) => {
   try {
-    let bizDate = await BusinessDate.findOne({ isCurrentDate: true });
+    let bizDate = await BusinessDate.findOne({ isCurrentDate: true }).populate("openedBy", "name email");
     if (!bizDate) {
       bizDate = await BusinessDate.create({
         date: new Date(),
@@ -34,7 +35,14 @@ export const getNightAuditStatus = async (_req: Request, res: Response) => {
     endOfDay.setHours(23, 59, 59, 999);
 
     // Checklist stats
-    const [pendingArrivals, pendingDepartures, inHouseGuests, dirtyRooms, openCashierShifts] = await Promise.all([
+    const [
+      pendingArrivals,
+      pendingDepartures,
+      inHouseGuests,
+      dirtyRooms,
+      openCashierShifts,
+      openCashierShiftsList,
+    ] = await Promise.all([
       Booking.countDocuments({
         status: BookingStatus.CONFIRMED,
         checkInDate: { $lte: endOfDay },
@@ -50,8 +58,14 @@ export const getNightAuditStatus = async (_req: Request, res: Response) => {
         housekeepingStatus: { $in: ["DIRTY", "CLEANING", "INSPECTION_FAILED"] },
       } as any),
       CashierShift.countDocuments({
-        status: CashierShiftStatus.OPEN,
+        status: { $in: [CashierShiftStatus.OPEN, CashierShiftStatus.HANDOVER_PENDING] },
       }),
+      CashierShift.find({
+        status: { $in: [CashierShiftStatus.OPEN, CashierShiftStatus.HANDOVER_PENDING] },
+      })
+        .populate("cashier", "name email")
+        .select("shiftNumber drawerId cashier openingFloat status openedAt")
+        .lean(),
     ]);
 
     const isReadyForAudit = pendingArrivals === 0 && pendingDepartures === 0 && openCashierShifts === 0;
@@ -60,6 +74,8 @@ export const getNightAuditStatus = async (_req: Request, res: Response) => {
       success: true,
       data: {
         businessDate: bizDate.date,
+        openedAt: bizDate.openedAt,
+        openedBy: (bizDate as any).openedBy?.name || "System",
         isOpen: bizDate.state === BusinessDateState.OPEN,
         checklist: {
           pendingArrivals,
@@ -67,6 +83,7 @@ export const getNightAuditStatus = async (_req: Request, res: Response) => {
           inHouseGuests,
           dirtyRooms,
           openCashierShifts,
+          openCashierShiftsList,
           isReadyForAudit,
         },
       },
@@ -77,47 +94,164 @@ export const getNightAuditStatus = async (_req: Request, res: Response) => {
 };
 
 /**
+ * GET /api/night-audit/preview
+ * Financial preview: Calculates proposed nightly room charges, tax breakdowns, collections,
+ * advances, and folio balances before executing the rollover.
+ */
+export const getNightAuditPreview = async (_req: Request, res: Response) => {
+  try {
+    const bizDate = await BusinessDate.findOne({ isCurrentDate: true });
+    if (!bizDate) {
+      return res.status(400).json({ success: false, message: "No active business date found" });
+    }
+
+    const auditDate = new Date(bizDate.date);
+    const startOfDay = new Date(auditDate);
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(auditDate);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    // 1. Proposed Room Charges for in-house guests
+    const inHouseBookings = await Booking.find({ status: BookingStatus.CHECKED_IN })
+      .populate("roomCategory", "name basePrice")
+      .populate("assignedRoom", "roomNumber")
+      .populate("customer", "firstName lastName email")
+      .lean();
+
+    let estimatedRoomCharges = 0;
+    let estimatedCGST = 0;
+    let estimatedSGST = 0;
+    const proposedPostings: any[] = [];
+
+    for (const b of inHouseBookings) {
+      const nightlyRate = Number((b.roomCategory as any)?.basePrice) || 0;
+      const taxRate = nightlyRate > 7500 ? 0.09 : 0.06;
+      const cgst = Math.round(nightlyRate * taxRate * 100) / 100;
+      const sgst = Math.round(nightlyRate * taxRate * 100) / 100;
+
+      estimatedRoomCharges += nightlyRate;
+      estimatedCGST += cgst;
+      estimatedSGST += sgst;
+
+      proposedPostings.push({
+        bookingReference: b.bookingReference,
+        guestName: b.guestDetails ? `${b.guestDetails.firstName} ${b.guestDetails.lastName}`.trim() : "Guest",
+        roomNumber: (b.assignedRoom as any)?.roomNumber || "Unassigned",
+        categoryName: (b.roomCategory as any)?.name || "Standard",
+        tariff: nightlyRate,
+        cgst,
+        sgst,
+        total: nightlyRate + cgst + sgst,
+      });
+    }
+
+    // 2. Today's collections by mode from FolioLines and Advances
+    const [folioPayments, advancesToday, openFolios] = await Promise.all([
+      FolioLine.find({
+        lineType: FolioLineType.PAYMENT,
+        postedAt: { $gte: startOfDay, $lte: endOfDay },
+      }).lean(),
+      AdvancePayment.find({
+        receivedAt: { $gte: startOfDay, $lte: endOfDay },
+      }).lean(),
+      Folio.find({ status: FolioStatus.OPEN }).lean(),
+    ]);
+
+    let cashCollections = 0;
+    let upiCollections = 0;
+    let cardCollections = 0;
+    let totalAdvances = 0;
+
+    for (const p of folioPayments) {
+      const desc = (p.description || "").toUpperCase();
+      if (desc.includes("CASH")) cashCollections += p.amount;
+      else if (desc.includes("UPI")) upiCollections += p.amount;
+      else cardCollections += p.amount;
+    }
+
+    for (const adv of advancesToday) {
+      totalAdvances += adv.amount;
+      if (adv.method === "CASH") cashCollections += adv.amount;
+      else if (adv.method === "UPI") upiCollections += adv.amount;
+      else cardCollections += adv.amount;
+    }
+
+    const openFolioBalances = openFolios.reduce((acc, f) => acc + (f.balance || 0), 0);
+
+    return res.json({
+      success: true,
+      data: {
+        businessDate: bizDate.date,
+        proposedPostings,
+        totals: {
+          inHouseCount: inHouseBookings.length,
+          estimatedRoomCharges,
+          estimatedCGST,
+          estimatedSGST,
+          estimatedTotalRevenue: estimatedRoomCharges + estimatedCGST + estimatedSGST,
+          cashCollections,
+          upiCollections,
+          cardCollections,
+          totalCollectionsToday: cashCollections + upiCollections + cardCollections,
+          totalAdvances,
+          openFoliosCount: openFolios.length,
+          openFolioBalances,
+        },
+      },
+    });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+/**
+ * GET /api/night-audit/history
+ * Returns immutable audit run history and business dates closed previously.
+ */
+export const getNightAuditHistory = async (req: Request, res: Response) => {
+  try {
+    const history = await BusinessDate.find({ state: BusinessDateState.CLOSED })
+      .populate("closedBy", "name email role")
+      .populate("openedBy", "name email role")
+      .sort({ date: -1 })
+      .limit(30)
+      .lean();
+
+    return res.json({
+      success: true,
+      data: history,
+    });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+/**
  * POST /api/night-audit/run
  * Executes night audit: posts room charges + GST for in-house guests,
- * cancels no-shows with inventory release, and rolls business date.
+ * cancels no-shows with inventory release, and rolls business date forward.
  */
 export const runNightAudit = async (req: Request, res: Response) => {
   const actorId = (req as any).user?.id || (req as any).user?._id;
   const { force } = req.body || {};
 
-  // Guard: ensure cashier shifts are closed before night audit. A cheap
-  // pre-check outside the transaction — worst case under a genuine race two
-  // requests both pass it, but the transaction below is what actually makes
-  // the audit itself safe, not this check.
-  const openShiftsCount = await CashierShift.countDocuments({ status: CashierShiftStatus.OPEN });
+  // Guard: ensure cashier shifts are closed before night audit
+  const openShiftsCount = await CashierShift.countDocuments({
+    status: { $in: [CashierShiftStatus.OPEN, CashierShiftStatus.HANDOVER_PENDING] },
+  });
   if (openShiftsCount > 0 && !force) {
     return res.status(400).json({
       success: false,
-      message: `Cannot execute Night Audit: ${openShiftsCount} cashier shift(s) are still OPEN. Cash drawers must be reconciled and closed before day rollover.`,
+      message: `Cannot execute Night Audit: ${openShiftsCount} cashier shift(s) are still active or pending handover. All cashier drawers must be closed and reconciled before day rollover.`,
     });
   }
 
-  // Previously this entire flow ran with no transaction and no locking at
-  // all: two concurrent (or retried) calls to this endpoint would both read
-  // the same isCurrentDate:true BusinessDate, both loop the same in-house
-  // bookings and both post a full night's room charge + GST to each one —
-  // confirmed live during this audit (₹4420 of duplicate revenue posted to
-  // a single test folio from exactly this race). Only the very last step
-  // (creating the new BusinessDate) was protected, by a unique index on
-  // isCurrentDate — so the second request's duplicate charges had already
-  // committed by the time it hit that error.
-  //
-  // Fix: wrap the whole audit in one transaction, and make closing the old
-  // BusinessDate + opening the new one the FIRST writes in it (the "claim"),
-  // before any charge posting. Under real concurrency, MongoDB's write
-  // conflict on that same document now aborts the entire transaction —
-  // charges included — for whichever request loses the race, instead of
-  // letting it complete unrelated work first.
   let result: {
     previousDate: Date;
     newBusinessDate: Date;
     postedChargesCount: number;
     noShowCount: number;
+    totalPostedRevenue: number;
   } | null = null;
 
   const session = await mongoose.startSession();
@@ -125,20 +259,24 @@ export const runNightAudit = async (req: Request, res: Response) => {
     await session.withTransaction(async () => {
       let bizDate = await BusinessDate.findOne({ isCurrentDate: true }).session(session);
       if (!bizDate) {
-        const [created] = await BusinessDate.create([{
-          date: new Date(),
-          state: BusinessDateState.OPEN,
-          isCurrentDate: true,
-          openedAt: new Date(),
-        }], { session });
+        const [created] = await BusinessDate.create(
+          [
+            {
+              date: new Date(),
+              state: BusinessDateState.OPEN,
+              isCurrentDate: true,
+              openedAt: new Date(),
+            },
+          ],
+          { session }
+        );
         bizDate = created;
       }
 
       const auditDate = new Date(bizDate.date);
 
       // Claim this business date for audit FIRST — close it and open
-      // tomorrow's before doing any financial posting, so a losing
-      // concurrent transaction conflicts here and rolls back everything.
+      // tomorrow's before doing any financial posting, preventing concurrent double-posting.
       bizDate.state = BusinessDateState.CLOSED;
       bizDate.closedAt = new Date();
       bizDate.closedBy = actorId;
@@ -148,16 +286,27 @@ export const runNightAudit = async (req: Request, res: Response) => {
       const nextDate = new Date(auditDate);
       nextDate.setDate(nextDate.getDate() + 1);
 
-      const [newBizDate] = await BusinessDate.create([{
-        date: nextDate,
-        state: BusinessDateState.OPEN,
-        isCurrentDate: true,
-        openedAt: new Date(),
-      }], { session });
+      const [newBizDate] = await BusinessDate.create(
+        [
+          {
+            propertyId: bizDate.propertyId,
+            date: nextDate,
+            state: BusinessDateState.OPEN,
+            isCurrentDate: true,
+            openedAt: new Date(),
+            openedBy: actorId,
+          },
+        ],
+        { session }
+      );
 
       // 1. Post nightly room charge + GST for all checked-in in-house guests
-      const inHouseBookings = await Booking.find({ status: BookingStatus.CHECKED_IN }).populate("roomCategory").session(session);
+      const inHouseBookings = await Booking.find({ status: BookingStatus.CHECKED_IN })
+        .populate("roomCategory")
+        .session(session);
+
       let postedChargesCount = 0;
+      let totalPostedRevenue = 0;
 
       for (const b of inHouseBookings) {
         const folio = await Folio.findOne({ booking: b._id, status: FolioStatus.OPEN }).session(session);
@@ -216,6 +365,7 @@ export const runNightAudit = async (req: Request, res: Response) => {
             }
 
             postedChargesCount++;
+            totalPostedRevenue += nightlyRate + cgst + sgst;
           }
         }
       }
@@ -246,18 +396,45 @@ export const runNightAudit = async (req: Request, res: Response) => {
         }
       }
 
+      // 3. Save audit summary on the closed business date
+      bizDate.auditSummary = {
+        roomChargesPosted: postedChargesCount,
+        roomChargesAmount: totalPostedRevenue,
+        noShowsProcessed: noShowBookings.length,
+        arrivalsCount: 0,
+        departuresCount: 0,
+        inHouseCount: inHouseBookings.length,
+        totalRevenue: totalPostedRevenue,
+        totalTax: 0,
+        totalCollection: 0,
+        totalRefunds: 0,
+        totalAdvances: 0,
+        totalAdvanceAdjustments: 0,
+        openFoliosCount: 0,
+        exceptions: [],
+      };
+      await bizDate.save({ session });
+
       result = {
         previousDate: auditDate,
         newBusinessDate: nextDate,
         postedChargesCount,
         noShowCount: noShowBookings.length,
+        totalPostedRevenue,
       };
     });
   } catch (error: any) {
-    if (error?.code === 11000) {
+    if (
+      error?.code === 11000 ||
+      error?.code === 112 ||
+      error?.name === "WriteConflict" ||
+      error?.hasErrorLabel?.("TransientTransactionError") ||
+      error?.errorLabels?.includes?.("TransientTransactionError")
+    ) {
       return res.status(409).json({
         success: false,
-        message: "Night Audit is already running or was just completed by another request. Refresh and check the current business date before retrying.",
+        message:
+          "Night Audit is already running or was just completed by another request. Refresh and check the current business date before retrying.",
       });
     }
     return res.status(500).json({ success: false, message: error.message });
@@ -269,9 +446,6 @@ export const runNightAudit = async (req: Request, res: Response) => {
     return res.status(500).json({ success: false, message: "Night Audit did not complete" });
   }
 
-  // Audit logging outside the transaction — same convention as
-  // checkIn/checkOut: a logging failure must never roll back a completed
-  // audit.
   await createAuditLog({
     req,
     action: "night_audit.completed",
@@ -281,6 +455,7 @@ export const runNightAudit = async (req: Request, res: Response) => {
       newDate: result.newBusinessDate,
       postedChargesCount: result.postedChargesCount,
       noShowCount: result.noShowCount,
+      totalPostedRevenue: result.totalPostedRevenue,
     },
   });
 

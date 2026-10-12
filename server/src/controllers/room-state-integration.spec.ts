@@ -34,6 +34,7 @@ function mockRes() {
 async function createRoom(status: RoomStatus) {
   const stamp = new mongoose.Types.ObjectId().toString().slice(-8);
   return Room.create({
+    propertyId: new mongoose.Types.ObjectId(),
     roomNumber: `RS-${stamp}`,
     floor: "1",
     category: new mongoose.Types.ObjectId(),
@@ -45,6 +46,24 @@ async function createConfirmedBooking() {
   const stamp = new mongoose.Types.ObjectId().toString().slice(-8);
   return Booking.create({
     bookingReference: `RSI-${stamp}`,
+    propertyId: new mongoose.Types.ObjectId(),
+    property: new mongoose.Types.ObjectId(),
+    source: "WALK_IN" as any,
+    bookingType: "INDIVIDUAL" as any,
+    stayType: "NIGHTLY" as any,
+    paymentStatus: PaymentStatus.PAID,
+    registrationStatus: "DRAFT" as any,
+    signatureStatus: "NOT_COLLECTED" as any,
+    cgstAmount: 0,
+    sgstAmount: 0,
+    paidAmount: 1000,
+    discountAmount: 0,
+    couponRedeemed: false,
+    extraPersonsNoBed: 0,
+    extraPersonsWithBed: 0,
+    extraChildrenNoBed: 0,
+    extraChildrenWithBed: 0,
+    kidsUnder3: 0,
     guestDetails: { firstName: "Room", lastName: "State", email: `rsi-${stamp}@test.local`, phone: "9999999999" },
     roomCategory: new mongoose.Types.ObjectId(),
     checkInDate: new Date(Date.now() + 86400000),
@@ -54,7 +73,6 @@ async function createConfirmedBooking() {
     totalAmount: 1000,
     taxAmount: 0,
     status: BookingStatus.CONFIRMED,
-    paymentStatus: PaymentStatus.PAID,
   });
 }
 

@@ -129,6 +129,7 @@ describe("Refund invariant: cumulative refunds never exceed the captured payment
     const payment = await Payment.create({
       booking: booking._id,
       amount: totalAmount,
+      propertyId: booking.property || new mongoose.Types.ObjectId(),
       currency: "INR",
       method: PaymentMethod.CASH,
       transactionId: `MON-TX-${stamp}`,
@@ -199,6 +200,7 @@ describe("Coupon invariant: concurrent redemptions never exceed usageLimit", () 
     const coupon = await Coupon.create({
       code: `CONC${stamp}`,
       description: "Concurrency test coupon",
+      propertyId: new mongoose.Types.ObjectId(),
       discountType: DiscountType.FIXED,
       discountValue: 100,
       startDate: new Date(Date.now() - 86400000),

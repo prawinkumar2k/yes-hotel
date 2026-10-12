@@ -181,9 +181,9 @@ export default function AdminGroupBookings() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
           { label: "Total Groups", value: groups.length, sub: `${confirmedCount} confirmed/in-house`, icon: Users, color: "text-blue-600 bg-blue-50" },
-          { label: "Pipeline Value", value: `\u20B9${(totalRevenue/100000).toFixed(1)}L`, sub: "estimated total", icon: TrendingUp, color: "text-emerald-600 bg-emerald-50" },
-          { label: "Advances Received", value: `\u20B9${(totalAdvances/1000).toFixed(0)}K`, sub: "total deposits", icon: IndianRupee, color: "text-amber-600 bg-amber-50" },
-          { label: "Balance Due", value: `\u20B9${((totalRevenue-totalAdvances)/1000).toFixed(0)}K`, sub: "outstanding", icon: AlertCircle, color: "text-red-600 bg-red-50" },
+          { label: "Pipeline Value", value: `₹${(totalRevenue/100000).toFixed(1)}L`, sub: "estimated total", icon: TrendingUp, color: "text-emerald-600 bg-emerald-50" },
+          { label: "Advances Received", value: `₹${(totalAdvances/1000).toFixed(0)}K`, sub: "total deposits", icon: IndianRupee, color: "text-amber-600 bg-amber-50" },
+          { label: "Balance Due", value: `₹${((totalRevenue-totalAdvances)/1000).toFixed(0)}K`, sub: "outstanding", icon: AlertCircle, color: "text-red-600 bg-red-50" },
         ].map(({ label, value, sub, icon: Icon, color }) => (
           <div key={label} className="bg-white rounded-xl border border-gray-100 p-4 flex items-center gap-3 shadow-sm">
             <div className={`p-2.5 rounded-lg ${color}`}><Icon size={20} /></div>
@@ -235,11 +235,11 @@ export default function AdminGroupBookings() {
               </select>
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Estimated Value (\u20B9)</label>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Estimated Value (₹)</label>
               <input type="number" min={0} value={form.totalEstimatedValue} onChange={e => setForm(f => ({ ...f, totalEstimatedValue: Number(e.target.value) }))} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Advance Paid (\u20B9)</label>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Advance Paid (₹)</label>
               <input type="number" min={0} value={form.advancePaid} onChange={e => setForm(f => ({ ...f, advancePaid: Number(e.target.value) }))} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
             </div>
             <div className="md:col-span-2 lg:col-span-3">
@@ -279,7 +279,7 @@ export default function AdminGroupBookings() {
           <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm">
             <h3 className="font-bold text-gray-900 mb-1">Record Advance Payment</h3>
             <p className="text-sm text-gray-500 mb-4">{advanceModal.code}</p>
-            <input type="number" min={1} value={advanceAmt} onChange={e => setAdvanceAmt(e.target.value)} placeholder="Enter amount (\u20B9)" className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm mb-4 focus:ring-2 focus:ring-blue-500 outline-none" />
+            <input type="number" min={1} value={advanceAmt} onChange={e => setAdvanceAmt(e.target.value)} placeholder="Enter amount (₹)" className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm mb-4 focus:ring-2 focus:ring-blue-500 outline-none" />
             <div className="flex gap-3">
               <button onClick={submitAdvance} disabled={advanceSaving} className="flex-1 flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white py-2 rounded-lg text-sm font-medium">
                 {advanceSaving ? <Loader2 size={14} className="animate-spin" /> : <IndianRupee size={14} />}
@@ -325,9 +325,9 @@ export default function AdminGroupBookings() {
                     </div>
                   </div>
                   <div className="text-right flex-shrink-0">
-                    <p className="text-sm font-bold text-gray-900">\u20B9{(group.totalEstimatedValue/1000).toFixed(0)}K</p>
+                    <p className="text-sm font-bold text-gray-900">₹{(group.totalEstimatedValue/1000).toFixed(0)}K</p>
                     <p className="text-xs text-gray-400">est. value</p>
-                    <p className={`text-xs mt-0.5 ${group.balance > 0 ? "text-red-600" : "text-emerald-600"}`}>\u20B9{(group.balance/1000).toFixed(0)}K bal.</p>
+                    <p className={`text-xs mt-0.5 ${group.balance > 0 ? "text-red-600" : "text-emerald-600"}`}>₹{(group.balance/1000).toFixed(0)}K bal.</p>
                   </div>
                   <div className="text-gray-400 flex-shrink-0">{isExp ? <ChevronUp size={16} /> : <ChevronDown size={16} />}</div>
                 </div>
@@ -341,8 +341,8 @@ export default function AdminGroupBookings() {
                       <div><p className="text-xs text-gray-400 mb-0.5">Meal Plan</p><p className="text-sm font-medium text-gray-800">{group.mealPlan}</p></div>
                       <div><p className="text-xs text-gray-400 mb-0.5">Email</p><p className="text-sm text-gray-700">{group.organiserEmail || ""}</p></div>
                       <div><p className="text-xs text-gray-400 mb-0.5">Phone</p><p className="text-sm text-gray-700">{group.organiserPhone || ""}</p></div>
-                      <div><p className="text-xs text-gray-400 mb-0.5">Advance Paid</p><p className="text-sm font-semibold text-emerald-600">\u20B9{group.advancePaid.toLocaleString("en-IN")}</p></div>
-                      <div><p className="text-xs text-gray-400 mb-0.5">Balance Due</p><p className={`text-sm font-semibold ${group.balance > 0 ? "text-red-600" : "text-gray-500"}`}>\u20B9{group.balance.toLocaleString("en-IN")}</p></div>
+                      <div><p className="text-xs text-gray-400 mb-0.5">Advance Paid</p><p className="text-sm font-semibold text-emerald-600">₹{group.advancePaid.toLocaleString("en-IN")}</p></div>
+                      <div><p className="text-xs text-gray-400 mb-0.5">Balance Due</p><p className={`text-sm font-semibold ${group.balance > 0 ? "text-red-600" : "text-gray-500"}`}>₹{group.balance.toLocaleString("en-IN")}</p></div>
                     </div>
                     {group.specialRequirements && (
                       <div className="bg-blue-50 border border-blue-100 rounded-lg px-3 py-2 text-sm text-blue-800">

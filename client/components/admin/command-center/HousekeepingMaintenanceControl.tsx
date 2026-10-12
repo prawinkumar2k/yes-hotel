@@ -22,6 +22,13 @@ export function HousekeepingAndMaintenanceControl({ housekeeping, maintenance }:
           </Link>
         </div>
 
+        <div className="grid grid-cols-4 gap-2 mb-4 border-b border-white/5 pb-4">
+          <div className="bg-black/40 rounded p-2 text-center border border-white/5"><div className="text-[10px] text-zinc-500 uppercase">Unassigned</div><div className="text-sm font-bold text-white">{housekeeping?.dirty || 0}</div></div>
+          <div className="bg-black/40 rounded p-2 text-center border border-white/5"><div className="text-[10px] text-zinc-500 uppercase">Cleaning</div><div className="text-sm font-bold text-white">{housekeeping?.cleaning || 0}</div></div>
+          <div className="bg-black/40 rounded p-2 text-center border border-white/5"><div className="text-[10px] text-zinc-500 uppercase">Inspection</div><div className="text-sm font-bold text-white">{(housekeeping?.completed || 0) + (housekeeping?.inspection || 0)}</div></div>
+          <div className="bg-black/40 rounded p-2 text-center border border-white/5"><div className="text-[10px] text-zinc-500 uppercase">Awaiting Rel.</div><div className="text-sm font-bold text-white">{housekeeping?.waitingRelease || 0}</div></div>
+        </div>
+
         <div className="flex-1 space-y-2.5 overflow-y-auto max-h-48">
           {(!housekeeping?.tasks || housekeeping.tasks.length === 0) ? (
             <p className="text-xs text-zinc-500 text-center py-6">All rooms clean.</p>
@@ -56,6 +63,12 @@ export function HousekeepingAndMaintenanceControl({ housekeeping, maintenance }:
           <Link to="/admin/maintenance" className="text-xs text-orange-400 hover:underline font-semibold whitespace-nowrap flex-shrink-0">
             Manage &rarr;
           </Link>
+        </div>
+
+        <div className="grid grid-cols-3 gap-2 mb-4 border-b border-white/5 pb-4">
+          <div className="bg-black/40 rounded p-2 text-center border border-white/5"><div className="text-[10px] text-red-500 uppercase">Critical</div><div className="text-sm font-bold text-red-400">{maintenance?.critical || 0}</div></div>
+          <div className="bg-black/40 rounded p-2 text-center border border-white/5"><div className="text-[10px] text-zinc-500 uppercase">High / Med</div><div className="text-sm font-bold text-white">{(maintenance?.high || 0) + (maintenance?.medium || 0)}</div></div>
+          <div className="bg-black/40 rounded p-2 text-center border border-white/5"><div className="text-[10px] text-zinc-500 uppercase">Total Pending</div><div className="text-sm font-bold text-white">{maintenance?.open || 0}</div></div>
         </div>
 
         <div className="flex-1 space-y-2.5 overflow-y-auto max-h-48">

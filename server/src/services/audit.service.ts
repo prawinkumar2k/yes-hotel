@@ -23,16 +23,29 @@ export async function createAuditLog(params: {
   actorId?: string;
   actorRole?: string;
   actorType?: AuditActorType;
+  propertyId?: string;
 }) {
   try {
-    const { req, action, resourceType, resourceId, metadata, actorId, actorRole, actorType } = params;
+    const { req, action, resourceType, resourceId, metadata, actorId, actorRole, actorType, propertyId } = params;
     const user = req ? (req as any).user : undefined;
     const resolvedActorId = actorId ?? user?.id;
     const resolvedActorRole = actorRole ?? user?.role;
     const resolvedActorType =
       actorType ?? (resolvedActorId ? AuditActorType.USER : AuditActorType.GUEST);
 
+    let resolvedPropertyId = propertyId || (req as any)?.property?._id;
+    if (!resolvedPropertyId) {
+      const { Property } = await import("../models/Property");
+      const prop = await Property.findOne().lean();
+      if (prop) resolvedPropertyId = prop._id;
+      else {
+        const mongoose = await import("mongoose");
+        resolvedPropertyId = new mongoose.Types.ObjectId();
+      }
+    }
+
     await AuditLog.create({
+      propertyId: resolvedPropertyId,
       actorType: resolvedActorType,
       actorId: resolvedActorId || undefined,
       actorRole: resolvedActorRole || (resolvedActorType === AuditActorType.SYSTEM ? "SYSTEM" : "GUEST"),

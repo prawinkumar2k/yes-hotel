@@ -34,3 +34,7 @@ const CorporateAccountSchema = new Schema<ICorporateAccount>(
 );
 
 export const CorporateAccount = (mongoose.models.CorporateAccount as mongoose.Model<ICorporateAccount>) || mongoose.model<ICorporateAccount>("CorporateAccount", CorporateAccountSchema);
+
+if (!mongoose.models.Company) {
+  mongoose.model("Company", CorporateAccountSchema);
+}

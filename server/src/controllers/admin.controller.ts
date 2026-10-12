@@ -59,12 +59,13 @@ export const getAdminStats = async (req: Request, res: Response) => {
 
 export const getAdminBookings = async (req: Request, res: Response) => {
   try {
-    const { page = "1", limit = "15", status, search } = req.query;
+    const { page = "1", limit = "15", status, search, source } = req.query;
     const p = parseInt(page as string);
     const l = parseInt(limit as string);
 
     const query: Record<string, any> = {};
     if (status && status !== "ALL") query.status = status;
+    if (source && source !== "ALL") query.source = source;
     if (search) {
       // Escape regex metacharacters and force to a string — an admin-only
       // route, but an uncontrolled $regex is still a self-inflicted ReDoS
@@ -106,7 +107,32 @@ export const getAdminBookingById = async (req: Request, res: Response) => {
       .populate("customer", "firstName lastName email phone");
 
     if (!booking) return res.status(404).json({ success: false, message: "Booking not found" });
-    return res.status(200).json({ success: true, data: booking });
+
+    let groupBookings: any[] = [];
+    if (booking.groupId) {
+      groupBookings = await Booking.find({ groupId: booking.groupId })
+        .populate("assignedRoom", "roomNumber floor")
+        .populate("roomCategory", "name slug basePrice");
+    } else if (booking.guestDetails?.phone) {
+      const matching = await Booking.find({
+        "guestDetails.phone": booking.guestDetails.phone,
+        status: { $in: [BookingStatus.CONFIRMED, BookingStatus.CHECKED_IN] },
+        checkInDate: booking.checkInDate,
+      })
+        .populate("assignedRoom", "roomNumber floor")
+        .populate("roomCategory", "name slug basePrice");
+      if (matching.length > 1) {
+        groupBookings = matching;
+      }
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        ...booking.toObject(),
+        groupBookings,
+      },
+    });
   } catch (error: any) {
     return res.status(500).json({ success: false, message: error.message });
   }

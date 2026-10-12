@@ -27,10 +27,13 @@ export async function syncGuestOnBookingCreated(params: {
   phone: string;
 }) {
   const email = params.email.trim().toLowerCase();
+  const mongoose = require("mongoose");
+  const defaultProp = await mongoose.model("Property").findOne();
   await Guest.findOneAndUpdate(
     { email },
     {
       $setOnInsert: {
+        propertyId: defaultProp ? defaultProp._id : undefined,
         email,
         fullName: `${params.firstName} ${params.lastName}`.trim(),
         phone: params.phone,

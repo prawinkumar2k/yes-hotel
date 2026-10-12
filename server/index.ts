@@ -1,5 +1,5 @@
 import "dotenv/config";
-import express from "express";
+import express from "express"; // Force reload
 import cors from "cors";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
@@ -44,19 +44,15 @@ import reportsRoutes from "./src/routes/reports.routes";
 import cashierShiftRoutes from "./src/routes/cashier-shift.routes";
 import ratePlanRoutes from "./src/routes/rate-plan.routes";
 import corporateAccountRoutes from "./src/routes/corporate-account.routes";
-import posRoutes from "./src/routes/pos.routes";
 import groupBookingRoutes from "./src/routes/group-booking.routes";
 import inspectionRoutes from "./src/routes/inspection.routes";
-import inventoryRoutes from "./src/routes/inventory.routes";
-import vendorRoutes from "./src/routes/vendor.routes";
-import procurementRoutes from "./src/routes/procurement.routes";
+
 import accountingRoutes from "./src/routes/accounting.routes";
 import banquetRoutes from "./src/routes/banquet.routes";
 import ancillaryRoutes from "./src/routes/ancillary.routes";
 import complaintRoutes from "./src/routes/complaint.routes";
 import propertyRoutes from "./src/routes/property.routes";
 import housekeepingRoutes from "./src/routes/housekeeping.routes";
-import menuRoutes from "./src/routes/menu.routes";
 import commandCenterRoutes from "./src/routes/command-center.routes";
 import paymentChannelRoutes from "./src/routes/payment-channel.routes";
 import taskApprovalRoutes from "./src/routes/task-approval.routes";
@@ -146,7 +142,7 @@ export function createServer() {
         // That's a materially lower-risk relaxation than allowing inline
         // *scripts*, and is the standard accepted tradeoff for this stack.
         styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
-        fontSrc: ["'self'", "https://fonts.gstatic.com"],
+        fontSrc: ["'self'", "data:", "https://fonts.gstatic.com"],
         imgSrc: ["'self'", "data:", "blob:", "https://res.cloudinary.com", "https://images.unsplash.com"],
         // The homepage hero background video (Hero.tsx) is hosted on
         // Pixabay's CDN. Without an explicit media-src, CSP falls back to
@@ -259,6 +255,7 @@ export function createServer() {
   app.use("/api/rooms", roomRoutes);
   app.use("/api/bookings", bookingRoutes);
   app.use("/api/booking-enquiry", bookingEnquiryRoutes);
+  app.use("/api/booking-enquiries", bookingEnquiryRoutes);
   app.use("/api/admin", adminRoutes);
   app.use("/api/payments", paymentRoutes);
   app.use("/api/contact", contactRoutes);
@@ -287,19 +284,15 @@ export function createServer() {
   app.use("/api/cashier-shifts", cashierShiftRoutes);
   app.use("/api/rate-plans", ratePlanRoutes);
   app.use("/api/corporate-accounts", corporateAccountRoutes);
-  app.use("/api/pos", posRoutes);
   app.use("/api/group-bookings", groupBookingRoutes);
   app.use("/api/inspections", inspectionRoutes);
-  app.use("/api/inventory", inventoryRoutes);
-  app.use("/api/vendors", vendorRoutes);
-  app.use("/api/procurement", procurementRoutes);
+
   app.use("/api/accounting", accountingRoutes);
   app.use("/api/banquets", banquetRoutes);
   app.use("/api/ancillary", ancillaryRoutes);
   app.use("/api/complaints", complaintRoutes);
   app.use("/api/properties", propertyRoutes);
   app.use("/api/housekeeping", housekeepingRoutes);
-  app.use("/api/menu", menuRoutes);
   app.use("/api/dashboard/command-center", commandCenterRoutes);
   app.use("/api/payment-channels", paymentChannelRoutes);
   app.use("/api/task-approvals", taskApprovalRoutes);

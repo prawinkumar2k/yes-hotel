@@ -207,7 +207,7 @@ export default function AdminMultiProperty() {
           }} className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1"><label className="text-sm font-medium">Property Name *</label><Input name="name" required /></div>
-              <div className="space-y-1"><label className="text-sm font-medium">Property Code *</label><Input name="code" placeholder="e.g. YES-HYD" required /></div>
+              <div className="space-y-1"><label className="text-sm font-medium">Property Code *</label><Input name="code" placeholder="e.g. YES-BLR" required /></div>
               <div className="space-y-1"><label className="text-sm font-medium">Legal Name</label><Input name="legalName" /></div>
               <div className="space-y-1"><label className="text-sm font-medium">GSTIN</label><Input name="gstin" /></div>
               <div className="col-span-2 space-y-1"><label className="text-sm font-medium">Address Line 1 *</label><Input name="addressLine1" required /></div>

@@ -9,6 +9,7 @@ import { logger } from "../services/logger.service";
  * Must be registered LAST, after every route.
  */
 export function errorHandler(err: any, req: Request, res: Response, next: NextFunction) {
+  console.error("UNHANDLED SERVER ERROR on", req.method, req.path, ":", err);
   logger.error("unhandled_error", {
     requestId: req.id,
     method: req.method,

@@ -40,12 +40,12 @@ export default function AdminBookings() {
       <div className="bg-hotel-black text-white px-6 py-4 flex items-center gap-4">
         <Link to="/admin/dashboard" className="font-serif text-lg text-hotel-gold uppercase tracking-widest">YES HOTELS</Link>
         <span className="text-white/30">/</span>
-        <span className="text-white/70 text-sm">Bookings Management</span>
+        <span className="text-white/70 text-sm">Reservations Management</span>
       </div>
 
       <div className="max-w-7xl mx-auto p-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-3">
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-800">All Bookings</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-800">All Reservations</h1>
         </div>
 
         {/* Filters */}
@@ -86,7 +86,7 @@ export default function AdminBookings() {
                   </tr>
                 ))
               ) : bookings.length === 0 ? (
-                <tr><td colSpan={8} className="px-4 py-12 text-center text-gray-400">No bookings found.</td></tr>
+                <tr><td colSpan={8} className="px-4 py-12 text-center text-gray-400">No reservations found.</td></tr>
               ) : (
                 bookings.map((b: any) => (
                   <tr key={b._id} className="hover:bg-gray-50 transition-colors">

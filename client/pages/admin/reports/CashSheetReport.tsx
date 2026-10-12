@@ -17,12 +17,32 @@ export default function CashSheetReport() {
     }
   });
 
+  const formatAmount = (val: number | string | undefined | null) => {
+    if (val === undefined || val === null || val === '') return '';
+    const num = typeof val === 'number' ? val : parseFloat(val);
+    if (isNaN(num)) return '';
+    return num.toFixed(2);
+  };
+
   // Ensure we always have 10 rows for the exact format
-  const tableRows = data?.rows || [];
+  const sourceTable = data?.table || [];
+  const tableRows = sourceTable.map((t: any, i: number) => ({
+    sNo: i + 1,
+    party: t.Reference || '',
+    description: t.Purpose || '',
+    debit: t.Amount != null ? formatAmount(t.Amount) : '',
+    credit: ''
+  }));
   const displayRows = [...tableRows];
   while (displayRows.length < 10) {
     displayRows.push({ sNo: displayRows.length + 1, party: '', description: '', debit: '', credit: '' });
   }
+
+  const rawCashInward = data?.kpis?.TotalCashVolume ?? 0;
+  const cashInward = formatAmount(rawCashInward);
+  const totalDebit = cashInward;
+  const totalCredit = cashInward; // Matches because closing balance is inserted on credit side
+  const closingBalance = cashInward;
 
   return (
     <div className="bg-white p-8 rounded shadow-sm border border-gray-200 overflow-x-auto w-full max-w-4xl mx-auto">
@@ -46,62 +66,66 @@ export default function CashSheetReport() {
       </div>
 
       {/* Printable Area - EXACT FORMAT */}
-      <div className="print:m-0 p-4 border-2 border-gray-800 text-black text-sm bg-white" style={{ fontFamily: 'monospace' }}>
-        <div className="text-center font-bold text-lg mb-4 underline">CASH Sheet</div>
-        
-        <div className="flex justify-between mb-4 pb-2">
+      <div 
+        className="print:m-0 p-6 border-2 border-gray-900 text-black text-sm bg-white print:border-2 print:border-black" 
+        style={{ fontFamily: "'Courier New', Courier, monospace" }}
+      >
+        <div className="flex justify-between items-center mb-4 border-b-2 border-gray-900 pb-2 font-bold">
+          <div className="text-base tracking-wide">CASH Sheet</div>
           <div>Day: {new Date(date).toLocaleDateString('en-US', { weekday: 'short' })}</div>
           <div>Date: {date}</div>
         </div>
 
         {isLoading ? (
-          <div className="h-64 flex items-center justify-center">Loading Data...</div>
+          <div className="h-64 flex items-center justify-center font-mono">Loading Data...</div>
         ) : (
           <div>
-            <table className="w-full border-collapse border border-gray-800 mb-6">
+            <table className="w-full mb-8 border-collapse table-fixed">
               <thead>
-                <tr className="border-b border-gray-800 bg-gray-100">
-                  <th className="border-r border-gray-800 p-2 text-center w-12">S. No.</th>
-                  <th className="border-r border-gray-800 p-2 text-left">Party</th>
-                  <th className="border-r border-gray-800 p-2 text-left">Description</th>
-                  <th className="border-r border-gray-800 p-2 text-right w-32">Debit</th>
-                  <th className="p-2 text-right w-32">Credit</th>
+                <tr className="border-b-2 border-gray-900 font-bold">
+                  <th className="py-2 text-left w-16">S. No.</th>
+                  <th className="py-2 text-left w-1/3">Party</th>
+                  <th className="py-2 text-left">Description</th>
+                  <th className="py-2 text-right w-28">Debit</th>
+                  <th className="py-2 text-right w-28">Credit</th>
                 </tr>
               </thead>
               <tbody>
                 {displayRows.map((row, index) => (
-                  <tr key={index} className="border-b border-gray-400">
-                    <td className="border-r border-gray-800 p-2 text-center">{row.sNo || index + 1}</td>
-                    <td className="border-r border-gray-800 p-2">{row.party}</td>
-                    <td className="border-r border-gray-800 p-2">{row.description}</td>
-                    <td className="border-r border-gray-800 p-2 text-right">{row.debit}</td>
-                    <td className="p-2 text-right">{row.credit}</td>
+                  <tr key={index} className="border-b border-gray-300">
+                    <td className="py-2 text-left font-mono">{row.sNo || index + 1}</td>
+                    <td className="py-2 text-left truncate">{row.party}</td>
+                    <td className="py-2 text-left truncate">{row.description}</td>
+                    <td className="py-2 text-right font-mono">{row.debit}</td>
+                    <td className="py-2 text-right font-mono">{row.credit}</td>
                   </tr>
                 ))}
                 {/* Totals Row */}
-                <tr className="border-b-2 border-t-2 border-gray-800 font-bold">
-                  <td colSpan={3} className="border-r border-gray-800 p-2 text-right">Total</td>
-                  <td className="border-r border-gray-800 p-2 text-right">{data?.totalDebit || ''}</td>
-                  <td className="p-2 text-right">{data?.totalCredit || ''}</td>
+                <tr className="border-b border-gray-900 font-bold">
+                  <td className="py-2"></td>
+                  <td className="py-2">Total</td>
+                  <td className="py-2"></td>
+                  <td className="py-2 text-right font-mono">{totalDebit}</td>
+                  <td className="py-2 text-right font-mono">{totalCredit}</td>
                 </tr>
               </tbody>
             </table>
 
             <div className="grid grid-cols-2 gap-8 mb-12">
               <div>
-                <table className="w-full">
+                <table className="w-full table-fixed border-collapse">
                   <tbody>
                     <tr>
-                      <td className="py-2 font-bold w-48">Opening Balance (B/d)</td>
-                      <td className="py-2 border-b border-gray-400">{data?.openingBalance || ''}</td>
+                      <td className="py-2 font-bold w-48 text-left">Opening Balance (B/d)</td>
+                      <td className="py-2 border-b border-gray-400 font-mono text-right">0.00</td>
                     </tr>
                     <tr>
-                      <td className="py-2 font-bold w-48">Today Cash Inward</td>
-                      <td className="py-2 border-b border-gray-400">{data?.cashInward || ''}</td>
+                      <td className="py-2 font-bold w-48 text-left">Today Cash Inward</td>
+                      <td className="py-2 border-b border-gray-400 font-mono text-right">{cashInward}</td>
                     </tr>
                     <tr>
-                      <td className="py-2 font-bold w-48">Closing Balance (C/f)</td>
-                      <td className="py-2 border-b border-gray-400">{data?.closingBalance || ''}</td>
+                      <td className="py-2 font-bold w-48 text-left">Closing Balance (C/f)</td>
+                      <td className="py-2 border-b border-gray-400 font-mono text-right">{closingBalance}</td>
                     </tr>
                   </tbody>
                 </table>
@@ -109,11 +133,11 @@ export default function CashSheetReport() {
               
               <div>
                 <div className="font-bold mb-2">Remarks, If any</div>
-                <div className="border border-gray-400 h-24 p-2 w-full">{data?.remarks || ''}</div>
+                <div className="border border-gray-400 h-24 p-2 w-full font-mono text-sm">{data?.remarks || ''}</div>
               </div>
             </div>
 
-            <div className="flex justify-between pt-8 border-t-2 border-gray-800">
+            <div className="flex justify-between items-end pt-8 border-t-2 border-gray-900">
               <div>
                 <div className="border-b border-black w-48 mb-2"></div>
                 <div className="text-center font-bold">Night Auditor</div>

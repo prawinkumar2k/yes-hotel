@@ -16,6 +16,8 @@ export interface IRefund extends Document {
   status: RefundStatus;
   razorpayRefundId?: string;
   initiatedBy: mongoose.Types.ObjectId;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 const RefundSchema = new Schema<IRefund>(

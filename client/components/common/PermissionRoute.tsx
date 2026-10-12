@@ -14,9 +14,10 @@ export const PermissionRoute: React.FC<PermissionRouteProps> = ({
   action = "VIEW", 
   children 
 }) => {
-  const { user, isLoading: authLoading } = useAuth();
+  const { user, logout, isLoading: authLoading } = useAuth();
   const { 
     hasPermission, 
+    refreshPermissions,
     isLoading: permLoading 
   } = usePermissions();
   const location = useLocation();
@@ -53,8 +54,25 @@ export const PermissionRoute: React.FC<PermissionRouteProps> = ({
           <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
             You do not have permission to access this resource. If you believe this is an error, please contact your administrator.
           </p>
-          <div className="text-xs text-gray-400 font-mono bg-gray-50 dark:bg-gray-900 p-2 rounded">
+          <div className="text-xs text-gray-400 font-mono bg-gray-50 dark:bg-gray-900 p-2 rounded mb-6">
             Missing: {pageKey}.{action}
+          </div>
+          <div className="flex flex-col gap-2">
+            <button
+              onClick={() => refreshPermissions()}
+              className="w-full py-2 px-4 bg-primary text-primary-foreground font-medium rounded-lg text-sm hover:opacity-90 transition-opacity"
+            >
+              Retry Access Check
+            </button>
+            <button
+              onClick={() => {
+                logout();
+                window.location.href = "/admin/login";
+              }}
+              className="w-full py-2 px-4 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 font-medium rounded-lg text-sm hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+            >
+              Sign In Again
+            </button>
           </div>
         </div>
       </div>

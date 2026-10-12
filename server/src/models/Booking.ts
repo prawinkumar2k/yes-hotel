@@ -237,7 +237,7 @@ export interface IBooking extends Document {
 
 const BookingSchema = new Schema<IBooking>(
   {
-    propertyId: { type: Schema.Types.ObjectId, ref: "Property", required: true },
+    propertyId: { type: Schema.Types.ObjectId, ref: "Property" },
     bookingReference: { type: String, required: true, unique: true },
 
     // ── REGISTRATION CARD: Section A ──
@@ -352,7 +352,7 @@ const BookingSchema = new Schema<IBooking>(
 
     folio: { type: Schema.Types.ObjectId, ref: "Folio" },
 
-    company: { type: Schema.Types.ObjectId, ref: "Company" },
+    company: { type: Schema.Types.ObjectId, ref: "CorporateAccount" },
     groupId: { type: Schema.Types.ObjectId },
     travelAgent: { type: String },
     otaName: { type: String },
@@ -389,8 +389,6 @@ BookingSchema.index({ checkOutDate: 1, status: 1 });
 BookingSchema.index({ assignedRoom: 1, status: 1 }, { sparse: true });
 BookingSchema.index({ source: 1, createdAt: -1 });
 BookingSchema.index({ isVipGuest: 1, checkInDate: 1 }, { sparse: true });
-// Bill number lookup (registration card search)
-BookingSchema.index({ billNumber: 1 }, { sparse: true });
 // Guest search by phone number
 BookingSchema.index({ "guestDetails.phone": 1 });
 // Property-level queries

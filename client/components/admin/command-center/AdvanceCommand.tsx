@@ -14,43 +14,60 @@ export function AdvanceCommand({ advances }: { advances: any }) {
   if (!advances) return null;
 
   return (
-    <div className="bg-hotel-ivory/30 border border-hotel-charcoal/10 rounded-xl overflow-hidden shadow-sm">
-      <div className="flex justify-between items-center p-4 border-b border-hotel-charcoal/5 bg-white">
-        <div className="flex items-center gap-2 text-hotel-charcoal font-semibold">
-          <Wallet size={18} className="text-hotel-gold" />
-          Advance Payments
+    <div className="bg-[#121316] rounded-2xl border border-white/10 p-5 shadow-xl flex flex-col h-full">
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <div className="p-2 rounded-lg bg-hotel-gold/10 text-hotel-gold">
+            <Wallet size={18} />
+          </div>
+          <div>
+            <h3 className="font-serif font-bold text-base text-white">Advance Payments</h3>
+            <p className="text-[11px] text-zinc-400">Deposits & Prepayments</p>
+          </div>
         </div>
-        <Link to="/admin/advances" className="text-xs text-semantic-info font-medium flex items-center hover:underline whitespace-nowrap flex-shrink-0">
-          View Ledger <ArrowRight size={14} className="ml-1" />
+        <Link to="/admin/advances" className="text-xs text-hotel-gold hover:underline font-semibold whitespace-nowrap flex-shrink-0">
+          View Ledger &rarr;
         </Link>
       </div>
-      <div className="p-4 grid grid-cols-2 md:grid-cols-4 gap-4 bg-white">
-        <div className="p-3 bg-hotel-gray rounded-lg border border-hotel-charcoal/5">
-          <div className="text-xs text-hotel-charcoal/60 mb-1 flex items-center gap-1 uppercase tracking-wide whitespace-nowrap overflow-hidden text-ellipsis font-semibold">
-            <Wallet size={12} className="text-hotel-gold"/> Held
+      <div className="grid grid-cols-2 gap-4 flex-1">
+        <div className="p-4 rounded-xl bg-black/40 border border-white/5">
+          <div className="flex justify-between text-zinc-400 mb-1">
+            <span className="text-[11px] font-bold uppercase tracking-wide whitespace-nowrap overflow-hidden text-ellipsis">Held</span>
+            <Wallet size={14} className="text-hotel-gold" />
           </div>
-          <div className="text-xl font-bold text-hotel-charcoal">{formatCurrency(advances.held)}</div>
+          <span className="font-sans text-xl font-bold text-white">
+            {formatCurrency(advances.held)}
+          </span>
         </div>
         
-        <div className="p-3 bg-hotel-gray rounded-lg border border-hotel-charcoal/5">
-          <div className="text-xs text-hotel-charcoal/60 mb-1 flex items-center gap-1 uppercase tracking-wide whitespace-nowrap overflow-hidden text-ellipsis font-semibold">
-            <ArrowDownLeft size={12} className="text-semantic-success"/> Received Today
+        <div className="p-4 rounded-xl bg-black/40 border border-white/5">
+          <div className="flex justify-between text-zinc-400 mb-1">
+            <span className="text-[11px] font-bold uppercase tracking-wide whitespace-nowrap overflow-hidden text-ellipsis">Received Today</span>
+            <ArrowDownLeft size={14} className="text-emerald-400" />
           </div>
-          <div className="text-xl font-bold text-semantic-success">{formatCurrency(advances.receivedToday)}</div>
+          <span className="font-sans text-xl font-bold text-white">
+            {formatCurrency(advances.receivedToday)}
+          </span>
         </div>
 
-        <div className="p-3 bg-hotel-gray rounded-lg border border-hotel-charcoal/5">
-          <div className="text-xs text-hotel-charcoal/60 mb-1 flex items-center gap-1 uppercase tracking-wide whitespace-nowrap overflow-hidden text-ellipsis font-semibold">
-            <ArrowUpRight size={12} className="text-semantic-info"/> Applied
+        <div className="p-4 rounded-xl bg-black/40 border border-white/5">
+          <div className="flex justify-between text-zinc-400 mb-1">
+            <span className="text-[11px] font-bold uppercase tracking-wide whitespace-nowrap overflow-hidden text-ellipsis">Applied</span>
+            <ArrowUpRight size={14} className="text-blue-400" />
           </div>
-          <div className="text-xl font-bold text-semantic-info">{formatCurrency(advances.applied)}</div>
+          <span className="font-sans text-xl font-bold text-white">
+            {formatCurrency(advances.applied)}
+          </span>
         </div>
 
-        <div className="p-3 bg-hotel-gray rounded-lg border border-hotel-charcoal/5">
-          <div className="text-xs text-hotel-charcoal/60 mb-1 flex items-center gap-1 uppercase tracking-wide whitespace-nowrap overflow-hidden text-ellipsis font-semibold">
-            <RefreshCw size={12} className="text-semantic-warning"/> Refunded
+        <div className="p-4 rounded-xl bg-black/40 border border-white/5">
+          <div className="flex justify-between text-zinc-400 mb-1">
+            <span className="text-[11px] font-bold uppercase tracking-wide whitespace-nowrap overflow-hidden text-ellipsis">Refunded</span>
+            <RefreshCw size={14} className="text-amber-400" />
           </div>
-          <div className="text-xl font-bold text-semantic-warning">{formatCurrency(advances.refunded)}</div>
+          <span className="font-sans text-xl font-bold text-white">
+            {formatCurrency(advances.refunded)}
+          </span>
         </div>
       </div>
     </div>

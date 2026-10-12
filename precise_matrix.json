@@ -1,0 +1,74 @@
+[
+  {
+    "route": "/customer/dashboard",
+    "component": "ProtectedRoute",
+    "file": "client/components/common/ProtectedRoute.tsx",
+    "apiCalls": [],
+    "mockFlags": [],
+    "status": "NO_DIRECT_API"
+  },
+  {
+    "route": "/customer/bookings",
+    "component": "ProtectedRoute",
+    "file": "client/components/common/ProtectedRoute.tsx",
+    "apiCalls": [],
+    "mockFlags": [],
+    "status": "NO_DIRECT_API"
+  },
+  {
+    "route": "/customer/bookings/:id",
+    "component": "ProtectedRoute",
+    "file": "client/components/common/ProtectedRoute.tsx",
+    "apiCalls": [],
+    "mockFlags": [],
+    "status": "NO_DIRECT_API"
+  },
+  {
+    "route": "/customer/bookings/:id/folio",
+    "component": "ProtectedRoute",
+    "file": "client/components/common/ProtectedRoute.tsx",
+    "apiCalls": [],
+    "mockFlags": [],
+    "status": "NO_DIRECT_API"
+  },
+  {
+    "route": "/customer/profile",
+    "component": "ProtectedRoute",
+    "file": "client/components/common/ProtectedRoute.tsx",
+    "apiCalls": [],
+    "mockFlags": [],
+    "status": "NO_DIRECT_API"
+  },
+  {
+    "route": "/customer/payments",
+    "component": "ProtectedRoute",
+    "file": "client/components/common/ProtectedRoute.tsx",
+    "apiCalls": [],
+    "mockFlags": [],
+    "status": "NO_DIRECT_API"
+  },
+  {
+    "route": "/customer/reviews",
+    "component": "ProtectedRoute",
+    "file": "client/components/common/ProtectedRoute.tsx",
+    "apiCalls": [],
+    "mockFlags": [],
+    "status": "NO_DIRECT_API"
+  },
+  {
+    "route": "/customer/requests",
+    "component": "ProtectedRoute",
+    "file": "client/components/common/ProtectedRoute.tsx",
+    "apiCalls": [],
+    "mockFlags": [],
+    "status": "NO_DIRECT_API"
+  },
+  {
+    "route": "/customer/loyalty",
+    "component": "ProtectedRoute",
+    "file": "client/components/common/ProtectedRoute.tsx",
+    "apiCalls": [],
+    "mockFlags": [],
+    "status": "NO_DIRECT_API"
+  }
+]

@@ -1,7 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-import { Loader2 } from "lucide-react";
+import { Loader2, Download } from "lucide-react";
 import { format } from "date-fns";
+import { exportToCSV } from "@/lib/utils";
 
 export default function DaySummaryTab() {
   const { data, isLoading, error } = useQuery({
@@ -18,8 +19,41 @@ export default function DaySummaryTab() {
   const d = data?.data;
   if (!d) return <div className="p-4 text-gray-500">No data available</div>;
 
+  const handleExport = () => {
+    const csvData = [
+      { Metric: "Total Rooms", Value: d.totalRooms },
+      { Metric: "Check In", Value: d.checkIns },
+      { Metric: "Check Out", Value: d.checkOuts },
+      { Metric: "Day Use", Value: d.dayUses },
+      { Metric: "Occupied Rooms", Value: d.occupiedRooms },
+      { Metric: "Total Pax", Value: d.totalPax },
+      { Metric: "Cancelled", Value: d.cancelled },
+      { Metric: "No Show", Value: d.noShows },
+      { Metric: "Inquiries", Value: d.inquiries || 0 },
+      { Metric: "Walkin", Value: d.walkins },
+      { Metric: "Reserved", Value: d.agencies },
+      { Metric: "OTA", Value: d.otas },
+      { Metric: "Resrv. Adv.", Value: d.resrvAdv },
+      { Metric: "Room Adv.", Value: d.roomAdv },
+      { Metric: "Partial", Value: d.partial },
+      { Metric: "Final", Value: d.final },
+      { Metric: "Adv. Adjd.", Value: d.advAdjd },
+      { Metric: "Cash", Value: d.paymentModes?.CASH },
+      { Metric: "Paytm", Value: d.paymentModes?.PAYTM },
+      { Metric: "HDFC UPI", Value: d.paymentModes?.UPI },
+      { Metric: "Card", Value: d.paymentModes?.CARD },
+      { Metric: "OTA Credit", Value: d.paymentModes?.OTA_CREDIT },
+      { Metric: "Sales Room", Value: d.salesRoom || 0 },
+      { Metric: "Misc.", Value: d.misc || 0 },
+    ];
+    exportToCSV(csvData, `DaySummary_${format(new Date(), "yyyy_MM_dd")}`);
+  };
+
   return (
-    <div className="bg-white rounded-lg shadow-sm border p-8 max-w-4xl mx-auto text-sm">
+    <div className="bg-white rounded-lg shadow-sm border p-8 max-w-4xl mx-auto text-sm relative">
+      <button onClick={handleExport} className="absolute top-8 right-8 flex items-center gap-2 bg-hotel-black text-white px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-gray-800 transition">
+        <Download size={14} /> Export CSV
+      </button>
       <div className="text-center border-b pb-4 mb-6">
         <h2 className="text-2xl font-serif text-hotel-black">YH - Day Sales Summary</h2>
         <p className="text-gray-500">

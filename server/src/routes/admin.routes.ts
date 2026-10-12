@@ -11,7 +11,7 @@ import {
   getMaintenanceTickets, createMaintenanceTicket, updateMaintenanceTicket
 } from "../controllers/maintenance.controller";
 import { getContactMessages, updateContactStatus, deleteContactMessage } from "../controllers/contact.controller";
-import { getBookingEnquiries, updateBookingEnquiryStatus, deleteBookingEnquiry } from "../controllers/bookingEnquiry.controller";
+import { getBookingEnquiries, updateBookingEnquiryStatus, deleteBookingEnquiry, getBookingEnquiryById, createAdminEnquiry, updateBookingEnquiry, addFollowUp, convertEnquiryToBooking } from "../controllers/bookingEnquiry.controller";
 import { getAllReviews, moderateReview } from "../controllers/review.controller";
 import {
   getAllCategories,
@@ -61,9 +61,14 @@ router.get("/contact-messages", protect, requirePropertyAccess, requirePermissio
 router.patch("/contact-messages/:id/status", protect, requirePropertyAccess, requirePermission("COMPLAINTS", "UPDATE"), updateContactStatus);
 router.delete("/contact-messages/:id", protect, requirePropertyAccess, requirePermission("COMPLAINTS", "DELETE"), deleteContactMessage);
 
-// Booking Enquiries (chatbot-collected leads)
+// Booking Enquiries (leads and workflow)
 router.get("/booking-enquiries", protect, requirePropertyAccess, requirePermission("ENQUIRIES", "VIEW"), getBookingEnquiries);
+router.post("/booking-enquiries", protect, requirePropertyAccess, requirePermission("ENQUIRIES", "CREATE"), createAdminEnquiry);
+router.get("/booking-enquiries/:id", protect, requirePropertyAccess, requirePermission("ENQUIRIES", "VIEW"), getBookingEnquiryById);
+router.patch("/booking-enquiries/:id", protect, requirePropertyAccess, requirePermission("ENQUIRIES", "EDIT"), updateBookingEnquiry);
 router.patch("/booking-enquiries/:id/status", protect, requirePropertyAccess, requirePermission("ENQUIRIES", "EDIT"), updateBookingEnquiryStatus);
+router.post("/booking-enquiries/:id/follow-up", protect, requirePropertyAccess, requirePermission("ENQUIRIES", "EDIT"), addFollowUp);
+router.post("/booking-enquiries/:id/convert", protect, requirePropertyAccess, requirePermission("ENQUIRIES", "EDIT"), convertEnquiryToBooking);
 router.delete("/booking-enquiries/:id", protect, requirePropertyAccess, requirePermission("ENQUIRIES", "DELETE"), deleteBookingEnquiry);
 
 // Reviews (moderation)
@@ -83,5 +88,36 @@ router.post("/pricing", protect, requirePropertyAccess, requirePermission("ROOM_
 router.patch("/pricing/:id", protect, requirePropertyAccess, requirePermission("ROOM_CATEGORIES", "EDIT"), updatePricingRule);
 router.delete("/pricing/:id", protect, requirePropertyAccess, requirePermission("ROOM_CATEGORIES", "DELETE"), deletePricingRule);
 
-export default router;
+// Master Data (Floors, Amenities, Bed Types, Room Views)
+import {
+  getFloors, createFloor, updateFloor, deleteFloor,
+  getAmenities, createAmenity, updateAmenity, deleteAmenity,
+  getBedTypes, createBedType, updateBedType, deleteBedType,
+  getRoomViews, createRoomView, updateRoomView, deleteRoomView
+} from "../controllers/master-data.controller";
 
+// Master Data - Floors
+router.get("/master-data/floors", protect, requirePropertyAccess, requirePermission("SETTINGS", "VIEW"), getFloors);
+router.post("/master-data/floors", protect, requirePropertyAccess, requirePermission("SETTINGS", "CREATE"), createFloor);
+router.patch("/master-data/floors/:id", protect, requirePropertyAccess, requirePermission("SETTINGS", "EDIT"), updateFloor);
+router.delete("/master-data/floors/:id", protect, requirePropertyAccess, requirePermission("SETTINGS", "DELETE"), deleteFloor);
+
+// Master Data - Amenities
+router.get("/master-data/amenities", protect, requirePropertyAccess, requirePermission("SETTINGS", "VIEW"), getAmenities);
+router.post("/master-data/amenities", protect, requirePropertyAccess, requirePermission("SETTINGS", "CREATE"), createAmenity);
+router.patch("/master-data/amenities/:id", protect, requirePropertyAccess, requirePermission("SETTINGS", "EDIT"), updateAmenity);
+router.delete("/master-data/amenities/:id", protect, requirePropertyAccess, requirePermission("SETTINGS", "DELETE"), deleteAmenity);
+
+// Master Data - Bed Types
+router.get("/master-data/bed-types", protect, requirePropertyAccess, requirePermission("SETTINGS", "VIEW"), getBedTypes);
+router.post("/master-data/bed-types", protect, requirePropertyAccess, requirePermission("SETTINGS", "CREATE"), createBedType);
+router.patch("/master-data/bed-types/:id", protect, requirePropertyAccess, requirePermission("SETTINGS", "EDIT"), updateBedType);
+router.delete("/master-data/bed-types/:id", protect, requirePropertyAccess, requirePermission("SETTINGS", "DELETE"), deleteBedType);
+
+// Master Data - Room Views
+router.get("/master-data/room-views", protect, requirePropertyAccess, requirePermission("SETTINGS", "VIEW"), getRoomViews);
+router.post("/master-data/room-views", protect, requirePropertyAccess, requirePermission("SETTINGS", "CREATE"), createRoomView);
+router.patch("/master-data/room-views/:id", protect, requirePropertyAccess, requirePermission("SETTINGS", "EDIT"), updateRoomView);
+router.delete("/master-data/room-views/:id", protect, requirePropertyAccess, requirePermission("SETTINGS", "DELETE"), deleteRoomView);
+
+export default router;

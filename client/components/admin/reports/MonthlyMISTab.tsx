@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-import { Loader2 } from "lucide-react";
+import { Loader2, Download } from "lucide-react";
+import { exportToCSV } from "@/lib/utils";
 
 export default function MonthlyMISTab() {
   const [month, setMonth] = useState(() => new Date().toISOString().substring(0, 7));
@@ -33,6 +34,34 @@ export default function MonthlyMISTab() {
     return acc;
   }, {});
 
+  const handleExport = () => {
+    const csvData = rows.map((r: any) => ({
+      Date: r.date,
+      Cash: r.cash,
+      Card: r.card,
+      "Gpay / UPI": r.upi,
+      Paytm: r.paytm,
+      "OTA Credit": r.ota,
+      "Day Total Recd": r.dayTotal,
+      Expenses: r.expenses,
+      "Refunds / Advance Adjd": r.refunds,
+      "Grand Total Net": r.grandTotal,
+    }));
+    csvData.push({
+      Date: "TOTAL",
+      Cash: totals.cash,
+      Card: totals.card,
+      "Gpay / UPI": totals.upi,
+      Paytm: totals.paytm,
+      "OTA Credit": totals.ota,
+      "Day Total Recd": totals.dayTotal,
+      Expenses: totals.expenses,
+      "Refunds / Advance Adjd": totals.refunds,
+      "Grand Total Net": totals.grandTotal,
+    });
+    exportToCSV(csvData, `MonthlyMIS_${month}`);
+  };
+
   return (
     <div className="bg-white rounded-lg shadow-sm border p-6 overflow-hidden text-sm">
       <div className="flex justify-between items-center mb-6">
@@ -40,13 +69,16 @@ export default function MonthlyMISTab() {
           <h2 className="text-2xl font-serif text-hotel-black">Monthly MIS & Cash Sheet</h2>
           <p className="text-gray-500">Comprehensive daily financial tracking</p>
         </div>
-        <div>
+        <div className="flex items-center gap-4">
           <input 
             type="month" 
             className="border rounded px-3 py-2 text-sm"
             value={month}
             onChange={(e) => setMonth(e.target.value)}
           />
+          <button onClick={handleExport} className="flex items-center gap-2 bg-hotel-black text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-800 transition">
+            <Download size={16} /> Export CSV
+          </button>
         </div>
       </div>
 

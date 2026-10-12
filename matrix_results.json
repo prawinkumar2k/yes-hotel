@@ -1,0 +1,976 @@
+[
+  {
+    "route": "/",
+    "component": "Index",
+    "file": "client/pages/Index.tsx",
+    "apiCalls": [],
+    "mockFlags": [],
+    "status": "STATIC_OR_SUBCOMPONENTS"
+  },
+  {
+    "route": "/about",
+    "component": "AboutPage",
+    "file": "client/pages/public/AboutPage.tsx",
+    "apiCalls": [],
+    "mockFlags": [],
+    "status": "STATIC_OR_SUBCOMPONENTS"
+  },
+  {
+    "route": "/rooms",
+    "component": "RoomsPage",
+    "file": "client/pages/public/RoomsPage.tsx",
+    "apiCalls": [
+      "FETCH /api/rooms/categories"
+    ],
+    "mockFlags": [],
+    "status": "CONNECTED"
+  },
+  {
+    "route": "/rooms/:slug",
+    "component": "RoomDetailsPage",
+    "file": "client/pages/public/RoomDetailsPage.tsx",
+    "apiCalls": [
+      "FETCH /api/rooms/categories/${slug}"
+    ],
+    "mockFlags": [],
+    "status": "CONNECTED"
+  },
+  {
+    "route": "/gallery",
+    "component": "GalleryPage",
+    "file": "client/pages/public/GalleryPage.tsx",
+    "apiCalls": [],
+    "mockFlags": [],
+    "status": "STATIC_OR_SUBCOMPONENTS"
+  },
+  {
+    "route": "/faq",
+    "component": "FAQPage",
+    "file": "client/pages/public/FAQPage.tsx",
+    "apiCalls": [],
+    "mockFlags": [],
+    "status": "STATIC_OR_SUBCOMPONENTS"
+  },
+  {
+    "route": "/contact",
+    "component": "ContactPage",
+    "file": "client/pages/public/ContactPage.tsx",
+    "apiCalls": [
+      "FETCH /api/contact"
+    ],
+    "mockFlags": [],
+    "status": "CONNECTED"
+  },
+  {
+    "route": "/search",
+    "component": "SearchPage",
+    "file": "client/pages/booking/SearchPage.tsx",
+    "apiCalls": [
+      "FETCH /api/bookings/availability"
+    ],
+    "mockFlags": [],
+    "status": "CONNECTED"
+  },
+  {
+    "route": "/booking",
+    "component": "Inline/Redirect",
+    "file": "N/A",
+    "apiCalls": [],
+    "mockFlags": [],
+    "status": "REDIRECT"
+  },
+  {
+    "route": "/booking/guest-details",
+    "component": "GuestDetailsPage",
+    "file": "client/pages/booking/GuestDetailsPage.tsx",
+    "apiCalls": [],
+    "mockFlags": [],
+    "status": "STATIC_OR_SUBCOMPONENTS"
+  },
+  {
+    "route": "/booking/payment",
+    "component": "PaymentPage",
+    "file": "client/pages/booking/PaymentPage.tsx",
+    "apiCalls": [
+      "FETCH /api/coupons/validate",
+      "FETCH /api/rooms/categories",
+      "FETCH /api/bookings",
+      "FETCH /api/payments/create-order",
+      "FETCH /api/bookings/${currentBookingId}/confirm-demo",
+      "FETCH /api/payments/verify"
+    ],
+    "mockFlags": [],
+    "status": "CONNECTED"
+  },
+  {
+    "route": "/booking/confirmation",
+    "component": "ConfirmationPage",
+    "file": "client/pages/booking/ConfirmationPage.tsx",
+    "apiCalls": [],
+    "mockFlags": [],
+    "status": "STATIC_OR_SUBCOMPONENTS"
+  },
+  {
+    "route": "/terms-and-conditions",
+    "component": "LegalPage",
+    "file": "client/pages/public/LegalPage.tsx",
+    "apiCalls": [
+      "GET /content/${contentKey}"
+    ],
+    "mockFlags": [],
+    "status": "CONNECTED"
+  },
+  {
+    "route": "/privacy-policy",
+    "component": "LegalPage",
+    "file": "client/pages/public/LegalPage.tsx",
+    "apiCalls": [
+      "GET /content/${contentKey}"
+    ],
+    "mockFlags": [],
+    "status": "CONNECTED"
+  },
+  {
+    "route": "/cancellation-and-refund",
+    "component": "LegalPage",
+    "file": "client/pages/public/LegalPage.tsx",
+    "apiCalls": [
+      "GET /content/${contentKey}"
+    ],
+    "mockFlags": [],
+    "status": "CONNECTED"
+  },
+  {
+    "route": "/login",
+    "component": "LoginPage",
+    "file": "client/pages/auth/LoginPage.tsx",
+    "apiCalls": [
+      "FETCH /api/auth/login"
+    ],
+    "mockFlags": [],
+    "status": "CONNECTED"
+  },
+  {
+    "route": "/register",
+    "component": "RegisterPage",
+    "file": "client/pages/auth/RegisterPage.tsx",
+    "apiCalls": [
+      "FETCH /api/auth/register"
+    ],
+    "mockFlags": [],
+    "status": "CONNECTED"
+  },
+  {
+    "route": "/forgot-password",
+    "component": "ForgotPasswordPage",
+    "file": "client/pages/auth/ForgotPasswordPage.tsx",
+    "apiCalls": [
+      "FETCH /api/auth/forgot-password"
+    ],
+    "mockFlags": [],
+    "status": "CONNECTED"
+  },
+  {
+    "route": "/reset-password",
+    "component": "ResetPasswordPage",
+    "file": "client/pages/auth/ResetPasswordPage.tsx",
+    "apiCalls": [
+      "FETCH /api/auth/reset-password"
+    ],
+    "mockFlags": [],
+    "status": "CONNECTED"
+  },
+  {
+    "route": "/customer/dashboard",
+    "component": "ProtectedRoute",
+    "file": "client/components/common/ProtectedRoute.tsx",
+    "apiCalls": [],
+    "mockFlags": [],
+    "status": "STATIC_OR_SUBCOMPONENTS"
+  },
+  {
+    "route": "/customer/bookings",
+    "component": "ProtectedRoute",
+    "file": "client/components/common/ProtectedRoute.tsx",
+    "apiCalls": [],
+    "mockFlags": [],
+    "status": "STATIC_OR_SUBCOMPONENTS"
+  },
+  {
+    "route": "/customer/bookings/:id",
+    "component": "ProtectedRoute",
+    "file": "client/components/common/ProtectedRoute.tsx",
+    "apiCalls": [],
+    "mockFlags": [],
+    "status": "STATIC_OR_SUBCOMPONENTS"
+  },
+  {
+    "route": "/customer/bookings/:id/folio",
+    "component": "ProtectedRoute",
+    "file": "client/components/common/ProtectedRoute.tsx",
+    "apiCalls": [],
+    "mockFlags": [],
+    "status": "STATIC_OR_SUBCOMPONENTS"
+  },
+  {
+    "route": "/customer/profile",
+    "component": "ProtectedRoute",
+    "file": "client/components/common/ProtectedRoute.tsx",
+    "apiCalls": [],
+    "mockFlags": [],
+    "status": "STATIC_OR_SUBCOMPONENTS"
+  },
+  {
+    "route": "/customer/payments",
+    "component": "ProtectedRoute",
+    "file": "client/components/common/ProtectedRoute.tsx",
+    "apiCalls": [],
+    "mockFlags": [],
+    "status": "STATIC_OR_SUBCOMPONENTS"
+  },
+  {
+    "route": "/customer/reviews",
+    "component": "ProtectedRoute",
+    "file": "client/components/common/ProtectedRoute.tsx",
+    "apiCalls": [],
+    "mockFlags": [],
+    "status": "STATIC_OR_SUBCOMPONENTS"
+  },
+  {
+    "route": "/customer/requests",
+    "component": "ProtectedRoute",
+    "file": "client/components/common/ProtectedRoute.tsx",
+    "apiCalls": [],
+    "mockFlags": [],
+    "status": "STATIC_OR_SUBCOMPONENTS"
+  },
+  {
+    "route": "/customer/loyalty",
+    "component": "ProtectedRoute",
+    "file": "client/components/common/ProtectedRoute.tsx",
+    "apiCalls": [],
+    "mockFlags": [],
+    "status": "STATIC_OR_SUBCOMPONENTS"
+  },
+  {
+    "route": "/admin/dashboard",
+    "component": "AdminDashboard",
+    "file": "client/pages/admin/AdminDashboard.tsx",
+    "apiCalls": [
+      "FETCH /api/dashboard/command-center"
+    ],
+    "mockFlags": [],
+    "status": "CONNECTED"
+  },
+  {
+    "route": "/admin/front-desk",
+    "component": "AdminLayout",
+    "file": "client/components/admin/AdminLayout.tsx",
+    "apiCalls": [
+      "FETCH /api/front-desk/summary",
+      "FETCH /api/admin/booking-enquiries"
+    ],
+    "mockFlags": [],
+    "status": "CONNECTED"
+  },
+  {
+    "route": "/admin/guest-registration",
+    "component": "AdminLayout",
+    "file": "client/components/admin/AdminLayout.tsx",
+    "apiCalls": [
+      "FETCH /api/front-desk/summary",
+      "FETCH /api/admin/booking-enquiries"
+    ],
+    "mockFlags": [],
+    "status": "CONNECTED"
+  },
+  {
+    "route": "/admin/room-rack",
+    "component": "AdminLayout",
+    "file": "client/components/admin/AdminLayout.tsx",
+    "apiCalls": [
+      "FETCH /api/front-desk/summary",
+      "FETCH /api/admin/booking-enquiries"
+    ],
+    "mockFlags": [],
+    "status": "CONNECTED"
+  },
+  {
+    "route": "/admin/bookings",
+    "component": "AdminLayout",
+    "file": "client/components/admin/AdminLayout.tsx",
+    "apiCalls": [
+      "FETCH /api/front-desk/summary",
+      "FETCH /api/admin/booking-enquiries"
+    ],
+    "mockFlags": [],
+    "status": "CONNECTED"
+  },
+  {
+    "route": "/admin/ota-bookings",
+    "component": "AdminLayout",
+    "file": "client/components/admin/AdminLayout.tsx",
+    "apiCalls": [
+      "FETCH /api/front-desk/summary",
+      "FETCH /api/admin/booking-enquiries"
+    ],
+    "mockFlags": [],
+    "status": "CONNECTED"
+  },
+  {
+    "route": "/admin/bookings/:id",
+    "component": "AdminLayout",
+    "file": "client/components/admin/AdminLayout.tsx",
+    "apiCalls": [
+      "FETCH /api/front-desk/summary",
+      "FETCH /api/admin/booking-enquiries"
+    ],
+    "mockFlags": [],
+    "status": "CONNECTED"
+  },
+  {
+    "route": "/admin/bookings/:id/folio-print",
+    "component": "AdminFolioPrint",
+    "file": "client/pages/admin/AdminFolioPrint.tsx",
+    "apiCalls": [
+      "GET /admin/bookings/${activeBookingId}",
+      "GET /folios/booking/${activeBookingId}${isGroupFolio",
+      "GET /advances"
+    ],
+    "mockFlags": [],
+    "status": "CONNECTED"
+  },
+  {
+    "route": "/admin/bookings/:id/grc-print",
+    "component": "AdminGRCPrint",
+    "file": "client/pages/admin/AdminGRCPrint.tsx",
+    "apiCalls": [
+      "GET /admin/bookings/${id}",
+      "GET /advances",
+      "GET /admin/bookings"
+    ],
+    "mockFlags": [],
+    "status": "CONNECTED"
+  },
+  {
+    "route": "/admin/calendar",
+    "component": "AdminLayout",
+    "file": "client/components/admin/AdminLayout.tsx",
+    "apiCalls": [
+      "FETCH /api/front-desk/summary",
+      "FETCH /api/admin/booking-enquiries"
+    ],
+    "mockFlags": [],
+    "status": "CONNECTED"
+  },
+  {
+    "route": "/admin/check-in",
+    "component": "AdminLayout",
+    "file": "client/components/admin/AdminLayout.tsx",
+    "apiCalls": [
+      "FETCH /api/front-desk/summary",
+      "FETCH /api/admin/booking-enquiries"
+    ],
+    "mockFlags": [],
+    "status": "CONNECTED"
+  },
+  {
+    "route": "/admin/check-out",
+    "component": "AdminLayout",
+    "file": "client/components/admin/AdminLayout.tsx",
+    "apiCalls": [
+      "FETCH /api/front-desk/summary",
+      "FETCH /api/admin/booking-enquiries"
+    ],
+    "mockFlags": [],
+    "status": "CONNECTED"
+  },
+  {
+    "route": "/admin/master-data",
+    "component": "AdminLayout",
+    "file": "client/components/admin/AdminLayout.tsx",
+    "apiCalls": [
+      "FETCH /api/front-desk/summary",
+      "FETCH /api/admin/booking-enquiries"
+    ],
+    "mockFlags": [],
+    "status": "CONNECTED"
+  },
+  {
+    "route": "/admin/master-data/amenities",
+    "component": "AdminLayout",
+    "file": "client/components/admin/AdminLayout.tsx",
+    "apiCalls": [
+      "FETCH /api/front-desk/summary",
+      "FETCH /api/admin/booking-enquiries"
+    ],
+    "mockFlags": [],
+    "status": "CONNECTED"
+  },
+  {
+    "route": "/admin/master-data/floors",
+    "component": "AdminLayout",
+    "file": "client/components/admin/AdminLayout.tsx",
+    "apiCalls": [
+      "FETCH /api/front-desk/summary",
+      "FETCH /api/admin/booking-enquiries"
+    ],
+    "mockFlags": [],
+    "status": "CONNECTED"
+  },
+  {
+    "route": "/admin/master-data/bed-types",
+    "component": "AdminLayout",
+    "file": "client/components/admin/AdminLayout.tsx",
+    "apiCalls": [
+      "FETCH /api/front-desk/summary",
+      "FETCH /api/admin/booking-enquiries"
+    ],
+    "mockFlags": [],
+    "status": "CONNECTED"
+  },
+  {
+    "route": "/admin/master-data/room-views",
+    "component": "AdminLayout",
+    "file": "client/components/admin/AdminLayout.tsx",
+    "apiCalls": [
+      "FETCH /api/front-desk/summary",
+      "FETCH /api/admin/booking-enquiries"
+    ],
+    "mockFlags": [],
+    "status": "CONNECTED"
+  },
+  {
+    "route": "/admin/rooms",
+    "component": "AdminLayout",
+    "file": "client/components/admin/AdminLayout.tsx",
+    "apiCalls": [
+      "FETCH /api/front-desk/summary",
+      "FETCH /api/admin/booking-enquiries"
+    ],
+    "mockFlags": [],
+    "status": "CONNECTED"
+  },
+  {
+    "route": "/admin/room-categories",
+    "component": "AdminLayout",
+    "file": "client/components/admin/AdminLayout.tsx",
+    "apiCalls": [
+      "FETCH /api/front-desk/summary",
+      "FETCH /api/admin/booking-enquiries"
+    ],
+    "mockFlags": [],
+    "status": "CONNECTED"
+  },
+  {
+    "route": "/admin/rate-plans",
+    "component": "AdminLayout",
+    "file": "client/components/admin/AdminLayout.tsx",
+    "apiCalls": [
+      "FETCH /api/front-desk/summary",
+      "FETCH /api/admin/booking-enquiries"
+    ],
+    "mockFlags": [],
+    "status": "CONNECTED"
+  },
+  {
+    "route": "/admin/pricing",
+    "component": "AdminLayout",
+    "file": "client/components/admin/AdminLayout.tsx",
+    "apiCalls": [
+      "FETCH /api/front-desk/summary",
+      "FETCH /api/admin/booking-enquiries"
+    ],
+    "mockFlags": [],
+    "status": "CONNECTED"
+  },
+  {
+    "route": "/admin/guests",
+    "component": "AdminLayout",
+    "file": "client/components/admin/AdminLayout.tsx",
+    "apiCalls": [
+      "FETCH /api/front-desk/summary",
+      "FETCH /api/admin/booking-enquiries"
+    ],
+    "mockFlags": [],
+    "status": "CONNECTED"
+  },
+  {
+    "route": "/admin/payments",
+    "component": "AdminLayout",
+    "file": "client/components/admin/AdminLayout.tsx",
+    "apiCalls": [
+      "FETCH /api/front-desk/summary",
+      "FETCH /api/admin/booking-enquiries"
+    ],
+    "mockFlags": [],
+    "status": "CONNECTED"
+  },
+  {
+    "route": "/admin/advances",
+    "component": "AdminLayout",
+    "file": "client/components/admin/AdminLayout.tsx",
+    "apiCalls": [
+      "FETCH /api/front-desk/summary",
+      "FETCH /api/admin/booking-enquiries"
+    ],
+    "mockFlags": [],
+    "status": "CONNECTED"
+  },
+  {
+    "route": "/admin/cashier-shifts",
+    "component": "AdminLayout",
+    "file": "client/components/admin/AdminLayout.tsx",
+    "apiCalls": [
+      "FETCH /api/front-desk/summary",
+      "FETCH /api/admin/booking-enquiries"
+    ],
+    "mockFlags": [],
+    "status": "CONNECTED"
+  },
+  {
+    "route": "/admin/refunds",
+    "component": "AdminLayout",
+    "file": "client/components/admin/AdminLayout.tsx",
+    "apiCalls": [
+      "FETCH /api/front-desk/summary",
+      "FETCH /api/admin/booking-enquiries"
+    ],
+    "mockFlags": [],
+    "status": "CONNECTED"
+  },
+  {
+    "route": "/admin/coupons",
+    "component": "AdminLayout",
+    "file": "client/components/admin/AdminLayout.tsx",
+    "apiCalls": [
+      "FETCH /api/front-desk/summary",
+      "FETCH /api/admin/booking-enquiries"
+    ],
+    "mockFlags": [],
+    "status": "CONNECTED"
+  },
+  {
+    "route": "/admin/housekeeping",
+    "component": "AdminLayout",
+    "file": "client/components/admin/AdminLayout.tsx",
+    "apiCalls": [
+      "FETCH /api/front-desk/summary",
+      "FETCH /api/admin/booking-enquiries"
+    ],
+    "mockFlags": [],
+    "status": "CONNECTED"
+  },
+  {
+    "route": "/admin/task-approvals",
+    "component": "AdminLayout",
+    "file": "client/components/admin/AdminLayout.tsx",
+    "apiCalls": [
+      "FETCH /api/front-desk/summary",
+      "FETCH /api/admin/booking-enquiries"
+    ],
+    "mockFlags": [],
+    "status": "CONNECTED"
+  },
+  {
+    "route": "/admin/maintenance",
+    "component": "AdminLayout",
+    "file": "client/components/admin/AdminLayout.tsx",
+    "apiCalls": [
+      "FETCH /api/front-desk/summary",
+      "FETCH /api/admin/booking-enquiries"
+    ],
+    "mockFlags": [],
+    "status": "CONNECTED"
+  },
+  {
+    "route": "/admin/staff",
+    "component": "AdminLayout",
+    "file": "client/components/admin/AdminLayout.tsx",
+    "apiCalls": [
+      "FETCH /api/front-desk/summary",
+      "FETCH /api/admin/booking-enquiries"
+    ],
+    "mockFlags": [],
+    "status": "CONNECTED"
+  },
+  {
+    "route": "/admin/gallery",
+    "component": "AdminLayout",
+    "file": "client/components/admin/AdminLayout.tsx",
+    "apiCalls": [
+      "FETCH /api/front-desk/summary",
+      "FETCH /api/admin/booking-enquiries"
+    ],
+    "mockFlags": [],
+    "status": "CONNECTED"
+  },
+  {
+    "route": "/admin/content",
+    "component": "AdminLayout",
+    "file": "client/components/admin/AdminLayout.tsx",
+    "apiCalls": [
+      "FETCH /api/front-desk/summary",
+      "FETCH /api/admin/booking-enquiries"
+    ],
+    "mockFlags": [],
+    "status": "CONNECTED"
+  },
+  {
+    "route": "/admin/faqs",
+    "component": "AdminLayout",
+    "file": "client/components/admin/AdminLayout.tsx",
+    "apiCalls": [
+      "FETCH /api/front-desk/summary",
+      "FETCH /api/admin/booking-enquiries"
+    ],
+    "mockFlags": [],
+    "status": "CONNECTED"
+  },
+  {
+    "route": "/admin/testimonials",
+    "component": "AdminLayout",
+    "file": "client/components/admin/AdminLayout.tsx",
+    "apiCalls": [
+      "FETCH /api/front-desk/summary",
+      "FETCH /api/admin/booking-enquiries"
+    ],
+    "mockFlags": [],
+    "status": "CONNECTED"
+  },
+  {
+    "route": "/admin/reviews",
+    "component": "AdminLayout",
+    "file": "client/components/admin/AdminLayout.tsx",
+    "apiCalls": [
+      "FETCH /api/front-desk/summary",
+      "FETCH /api/admin/booking-enquiries"
+    ],
+    "mockFlags": [],
+    "status": "CONNECTED"
+  },
+  {
+    "route": "/admin/contact-messages",
+    "component": "AdminLayout",
+    "file": "client/components/admin/AdminLayout.tsx",
+    "apiCalls": [
+      "FETCH /api/front-desk/summary",
+      "FETCH /api/admin/booking-enquiries"
+    ],
+    "mockFlags": [],
+    "status": "CONNECTED"
+  },
+  {
+    "route": "/admin/complaints",
+    "component": "AdminLayout",
+    "file": "client/components/admin/AdminLayout.tsx",
+    "apiCalls": [
+      "FETCH /api/front-desk/summary",
+      "FETCH /api/admin/booking-enquiries"
+    ],
+    "mockFlags": [],
+    "status": "CONNECTED"
+  },
+  {
+    "route": "/admin/reports/*",
+    "component": "AdminLayout",
+    "file": "client/components/admin/AdminLayout.tsx",
+    "apiCalls": [
+      "FETCH /api/front-desk/summary",
+      "FETCH /api/admin/booking-enquiries"
+    ],
+    "mockFlags": [],
+    "status": "CONNECTED"
+  },
+  {
+    "route": "/admin/in-house-list",
+    "component": "AdminLayout",
+    "file": "client/components/admin/AdminLayout.tsx",
+    "apiCalls": [
+      "FETCH /api/front-desk/summary",
+      "FETCH /api/admin/booking-enquiries"
+    ],
+    "mockFlags": [],
+    "status": "CONNECTED"
+  },
+  {
+    "route": "/admin/day-sales-summary",
+    "component": "AdminLayout",
+    "file": "client/components/admin/AdminLayout.tsx",
+    "apiCalls": [
+      "FETCH /api/front-desk/summary",
+      "FETCH /api/admin/booking-enquiries"
+    ],
+    "mockFlags": [],
+    "status": "CONNECTED"
+  },
+  {
+    "route": "/admin/monthly-mis",
+    "component": "AdminLayout",
+    "file": "client/components/admin/AdminLayout.tsx",
+    "apiCalls": [
+      "FETCH /api/front-desk/summary",
+      "FETCH /api/admin/booking-enquiries"
+    ],
+    "mockFlags": [],
+    "status": "CONNECTED"
+  },
+  {
+    "route": "/admin/enquiries",
+    "component": "AdminLayout",
+    "file": "client/components/admin/AdminLayout.tsx",
+    "apiCalls": [
+      "FETCH /api/front-desk/summary",
+      "FETCH /api/admin/booking-enquiries"
+    ],
+    "mockFlags": [],
+    "status": "CONNECTED"
+  },
+  {
+    "route": "/admin/enquiries/:id",
+    "component": "AdminLayout",
+    "file": "client/components/admin/AdminLayout.tsx",
+    "apiCalls": [
+      "FETCH /api/front-desk/summary",
+      "FETCH /api/admin/booking-enquiries"
+    ],
+    "mockFlags": [],
+    "status": "CONNECTED"
+  },
+  {
+    "route": "/admin/executive",
+    "component": "AdminLayout",
+    "file": "client/components/admin/AdminLayout.tsx",
+    "apiCalls": [
+      "FETCH /api/front-desk/summary",
+      "FETCH /api/admin/booking-enquiries"
+    ],
+    "mockFlags": [],
+    "status": "CONNECTED"
+  },
+  {
+    "route": "/admin/multi-property",
+    "component": "AdminLayout",
+    "file": "client/components/admin/AdminLayout.tsx",
+    "apiCalls": [
+      "FETCH /api/front-desk/summary",
+      "FETCH /api/admin/booking-enquiries"
+    ],
+    "mockFlags": [],
+    "status": "CONNECTED"
+  },
+  {
+    "route": "/admin/night-audit",
+    "component": "AdminLayout",
+    "file": "client/components/admin/AdminLayout.tsx",
+    "apiCalls": [
+      "FETCH /api/front-desk/summary",
+      "FETCH /api/admin/booking-enquiries"
+    ],
+    "mockFlags": [],
+    "status": "CONNECTED"
+  },
+  {
+    "route": "/staff/mobile-housekeeping",
+    "component": "AdminLayout",
+    "file": "client/components/admin/AdminLayout.tsx",
+    "apiCalls": [
+      "FETCH /api/front-desk/summary",
+      "FETCH /api/admin/booking-enquiries"
+    ],
+    "mockFlags": [],
+    "status": "CONNECTED"
+  },
+  {
+    "route": "/admin/analytics",
+    "component": "Inline/Redirect",
+    "file": "N/A",
+    "apiCalls": [],
+    "mockFlags": [],
+    "status": "REDIRECT"
+  },
+  {
+    "route": "/admin/settings",
+    "component": "AdminLayout",
+    "file": "client/components/admin/AdminLayout.tsx",
+    "apiCalls": [
+      "FETCH /api/front-desk/summary",
+      "FETCH /api/admin/booking-enquiries"
+    ],
+    "mockFlags": [],
+    "status": "CONNECTED"
+  },
+  {
+    "route": "/admin/settings/payment-channels",
+    "component": "AdminLayout",
+    "file": "client/components/admin/AdminLayout.tsx",
+    "apiCalls": [
+      "FETCH /api/front-desk/summary",
+      "FETCH /api/admin/booking-enquiries"
+    ],
+    "mockFlags": [],
+    "status": "CONNECTED"
+  },
+  {
+    "route": "/admin/audit-logs",
+    "component": "AdminLayout",
+    "file": "client/components/admin/AdminLayout.tsx",
+    "apiCalls": [
+      "FETCH /api/front-desk/summary",
+      "FETCH /api/admin/booking-enquiries"
+    ],
+    "mockFlags": [],
+    "status": "CONNECTED"
+  },
+  {
+    "route": "/admin/corporate-accounts",
+    "component": "AdminLayout",
+    "file": "client/components/admin/AdminLayout.tsx",
+    "apiCalls": [
+      "FETCH /api/front-desk/summary",
+      "FETCH /api/admin/booking-enquiries"
+    ],
+    "mockFlags": [],
+    "status": "CONNECTED"
+  },
+  {
+    "route": "/admin/banquets",
+    "component": "AdminLayout",
+    "file": "client/components/admin/AdminLayout.tsx",
+    "apiCalls": [
+      "FETCH /api/front-desk/summary",
+      "FETCH /api/admin/booking-enquiries"
+    ],
+    "mockFlags": [],
+    "status": "CONNECTED"
+  },
+  {
+    "route": "/admin/pos",
+    "component": "AdminLayout",
+    "file": "client/components/admin/AdminLayout.tsx",
+    "apiCalls": [
+      "FETCH /api/front-desk/summary",
+      "FETCH /api/admin/booking-enquiries"
+    ],
+    "mockFlags": [],
+    "status": "CONNECTED"
+  },
+  {
+    "route": "/admin/ancillary",
+    "component": "AdminLayout",
+    "file": "client/components/admin/AdminLayout.tsx",
+    "apiCalls": [
+      "FETCH /api/front-desk/summary",
+      "FETCH /api/admin/booking-enquiries"
+    ],
+    "mockFlags": [],
+    "status": "CONNECTED"
+  },
+  {
+    "route": "/admin/group-bookings",
+    "component": "AdminLayout",
+    "file": "client/components/admin/AdminLayout.tsx",
+    "apiCalls": [
+      "FETCH /api/front-desk/summary",
+      "FETCH /api/admin/booking-enquiries"
+    ],
+    "mockFlags": [],
+    "status": "CONNECTED"
+  },
+  {
+    "route": "/front-desk/dashboard",
+    "component": "FrontDeskDashboard",
+    "file": "client/pages/staff/FrontDeskDashboard.tsx",
+    "apiCalls": [
+      "FETCH /api/dashboard/command-center",
+      "FETCH /api/front-desk/summary"
+    ],
+    "mockFlags": [],
+    "status": "CONNECTED"
+  },
+  {
+    "route": "/housekeeping/dashboard",
+    "component": "HousekeepingDashboard",
+    "file": "client/pages/staff/HousekeepingDashboard.tsx",
+    "apiCalls": [
+      "FETCH /api/dashboard/command-center",
+      "FETCH /api/housekeeping/${id}"
+    ],
+    "mockFlags": [],
+    "status": "CONNECTED"
+  },
+  {
+    "route": "/maintenance/dashboard",
+    "component": "MaintenanceDashboard",
+    "file": "client/pages/staff/MaintenanceDashboard.tsx",
+    "apiCalls": [
+      "FETCH /api/dashboard/command-center",
+      "FETCH /api/admin/maintenance/${id}"
+    ],
+    "mockFlags": [],
+    "status": "CONNECTED"
+  },
+  {
+    "route": "/cashier/dashboard",
+    "component": "CashierDashboard",
+    "file": "client/pages/staff/CashierDashboard.tsx",
+    "apiCalls": [
+      "FETCH /api/dashboard/command-center",
+      "FETCH /api/cashier-shifts/current"
+    ],
+    "mockFlags": [],
+    "status": "CONNECTED"
+  },
+  {
+    "route": "/finance/dashboard",
+    "component": "FinanceDashboard",
+    "file": "client/pages/staff/FinanceDashboard.tsx",
+    "apiCalls": [
+      "FETCH /api/dashboard/command-center",
+      "FETCH /api/reports/executive-summary"
+    ],
+    "mockFlags": [],
+    "status": "CONNECTED"
+  },
+  {
+    "route": "/events/dashboard",
+    "component": "AdminLayout",
+    "file": "client/components/admin/AdminLayout.tsx",
+    "apiCalls": [
+      "FETCH /api/front-desk/summary",
+      "FETCH /api/admin/booking-enquiries"
+    ],
+    "mockFlags": [],
+    "status": "CONNECTED"
+  },
+  {
+    "route": "/staff/housekeeping",
+    "component": "HousekeepingDashboard",
+    "file": "client/pages/staff/HousekeepingDashboard.tsx",
+    "apiCalls": [
+      "FETCH /api/dashboard/command-center",
+      "FETCH /api/housekeeping/${id}"
+    ],
+    "mockFlags": [],
+    "status": "CONNECTED"
+  },
+  {
+    "route": "/staff/maintenance",
+    "component": "MaintenanceDashboard",
+    "file": "client/pages/staff/MaintenanceDashboard.tsx",
+    "apiCalls": [
+      "FETCH /api/dashboard/command-center",
+      "FETCH /api/admin/maintenance/${id}"
+    ],
+    "mockFlags": [],
+    "status": "CONNECTED"
+  },
+  {
+    "route": "*",
+    "component": "Inline/Redirect",
+    "file": "N/A",
+    "apiCalls": [],
+    "mockFlags": [],
+    "status": "REDIRECT"
+  }
+]

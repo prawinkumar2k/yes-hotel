@@ -91,6 +91,13 @@ export default function ChatWindow({ onMinimize, onClose }: { onMinimize: () => 
         availabilityStatus: "available" as const,
       };
       setBooking(next);
+      if (next.guestName && next.phone) {
+        submitBookingEnquiry({
+          ...next,
+          bookingStage: "CHATBOT_ROOM_SELECTED",
+          source: "CHATBOT",
+        }).catch(() => undefined);
+      }
       // Skip re-asking for whatever contact details we already collected earlier in this chat.
       if (next.guestName && next.phone) {
         say("I still have your contact details from earlier. Please review your booking enquiry before sending it.");
@@ -112,6 +119,16 @@ export default function ChatWindow({ onMinimize, onClose }: { onMinimize: () => 
     if (!booking.roomCategoryId) { navigate("/search"); return; }
     const { firstName, lastName } = splitFullName(booking.guestName);
     const guestDetails = { firstName, lastName, email: booking.email, phone: booking.phone };
+
+    // Register active enquiry with stage PAYMENT_PENDING so hotel staff see booking process started
+    if (booking.guestName && booking.phone) {
+      submitBookingEnquiry({
+        ...booking,
+        bookingStage: "PAYMENT_PENDING",
+        source: "CHATBOT",
+      }).catch(() => undefined);
+    }
+
     // Save whatever contact info we already have — even if incomplete — so
     // the guest-details form (if it still needs to render) pre-fills from
     // this chat instead of falling back to a logged-in staff account.
@@ -201,7 +218,26 @@ export default function ChatWindow({ onMinimize, onClose }: { onMinimize: () => 
       return;
     }
     if (field === "phone" && value.replace(/\D/g, "").length !== 10) return say("Please re-enter your phone number. It must contain exactly 10 digits.");
-    setBooking((current) => ({ ...current, [field]: value })); userSays(field === "email" && !value ? "I prefer not to share an email" : value);
+    const updated = { ...booking, [field]: value };
+    setBooking(updated);
+    userSays(field === "email" && !value ? "I prefer not to share an email" : value);
+
+    // Sync enquiry lead in the background as soon as contact details are gathered
+    if (updated.guestName && updated.phone) {
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      const dayAfter = new Date();
+      dayAfter.setDate(dayAfter.getDate() + 2);
+      submitBookingEnquiry({
+        ...updated,
+        checkIn: updated.checkIn || tomorrow.toISOString().slice(0, 10),
+        checkOut: updated.checkOut || dayAfter.toISOString().slice(0, 10),
+        nights: updated.nights || 1,
+        source: "CHATBOT",
+        bookingStage: "CHATBOT_CONTACT_COLLECTED",
+      }).catch(() => undefined);
+    }
+
     if (field === "phone") { say("What is your email address?"); setStep("email"); }
     else if (pendingAction) { processPendingAction(pendingAction); }
     else { say("Please review your booking enquiry before sending it."); setStep("summary"); }
@@ -209,9 +245,19 @@ export default function ChatWindow({ onMinimize, onClose }: { onMinimize: () => 
 
   async function confirmEnquiry() {
     setSubmitting(true);
-    try { await submitBookingEnquiry(booking); say("Your booking enquiry has been sent to YES Hotels. You can continue your reservation through the official YES Hotels booking page."); setStep("submitted"); }
-    catch { say("We couldn't submit your enquiry right now. Please try again or contact YES Hotels directly.", { kind: "error" }); }
-    finally { setSubmitting(false); }
+    try {
+      await submitBookingEnquiry({
+        ...booking,
+        bookingStage: "ENQUIRY_CONFIRMED",
+        source: "CHATBOT",
+      });
+      say("Your booking enquiry has been sent to YES Hotels. You can continue your reservation through the official YES Hotels booking page.");
+      setStep("submitted");
+    } catch {
+      say("We couldn't submit your enquiry right now. Please try again or contact YES Hotels directly.", { kind: "error" });
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   function reloadConversation() {

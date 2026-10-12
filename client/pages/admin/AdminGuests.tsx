@@ -5,10 +5,11 @@ import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Loader2, Search, Edit, Ban, CheckCircle, Eye, UserPlus, Plus } from "lucide-react";
+import { Loader2, Search, Edit, Ban, CheckCircle, Eye, UserPlus, Plus, Printer, FileCheck2, Receipt, ExternalLink, FileText } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
+import { Link } from "react-router-dom";
 
 export default function AdminGuests() {
   const { toast } = useToast();
@@ -95,8 +96,8 @@ export default function AdminGuests() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-serif text-hotel-black font-bold">Guest Management</h1>
-          <p className="text-hotel-black/60 text-sm">Manage guest profiles, view history, and handle VIPs</p>
+          <h1 className="text-2xl sm:text-3xl font-serif text-hotel-black font-bold">Guest Directory</h1>
+          <p className="text-hotel-black/60 text-sm">Manage guest profiles, view stay history, and handle VIPs</p>
         </div>
         <Button onClick={() => setIsCreateOpen(true)} className="bg-hotel-gold text-black hover:bg-amber-600 font-bold w-full sm:w-auto">
           <Plus className="w-4 h-4 mr-2" /> Register New Guest
@@ -254,22 +255,22 @@ export default function AdminGuests() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-3 gap-4">
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <p className="text-xs text-gray-500 uppercase">Total Bookings</p>
-                  <p className="text-xl font-bold">{viewData.guest.totalBookings}</p>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div className="bg-gray-50 p-3.5 rounded-xl border border-gray-100">
+                  <p className="text-xs text-gray-500 font-semibold uppercase tracking-wider">Total Bookings</p>
+                  <p className="text-xl font-bold font-serif text-gray-900 mt-0.5">{viewData.guest.totalBookings || 0}</p>
                 </div>
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <p className="text-xs text-gray-500 uppercase">Total Spend</p>
-                  <p className="text-xl font-bold">₹{viewData.guest.totalSpend}</p>
+                <div className="bg-gray-50 p-3.5 rounded-xl border border-gray-100">
+                  <p className="text-xs text-gray-500 font-semibold uppercase tracking-wider">Total Spend</p>
+                  <p className="text-xl font-bold font-serif text-gray-900 mt-0.5">₹{Number(viewData.guest.totalSpend || 0).toLocaleString()}</p>
                 </div>
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <p className="text-xs text-gray-500 uppercase">Loyalty Points</p>
-                  <p className="text-xl font-bold text-purple-700">{viewData.guest.loyaltyPoints}</p>
+                <div className="bg-gray-50 p-3.5 rounded-xl border border-gray-100">
+                  <p className="text-xs text-gray-500 font-semibold uppercase tracking-wider">Loyalty Points</p>
+                  <p className="text-xl font-bold font-serif text-purple-700 mt-0.5">{viewData.guest.loyaltyPoints || 0}</p>
                 </div>
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <p className="text-xs text-gray-500 uppercase">Last Stay</p>
-                  <p className="text-lg font-bold">{viewData.guest.lastStay ? format(new Date(viewData.guest.lastStay), 'MMM d, yyyy') : 'Never'}</p>
+                <div className="bg-gray-50 p-3.5 rounded-xl border border-gray-100">
+                  <p className="text-xs text-gray-500 font-semibold uppercase tracking-wider">Last Stay</p>
+                  <p className="text-base font-bold text-gray-900 mt-0.5">{viewData.guest.lastStay ? format(new Date(viewData.guest.lastStay), 'MMM d, yyyy') : 'Never'}</p>
                 </div>
               </div>
 
@@ -300,33 +301,85 @@ export default function AdminGuests() {
               )}
 
               <div>
-                <h3 className="font-bold mb-3 border-b pb-2">Recent Bookings</h3>
+                <div className="flex justify-between items-center mb-3 border-b pb-2">
+                  <h3 className="font-bold text-base font-serif text-gray-900">
+                    Stay History, Reports &amp; Invoices ({viewData.bookings.length})
+                  </h3>
+                  <a
+                    href="/admin/reports/bulk-docs"
+                    target="_blank"
+                    className="text-xs font-bold text-[#c9a227] hover:underline flex items-center gap-1"
+                  >
+                    <Printer size={13} /> Bulk GRC &amp; GST Viewer
+                  </a>
+                </div>
                 {viewData.bookings.length === 0 ? (
                   <p className="text-gray-500 text-sm">No bookings found.</p>
                 ) : (
                   <div className="space-y-3">
-                    {viewData.bookings.map((booking: any) => (
-                      <div key={booking._id} className="flex justify-between items-center border p-3 rounded hover:bg-gray-50">
-                        <div>
-                          <div className="font-semibold">{booking.roomCategory?.name} {booking.assignedRoom ? `(Room ${booking.assignedRoom.roomNumber})` : ''}</div>
-                          <div className="text-xs text-gray-500">
-                            {format(new Date(booking.checkInDate), 'MMM d')} - {format(new Date(booking.checkOutDate), 'MMM d, yyyy')}
+                    {viewData.bookings.map((booking: any) => {
+                      const roomNo = booking.assignedRoom?.roomNumber || "—";
+                      const billNo = booking.billNumber || booking.bookingReference?.slice(-4) || "—";
+                      return (
+                        <div key={booking._id} className="border border-gray-200 bg-white p-3.5 rounded-xl shadow-sm hover:border-gray-400 transition space-y-2">
+                          <div className="flex flex-wrap justify-between items-start gap-2">
+                            <div>
+                              <div className="font-bold text-gray-900 flex items-center gap-2">
+                                <span>Room {roomNo}</span>
+                                <span className="text-xs font-normal text-gray-500">({booking.roomCategory?.name || "Standard"})</span>
+                                <span className="text-xs font-mono font-semibold bg-gray-100 px-1.5 py-0.5 rounded text-gray-700">Bill #{billNo}</span>
+                              </div>
+                              <div className="text-xs text-gray-600 mt-0.5 font-mono">
+                                {format(new Date(booking.checkInDate), "dd MMM yyyy")} &rarr; {format(new Date(booking.checkOutDate), "dd MMM yyyy")}
+                                <span className="text-gray-400 ml-2">&bull; Ref: {booking.bookingReference}</span>
+                              </div>
+                            </div>
+
+                            <div className="text-right">
+                              <div className="font-mono font-black text-sm text-gray-900">₹{booking.totalAmount?.toLocaleString()}</div>
+                              <Badge variant="outline" className={`text-[10px] uppercase font-bold mt-0.5 ${booking.status === "CHECKED_IN" ? "bg-green-50 text-green-700 border-green-200" : booking.status === "CHECKED_OUT" ? "bg-blue-50 text-blue-700 border-blue-200" : ""}`}>
+                                {booking.status}
+                              </Badge>
+                            </div>
                           </div>
-                          {booking.idProofPhoto && (
-                            <button
-                              onClick={() => window.open(booking.idProofPhoto, "_blank")}
-                              className="text-[11px] text-indigo-600 hover:underline mt-1 font-semibold flex items-center gap-1"
-                            >
-                              📷 View Booking ID Proof
-                            </button>
-                          )}
+
+                          {/* Quick Document & Report Action Links */}
+                          <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-gray-100 text-xs">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <Link
+                                to={`/admin/bookings/${booking._id}/grc-print`}
+                                target="_blank"
+                                className="inline-flex items-center gap-1 px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 rounded font-bold text-[11px] transition shadow-xs"
+                              >
+                                <FileCheck2 size={13} className="text-[#c9a227]" /> View GRC
+                              </Link>
+                              <Link
+                                to={`/admin/bookings/${booking._id}/folio-print`}
+                                target="_blank"
+                                className="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-50 hover:bg-blue-100 text-blue-900 border border-blue-200 rounded font-bold text-[11px] transition shadow-xs"
+                              >
+                                <Receipt size={13} className="text-blue-700" /> View GST Invoice
+                              </Link>
+                              <Link
+                                to={`/admin/bookings/${booking._id}`}
+                                className="inline-flex items-center gap-1 px-2.5 py-1 bg-gray-50 hover:bg-gray-100 text-gray-800 border border-gray-300 rounded font-bold text-[11px] transition"
+                              >
+                                <ExternalLink size={12} /> Open Booking
+                              </Link>
+                            </div>
+
+                            {booking.idProofPhoto && (
+                              <button
+                                onClick={() => window.open(booking.idProofPhoto, "_blank")}
+                                className="text-[11px] text-indigo-600 hover:underline font-semibold flex items-center gap-1"
+                              >
+                                📷 ID Photo
+                              </button>
+                            )}
+                          </div>
                         </div>
-                        <div className="text-right">
-                          <div className="font-bold">₹{booking.totalAmount}</div>
-                          <Badge variant="outline">{booking.status}</Badge>
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </div>
@@ -419,7 +472,7 @@ export default function AdminGuests() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <label className="text-xs font-semibold uppercase text-gray-600">City</label>
-                <Input name="city" placeholder="Hyderabad" />
+                <Input name="city" placeholder="Bengaluru" />
               </div>
               <div className="space-y-2">
                 <label className="text-xs font-semibold uppercase text-gray-600">Country</label>

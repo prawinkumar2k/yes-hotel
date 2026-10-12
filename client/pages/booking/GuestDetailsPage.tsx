@@ -6,6 +6,7 @@ import { useAuth } from "../../context/AuthContext";
 import { format } from "date-fns";
 import { ChevronRight } from "lucide-react";
 import { getStoredBookingDetails, hasCompleteGuestContact, saveBookingDetails } from "@/lib/bookingSession";
+import { submitBookingEnquiry } from "@/services/bookingEnquiryService";
 
 export default function GuestDetailsPage() {
   const [searchParams] = useSearchParams();
@@ -51,6 +52,25 @@ export default function GuestDetailsPage() {
       specialRequests: form.specialRequests,
       idempotencyKey,
     });
+
+    // Capture website booking process stage: guest details entered & payment pending
+    if (form.firstName && form.phone && checkIn && checkOut) {
+      submitBookingEnquiry({
+        guestName: `${form.firstName} ${form.lastName}`.trim(),
+        email: form.email,
+        phone: form.phone,
+        checkIn,
+        checkOut,
+        adults: Number(adults) || 1,
+        children: Number(children) || 0,
+        rooms: 1,
+        roomType: "Selected Room",
+        roomCategoryId: category || undefined,
+        bookingStage: "PAYMENT_PENDING",
+        source: "WEBSITE",
+      }).catch(() => undefined);
+    }
+
     navigate("/booking/payment");
   };
 

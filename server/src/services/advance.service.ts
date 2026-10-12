@@ -25,6 +25,7 @@ async function generateAdvanceNumber(): Promise<string> {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export interface ReceiveAdvanceParams {
+  propertyId?: string;
   bookingId?: string;
   guestId: string;
   amount: number;
@@ -39,13 +40,26 @@ export interface ReceiveAdvanceParams {
 
 export async function receiveAdvance(
   params: ReceiveAdvanceParams,
-  opts: { req?: Request }
+  opts: { req?: Request } = {}
 ): Promise<IAdvancePayment> {
   if (params.amount <= 0) throw new Error("Advance amount must be positive");
+
+  let resolvedPropertyId = params.propertyId || (opts.req as any)?.propertyId || (opts.req as any)?.user?.propertyId;
+  if (!resolvedPropertyId && params.bookingId) {
+    const { Booking } = await import("../models/Booking");
+    const bk = await Booking.findById(params.bookingId).lean();
+    if (bk) resolvedPropertyId = bk.propertyId || (bk as any).property;
+  }
+  if (!resolvedPropertyId) {
+    const { Property } = await import("../models/Property");
+    const prop = await Property.findOne().lean();
+    resolvedPropertyId = prop?._id;
+  }
 
   const advanceNumber = await generateAdvanceNumber();
 
   const advance = await AdvancePayment.create({
+    propertyId: resolvedPropertyId,
     advanceNumber,
     booking: params.bookingId,
     guest: params.guestId,

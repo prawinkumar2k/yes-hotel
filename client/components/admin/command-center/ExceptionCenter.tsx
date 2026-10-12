@@ -34,9 +34,9 @@ export function ExceptionCenter({ actionQueue }: { actionQueue: any[] }) {
                 </span>
               </div>
               <p className="text-sm text-white font-medium">{action.action}</p>
-              <button className="text-left text-xs text-red-400 hover:text-red-300 font-semibold mt-1">
+              <Link to={action.link || "#"} className="text-left text-xs text-red-400 hover:text-red-300 font-semibold mt-1">
                 Resolve Issue &rarr;
-              </button>
+              </Link>
             </div>
           ))
         )}

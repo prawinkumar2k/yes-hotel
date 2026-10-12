@@ -28,7 +28,7 @@ export interface IGuest extends Document {
 
 const GuestSchema = new Schema<IGuest>(
   {
-    propertyId: { type: Schema.Types.ObjectId, ref: "Property", required: true },
+    propertyId: { type: Schema.Types.ObjectId, ref: "Property" },
     fullName: { type: String, required: true },
     email: { type: String, required: true, unique: true },
     phone: { type: String, required: true },

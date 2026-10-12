@@ -23,13 +23,16 @@ const STATUS_COLORS: Record<string, { bg: string; text: string; border: string }
 const LEGAL_NEXT_STATUSES: Record<string, { label: string; status: string; color: string }[]> = {
   DIRTY: [
     { label: "Start Cleaning", status: "CLEANING", color: "bg-blue-600 hover:bg-blue-700 text-white font-semibold" },
-    { label: "Assign Attendant", status: "ASSIGNED", color: "bg-amber-600 hover:bg-amber-700 text-white font-semibold" }
+    { label: "Assign Attendant", status: "ASSIGNED", color: "bg-amber-600 hover:bg-amber-700 text-white font-semibold" },
+    { label: "Quick Mark Clean", status: "CLEAN", color: "bg-emerald-600 hover:bg-emerald-700 text-white font-semibold" }
   ],
   ASSIGNED: [
     { label: "Begin Cleaning", status: "CLEANING", color: "bg-blue-600 hover:bg-blue-700 text-white font-semibold" },
+    { label: "Direct Mark Clean", status: "CLEAN", color: "bg-emerald-600 hover:bg-emerald-700 text-white font-semibold" }
   ],
   CLEANING: [
     { label: "Complete Cleaning", status: "CLEANING_COMPLETED", color: "bg-sky-600 hover:bg-sky-700 text-white font-semibold" },
+    { label: "Direct Mark Clean", status: "CLEAN", color: "bg-emerald-600 hover:bg-emerald-700 text-white font-semibold" }
   ],
   CLEANING_COMPLETED: [
     { label: "Send to Inspection", status: "INSPECTION", color: "bg-purple-600 hover:bg-purple-700 text-white font-semibold" },
@@ -41,6 +44,7 @@ const LEGAL_NEXT_STATUSES: Record<string, { label: string; status: string; color
   ],
   INSPECTION_FAILED: [
     { label: "Re-Clean Room", status: "DIRTY", color: "bg-red-600 hover:bg-red-700 text-white font-semibold" },
+    { label: "Direct Mark Clean", status: "CLEAN", color: "bg-emerald-600 hover:bg-emerald-700 text-white font-semibold" }
   ],
   INSPECTED: [
     { label: "Release Room", status: "CLEAN", color: "bg-emerald-600 hover:bg-emerald-700 text-white font-semibold" }
@@ -49,6 +53,7 @@ const LEGAL_NEXT_STATUSES: Record<string, { label: string; status: string; color
     { label: "Authorize Release", status: "CLEAN", color: "bg-emerald-600 hover:bg-emerald-700 text-white font-semibold" }
   ],
   CLEAN: [
+    { label: "Touch Up / Clean", status: "CLEANING", color: "bg-blue-50 text-blue-800 hover:bg-blue-100 border border-blue-300 font-semibold" },
     { label: "Mark Dirty", status: "DIRTY", color: "bg-stone-200 text-red-800 hover:bg-red-100 hover:text-red-900 border border-red-300 font-semibold" }
   ]
 };
@@ -62,10 +67,11 @@ export default function AdminHousekeeping() {
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [updatingTaskId, setUpdatingTaskId] = useState<string | null>(null);
+  const [staffList, setStaffList] = useState<any[]>([]);
 
   // Assign staff modal
   const [assignModal, setAssignModal] = useState<{ open: boolean; task: any | null }>({ open: false, task: null });
-  const [cleanerName, setCleanerName] = useState("");
+  const [selectedStaffId, setSelectedStaffId] = useState("");
   const [priority, setPriority] = useState("MEDIUM");
 
   const fetchData = async () => {
@@ -90,11 +96,37 @@ export default function AdminHousekeeping() {
         const floors = jsonRooms.data?.floors || [];
         setRooms(floors.flatMap((f: any) => f.rooms || []));
       }
+
+      // Fetch housekeeping staff
+      const resStaff = await fetch("/api/staff?role=HOUSEKEEPING&limit=100", {
+        headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      });
+      const jsonStaff = await resStaff.json();
+      if (jsonStaff.success) {
+        let staffData = jsonStaff.data?.staff || jsonStaff.data?.users || [];
+        if (!staffData.length) {
+          // If no specific staff with HOUSEKEEPING role, fallback to general staff
+          const resAllStaff = await fetch("/api/staff?limit=100", {
+            headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+          });
+          const jsonAllStaff = await resAllStaff.json();
+          if (jsonAllStaff.success) {
+            staffData = jsonAllStaff.data?.staff || jsonAllStaff.data?.users || [];
+          }
+        }
+        setStaffList(staffData);
+      }
     } catch (err: any) {
       toast({ title: "Error", description: err.message, variant: "destructive" });
     } finally {
       setLoading(false);
     }
+  };
+
+  const openAssignModal = (task: any) => {
+    setSelectedStaffId(task.assignedTo?._id || task.assignedTo || "");
+    setPriority(task.priority || "MEDIUM");
+    setAssignModal({ open: true, task });
   };
 
   useEffect(() => {
@@ -165,7 +197,7 @@ export default function AdminHousekeeping() {
       
       const payload: any = {
         priority,
-        notes: `Assigned to ${cleanerName}`,
+        assignedTo: selectedStaffId,
       };
       if (!assignModal.task.status || assignModal.task.status === "DIRTY") {
         payload.status = "ASSIGNED";
@@ -181,7 +213,7 @@ export default function AdminHousekeeping() {
       });
       const json = await res.json();
       if (json.success) {
-        toast({ title: "Task Assigned", description: `Assigned to ${cleanerName}` });
+        toast({ title: "Task Assigned", description: `Staff assigned successfully.` });
         setAssignModal({ open: false, task: null });
         fetchData();
       } else {
@@ -456,7 +488,7 @@ export default function AdminHousekeeping() {
               <div className="space-y-2 pt-1">
                 {!["CLEAN", "WAITING_FOR_RELEASE", "INSPECTED"].includes(task.status || room.housekeepingStatus || "") && (
                   <button
-                    onClick={() => setAssignModal({ open: true, task })}
+                    onClick={() => openAssignModal(task)}
                     className="w-full py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-semibold rounded-xl border border-slate-300 transition flex items-center justify-center gap-1"
                   >
                     <UserCheck size={13} className="text-amber-600" /> Assign / Change Staff
@@ -469,7 +501,13 @@ export default function AdminHousekeeping() {
                     <button
                       key={tr.status}
                       disabled={updatingTaskId === task._id}
-                      onClick={() => handleUpdateStatus(task._id, tr.status, room.roomNumber)}
+                      onClick={() => {
+                        if (tr.status === "ASSIGNED") {
+                          openAssignModal(task);
+                        } else {
+                          handleUpdateStatus(task._id, tr.status, room.roomNumber);
+                        }
+                      }}
                       className={`w-full py-2 px-3 text-xs font-bold rounded-xl transition flex items-center justify-center gap-1.5 shadow-sm ${tr.color} disabled:opacity-50`}
                     >
                       {updatingTaskId === task._id ? (
@@ -504,13 +542,18 @@ export default function AdminHousekeeping() {
 
             <div>
               <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">Attendant Name / Staff Member</label>
-              <input
-                type="text"
-                placeholder="e.g. Ramesh Kumar / Staff #104"
-                value={cleanerName}
-                onChange={(e) => setCleanerName(e.target.value)}
+              <select
+                value={selectedStaffId}
+                onChange={(e) => setSelectedStaffId(e.target.value)}
                 className="w-full bg-slate-50 border border-slate-200 text-sm text-slate-900 rounded-xl p-3 focus:outline-none focus:border-amber-500 focus:bg-white"
-              />
+              >
+                <option value="">Select a staff member...</option>
+                {staffList.map((staff) => (
+                  <option key={staff._id} value={staff._id}>
+                    {staff.firstName} {staff.lastName || ""} {staff.role && staff.role !== "HOUSEKEEPING" ? `(${staff.role})` : ""}
+                  </option>
+                ))}
+              </select>
             </div>
 
             <div>
@@ -532,7 +575,7 @@ export default function AdminHousekeeping() {
                 Cancel
               </button>
               <button
-                disabled={!cleanerName}
+                disabled={!selectedStaffId}
                 onClick={handleAssignSubmit}
                 className="px-5 py-2.5 bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800 text-white rounded-xl text-xs font-bold shadow-md disabled:opacity-50"
               >

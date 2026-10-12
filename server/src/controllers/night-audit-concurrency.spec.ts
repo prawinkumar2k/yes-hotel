@@ -70,6 +70,7 @@ describe("runNightAudit concurrency safety (regression for a live-reproduced dou
     });
 
     room = await Room.create({
+      propertyId: new mongoose.Types.ObjectId(),
       roomNumber: `NAC-${stamp}`,
       floor: "1",
       category: category._id,
@@ -81,6 +82,12 @@ describe("runNightAudit concurrency safety (regression for a live-reproduced dou
 
     booking = await Booking.create({
       bookingReference: `NAC-${stamp}`,
+      property: new mongoose.Types.ObjectId(),
+      source: "WALK_IN" as any,
+      bookingType: "INDIVIDUAL" as any,
+      stayType: "NIGHTLY" as any,
+      registrationStatus: "DRAFT" as any,
+      signatureStatus: "NOT_COLLECTED" as any,
       guestDetails: { firstName: "Concurrency", lastName: "Test", email: `nac-${stamp}@test.local`, phone: "9999999999" },
       roomCategory: category._id,
       assignedRoom: room._id,
@@ -95,6 +102,7 @@ describe("runNightAudit concurrency safety (regression for a live-reproduced dou
     });
 
     folio = await Folio.create({
+      propertyId: new mongoose.Types.ObjectId(),
       booking: booking._id,
       guest: booking._id, // placeholder ObjectId — this test only checks FolioLine counts, not guest population
       room: room._id,
@@ -113,6 +121,7 @@ describe("runNightAudit concurrency safety (regression for a live-reproduced dou
     }
 
     const seededDate = await BusinessDate.create({
+      propertyId: new mongoose.Types.ObjectId(),
       date: new Date(),
       state: BusinessDateState.OPEN,
       isCurrentDate: true,

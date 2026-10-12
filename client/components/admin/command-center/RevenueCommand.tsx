@@ -17,12 +17,12 @@ export function RevenueCommand({ revenue }: { revenue: any }) {
             <p className="text-[11px] text-zinc-400">Live realized metrics</p>
           </div>
         </div>
-        <Link to="/admin/reports" className="text-xs text-emerald-400 hover:underline font-semibold whitespace-nowrap flex-shrink-0">
-          Financials &rarr;
+        <Link to="/admin/day-sales-summary" className="text-xs text-emerald-400 hover:underline font-semibold whitespace-nowrap flex-shrink-0">
+          Day Sales Summary &rarr;
         </Link>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 flex-1">
+      <div className="grid grid-cols-2 gap-4 flex-1 mb-4">
         <div className="p-4 rounded-xl bg-black/40 border border-white/5">
           <div className="flex justify-between text-zinc-400 mb-1">
             <span className="text-[11px] font-bold uppercase tracking-wide whitespace-nowrap overflow-hidden text-ellipsis">Gross Payments</span>
@@ -42,6 +42,21 @@ export function RevenueCommand({ revenue }: { revenue: any }) {
             —
           </span>
           <p className="text-[10px] text-zinc-500 mt-1 font-mono">Aggregating...</p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-3 gap-2 mt-auto pt-4 border-t border-white/5">
+        <div className="text-center">
+          <p className="text-[10px] uppercase text-zinc-500 font-bold mb-1">Room Rev</p>
+          <p className="text-sm font-bold text-white font-mono">₹{revenue.roomRevenue?.toLocaleString("en-IN") || 0}</p>
+        </div>
+        <div className="text-center">
+          <p className="text-[10px] uppercase text-zinc-500 font-bold mb-1">ADR</p>
+          <p className="text-sm font-bold text-white font-mono">₹{revenue.adr?.toLocaleString("en-IN") || 0}</p>
+        </div>
+        <div className="text-center">
+          <p className="text-[10px] uppercase text-zinc-500 font-bold mb-1">RevPAR</p>
+          <p className="text-sm font-bold text-white font-mono">₹{revenue.revPar?.toLocaleString("en-IN") || 0}</p>
         </div>
       </div>
     </div>

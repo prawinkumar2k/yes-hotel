@@ -16,13 +16,15 @@ export class PermissionService {
    */
   static async getEffectivePermissions(
     userId: mongoose.Types.ObjectId | string,
-    propertyId: mongoose.Types.ObjectId | string
+    propertyId: mongoose.Types.ObjectId | string,
+    fallbackRole?: string
   ): Promise<PermissionCache> {
     const user = await User.findById(userId);
-    if (!user) throw new Error("User not found");
+    const role = user?.role || fallbackRole;
+    if (!user && !fallbackRole) throw new Error("User not found");
 
     // 1. If Super Admin or Admin, return full access
-    if (user.role === "SUPER_ADMIN" || user.role === "ADMIN") {
+    if (role === "SUPER_ADMIN" || role === "ADMIN") {
       const allPages = await PageResource.find({ isActive: true });
       const allRolePermKeys = await RolePermission.distinct("pageKey");
       
@@ -39,7 +41,22 @@ export class PermissionService {
         }
       });
       
-      const manualKeys = ["REPORTS_LAYOUT", "COUPONS", "TASK_APPROVALS", "CORPORATE_ACCOUNTS", "GROUP_BOOKINGS", "INVENTORY", "PROCUREMENT", "VENDORS"];
+      const manualKeys = [
+        "DASHBOARD.ADMIN",
+        "DASHBOARD.EXECUTIVE",
+        "REPORTS_LAYOUT",
+        "COUPONS",
+        "TASK_APPROVALS",
+        "CORPORATE_ACCOUNTS",
+        "GROUP_BOOKINGS",
+        "INVENTORY",
+        "PROCUREMENT",
+        "VENDORS",
+        "FRONT_DESK",
+        "ROOMS",
+        "ROOM_CATEGORIES",
+        "SETTINGS"
+      ];
       manualKeys.forEach(key => {
         if (!fullAccess[key]) {
           fullAccess[key] = allActions;
@@ -52,7 +69,7 @@ export class PermissionService {
     const effectivePermissions: PermissionCache = {};
 
     // 2. Map string role to DB Role
-    const roleDoc = await Role.findOne({ key: user.role, isActive: true });
+    const roleDoc = await Role.findOne({ key: role, isActive: true });
     
     // 3. Get Role Permissions
     if (roleDoc) {
@@ -73,10 +90,10 @@ export class PermissionService {
       orConditions.push({ propertyId: propertyId });
     }
 
-    const overrides = await UserPermissionOverride.find({
+    const overrides = userId ? await UserPermissionOverride.find({
       userId,
       $or: orConditions
-    });
+    }) : [];
 
     overrides.forEach(ov => {
       const currentActions = effectivePermissions[ov.pageKey] || [];
@@ -100,9 +117,10 @@ export class PermissionService {
     userId: mongoose.Types.ObjectId | string,
     propertyId: mongoose.Types.ObjectId | string,
     pageKey: string,
-    action: string
+    action: string,
+    fallbackRole?: string
   ): Promise<boolean> {
-    const perms = await this.getEffectivePermissions(userId, propertyId);
+    const perms = await this.getEffectivePermissions(userId, propertyId, fallbackRole);
     if (!perms[pageKey]) return false;
     return perms[pageKey].includes(action);
   }

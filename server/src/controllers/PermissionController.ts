@@ -100,9 +100,12 @@ export const getEffectivePermissions = async (req: AuthenticatedRequest, res: Re
       ? String(req.query.propertyId[0]) 
       : (req.query.propertyId ? String(req.query.propertyId) : "");
 
-    const perms = await PermissionService.getEffectivePermissions(String(userId), propertyId);
+    const perms = await PermissionService.getEffectivePermissions(String(userId), propertyId, req.user?.role);
     res.json(perms);
-  } catch (error) {
+  } catch (error: any) {
+    if (error?.message === "User not found") {
+      return res.status(401).json({ message: "User session expired or user not found. Please log in again." });
+    }
     res.status(500).json({ message: 'Error fetching effective permissions' });
   }
 };

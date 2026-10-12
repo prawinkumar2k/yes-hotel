@@ -13,7 +13,7 @@ import { Refund, RefundStatus } from "../models/Refund";
 // POST /api/bookings/:id/cancel
 export const cancelBooking = async (req: Request, res: Response) => {
   try {
-    const { reason } = req.body;
+    const { reason } = req.body || {};
     const booking = await Booking.findById(req.params.id);
     if (!booking) return res.status(404).json({ success: false, message: "Booking not found" });
 

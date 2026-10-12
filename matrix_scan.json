@@ -1,0 +1,910 @@
+[
+  {
+    "route": "/",
+    "component": "Index",
+    "file": "client/pages/Index.tsx",
+    "apiCalls": [],
+    "flags": []
+  },
+  {
+    "route": "/about",
+    "component": "AboutPage",
+    "file": "client/pages/public/AboutPage.tsx",
+    "apiCalls": [],
+    "flags": [
+      "No direct api.* calls"
+    ]
+  },
+  {
+    "route": "/rooms",
+    "component": "RoomsPage",
+    "file": "client/pages/public/RoomsPage.tsx",
+    "apiCalls": [],
+    "flags": [
+      "No direct api.* calls"
+    ]
+  },
+  {
+    "route": "/rooms/:slug",
+    "component": "RoomDetailsPage",
+    "file": "client/pages/public/RoomDetailsPage.tsx",
+    "apiCalls": [],
+    "flags": [
+      "No direct api.* calls"
+    ]
+  },
+  {
+    "route": "/gallery",
+    "component": "GalleryPage",
+    "file": "client/pages/public/GalleryPage.tsx",
+    "apiCalls": [],
+    "flags": [
+      "No direct api.* calls"
+    ]
+  },
+  {
+    "route": "/faq",
+    "component": "FAQPage",
+    "file": "client/pages/public/FAQPage.tsx",
+    "apiCalls": [],
+    "flags": [
+      "No direct api.* calls"
+    ]
+  },
+  {
+    "route": "/contact",
+    "component": "ContactPage",
+    "file": "client/pages/public/ContactPage.tsx",
+    "apiCalls": [],
+    "flags": [
+      "No direct api.* calls"
+    ]
+  },
+  {
+    "route": "/search",
+    "component": "SearchPage",
+    "file": "client/pages/booking/SearchPage.tsx",
+    "apiCalls": [],
+    "flags": []
+  },
+  {
+    "route": "/booking",
+    "component": "Navigate",
+    "file": "UNKNOWN",
+    "apiCalls": [],
+    "flags": [
+      "Page component not found in client/pages",
+      "No direct api.* calls"
+    ]
+  },
+  {
+    "route": "/booking/guest-details",
+    "component": "GuestDetailsPage",
+    "file": "client/pages/booking/GuestDetailsPage.tsx",
+    "apiCalls": [],
+    "flags": [
+      "No direct api.* calls"
+    ]
+  },
+  {
+    "route": "/booking/payment",
+    "component": "PaymentPage",
+    "file": "client/pages/booking/PaymentPage.tsx",
+    "apiCalls": [],
+    "flags": [
+      "No direct api.* calls"
+    ]
+  },
+  {
+    "route": "/booking/confirmation",
+    "component": "ConfirmationPage",
+    "file": "client/pages/booking/ConfirmationPage.tsx",
+    "apiCalls": [],
+    "flags": []
+  },
+  {
+    "route": "/terms-and-conditions",
+    "component": "LegalPage",
+    "file": "client/pages/public/LegalPage.tsx",
+    "apiCalls": [
+      "GET /content/${contentKey}"
+    ],
+    "flags": []
+  },
+  {
+    "route": "/privacy-policy",
+    "component": "LegalPage",
+    "file": "client/pages/public/LegalPage.tsx",
+    "apiCalls": [
+      "GET /content/${contentKey}"
+    ],
+    "flags": []
+  },
+  {
+    "route": "/cancellation-and-refund",
+    "component": "LegalPage",
+    "file": "client/pages/public/LegalPage.tsx",
+    "apiCalls": [
+      "GET /content/${contentKey}"
+    ],
+    "flags": []
+  },
+  {
+    "route": "/login",
+    "component": "LoginPage",
+    "file": "client/pages/auth/LoginPage.tsx",
+    "apiCalls": [],
+    "flags": []
+  },
+  {
+    "route": "/register",
+    "component": "RegisterPage",
+    "file": "client/pages/auth/RegisterPage.tsx",
+    "apiCalls": [],
+    "flags": []
+  },
+  {
+    "route": "/forgot-password",
+    "component": "ForgotPasswordPage",
+    "file": "client/pages/auth/ForgotPasswordPage.tsx",
+    "apiCalls": [],
+    "flags": []
+  },
+  {
+    "route": "/reset-password",
+    "component": "ResetPasswordPage",
+    "file": "client/pages/auth/ResetPasswordPage.tsx",
+    "apiCalls": [],
+    "flags": []
+  },
+  {
+    "route": "/customer/dashboard",
+    "component": "ProtectedRoute",
+    "file": "UNKNOWN",
+    "apiCalls": [],
+    "flags": [
+      "Page component not found in client/pages",
+      "No direct api.* calls"
+    ]
+  },
+  {
+    "route": "/customer/bookings",
+    "component": "ProtectedRoute",
+    "file": "UNKNOWN",
+    "apiCalls": [],
+    "flags": [
+      "Page component not found in client/pages",
+      "No direct api.* calls"
+    ]
+  },
+  {
+    "route": "/customer/bookings/:id",
+    "component": "ProtectedRoute",
+    "file": "UNKNOWN",
+    "apiCalls": [],
+    "flags": [
+      "Page component not found in client/pages",
+      "No direct api.* calls"
+    ]
+  },
+  {
+    "route": "/customer/bookings/:id/folio",
+    "component": "ProtectedRoute",
+    "file": "UNKNOWN",
+    "apiCalls": [],
+    "flags": [
+      "Page component not found in client/pages",
+      "No direct api.* calls"
+    ]
+  },
+  {
+    "route": "/customer/profile",
+    "component": "ProtectedRoute",
+    "file": "UNKNOWN",
+    "apiCalls": [],
+    "flags": [
+      "Page component not found in client/pages",
+      "No direct api.* calls"
+    ]
+  },
+  {
+    "route": "/customer/payments",
+    "component": "ProtectedRoute",
+    "file": "UNKNOWN",
+    "apiCalls": [],
+    "flags": [
+      "Page component not found in client/pages",
+      "No direct api.* calls"
+    ]
+  },
+  {
+    "route": "/customer/reviews",
+    "component": "ProtectedRoute",
+    "file": "UNKNOWN",
+    "apiCalls": [],
+    "flags": [
+      "Page component not found in client/pages",
+      "No direct api.* calls"
+    ]
+  },
+  {
+    "route": "/customer/requests",
+    "component": "ProtectedRoute",
+    "file": "UNKNOWN",
+    "apiCalls": [],
+    "flags": [
+      "Page component not found in client/pages",
+      "No direct api.* calls"
+    ]
+  },
+  {
+    "route": "/customer/loyalty",
+    "component": "ProtectedRoute",
+    "file": "UNKNOWN",
+    "apiCalls": [],
+    "flags": [
+      "Page component not found in client/pages",
+      "No direct api.* calls"
+    ]
+  },
+  {
+    "route": "/admin/dashboard",
+    "component": "PermissionRoute",
+    "file": "UNKNOWN",
+    "apiCalls": [],
+    "flags": [
+      "Page component not found in client/pages",
+      "No direct api.* calls"
+    ]
+  },
+  {
+    "route": "/admin/front-desk",
+    "component": "PermissionRoute",
+    "file": "UNKNOWN",
+    "apiCalls": [],
+    "flags": [
+      "Page component not found in client/pages",
+      "No direct api.* calls"
+    ]
+  },
+  {
+    "route": "/admin/guest-registration",
+    "component": "PermissionRoute",
+    "file": "UNKNOWN",
+    "apiCalls": [],
+    "flags": [
+      "Page component not found in client/pages",
+      "No direct api.* calls"
+    ]
+  },
+  {
+    "route": "/admin/room-rack",
+    "component": "PermissionRoute",
+    "file": "UNKNOWN",
+    "apiCalls": [],
+    "flags": [
+      "Page component not found in client/pages",
+      "No direct api.* calls"
+    ]
+  },
+  {
+    "route": "/admin/bookings",
+    "component": "PermissionRoute",
+    "file": "UNKNOWN",
+    "apiCalls": [],
+    "flags": [
+      "Page component not found in client/pages",
+      "No direct api.* calls"
+    ]
+  },
+  {
+    "route": "/admin/ota-bookings",
+    "component": "PermissionRoute",
+    "file": "UNKNOWN",
+    "apiCalls": [],
+    "flags": [
+      "Page component not found in client/pages",
+      "No direct api.* calls"
+    ]
+  },
+  {
+    "route": "/admin/bookings/:id",
+    "component": "PermissionRoute",
+    "file": "UNKNOWN",
+    "apiCalls": [],
+    "flags": [
+      "Page component not found in client/pages",
+      "No direct api.* calls"
+    ]
+  },
+  {
+    "route": "/admin/bookings/:id/folio-print",
+    "component": "PermissionRoute",
+    "file": "UNKNOWN",
+    "apiCalls": [],
+    "flags": [
+      "Page component not found in client/pages",
+      "No direct api.* calls"
+    ]
+  },
+  {
+    "route": "/admin/bookings/:id/grc-print",
+    "component": "PermissionRoute",
+    "file": "UNKNOWN",
+    "apiCalls": [],
+    "flags": [
+      "Page component not found in client/pages",
+      "No direct api.* calls"
+    ]
+  },
+  {
+    "route": "/admin/calendar",
+    "component": "PermissionRoute",
+    "file": "UNKNOWN",
+    "apiCalls": [],
+    "flags": [
+      "Page component not found in client/pages",
+      "No direct api.* calls"
+    ]
+  },
+  {
+    "route": "/admin/check-in",
+    "component": "PermissionRoute",
+    "file": "UNKNOWN",
+    "apiCalls": [],
+    "flags": [
+      "Page component not found in client/pages",
+      "No direct api.* calls"
+    ]
+  },
+  {
+    "route": "/admin/check-out",
+    "component": "PermissionRoute",
+    "file": "UNKNOWN",
+    "apiCalls": [],
+    "flags": [
+      "Page component not found in client/pages",
+      "No direct api.* calls"
+    ]
+  },
+  {
+    "route": "/admin/master-data",
+    "component": "PermissionRoute",
+    "file": "UNKNOWN",
+    "apiCalls": [],
+    "flags": [
+      "Page component not found in client/pages",
+      "No direct api.* calls"
+    ]
+  },
+  {
+    "route": "/admin/master-data/amenities",
+    "component": "PermissionRoute",
+    "file": "UNKNOWN",
+    "apiCalls": [],
+    "flags": [
+      "Page component not found in client/pages",
+      "No direct api.* calls"
+    ]
+  },
+  {
+    "route": "/admin/master-data/floors",
+    "component": "PermissionRoute",
+    "file": "UNKNOWN",
+    "apiCalls": [],
+    "flags": [
+      "Page component not found in client/pages",
+      "No direct api.* calls"
+    ]
+  },
+  {
+    "route": "/admin/master-data/bed-types",
+    "component": "PermissionRoute",
+    "file": "UNKNOWN",
+    "apiCalls": [],
+    "flags": [
+      "Page component not found in client/pages",
+      "No direct api.* calls"
+    ]
+  },
+  {
+    "route": "/admin/master-data/room-views",
+    "component": "PermissionRoute",
+    "file": "UNKNOWN",
+    "apiCalls": [],
+    "flags": [
+      "Page component not found in client/pages",
+      "No direct api.* calls"
+    ]
+  },
+  {
+    "route": "/admin/rooms",
+    "component": "PermissionRoute",
+    "file": "UNKNOWN",
+    "apiCalls": [],
+    "flags": [
+      "Page component not found in client/pages",
+      "No direct api.* calls"
+    ]
+  },
+  {
+    "route": "/admin/room-categories",
+    "component": "PermissionRoute",
+    "file": "UNKNOWN",
+    "apiCalls": [],
+    "flags": [
+      "Page component not found in client/pages",
+      "No direct api.* calls"
+    ]
+  },
+  {
+    "route": "/admin/rate-plans",
+    "component": "PermissionRoute",
+    "file": "UNKNOWN",
+    "apiCalls": [],
+    "flags": [
+      "Page component not found in client/pages",
+      "No direct api.* calls"
+    ]
+  },
+  {
+    "route": "/admin/pricing",
+    "component": "PermissionRoute",
+    "file": "UNKNOWN",
+    "apiCalls": [],
+    "flags": [
+      "Page component not found in client/pages",
+      "No direct api.* calls"
+    ]
+  },
+  {
+    "route": "/admin/guests",
+    "component": "PermissionRoute",
+    "file": "UNKNOWN",
+    "apiCalls": [],
+    "flags": [
+      "Page component not found in client/pages",
+      "No direct api.* calls"
+    ]
+  },
+  {
+    "route": "/admin/payments",
+    "component": "PermissionRoute",
+    "file": "UNKNOWN",
+    "apiCalls": [],
+    "flags": [
+      "Page component not found in client/pages",
+      "No direct api.* calls"
+    ]
+  },
+  {
+    "route": "/admin/advances",
+    "component": "PermissionRoute",
+    "file": "UNKNOWN",
+    "apiCalls": [],
+    "flags": [
+      "Page component not found in client/pages",
+      "No direct api.* calls"
+    ]
+  },
+  {
+    "route": "/admin/cashier-shifts",
+    "component": "PermissionRoute",
+    "file": "UNKNOWN",
+    "apiCalls": [],
+    "flags": [
+      "Page component not found in client/pages",
+      "No direct api.* calls"
+    ]
+  },
+  {
+    "route": "/admin/refunds",
+    "component": "PermissionRoute",
+    "file": "UNKNOWN",
+    "apiCalls": [],
+    "flags": [
+      "Page component not found in client/pages",
+      "No direct api.* calls"
+    ]
+  },
+  {
+    "route": "/admin/coupons",
+    "component": "PermissionRoute",
+    "file": "UNKNOWN",
+    "apiCalls": [],
+    "flags": [
+      "Page component not found in client/pages",
+      "No direct api.* calls"
+    ]
+  },
+  {
+    "route": "/admin/housekeeping",
+    "component": "PermissionRoute",
+    "file": "UNKNOWN",
+    "apiCalls": [],
+    "flags": [
+      "Page component not found in client/pages",
+      "No direct api.* calls"
+    ]
+  },
+  {
+    "route": "/admin/task-approvals",
+    "component": "PermissionRoute",
+    "file": "UNKNOWN",
+    "apiCalls": [],
+    "flags": [
+      "Page component not found in client/pages",
+      "No direct api.* calls"
+    ]
+  },
+  {
+    "route": "/admin/maintenance",
+    "component": "PermissionRoute",
+    "file": "UNKNOWN",
+    "apiCalls": [],
+    "flags": [
+      "Page component not found in client/pages",
+      "No direct api.* calls"
+    ]
+  },
+  {
+    "route": "/admin/staff",
+    "component": "PermissionRoute",
+    "file": "UNKNOWN",
+    "apiCalls": [],
+    "flags": [
+      "Page component not found in client/pages",
+      "No direct api.* calls"
+    ]
+  },
+  {
+    "route": "/admin/gallery",
+    "component": "PermissionRoute",
+    "file": "UNKNOWN",
+    "apiCalls": [],
+    "flags": [
+      "Page component not found in client/pages",
+      "No direct api.* calls"
+    ]
+  },
+  {
+    "route": "/admin/content",
+    "component": "PermissionRoute",
+    "file": "UNKNOWN",
+    "apiCalls": [],
+    "flags": [
+      "Page component not found in client/pages",
+      "No direct api.* calls"
+    ]
+  },
+  {
+    "route": "/admin/faqs",
+    "component": "PermissionRoute",
+    "file": "UNKNOWN",
+    "apiCalls": [],
+    "flags": [
+      "Page component not found in client/pages",
+      "No direct api.* calls"
+    ]
+  },
+  {
+    "route": "/admin/testimonials",
+    "component": "PermissionRoute",
+    "file": "UNKNOWN",
+    "apiCalls": [],
+    "flags": [
+      "Page component not found in client/pages",
+      "No direct api.* calls"
+    ]
+  },
+  {
+    "route": "/admin/reviews",
+    "component": "PermissionRoute",
+    "file": "UNKNOWN",
+    "apiCalls": [],
+    "flags": [
+      "Page component not found in client/pages",
+      "No direct api.* calls"
+    ]
+  },
+  {
+    "route": "/admin/contact-messages",
+    "component": "PermissionRoute",
+    "file": "UNKNOWN",
+    "apiCalls": [],
+    "flags": [
+      "Page component not found in client/pages",
+      "No direct api.* calls"
+    ]
+  },
+  {
+    "route": "/admin/complaints",
+    "component": "PermissionRoute",
+    "file": "UNKNOWN",
+    "apiCalls": [],
+    "flags": [
+      "Page component not found in client/pages",
+      "No direct api.* calls"
+    ]
+  },
+  {
+    "route": "/admin/reports/*",
+    "component": "PermissionRoute",
+    "file": "UNKNOWN",
+    "apiCalls": [],
+    "flags": [
+      "Page component not found in client/pages",
+      "No direct api.* calls"
+    ]
+  },
+  {
+    "route": "/admin/in-house-list",
+    "component": "PermissionRoute",
+    "file": "UNKNOWN",
+    "apiCalls": [],
+    "flags": [
+      "Page component not found in client/pages",
+      "No direct api.* calls"
+    ]
+  },
+  {
+    "route": "/admin/day-sales-summary",
+    "component": "PermissionRoute",
+    "file": "UNKNOWN",
+    "apiCalls": [],
+    "flags": [
+      "Page component not found in client/pages",
+      "No direct api.* calls"
+    ]
+  },
+  {
+    "route": "/admin/monthly-mis",
+    "component": "PermissionRoute",
+    "file": "UNKNOWN",
+    "apiCalls": [],
+    "flags": [
+      "Page component not found in client/pages",
+      "No direct api.* calls"
+    ]
+  },
+  {
+    "route": "/admin/enquiries",
+    "component": "PermissionRoute",
+    "file": "UNKNOWN",
+    "apiCalls": [],
+    "flags": [
+      "Page component not found in client/pages",
+      "No direct api.* calls"
+    ]
+  },
+  {
+    "route": "/admin/enquiries/:id",
+    "component": "PermissionRoute",
+    "file": "UNKNOWN",
+    "apiCalls": [],
+    "flags": [
+      "Page component not found in client/pages",
+      "No direct api.* calls"
+    ]
+  },
+  {
+    "route": "/admin/executive",
+    "component": "PermissionRoute",
+    "file": "UNKNOWN",
+    "apiCalls": [],
+    "flags": [
+      "Page component not found in client/pages",
+      "No direct api.* calls"
+    ]
+  },
+  {
+    "route": "/admin/multi-property",
+    "component": "PermissionRoute",
+    "file": "UNKNOWN",
+    "apiCalls": [],
+    "flags": [
+      "Page component not found in client/pages",
+      "No direct api.* calls"
+    ]
+  },
+  {
+    "route": "/admin/night-audit",
+    "component": "PermissionRoute",
+    "file": "UNKNOWN",
+    "apiCalls": [],
+    "flags": [
+      "Page component not found in client/pages",
+      "No direct api.* calls"
+    ]
+  },
+  {
+    "route": "/staff/mobile-housekeeping",
+    "component": "PermissionRoute",
+    "file": "UNKNOWN",
+    "apiCalls": [],
+    "flags": [
+      "Page component not found in client/pages",
+      "No direct api.* calls"
+    ]
+  },
+  {
+    "route": "/admin/analytics",
+    "component": "Navigate",
+    "file": "UNKNOWN",
+    "apiCalls": [],
+    "flags": [
+      "Page component not found in client/pages",
+      "No direct api.* calls"
+    ]
+  },
+  {
+    "route": "/admin/settings",
+    "component": "PermissionRoute",
+    "file": "UNKNOWN",
+    "apiCalls": [],
+    "flags": [
+      "Page component not found in client/pages",
+      "No direct api.* calls"
+    ]
+  },
+  {
+    "route": "/admin/settings/payment-channels",
+    "component": "PermissionRoute",
+    "file": "UNKNOWN",
+    "apiCalls": [],
+    "flags": [
+      "Page component not found in client/pages",
+      "No direct api.* calls"
+    ]
+  },
+  {
+    "route": "/admin/audit-logs",
+    "component": "PermissionRoute",
+    "file": "UNKNOWN",
+    "apiCalls": [],
+    "flags": [
+      "Page component not found in client/pages",
+      "No direct api.* calls"
+    ]
+  },
+  {
+    "route": "/admin/corporate-accounts",
+    "component": "PermissionRoute",
+    "file": "UNKNOWN",
+    "apiCalls": [],
+    "flags": [
+      "Page component not found in client/pages",
+      "No direct api.* calls"
+    ]
+  },
+  {
+    "route": "/admin/banquets",
+    "component": "PermissionRoute",
+    "file": "UNKNOWN",
+    "apiCalls": [],
+    "flags": [
+      "Page component not found in client/pages",
+      "No direct api.* calls"
+    ]
+  },
+  {
+    "route": "/admin/pos",
+    "component": "PermissionRoute",
+    "file": "UNKNOWN",
+    "apiCalls": [],
+    "flags": [
+      "Page component not found in client/pages",
+      "No direct api.* calls"
+    ]
+  },
+  {
+    "route": "/admin/ancillary",
+    "component": "PermissionRoute",
+    "file": "UNKNOWN",
+    "apiCalls": [],
+    "flags": [
+      "Page component not found in client/pages",
+      "No direct api.* calls"
+    ]
+  },
+  {
+    "route": "/admin/group-bookings",
+    "component": "PermissionRoute",
+    "file": "UNKNOWN",
+    "apiCalls": [],
+    "flags": [
+      "Page component not found in client/pages",
+      "No direct api.* calls"
+    ]
+  },
+  {
+    "route": "/front-desk/dashboard",
+    "component": "PermissionRoute",
+    "file": "UNKNOWN",
+    "apiCalls": [],
+    "flags": [
+      "Page component not found in client/pages",
+      "No direct api.* calls"
+    ]
+  },
+  {
+    "route": "/housekeeping/dashboard",
+    "component": "PermissionRoute",
+    "file": "UNKNOWN",
+    "apiCalls": [],
+    "flags": [
+      "Page component not found in client/pages",
+      "No direct api.* calls"
+    ]
+  },
+  {
+    "route": "/maintenance/dashboard",
+    "component": "PermissionRoute",
+    "file": "UNKNOWN",
+    "apiCalls": [],
+    "flags": [
+      "Page component not found in client/pages",
+      "No direct api.* calls"
+    ]
+  },
+  {
+    "route": "/cashier/dashboard",
+    "component": "PermissionRoute",
+    "file": "UNKNOWN",
+    "apiCalls": [],
+    "flags": [
+      "Page component not found in client/pages",
+      "No direct api.* calls"
+    ]
+  },
+  {
+    "route": "/finance/dashboard",
+    "component": "PermissionRoute",
+    "file": "UNKNOWN",
+    "apiCalls": [],
+    "flags": [
+      "Page component not found in client/pages",
+      "No direct api.* calls"
+    ]
+  },
+  {
+    "route": "/events/dashboard",
+    "component": "PermissionRoute",
+    "file": "UNKNOWN",
+    "apiCalls": [],
+    "flags": [
+      "Page component not found in client/pages",
+      "No direct api.* calls"
+    ]
+  },
+  {
+    "route": "/staff/housekeeping",
+    "component": "PermissionRoute",
+    "file": "UNKNOWN",
+    "apiCalls": [],
+    "flags": [
+      "Page component not found in client/pages",
+      "No direct api.* calls"
+    ]
+  },
+  {
+    "route": "/staff/maintenance",
+    "component": "PermissionRoute",
+    "file": "UNKNOWN",
+    "apiCalls": [],
+    "flags": [
+      "Page component not found in client/pages",
+      "No direct api.* calls"
+    ]
+  },
+  {
+    "route": "*",
+    "component": "Navigate",
+    "file": "UNKNOWN",
+    "apiCalls": [],
+    "flags": [
+      "Page component not found in client/pages",
+      "No direct api.* calls"
+    ]
+  }
+]

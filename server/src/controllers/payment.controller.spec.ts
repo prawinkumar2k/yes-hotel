@@ -32,8 +32,15 @@ async function createTestBooking(overrides: Partial<any> = {}) {
     children: 0,
     totalAmount: 1000,
     taxAmount: 0,
+    propertyId: new mongoose.Types.ObjectId(),
+    property: new mongoose.Types.ObjectId(),
+    source: "WALK_IN" as any,
+    bookingType: "INDIVIDUAL" as any,
+    stayType: "NIGHTLY" as any,
     status: BookingStatus.PENDING,
     paymentStatus: PaymentStatus.UNPAID,
+    registrationStatus: "DRAFT" as any,
+    signatureStatus: "NOT_COLLECTED" as any,
     ...overrides,
   });
 }

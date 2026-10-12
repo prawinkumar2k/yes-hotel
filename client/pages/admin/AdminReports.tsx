@@ -2,8 +2,9 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { Input } from "@/components/ui/input";
-import { Loader2 } from "lucide-react";
+import { Loader2, Download } from "lucide-react";
 import { format } from "date-fns";
+import { exportToCSV } from "@/lib/utils";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import DaySummaryTab from "@/components/admin/reports/DaySummaryTab";
 import MonthlyMISTab from "@/components/admin/reports/MonthlyMISTab";
@@ -60,6 +61,26 @@ export default function AdminReports() {
         <div>
           <label className="text-xs text-gray-500 block mb-1">To</label>
           <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
+        </div>
+        <div className="flex-1 flex justify-end">
+          <button
+            onClick={() => {
+              if (data?.categoryPerformance) {
+                exportToCSV(
+                  data.categoryPerformance.map((c: any) => ({
+                    Category: c.name,
+                    BasePrice: c.basePrice,
+                    PaidBookings: c.bookingsCount,
+                    Revenue: c.revenue
+                  })),
+                  `Reports_Overview_${dateFrom}_to_${dateTo}`
+                );
+              }
+            }}
+            className="flex items-center gap-2 bg-hotel-black text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-800 transition"
+          >
+            <Download size={16} /> Export to Excel
+          </button>
         </div>
       </div>
 

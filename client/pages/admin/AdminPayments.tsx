@@ -55,8 +55,8 @@ export default function AdminPayments() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-serif text-hotel-black">Payment Management</h1>
-        <p className="text-hotel-black/60">Monitor transactions, revenue, and payment statuses</p>
+        <h1 className="text-3xl font-serif text-hotel-black">Payments & Folios</h1>
+        <p className="text-hotel-black/60">Monitor folio transactions, settlements, and payment ledger</p>
       </div>
 
       {/* Stats Cards */}

@@ -39,6 +39,25 @@ export function RoomControl({ pulseData }: { pulseData: any }) {
           <p className="text-[10px] uppercase text-zinc-500 font-bold tracking-wide whitespace-nowrap overflow-hidden text-ellipsis mb-1">OOO / OOS</p>
           <p className="text-xl font-bold text-white tabular-nums">{pulseData.ooo + pulseData.oos}</p>
         </div>
+        
+        {/* NEW KPI CARDS FOR PHASE 3 */}
+        <div className="p-3 rounded-xl bg-black/40 border border-white/5">
+          <p className="text-[10px] uppercase text-zinc-500 font-bold tracking-wide whitespace-nowrap overflow-hidden text-ellipsis mb-1">Reserved</p>
+          <p className="text-xl font-bold text-white tabular-nums">{pulseData.reserved || 0}</p>
+        </div>
+        <div className="p-3 rounded-xl bg-black/40 border border-white/5">
+          <p className="text-[10px] uppercase text-zinc-500 font-bold tracking-wide whitespace-nowrap overflow-hidden text-ellipsis mb-1">Cleaning</p>
+          <p className="text-xl font-bold text-white tabular-nums">{pulseData.cleaning || 0}</p>
+        </div>
+        <div className="p-3 rounded-xl bg-black/40 border border-white/5">
+          <p className="text-[10px] uppercase text-zinc-500 font-bold tracking-wide whitespace-nowrap overflow-hidden text-ellipsis mb-1">Inspection</p>
+          <p className="text-xl font-bold text-white tabular-nums">{pulseData.inspection || 0}</p>
+        </div>
+        <div className="p-3 rounded-xl bg-black/40 border border-white/5">
+          <p className="text-[10px] uppercase text-zinc-500 font-bold tracking-wide whitespace-nowrap overflow-hidden text-ellipsis mb-1">Unavailable</p>
+          <p className="text-xl font-bold text-white tabular-nums">{pulseData.unavailable || 0}</p>
+          <p className="text-[8px] text-zinc-500 mt-0.5">Includes Blocked ({pulseData.blocked || 0})</p>
+        </div>
       </div>
       
       <div className="mt-auto pt-3 border-t border-white/5 text-xs text-zinc-500 text-center flex items-center justify-center gap-2">

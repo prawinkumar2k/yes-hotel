@@ -46,12 +46,12 @@ export default function AdminLayout({ children, title, hidePadding }: { children
 
   // Expanded sections state (default all open)
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({
-    "MAIN": true,
-    "FRONT DESK & GUESTS": true,
-    "CLEANING & ROOMS": true,
-    "MAINTENANCE & REPAIRS": true,
-    "RESTAURANT & FOOD BILLING": true,
-    "ACCOUNTS & MONEY": true,
+    "FRONT OFFICE": true,
+    "RESERVATIONS": true,
+    "HOUSEKEEPING & MAINTENANCE": true,
+    "CASHIERING": true,
+    "MANAGEMENT": true,
+    "SYSTEM SETUP": true,
   });
 
   const toggleSection = (title: string) => {
@@ -108,55 +108,54 @@ export default function AdminLayout({ children, title, hidePadding }: { children
 
   const NAV_SECTIONS: NavSection[] = [
     {
-      title: "MAIN",
+      title: "FRONT OFFICE",
       items: [
         { label: "Dashboard", to: "/admin/dashboard", icon: LayoutDashboard, pageKey: "DASHBOARD.ADMIN" },
+        { label: "Front Desk (Reception)", to: "/admin/front-desk", icon: Home, pageKey: "FRONT_DESK", badge: arrivalsCount > 0 ? arrivalsCount : undefined },
+        { label: "Room Rack (Tape Chart)", to: "/admin/calendar", icon: CalendarDays, pageKey: "CALENDAR" },
+        { label: "Guest Directory", to: "/admin/guests", icon: Users, pageKey: "GUESTS" },
       ],
     },
     {
-      title: "OPERATIONS",
+      title: "RESERVATIONS",
       items: [
-        { label: "Front Desk", to: "/admin/front-desk", icon: Home, pageKey: "FRONT_DESK", badge: arrivalsCount > 0 ? arrivalsCount : undefined },
-        { label: "Rooms", to: "/admin/rooms", icon: BedDouble, pageKey: "ROOMS" },
-        { label: "Reservations", to: "/admin/bookings", icon: CalendarDays, pageKey: "BOOKINGS" },
-        { label: "Guests", to: "/admin/guests", icon: Users, pageKey: "GUESTS" },
+        { label: "Enquiries", to: "/admin/enquiries", icon: MessageSquare, pageKey: "ENQUIRIES", badge: newEnquiriesCount > 0 ? newEnquiriesCount : undefined },
+        { label: "All Reservations", to: "/admin/bookings", icon: CalendarDays, pageKey: "BOOKINGS" },
+        { label: "OTA Bookings", to: "/admin/ota-bookings", icon: Globe, pageKey: "BOOKINGS" },
+        { label: "Groups & Banquets", to: "/admin/group-bookings", icon: Users, pageKey: "GROUP_BOOKINGS" },
+      ],
+    },
+    {
+      title: "HOUSEKEEPING & MAINTENANCE",
+      items: [
         { label: "Housekeeping", to: "/admin/housekeeping", icon: Sparkles, pageKey: "HOUSEKEEPING", badge: dirtyCount > 0 ? dirtyCount : undefined },
         { label: "Maintenance", to: "/admin/maintenance", icon: Wrench, pageKey: "MAINTENANCE" },
+        { label: "Rooms Management", to: "/admin/rooms", icon: BedDouble, pageKey: "ROOMS" },
       ],
     },
     {
-      title: "MONEY",
+      title: "CASHIERING",
       items: [
-        { label: "Guest Bills", to: "/admin/accounting", icon: FileText, pageKey: "ACCOUNTING" },
-        { label: "Payments", to: "/admin/payments", icon: CreditCard, pageKey: "PAYMENTS" },
-        { label: "Advance Payments", to: "/admin/advances", icon: CreditCard, pageKey: "ADVANCES" },
-        { label: "Cashier", to: "/admin/cashier-shifts", icon: DollarSign, pageKey: "CASHIER_SHIFTS" },
-        { label: "Reports", to: "/admin/reports", icon: BarChart3, pageKey: "REPORTS_LAYOUT" },
+        { label: "Payments & Folios", to: "/admin/payments", icon: CreditCard, pageKey: "PAYMENTS" },
+        { label: "Advance Deposits", to: "/admin/advances", icon: CreditCard, pageKey: "ADVANCES" },
+        { label: "Cashier Shifts", to: "/admin/cashier-shifts", icon: DollarSign, pageKey: "CASHIER_SHIFTS" },
       ],
     },
     {
-      title: "STOCK",
+      title: "MANAGEMENT",
       items: [
-        { label: "Inventory", to: "/admin/inventory", icon: Package, pageKey: "INVENTORY" },
-        { label: "Purchasing", to: "/admin/procurement", icon: ShoppingBag, pageKey: "PROCUREMENT" },
-        { label: "Suppliers", to: "/admin/vendors", icon: Truck, pageKey: "VENDORS" },
+        { label: "Reports & Analytics", to: "/admin/reports", icon: BarChart3, pageKey: "REPORTS_LAYOUT" },
+        { label: "Promotions & Offers", to: "/admin/coupons", icon: Tag, pageKey: "COUPONS" },
+        { label: "Restaurant & POS", to: "/admin/pos", icon: UtensilsCrossed, pageKey: "FRONT_DESK" },
       ],
     },
     {
-      title: "BUSINESS",
+      title: "SYSTEM SETUP",
       items: [
-        { label: "Corporate Accounts", to: "/admin/corporate-accounts", icon: Building2, pageKey: "CORPORATE_ACCOUNTS" },
-        { label: "Groups & Events", to: "/admin/group-bookings", icon: Users, pageKey: "GROUP_BOOKINGS" },
-        { label: "Coupons", to: "/admin/coupons", icon: Tag, pageKey: "COUPONS" },
-      ],
-    },
-    {
-      title: "CONTROL",
-      items: [
-        { label: "Approvals", to: "/admin/task-approvals", icon: ShieldCheck, pageKey: "TASK_APPROVALS", badge: "Pending" },
-        { label: "Staff & Permissions", to: "/admin/staff", icon: Users, pageKey: "STAFF" },
-        { label: "Audit History", to: "/admin/audit-logs", icon: ScrollText, pageKey: "AUDIT_LOGS" },
-        { label: "Hotel Settings", to: "/admin/settings", icon: Settings, pageKey: "SETTINGS" },
+        { label: "Master Data", to: "/admin/master-data", icon: Settings, pageKey: "SETTINGS" },
+        { label: "User Roles & Rights", to: "/admin/staff", icon: Users, pageKey: "STAFF" },
+        { label: "Audit Trail", to: "/admin/audit-logs", icon: ScrollText, pageKey: "AUDIT_LOGS" },
+        { label: "Property Settings", to: "/admin/settings", icon: Settings, pageKey: "SETTINGS" },
       ],
     },
   ];
@@ -170,7 +169,7 @@ export default function AdminLayout({ children, title, hidePadding }: { children
   const totalBadgeCount = (arrivalsCount > 0 ? 1 : 0) + (departuresCount > 0 ? 1 : 0) + (dirtyCount > 0 ? 1 : 0);
 
   return (
-    <div className="admin-panel h-screen overflow-hidden bg-slate-50 text-slate-800 flex selection:bg-hotel-gold selection:text-black">
+    <div className="admin-panel h-screen overflow-hidden bg-slate-50 text-slate-800 flex selection:bg-hotel-gold selection:text-black print:h-auto print:overflow-visible print:bg-white print:block">
       {/* Command Palette */}
       <CommandPalette open={commandPaletteOpen} onOpenChange={setCommandPaletteOpen} />
 
@@ -182,7 +181,7 @@ export default function AdminLayout({ children, title, hidePadding }: { children
 
       {/* Sidebar Desktop & Mobile Drawer */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 bg-white border-r border-slate-200 shadow-sm transform transition-all duration-300 ease-in-out ${
+        className={`fixed inset-y-0 left-0 z-50 bg-white border-r border-slate-200 shadow-sm transform transition-all duration-300 ease-in-out print:hidden ${
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         } lg:translate-x-0 lg:static flex flex-col ${
           collapsed ? "w-20" : "w-64"
@@ -322,9 +321,9 @@ export default function AdminLayout({ children, title, hidePadding }: { children
       )}
 
       {/* Main Workspace Frame */}
-      <div className="flex-1 flex flex-col min-w-0 bg-slate-50">
+      <div className="flex-1 flex flex-col min-w-0 bg-slate-50 print:bg-white">
         {/* Universal Topbar */}
-        <header className="sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b border-slate-200 shadow-xs px-4 py-3 sm:px-6 flex items-center justify-between gap-3">
+        <header className="sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b border-slate-200 shadow-xs px-4 py-3 sm:px-6 flex items-center justify-between gap-3 print:hidden">
           {/* Left: Mobile Toggle, Property & Breadcrumbs */}
           <div className="flex items-center gap-3 min-w-0">
             <button
@@ -336,7 +335,7 @@ export default function AdminLayout({ children, title, hidePadding }: { children
             <div className="flex flex-col min-w-0">
               <div className="flex items-center gap-2 text-[11px] text-slate-400">
                 <span className="font-semibold text-hotel-gold-text flex items-center gap-1">
-                  <Building2 size={12} /> YES HOTELS Hyderabad
+                  <Building2 size={12} /> YES HOTELS Bengaluru
                 </span>
                 <span>/</span>
                 <span className="truncate text-slate-500">{title || "Command Center"}</span>
@@ -410,13 +409,13 @@ export default function AdminLayout({ children, title, hidePadding }: { children
         </header>
 
         {/* Page Content Body */}
-        <main className={`flex-1 overflow-auto ${hidePadding ? "" : "p-4 sm:p-6 lg:p-8"}`}>
+        <main className={`flex-1 overflow-auto print:overflow-visible ${hidePadding ? "" : "p-4 sm:p-6 lg:p-8"} print:p-0`}>
           {children}
         </main>
       </div>
 
       {/* ── Mobile Bottom Navigation Bar (phones & tablets only) ── */}
-      <nav className="mobile-bottom-nav items-center justify-around px-2 py-1 safe-area-pb">
+      <nav className="mobile-bottom-nav items-center justify-around px-2 py-1 safe-area-pb print:hidden">
         <Link
           to="/admin/dashboard"
           onClick={() => setSidebarOpen(false)}

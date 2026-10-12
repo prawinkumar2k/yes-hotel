@@ -6,9 +6,15 @@ import { getStoredAuthToken } from "@/lib/authStorage";
 import AdminMonthlyMIS from "./AdminMonthlyMIS";
 import DaySummaryReport from "./reports/DaySummaryReport";
 import CashSheetReport from "./reports/CashSheetReport";
+import AdminAnalytics from "./reports/AdminAnalytics";
+import AdminInHouseList from "./AdminInHouseList";
+import AdminBulkDocViewer from "./AdminBulkDocViewer";
+
 const CATEGORIES = [
+  { id: "analytics", name: "Advanced Analytics", path: "/admin/reports/analytics" },
   { id: "daily-summary", name: "Daily Hotel Summary", path: "/admin/reports/daily-summary" },
-  { id: "cash-sheet", name: "Cash Sheet", path: "/admin/reports/cash-sheet" },
+  { id: "in-house-list", name: "Guest In-House List", path: "/admin/reports/in-house-list" },
+  { id: "bulk-docs", name: "GRC & GST Invoices (Bulk)", path: "/admin/reports/bulk-docs" },
   { id: "monthly-mis", name: "Monthly MIS Report", path: "/admin/reports/monthly-mis" },
 ];
 
@@ -46,7 +52,10 @@ export default function AdminReportsLayout() {
       {/* Main Content Area */}
       <div className="flex-1 overflow-y-auto bg-gray-50 p-4 md:p-6 w-full">
         <Routes>
-          <Route path="/" element={<DaySummaryReport />} />
+          <Route path="/" element={<AdminAnalytics />} />
+          <Route path="analytics" element={<AdminAnalytics />} />
+          <Route path="in-house-list" element={<AdminInHouseList />} />
+          <Route path="bulk-docs" element={<AdminBulkDocViewer />} />
           <Route path="monthly-mis" element={<AdminMonthlyMIS />} />
           <Route path="daily-summary" element={<DaySummaryReport />} />
           <Route path="cash-sheet" element={<CashSheetReport />} />

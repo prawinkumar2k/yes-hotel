@@ -2,7 +2,9 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   ArrowLeft, Search, UserCheck, ShieldCheck, CreditCard,
-  Printer, CheckCircle2, BedDouble, Plus, AlertCircle, RefreshCw, ArrowRight
+  Printer, CheckCircle2, BedDouble, Plus, AlertCircle, RefreshCw, ArrowRight,
+  FileCheck2, FileText, Calendar, Receipt, MapPin, Mail, Phone, Eye, X, Image as ImageIcon,
+  Building2, Briefcase, Clock, Users, User, Car
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { getStoredAuthToken } from "../../lib/authStorage";
@@ -45,6 +47,24 @@ interface ForeignGuestDetails {
   visaIssuedBy: string;
 }
 
+// Number to words helper for invoices
+function numberToWords(num: number): string {
+  const a = ["", "ONE ", "TWO ", "THREE ", "FOUR ", "FIVE ", "SIX ", "SEVEN ", "EIGHT ", "NINE ", "TEN ", "ELEVEN ", "TWELVE ", "THIRTEEN ", "FOURTEEN ", "FIFTEEN ", "SIXTEEN ", "SEVENTEEN ", "EIGHTEEN ", "NINETEEN "];
+  const b = ["", "", "TWENTY", "THIRTY", "FORTY", "FIFTY", "SIXTY", "SEVENTY", "EIGHTY", "NINETY"];
+  
+  if ((num = Math.floor(num)) <= 0) return "ZERO RUPEES ONLY";
+  const n = ("000000000" + num).substr(-9).match(/^(\d{2})(\d{2})(\d{2})(\d{1})(\d{2})$/);
+  if (!n) return "";
+  
+  let str = "";
+  str += (Number(n[1]) !== 0) ? (a[Number(n[1])] || b[n[1][0] as any] + " " + a[n[1][1] as any]) + "CRORE " : "";
+  str += (Number(n[2]) !== 0) ? (a[Number(n[2])] || b[n[2][0] as any] + " " + a[n[2][1] as any]) + "LAKH " : "";
+  str += (Number(n[3]) !== 0) ? (a[Number(n[3])] || b[n[3][0] as any] + " " + a[n[3][1] as any]) + "THOUSAND " : "";
+  str += (Number(n[4]) !== 0) ? (a[Number(n[4])] || b[n[4][0] as any] + " " + a[n[4][1] as any]) + "HUNDRED " : "";
+  str += (Number(n[5]) !== 0) ? ((str !== "") ? "AND " : "") + (a[Number(n[5])] || b[n[5][0] as any] + " " + a[n[5][1] as any]) : "";
+  return str.trim() + " RUPEES ONLY";
+}
+
 export default function AdminGuestRegistration() {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -52,6 +72,12 @@ export default function AdminGuestRegistration() {
   const [step, setStep] = useState<Step>("SEARCH");
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+
+  // STEP 5 IN-PAGE DOCUMENT VIEWER (BOTH, GRC, INVOICE)
+  const [documentView, setDocumentView] = useState<"BOTH" | "GRC" | "INVOICE">("BOTH");
+
+  // LIGHTBOX PREVIEW STATE
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
 
   // SEARCH STEP
   const [searchQuery, setSearchQuery] = useState("");
@@ -68,6 +94,7 @@ export default function AdminGuestRegistration() {
   });
   const [availableRooms, setAvailableRooms] = useState<any[]>([]);
   const [selectedRoom, setSelectedRoom] = useState<any | null>(null);
+  const [selectedRooms, setSelectedRooms] = useState<any[]>([]);
 
   // GUEST DETAILS STEP
   const [isExistingGuest, setIsExistingGuest] = useState(false);
@@ -117,6 +144,7 @@ export default function AdminGuestRegistration() {
     kidsUnder3: 0,
     otherCharges: 0,
     otherChargesDesc: "",
+    rateOverrideAmount: "",
   });
 
   const [billingDetails, setBillingDetails] = useState({
@@ -218,6 +246,10 @@ export default function AdminGuestRegistration() {
     });
     if (booking.assignedRoom) {
       setSelectedRoom(booking.assignedRoom);
+      const defaultTariff = booking.ratePerNight || booking.assignedRoom?.ratePerNight || booking.assignedRoom?.category?.basePrice || 0;
+      if (defaultTariff) {
+        setStayDetails((prev) => ({ ...prev, rateOverrideAmount: String(defaultTariff) }));
+      }
     }
     setStep(booking.assignedRoom ? "DETAILS" : "ROOM");
   };
@@ -254,10 +286,41 @@ export default function AdminGuestRegistration() {
 
   const handleSelectRoom = (room: any) => {
     setSelectedRoom(room);
+    setSelectedRooms([room]);
+    const defaultTariff = room.ratePerNight || room.category?.basePrice || 0;
+    setStayDetails((prev) => ({
+      ...prev,
+      rateOverrideAmount: defaultTariff ? String(defaultTariff) : prev.rateOverrideAmount,
+    }));
     setStep("DETAILS");
   };
 
+  const toggleSelectRoom = (room: any) => {
+    setSelectedRooms(prev => {
+      const exists = prev.some(r => r._id === room._id);
+      if (exists) {
+        const next = prev.filter(r => r._id !== room._id);
+        setSelectedRoom(next.length > 0 ? next[0] : null);
+        return next;
+      } else {
+        const next = [...prev, room];
+        if (!selectedRoom) setSelectedRoom(room);
+        const defaultTariff = room.ratePerNight || room.category?.basePrice || 0;
+        setStayDetails((s) => ({
+          ...s,
+          rateOverrideAmount: defaultTariff && !s.rateOverrideAmount ? String(defaultTariff) : s.rateOverrideAmount,
+        }));
+        return next;
+      }
+    });
+  };
+
   const calculateRates = async () => {
+    const roomsToBook = selectedRooms.length > 0 ? selectedRooms : (selectedRoom ? [selectedRoom] : []);
+    if (roomsToBook.length === 0) {
+      toast({ title: "No room selected", description: "Please select at least one room.", variant: "destructive" });
+      return;
+    }
     setSubmitting(true);
     try {
       const token = getStoredAuthToken();
@@ -268,7 +331,8 @@ export default function AdminGuestRegistration() {
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         body: JSON.stringify({
-          roomId: selectedRoom._id,
+          roomId: roomsToBook[0]._id,
+          roomIds: roomsToBook.map(r => r._id),
           checkIn: roomSearch.checkIn,
           checkOut: roomSearch.checkOut,
           mealPlan: stayDetails.mealPlan,
@@ -283,6 +347,7 @@ export default function AdminGuestRegistration() {
           kidsUnder3: stayDetails.kidsUnder3,
           otherCharges: stayDetails.otherCharges,
           discountAmount: 0,
+          rateOverrideAmount: stayDetails.rateOverrideAmount !== "" ? Number(stayDetails.rateOverrideAmount) : (roomsToBook[0]?.ratePerNight || roomsToBook[0]?.category?.basePrice || undefined),
         }),
       });
       const json = await res.json();
@@ -303,7 +368,8 @@ export default function AdminGuestRegistration() {
   };
 
   const confirmRegistration = async () => {
-    if (!selectedRoom || !rateBreakdown) return;
+    const roomsToBook = selectedRooms.length > 0 ? selectedRooms : (selectedRoom ? [selectedRoom] : []);
+    if (roomsToBook.length === 0 || !rateBreakdown) return;
     setSubmitting(true);
     try {
       const token = getStoredAuthToken();
@@ -320,7 +386,9 @@ export default function AdminGuestRegistration() {
         bookingType: roomSearch.bookingType,
         hours: Number(roomSearch.hours),
         ...stayDetails,
-        roomId: selectedRoom._id,
+        rateOverrideAmount: stayDetails.rateOverrideAmount ? Number(stayDetails.rateOverrideAmount) : undefined,
+        roomId: roomsToBook[0]._id,
+        roomIds: roomsToBook.map(r => r._id),
         ...billingDetails,
       };
 
@@ -334,7 +402,7 @@ export default function AdminGuestRegistration() {
       });
       const json = await res.json();
       if (json.success) {
-        toast({ title: "Registration Successful", description: "Booking has been generated. Ready for Check-in." });
+        toast({ title: "Registration Successful", description: `${roomsToBook.length} room(s) booked successfully. Ready for Check-in.` });
         setRegisteredBooking(json.data.booking);
         setStep("DONE");
       } else {
@@ -376,23 +444,12 @@ export default function AdminGuestRegistration() {
 
   const handlePrint = () => {
     if (!registeredBooking) return;
-    const token = getStoredAuthToken();
-    const url = `/api/front-desk/registration/${registeredBooking._id}/print`;
-    
-    // Open in new tab and auto-print via small script
-    const printWindow = window.open("", "_blank");
-    if (printWindow) {
-      fetch(url, { headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) } })
-        .then(res => res.text())
-        .then(html => {
-          printWindow.document.write(html);
-          printWindow.document.close();
-          // Let it load images/fonts before printing
-          setTimeout(() => {
-            printWindow.print();
-          }, 500);
-        });
-    }
+    window.open(`/admin/bookings/${registeredBooking._id}/grc-print`, "_blank");
+  };
+
+  const handlePrintInvoice = () => {
+    if (!registeredBooking) return;
+    window.open(`/admin/bookings/${registeredBooking._id}/folio-print`, "_blank");
   };
 
   // ─────────────────────────────────────────────────────────────────────────────
@@ -586,29 +643,97 @@ export default function AdminGuestRegistration() {
 
             {availableRooms.length > 0 && (
               <div className="space-y-4">
-                <h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest px-2">Ready for Assignment ({availableRooms.length})</h3>
-                {availableRooms.map(room => (
-                  <div key={room._id} className="bg-white rounded-2xl shadow-sm border border-gray-200 p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:border-[#c9a227] transition">
-                    <div>
-                      <div className="flex items-center gap-3 mb-1">
-                        <span className="text-2xl font-bold font-serif">{room.roomNumber}</span>
-                        <span className="text-xs bg-green-100 text-green-700 font-bold px-2 py-0.5 rounded-md uppercase tracking-wider">
-                          {room.housekeepingLabel}
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-amber-50/60 border border-amber-200 p-4 rounded-xl">
+                  <div>
+                    <h3 className="text-sm font-bold text-gray-800 uppercase tracking-widest">
+                      Ready for Assignment ({availableRooms.length})
+                    </h3>
+                    <p className="text-xs text-gray-600 mt-0.5">
+                      Select one or multiple rooms to book simultaneously.
+                      {selectedRooms.length > 0 && (
+                        <span className="font-bold text-[#c9a227] ml-1">
+                          ({selectedRooms.length} room{selectedRooms.length > 1 ? "s" : ""} selected: {selectedRooms.map(r => r.roomNumber).join(", ")})
                         </span>
-                      </div>
-                      <div className="text-sm text-gray-500">{room.category?.name} &bull; Floor {room.floor_number}</div>
-                    </div>
-                    <div className="flex items-center gap-6">
-                      <div className="text-right">
-                        <div className="text-xs text-gray-500">Rack Rate</div>
-                        <div className="font-bold text-lg text-[#c9a227]">₹{room.ratePerNight?.toLocaleString()}</div>
-                      </div>
-                      <button onClick={() => handleSelectRoom(room)} className="bg-[#c9a227]/10 text-[#c9a227] hover:bg-[#c9a227] hover:text-white px-6 py-2.5 rounded-xl font-bold transition border border-[#c9a227]">
-                        Assign Room
-                      </button>
-                    </div>
+                      )}
+                    </p>
                   </div>
-                ))}
+                  {selectedRooms.length > 0 && (
+                    <button
+                      onClick={() => {
+                        const targetRoom = selectedRooms[0] || selectedRoom;
+                        const defaultTariff = targetRoom?.ratePerNight || targetRoom?.category?.basePrice || 0;
+                        setStayDetails(prev => ({
+                          ...prev,
+                          rateOverrideAmount: prev.rateOverrideAmount || (defaultTariff ? String(defaultTariff) : ""),
+                        }));
+                        setStep("DETAILS");
+                      }}
+                      className="px-5 py-2.5 bg-[#c9a227] hover:bg-black text-white rounded-xl text-xs font-bold transition shadow-md flex items-center gap-2 whitespace-nowrap"
+                    >
+                      Proceed with {selectedRooms.length} Room{selectedRooms.length > 1 ? "s" : ""} <ArrowRight size={14} />
+                    </button>
+                  )}
+                </div>
+
+                {availableRooms.map(room => {
+                  const isSelected = selectedRooms.some(r => r._id === room._id);
+                  return (
+                    <div
+                      key={room._id}
+                      onClick={() => toggleSelectRoom(room)}
+                      className={cn(
+                        "bg-white rounded-2xl shadow-sm border p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 cursor-pointer transition",
+                        isSelected
+                          ? "border-[#c9a227] bg-[#fdfaf2] ring-2 ring-[#c9a227]/40"
+                          : "border-gray-200 hover:border-[#c9a227]"
+                      )}
+                    >
+                      <div className="flex items-center gap-3">
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => {}} // handled by parent onClick
+                          className="w-5 h-5 rounded text-[#c9a227] accent-[#c9a227] cursor-pointer"
+                        />
+                        <div>
+                          <div className="flex items-center gap-3 mb-1">
+                            <span className="text-2xl font-bold font-serif">{room.roomNumber}</span>
+                            <span className="text-xs bg-green-100 text-green-700 font-bold px-2 py-0.5 rounded-md uppercase tracking-wider">
+                              {room.housekeepingLabel}
+                            </span>
+                            {isSelected && (
+                              <span className="text-xs bg-[#c9a227] text-white font-bold px-2 py-0.5 rounded-md">
+                                SELECTED
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-sm text-gray-500">{room.category?.name} &bull; Floor {room.floor_number}</div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-6" onClick={(e) => e.stopPropagation()}>
+                        <div className="text-right">
+                          <div className="text-xs text-gray-500">Rack Rate</div>
+                          <div className="font-bold text-lg text-[#c9a227]">₹{room.ratePerNight?.toLocaleString()}</div>
+                        </div>
+                        <button
+                          onClick={() => handleSelectRoom(room)}
+                          className={cn(
+                            "px-5 py-2.5 rounded-xl font-bold transition border text-xs flex items-center gap-1.5",
+                            isSelected
+                              ? "bg-[#c9a227] text-white border-[#c9a227]"
+                              : "bg-[#c9a227]/10 text-[#c9a227] hover:bg-[#c9a227] hover:text-white border-[#c9a227]"
+                          )}
+                        >
+                          {isSelected ? (
+                            <>Proceed <ArrowRight size={14} /></>
+                          ) : (
+                            "Select Only This"
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>
@@ -697,7 +822,26 @@ export default function AdminGuestRegistration() {
               <div className="p-6 grid grid-cols-1 md:grid-cols-4 gap-5">
                 <div><label className="block text-xs font-bold text-gray-500 mb-1">Arrival Time</label><input type="time" className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm" value={stayDetails.arrivalTime} onChange={e => setStayDetails({...stayDetails, arrivalTime: e.target.value})} /></div>
                 <div><label className="block text-xs font-bold text-gray-500 mb-1">Departure Time</label><input type="time" className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm" value={stayDetails.departureTime} onChange={e => setStayDetails({...stayDetails, departureTime: e.target.value})} /></div>
-                <div><label className="block text-xs font-bold text-gray-500 mb-1">Meal Plan</label><select className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm" value={stayDetails.mealPlan} onChange={e => setStayDetails({...stayDetails, mealPlan: e.target.value})}><option value="EP">EP (Room Only)</option><option value="CP">CP (Breakfast)</option><option value="MAP">MAP (Half Board)</option><option value="AP">AP (Full Board)</option><option value="RO">RO (Room Only)</option><option value="BB">BB (Bed & Breakfast)</option></select></div>
+                <div><label className="block text-xs font-bold text-gray-500 mb-1">Meal Plan</label><select className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm" value={stayDetails.mealPlan} onChange={e => setStayDetails({...stayDetails, mealPlan: e.target.value})}><option value="EP">EP (Room Only)</option><option value="CP">CP (Breakfast)</option><option value="MAP">MAP (Half Board)</option><option value="AP">AP (Full Board)</option></select></div>
+                <div>
+                  <div className="flex justify-between items-center mb-1">
+                    <label className="block text-xs font-bold text-[#c9a227]">Room Tariff (₹/Night)</label>
+                    {(selectedRoom?.ratePerNight || selectedRoom?.category?.basePrice) ? (
+                      <span className="text-[10px] font-bold text-amber-800 bg-amber-100 px-1.5 py-0.5 rounded border border-amber-300">
+                        Default: ₹{selectedRoom?.ratePerNight || selectedRoom?.category?.basePrice}
+                      </span>
+                    ) : null}
+                  </div>
+                  <input
+                    type="number"
+                    min="0"
+                    placeholder={(selectedRoom?.ratePerNight || selectedRoom?.category?.basePrice) ? `Default ₹${selectedRoom?.ratePerNight || selectedRoom?.category?.basePrice}` : "Enter custom tariff"}
+                    className="w-full px-3 py-2 bg-[#fdfaf2] border border-[#e5c76b] rounded-lg text-sm font-semibold text-slate-800 focus:ring-2 focus:ring-[#c9a227] outline-none"
+                    value={stayDetails.rateOverrideAmount}
+                    onChange={e => setStayDetails({...stayDetails, rateOverrideAmount: e.target.value})}
+                  />
+                  <p className="text-[10px] text-gray-500 mt-0.5">Pre-filled with category default tariff. Type any amount to override.</p>
+                </div>
                 <div><label className="block text-xs font-bold text-gray-500 mb-1">Kids &lt; 3 (Free)</label><input type="number" min="0" className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm" value={stayDetails.kidsUnder3} onChange={e => setStayDetails({...stayDetails, kidsUnder3: parseInt(e.target.value)||0})} /></div>
                 <div><label className="block text-xs font-bold text-gray-500 mb-1">Adult Extra Pax (No Bed)</label><input type="number" min="0" className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm" value={stayDetails.extraPersonsNoBed} onChange={e => setStayDetails({...stayDetails, extraPersonsNoBed: parseInt(e.target.value)||0})} /></div>
                 <div><label className="block text-xs font-bold text-gray-500 mb-1">Adult Extra Pax (With Bed)</label><input type="number" min="0" className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm" value={stayDetails.extraPersonsWithBed} onChange={e => setStayDetails({...stayDetails, extraPersonsWithBed: parseInt(e.target.value)||0})} /></div>
@@ -734,115 +878,1201 @@ export default function AdminGuestRegistration() {
         )}
 
         {/* =========================================================================
-            STEP 4: CONFIRMATION
+            STEP 4: CONFIRMATION & DAY-BY-DAY CHARGES BREAKDOWN
             ========================================================================= */}
-        {step === "CONFIRM" && rateBreakdown && (
-          <div className="animate-in fade-in slide-in-from-right-4 duration-300">
-            <div className="bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden">
-              <div className="bg-[#262930] text-[#e5c76b] p-8 text-center">
-                <CheckCircle2 size={48} className="mx-auto mb-4" />
-                <h2 className="text-3xl font-serif mb-1">Registration Summary</h2>
-                <p className="text-gray-400">Please verify details with the guest before generating the registration card.</p>
-              </div>
+        {step === "CONFIRM" && rateBreakdown && (() => {
+          const checkInDate = new Date(roomSearch.checkIn);
+          const nights = Math.max(1, rateBreakdown.nights || 1);
+          const dailyTariff = Math.round(rateBreakdown.roomCharges / nights);
+          const dailyExtraBed = Math.round((rateBreakdown.extraBedTotal || 0) / nights);
+          const dailyTaxable = dailyTariff + dailyExtraBed;
+          const dailyCgst = Math.round(dailyTaxable * 0.06 * 100) / 100;
+          const dailySgst = Math.round(dailyTaxable * 0.06 * 100) / 100;
+          const dailyTotal = dailyTaxable + dailyCgst + dailySgst;
 
-              <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-12">
-                <div>
-                  <h4 className="text-xs font-bold text-gray-400 uppercase tracking-widest border-b border-gray-200 pb-2 mb-4">Guest Info</h4>
-                  <div className="text-lg font-bold">{guestDetails.guestFirstName} {guestDetails.guestLastName}</div>
-                  <div className="text-sm text-gray-500 mb-4">{guestDetails.mobile} &bull; {guestDetails.idType} {guestDetails.idNumber}</div>
+          const advanceAmountNum = Number(billingDetails.advanceAmount) || 0;
+          const netPayable = Math.max(0, rateBreakdown.totalAmount - advanceAmountNum);
 
-                  <h4 className="text-xs font-bold text-gray-400 uppercase tracking-widest border-b border-gray-200 pb-2 mb-4 mt-8">Stay Info</h4>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <div className="text-xs text-gray-500">Room</div>
-                      <div className="font-bold text-xl">{selectedRoom?.roomNumber}</div>
+          const daysSchedule = [];
+          for (let i = 0; i < nights; i++) {
+            const d = new Date(checkInDate);
+            d.setDate(d.getDate() + i);
+            daysSchedule.push({
+              night: i + 1,
+              dateStr: d.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }),
+              tariff: dailyTariff,
+              extraBed: dailyExtraBed,
+              taxable: dailyTaxable,
+              cgst: dailyCgst,
+              sgst: dailySgst,
+              total: dailyTotal,
+            });
+          }
+
+          return (
+            <div className="animate-in fade-in slide-in-from-right-4 duration-300">
+              <div className="bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden">
+                {/* Header banner */}
+                <div className="bg-[#1f2937] text-white p-6 sm:p-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+                  <div className="text-center sm:text-left">
+                    <div className="flex items-center gap-2 justify-center sm:justify-start text-[#c9a227] font-bold text-xs uppercase tracking-widest mb-1">
+                      <Receipt size={16} /> Guest Registration Summary
                     </div>
-                    <div>
-                      <div className="text-xs text-gray-500">Dates</div>
-                      <div className="font-bold">{rateBreakdown.nights} Nights</div>
-                      <div className="text-xs text-gray-500">{new Date(roomSearch.checkIn).toLocaleDateString()} &rarr; {new Date(roomSearch.checkOut).toLocaleDateString()}</div>
-                    </div>
+                    <h2 className="text-2xl sm:text-3xl font-serif font-black">Day-by-Day Stay &amp; Tax Invoice</h2>
+                    <p className="text-gray-400 text-xs mt-1">Review the itemized schedule and payment breakdown before generating the official bill.</p>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setStep("DETAILS")}
+                      className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-xs font-bold transition text-gray-200"
+                    >
+                      Edit Details
+                    </button>
                   </div>
                 </div>
 
-                <div className="bg-gray-50 rounded-xl p-6 border border-gray-100">
-                  <h4 className="text-xs font-bold text-gray-400 uppercase tracking-widest border-b border-gray-200 pb-2 mb-4">Tariff & Taxes</h4>
-                  <div className="space-y-3 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Room Charges</span>
-                      <span className="font-mono">₹{rateBreakdown.roomCharges.toLocaleString()}</span>
-                    </div>
-                    {rateBreakdown.extraBedTotal > 0 && (
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Extra Bed(s)</span>
-                        <span className="font-mono">₹{rateBreakdown.extraBedTotal.toLocaleString()}</span>
-                      </div>
-                    )}
-                    {rateBreakdown.mealPlanTotal > 0 && (
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Meal Plan ({stayDetails.mealPlan})</span>
-                        <span className="font-mono">₹{rateBreakdown.mealPlanTotal.toLocaleString()}</span>
-                      </div>
-                    )}
-                    {rateBreakdown.otherCharges > 0 && (
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Other Charges</span>
-                        <span className="font-mono">₹{rateBreakdown.otherCharges.toLocaleString()}</span>
-                      </div>
-                    )}
-                    <div className="flex justify-between text-gray-500">
-                      <span>CGST (9%)</span>
-                      <span className="font-mono">₹{rateBreakdown.tax.cgst.toLocaleString()}</span>
-                    </div>
-                    <div className="flex justify-between text-gray-500 border-b border-gray-200 pb-3">
-                      <span>SGST (9%)</span>
-                      <span className="font-mono">₹{rateBreakdown.tax.sgst.toLocaleString()}</span>
-                    </div>
-                    <div className="flex justify-between font-bold text-lg pt-1">
-                      <span>Total Invoice Value</span>
-                      <span className="font-mono text-[#c9a227]">₹{rateBreakdown.totalAmount.toLocaleString()}</span>
-                    </div>
-                    {Number(billingDetails.advanceAmount) > 0 && (
-                      <div className="flex justify-between font-bold text-green-700 bg-green-50 p-2 rounded-lg mt-2 border border-green-100">
-                        <span>Advance Paid ({billingDetails.advanceMethod})</span>
-                        <span className="font-mono">- ₹{Number(billingDetails.advanceAmount).toLocaleString()}</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
+                {/* 2-COLUMN MAIN CONTENT (SIDE SUMMARY PANEL AS REQUESTED) */}
+                <div className="p-6 sm:p-8 grid grid-cols-1 lg:grid-cols-12 gap-8">
+                  
+                  {/* LEFT: GUEST INFO & DAY-BY-DAY TABLE (8 COLS) */}
+                  <div className="lg:col-span-8 space-y-6">
+                    
+                    {/* 1. COMPREHENSIVE GUEST INFORMATION & DEMOGRAPHICS */}
+                    <div className="bg-gray-50/80 p-5 rounded-2xl border border-gray-200 shadow-sm space-y-4">
+                      {/* Top Header Row with Name, ID Badge, Contacts */}
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-gray-200">
+                        <div className="flex items-center gap-3">
+                          <div className="w-12 h-12 rounded-xl bg-[#c9a227]/15 border border-[#c9a227]/30 flex items-center justify-center text-[#c9a227] font-black text-xl font-serif shadow-sm">
+                            {guestDetails.guestFirstName ? guestDetails.guestFirstName[0].toUpperCase() : "G"}
+                          </div>
+                          <div>
+                            <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
+                              <User size={12} className="text-[#c9a227]" />
+                              Primary Guest Information
+                            </div>
+                            <h3 className="text-lg font-black text-gray-900 leading-tight">
+                              {guestDetails.guestFirstName} {guestDetails.guestLastName || ""}
+                            </h3>
+                            <div className="flex flex-wrap items-center gap-3 text-xs text-gray-600 mt-0.5">
+                              <span className="flex items-center gap-1 font-mono font-medium">
+                                <Phone size={12} className="text-gray-400" />
+                                {guestDetails.mobile || "—"}
+                              </span>
+                              {guestDetails.email && (
+                                <span className="flex items-center gap-1 text-gray-500">
+                                  <Mail size={12} className="text-gray-400" />
+                                  {guestDetails.email}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
 
-              <div className="p-6 bg-gray-50 border-t border-gray-200 flex justify-end gap-3">
-                <button onClick={() => setStep("DETAILS")} disabled={submitting} className="px-6 py-3 bg-white border border-gray-300 rounded-xl font-bold">Edit Details</button>
-                <button onClick={confirmRegistration} disabled={submitting} className="bg-[#c9a227] text-white px-8 py-3 rounded-xl font-bold hover:bg-black transition flex items-center gap-2">
-                  {submitting ? <RefreshCw size={18} className="animate-spin" /> : "Complete Registration"}
-                </button>
+                        {/* ID Document Badge */}
+                        <div className="flex flex-col sm:items-end">
+                          <span className="text-[10px] font-bold text-gray-400 uppercase">Verified ID Document</span>
+                          <span className="inline-flex items-center gap-1.5 bg-white border-2 border-gray-300 px-3 py-1 rounded-lg font-mono font-black text-xs text-gray-800 shadow-sm mt-0.5">
+                            <ShieldCheck size={14} className="text-green-600" />
+                            {guestDetails.idType}: {guestDetails.idNumber || "—"}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Address Row */}
+                      {guestDetails.address && (
+                        <div className="flex items-start gap-2 text-xs text-gray-700 bg-white p-2.5 rounded-lg border border-gray-200">
+                          <MapPin size={14} className="text-[#c9a227] flex-shrink-0 mt-0.5" />
+                          <div>
+                            <span className="font-bold text-gray-400 text-[10px] uppercase block">Residential / Billing Address</span>
+                            <span>{guestDetails.address}</span>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Demographics & Travel Data Grid */}
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs">
+                        <div className="bg-white p-2.5 rounded-lg border border-gray-200">
+                          <span className="text-[10px] font-bold text-gray-400 uppercase block">Nationality</span>
+                          <span className="font-semibold text-gray-800">{guestDetails.nationality || "Indian"}</span>
+                        </div>
+                        <div className="bg-white p-2.5 rounded-lg border border-gray-200">
+                          <span className="text-[10px] font-bold text-gray-400 uppercase block">Gender & DOB</span>
+                          <span className="font-semibold text-gray-800">
+                            {guestDetails.gender || "—"}{guestDetails.dateOfBirth ? ` • ${new Date(guestDetails.dateOfBirth).toLocaleDateString("en-IN")}` : ""}
+                          </span>
+                        </div>
+                        <div className="bg-white p-2.5 rounded-lg border border-gray-200">
+                          <span className="text-[10px] font-bold text-gray-400 uppercase block">Purpose of Visit</span>
+                          <span className="font-semibold text-gray-800">{guestDetails.purposeOfVisit || "Personal / Leisure"}</span>
+                        </div>
+                        <div className="bg-white p-2.5 rounded-lg border border-gray-200">
+                          <span className="text-[10px] font-bold text-gray-400 uppercase block">Proceeding To</span>
+                          <span className="font-semibold text-gray-800">{guestDetails.proceedingTo || "Local / Airport"}</span>
+                        </div>
+
+                        {guestDetails.organization && (
+                          <div className="bg-white p-2.5 rounded-lg border border-gray-200">
+                            <span className="text-[10px] font-bold text-gray-400 uppercase block flex items-center gap-1">
+                              <Building2 size={10} /> Organization
+                            </span>
+                            <span className="font-semibold text-gray-800">
+                              {guestDetails.organization} {guestDetails.designation ? `(${guestDetails.designation})` : ""}
+                            </span>
+                          </div>
+                        )}
+
+                        {guestDetails.vehicleNumber && (
+                          <div className="bg-white p-2.5 rounded-lg border border-gray-200">
+                            <span className="text-[10px] font-bold text-gray-400 uppercase block flex items-center gap-1">
+                              <Car size={10} /> Vehicle No
+                            </span>
+                            <span className="font-mono font-bold text-gray-800">{guestDetails.vehicleNumber}</span>
+                          </div>
+                        )}
+
+                        {guestDetails.gstin && (
+                          <div className="bg-white p-2.5 rounded-lg border border-gray-200">
+                            <span className="text-[10px] font-bold text-gray-400 uppercase block">Company GSTIN</span>
+                            <span className="font-mono font-bold text-gray-800">{guestDetails.gstin}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Foreign Guest Details (if applicable) */}
+                      {isForeignGuest && foreignDetails.passportNumber && (
+                        <div className="bg-amber-50/70 p-3 rounded-lg border border-amber-200 text-xs">
+                          <span className="text-[10px] font-bold text-amber-800 uppercase block mb-1">
+                            Foreign National Passport & Visa Registration (Form-C)
+                          </span>
+                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-amber-900 font-mono">
+                            <div><strong>Passport:</strong> {foreignDetails.passportNumber}</div>
+                            <div><strong>Exp:</strong> {foreignDetails.passportExpiryDate || "—"}</div>
+                            <div><strong>Visa:</strong> {foreignDetails.visaNumber || "—"}</div>
+                            <div><strong>Visa Exp:</strong> {foreignDetails.visaExpiryDate || "—"}</div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* 2. COLLECTED ID PROOFS & KYC IMAGES GALLERY */}
+                    <div className="bg-gray-50/80 p-5 rounded-2xl border border-gray-200 shadow-sm space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <ImageIcon size={16} className="text-[#c9a227]" />
+                          <h4 className="text-xs font-bold text-gray-800 uppercase tracking-wider">
+                            Collected ID Proof Documents & Photos ({guestDetails.idProofImages?.length || 0})
+                          </h4>
+                        </div>
+                        {guestDetails.idProofImages && guestDetails.idProofImages.length > 0 && (
+                          <span className="text-[10px] text-gray-500 font-medium">Click any document to inspect full preview</span>
+                        )}
+                      </div>
+
+                      {guestDetails.idProofImages && guestDetails.idProofImages.length > 0 ? (
+                        <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 gap-3 pt-1">
+                          {guestDetails.idProofImages.map((src, idx) => (
+                            <div
+                              key={idx}
+                              onClick={() => setPreviewImage(src)}
+                              className="group relative bg-white rounded-xl border-2 border-gray-200 hover:border-[#c9a227] p-1.5 shadow-sm hover:shadow-md transition-all cursor-pointer overflow-hidden flex flex-col"
+                            >
+                              <div className="relative aspect-video sm:aspect-square w-full bg-gray-100 rounded-lg overflow-hidden flex items-center justify-center">
+                                {src.startsWith("data:image") || src.startsWith("http") ? (
+                                  <img
+                                    src={src}
+                                    alt={`ID Document ${idx + 1}`}
+                                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                  />
+                                ) : (
+                                  <div className="p-2 text-center text-gray-500 flex flex-col items-center">
+                                    <FileText size={24} className="text-[#c9a227] mb-1" />
+                                    <span className="text-[10px] font-bold">Document {idx + 1}</span>
+                                  </div>
+                                )}
+                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
+                                  <Eye size={20} className="drop-shadow" />
+                                </div>
+                              </div>
+                              <div className="mt-1.5 px-1 flex items-center justify-between text-[10px]">
+                                <span className="font-bold text-gray-700">
+                                  {idx === 0 ? "ID Front" : idx === 1 ? "ID Back" : `Doc #${idx + 1}`}
+                                </span>
+                                <span className="text-[9px] text-[#c9a227] font-semibold group-hover:underline">View</span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="bg-white p-4 rounded-xl border border-dashed border-gray-300 text-center text-xs text-gray-500 flex flex-col items-center justify-center gap-1.5">
+                          <ShieldCheck size={20} className="text-gray-400" />
+                          <span>No physical image documents attached during registration.</span>
+                          <span className="text-[10px] text-gray-400">
+                            (Verification recorded with ID Number: {guestDetails.idNumber || "Provided at check-in"})
+                          </span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* 3. ASSIGNED ACCOMMODATION & STAY CONFIGURATION */}
+                    <div className="bg-gray-50/80 p-5 rounded-2xl border border-gray-200 shadow-sm space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
+                          <BedDouble size={14} className="text-[#c9a227]" />
+                          Assigned Accommodation {selectedRooms.length > 1 ? `(${selectedRooms.length} Rooms)` : ""}
+                        </div>
+                        <span className="text-xs text-gray-600 font-semibold">
+                          <strong>{nights} Night{nights > 1 ? "s" : ""}</strong> &bull; {new Date(roomSearch.checkIn).toLocaleDateString("en-IN")} &rarr; {new Date(roomSearch.checkOut).toLocaleDateString("en-IN")}
+                        </span>
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-2 pt-1">
+                        {selectedRooms.length > 1 ? (
+                          selectedRooms.map(rm => (
+                            <span key={rm._id} className="text-sm font-black font-serif text-[#c9a227] bg-[#c9a227]/10 px-3 py-1.5 rounded-xl border border-[#c9a227]/30 shadow-sm flex items-center gap-1.5">
+                              <BedDouble size={14} /> Room {rm.roomNumber} ({rm.category?.name || "Suite"})
+                            </span>
+                          ))
+                        ) : (
+                          <div className="flex items-center gap-2">
+                            <span className="text-2xl font-black font-serif text-[#c9a227]">
+                              Room {selectedRoom?.roomNumber}
+                            </span>
+                            <span className="text-xs font-bold bg-white border border-gray-200 px-2.5 py-1 rounded-lg">
+                              {selectedRoom?.category?.name || "Deluxe"}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Stay parameters chips */}
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-2 text-xs">
+                        <div className="bg-white p-2.5 rounded-lg border border-gray-200">
+                          <span className="text-[10px] font-bold text-gray-400 uppercase block">Arrival & Departure</span>
+                          <span className="font-semibold text-gray-800">
+                            In: {stayDetails.arrivalTime || "12:00"} &bull; Out: {stayDetails.departureTime || "11:00"}
+                          </span>
+                        </div>
+                        <div className="bg-white p-2.5 rounded-lg border border-gray-200">
+                          <span className="text-[10px] font-bold text-gray-400 uppercase block">Meal Plan</span>
+                          <span className="font-semibold text-gray-800">
+                            {stayDetails.mealPlan === "EP" ? "EP — Room Only" :
+                             stayDetails.mealPlan === "CP" ? "CP — Continental / Breakfast" :
+                             stayDetails.mealPlan === "MAP" ? "MAP — Half Board" :
+                             stayDetails.mealPlan === "AP" ? "AP — American / All Meals" : stayDetails.mealPlan}
+                          </span>
+                        </div>
+                        <div className="bg-white p-2.5 rounded-lg border border-gray-200">
+                          <span className="text-[10px] font-bold text-gray-400 uppercase block">Occupancy</span>
+                          <span className="font-semibold text-gray-800">
+                            {roomSearch.adults} Adult(s){Number(roomSearch.children) > 0 ? `, ${roomSearch.children} Child(ren)` : ""}
+                          </span>
+                        </div>
+                        <div className="bg-white p-2.5 rounded-lg border border-gray-200">
+                          <span className="text-[10px] font-bold text-gray-400 uppercase block">Payment & Advance</span>
+                          <span className="font-semibold text-gray-800">
+                            {billingDetails.advanceAmount && Number(billingDetails.advanceAmount) > 0 ? (
+                              <span className="text-green-700 font-bold">
+                                ₹{Number(billingDetails.advanceAmount).toLocaleString("en-IN")} ({billingDetails.advanceMethod})
+                              </span>
+                            ) : (
+                              <span className="text-gray-500">Pay on Checkout</span>
+                            )}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* DAY-BY-DAY CHARGES BREAKDOWN TABLE (IMAGE 1 BILL STYLE) */}
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <h4 className="text-xs font-bold text-gray-700 uppercase tracking-wider flex items-center gap-1.5">
+                          <Calendar size={14} className="text-[#c9a227]" />
+                          Day-by-Day Itemized Charges Schedule (Check-in &rarr; Checkout)
+                        </h4>
+                        <span className="text-[10px] text-gray-500 font-mono">SAC: 996311</span>
+                      </div>
+
+                      <div className="border border-gray-300 rounded-xl overflow-hidden shadow-sm">
+                        <table className="w-full text-xs text-left">
+                          <thead className="bg-gray-100 border-b border-gray-300 text-gray-700 font-bold uppercase text-[10px]">
+                            <tr>
+                              <th className="p-2.5 border-r border-gray-200">Date / Night</th>
+                              <th className="p-2.5 text-right border-r border-gray-200">Tariff</th>
+                              <th className="p-2.5 text-right border-r border-gray-200">Extra Bed</th>
+                              <th className="p-2.5 text-right border-r border-gray-200">Taxable</th>
+                              <th className="p-2.5 text-right border-r border-gray-200">CGST (6%)</th>
+                              <th className="p-2.5 text-right border-r border-gray-200">SGST (6%)</th>
+                              <th className="p-2.5 text-right">Day Total</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-gray-200 font-mono">
+                            {daysSchedule.map((day) => (
+                              <tr key={day.night} className="hover:bg-gray-50/80 transition">
+                                <td className="p-2.5 border-r border-gray-200 font-sans font-semibold text-gray-900">
+                                  Night #{day.night} &bull; <span className="font-mono text-gray-600">{day.dateStr}</span>
+                                </td>
+                                <td className="p-2.5 text-right border-r border-gray-200">₹{day.tariff.toLocaleString("en-IN")}</td>
+                                <td className="p-2.5 text-right border-r border-gray-200">{day.extraBed > 0 ? `₹${day.extraBed.toLocaleString("en-IN")}` : "—"}</td>
+                                <td className="p-2.5 text-right border-r border-gray-200 font-semibold">₹{day.taxable.toLocaleString("en-IN")}</td>
+                                <td className="p-2.5 text-right border-r border-gray-200 text-gray-600">₹{day.cgst.toLocaleString("en-IN")}</td>
+                                <td className="p-2.5 text-right border-r border-gray-200 text-gray-600">₹{day.sgst.toLocaleString("en-IN")}</td>
+                                <td className="p-2.5 text-right font-bold text-gray-900">₹{day.total.toLocaleString("en-IN")}</td>
+                              </tr>
+                            ))}
+
+                            {/* Additional Service or Meal Plan Charges if any */}
+                            {rateBreakdown.mealPlanTotal > 0 && (
+                              <tr className="bg-amber-50/50 text-amber-900">
+                                <td className="p-2.5 border-r border-gray-200 font-sans font-semibold">Meal Plan ({stayDetails.mealPlan})</td>
+                                <td colSpan={5} className="p-2.5 text-right border-r border-gray-200">Applicable food package</td>
+                                <td className="p-2.5 text-right font-bold">₹{rateBreakdown.mealPlanTotal.toLocaleString("en-IN")}</td>
+                              </tr>
+                            )}
+                            {rateBreakdown.otherCharges > 0 && (
+                              <tr className="bg-amber-50/50 text-amber-900">
+                                <td className="p-2.5 border-r border-gray-200 font-sans font-semibold">Other Charges / Incidentals</td>
+                                <td colSpan={5} className="p-2.5 text-right border-r border-gray-200">Services</td>
+                                <td className="p-2.5 text-right font-bold">₹{rateBreakdown.otherCharges.toLocaleString("en-IN")}</td>
+                              </tr>
+                            )}
+                          </tbody>
+                          <tfoot className="bg-gray-100 font-bold border-t-2 border-gray-300 text-xs font-mono">
+                            <tr>
+                              <td className="p-2.5 border-r border-gray-200 uppercase font-sans">Sub Total</td>
+                              <td className="p-2.5 text-right border-r border-gray-200">₹{rateBreakdown.roomCharges.toLocaleString("en-IN")}</td>
+                              <td className="p-2.5 text-right border-r border-gray-200">{rateBreakdown.extraBedTotal > 0 ? `₹${rateBreakdown.extraBedTotal.toLocaleString("en-IN")}` : "—"}</td>
+                              <td className="p-2.5 text-right border-r border-gray-200">₹{(rateBreakdown.roomCharges + (rateBreakdown.extraBedTotal || 0)).toLocaleString("en-IN")}</td>
+                              <td className="p-2.5 text-right border-r border-gray-200">₹{rateBreakdown.tax.cgst.toLocaleString("en-IN")}</td>
+                              <td className="p-2.5 text-right border-r border-gray-200">₹{rateBreakdown.tax.sgst.toLocaleString("en-IN")}</td>
+                              <td className="p-2.5 text-right font-black text-sm text-[#c9a227]">₹{rateBreakdown.totalAmount.toLocaleString("en-IN")}</td>
+                            </tr>
+                          </tfoot>
+                        </table>
+                      </div>
+                    </div>
+
+                    {/* Statutory GST Note */}
+                    <div className="text-[10px] text-gray-500 bg-gray-50 p-2.5 rounded-lg border border-gray-200 leading-relaxed">
+                      *GST calculated at 12% standard hospitality rate (6% CGST + 6% SGST) under SAC Code 996311. All disputes subject to Bengaluru jurisdiction.
+                    </div>
+
+                  </div>
+
+                  {/* RIGHT COLUMN: STICKY NET VALUE & SETTLEMENT SIDE PANEL (AS REQUESTED) */}
+                  <div className="lg:col-span-4">
+                    <div className="sticky top-24 bg-gradient-to-b from-gray-50 to-white rounded-2xl border-2 border-gray-300 p-6 shadow-md space-y-5">
+                      
+                      <div className="border-b border-gray-200 pb-3">
+                        <div className="text-[10px] font-black uppercase tracking-widest text-[#c9a227] flex items-center gap-1">
+                          <CreditCard size={14} /> Settlement Breakdown
+                        </div>
+                        <h3 className="text-lg font-serif font-black text-gray-900 mt-0.5">Billing &amp; Net Value</h3>
+                      </div>
+
+                      {/* Line Items */}
+                      <div className="space-y-2.5 text-xs">
+                        <div className="flex justify-between text-gray-600">
+                          <span>Room Tariff ({nights}N)</span>
+                          <span className="font-mono font-semibold">₹{rateBreakdown.roomCharges.toLocaleString("en-IN")}</span>
+                        </div>
+                        {rateBreakdown.extraBedTotal > 0 && (
+                          <div className="flex justify-between text-gray-600">
+                            <span>Extra Bed Charges</span>
+                            <span className="font-mono font-semibold">₹{rateBreakdown.extraBedTotal.toLocaleString("en-IN")}</span>
+                          </div>
+                        )}
+                        <div className="flex justify-between text-gray-600">
+                          <span>Taxes (CGST + SGST)</span>
+                          <span className="font-mono font-semibold">₹{(rateBreakdown.tax.cgst + rateBreakdown.tax.sgst).toLocaleString("en-IN")}</span>
+                        </div>
+                        
+                        <div className="border-t border-gray-200 pt-2 flex justify-between font-bold text-sm text-gray-900">
+                          <span>Total Invoice Value:</span>
+                          <span className="font-mono">₹{rateBreakdown.totalAmount.toLocaleString("en-IN")}</span>
+                        </div>
+
+                        {/* Advance Paid Section */}
+                        {advanceAmountNum > 0 ? (
+                          <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 text-emerald-900 space-y-1">
+                            <div className="flex justify-between font-bold text-xs">
+                              <span>Advance Received:</span>
+                              <span className="font-mono text-emerald-700">- ₹{advanceAmountNum.toLocaleString("en-IN")}</span>
+                            </div>
+                            <div className="flex justify-between text-[10px] text-emerald-700">
+                              <span>Mode:</span>
+                              <span className="font-bold uppercase tracking-wider">{billingDetails.advanceMethod}</span>
+                            </div>
+                            {billingDetails.advanceReference && (
+                              <div className="text-[10px] text-emerald-600 font-mono truncate">
+                                Ref: {billingDetails.advanceReference}
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="bg-gray-100 rounded-lg p-2 text-center text-[10px] text-gray-500">
+                            No advance deposit recorded (Full settlement at checkout)
+                          </div>
+                        )}
+
+                        {/* NET VALUE DUE AT CHECKOUT (HIGHLIGHTED) */}
+                        <div className="border-t-2 border-dashed border-gray-300 pt-3">
+                          <div className="text-[10px] uppercase font-black text-gray-500 tracking-wider">Net Balance Due on Checkout:</div>
+                          <div className="text-3xl font-black font-mono text-[#c9a227] tracking-tight mt-0.5">
+                            ₹{netPayable.toLocaleString("en-IN")}
+                          </div>
+                          <div className="text-[10px] text-gray-400 mt-1">
+                            Payable upon departure settlement
+                          </div>
+                        </div>
+
+                      </div>
+
+                      {/* Action Buttons */}
+                      <div className="pt-2 space-y-2">
+                        <button
+                          onClick={confirmRegistration}
+                          disabled={submitting}
+                          className="w-full bg-[#c9a227] hover:bg-black text-white py-3.5 px-4 rounded-xl font-black text-sm uppercase tracking-wider transition shadow-lg flex items-center justify-center gap-2"
+                        >
+                          {submitting ? (
+                            <>
+                              <RefreshCw size={18} className="animate-spin" /> Saving Registration...
+                            </>
+                          ) : (
+                            <>
+                              <CheckCircle2 size={18} /> Complete Registration
+                            </>
+                          )}
+                        </button>
+
+                        <button
+                          onClick={() => setStep("DETAILS")}
+                          disabled={submitting}
+                          className="w-full bg-white hover:bg-gray-100 border border-gray-300 text-gray-700 py-2.5 px-4 rounded-xl font-bold text-xs transition"
+                        >
+                          Back to Edit Details
+                        </button>
+                      </div>
+
+                    </div>
+                  </div>
+
+                </div>
+
               </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
 
         {/* =========================================================================
-            STEP 5: DONE
+            STEP 5: DONE — BOTH GRC (CONSENT FORM) & GST INVOICE RENDERED VISIBLE ON PAGE
             ========================================================================= */}
-        {step === "DONE" && registeredBooking && (
-          <div className="animate-in zoom-in-95 duration-300 max-w-2xl mx-auto">
-            <div className="bg-white rounded-2xl shadow-xl border border-gray-200 text-center p-12">
-              <div className="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-6">
-                <CheckCircle2 size={40} />
-              </div>
-              <h2 className="text-3xl font-serif font-bold mb-2">Registration Saved</h2>
-              <p className="text-gray-500 mb-8">Bill No: <span className="font-mono font-bold text-black">{registeredBooking.billNumber}</span></p>
+        {step === "DONE" && registeredBooking && (() => {
+          const checkInDate = new Date(roomSearch.checkIn);
+          const checkOutDate = new Date(roomSearch.checkOut);
+          const nights = Math.max(1, rateBreakdown?.nights || 1);
+          const dailyTariff = Math.round((rateBreakdown?.roomCharges || 0) / nights);
+          const dailyExtraBed = Math.round(((rateBreakdown?.extraBedTotal || 0)) / nights);
+          const dailyTaxable = dailyTariff + dailyExtraBed;
+          const dailyCgst = Math.round(dailyTaxable * 0.06 * 100) / 100;
+          const dailySgst = Math.round(dailyTaxable * 0.06 * 100) / 100;
+          const dailyTotal = dailyTaxable + dailyCgst + dailySgst;
 
-              <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <button onClick={handlePrint} className="flex-1 py-4 bg-gray-100 text-gray-800 rounded-xl font-bold hover:bg-gray-200 transition flex items-center justify-center gap-2 border border-gray-300">
-                  <Printer size={20} /> Print Card
-                </button>
-                <button onClick={handleCheckIn} disabled={submitting} className="flex-1 py-4 bg-[#c9a227] text-white rounded-xl font-bold hover:bg-black transition flex items-center justify-center gap-2 shadow-lg">
-                  {submitting ? <RefreshCw size={20} className="animate-spin" /> : "Check-in Now"}
+          const advanceAmountNum = Number(billingDetails.advanceAmount) || 0;
+          const totalInvoiceValue = rateBreakdown?.totalAmount || 0;
+          const netPayable = Math.max(0, totalInvoiceValue - advanceAmountNum);
+
+          const daysSchedule = [];
+          for (let i = 0; i < nights; i++) {
+            const d = new Date(checkInDate);
+            d.setDate(d.getDate() + i);
+            daysSchedule.push({
+              night: i + 1,
+              dateStr: d.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }),
+              tariff: dailyTariff,
+              extraBed: dailyExtraBed,
+              taxable: dailyTaxable,
+              cgst: dailyCgst,
+              sgst: dailySgst,
+              total: dailyTotal,
+            });
+          }
+
+          const billNo = registeredBooking.billNumber || registeredBooking.bookingReference || "—";
+          const allRoomNumbers = selectedRooms.length > 0
+            ? selectedRooms.map(r => r.roomNumber).join(", ")
+            : (selectedRoom?.roomNumber || "—");
+
+          const isAadhaar = guestDetails.idType.toUpperCase().includes("AAD");
+          const isDL = guestDetails.idType.toUpperCase().includes("DRIV");
+          const isVoter = guestDetails.idType.toUpperCase().includes("VOT");
+          const isGovt = !isAadhaar && !isDL && !isVoter;
+
+          return (
+            <div className="animate-in fade-in duration-300 space-y-6 max-w-5xl mx-auto">
+              
+              {/* TOP STICKY COMMAND BAR */}
+              <div className="sticky top-20 z-20 bg-white/95 backdrop-blur-md border-2 border-gray-200 rounded-2xl p-4 shadow-md flex flex-col md:flex-row items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-green-100 text-green-700 flex items-center justify-center flex-shrink-0 shadow-sm">
+                    <CheckCircle2 size={24} />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Registration Complete</span>
+                      <span className="bg-red-50 text-red-700 border border-red-200 font-mono font-black text-xs px-2 py-0.5 rounded">
+                        Bill No: {billNo}
+                      </span>
+                    </div>
+                    <div className="text-sm font-black text-gray-900 mt-0.5">
+                      {guestDetails.guestFirstName} {guestDetails.guestLastName} &bull; Room(s) {allRoomNumbers}
+                    </div>
+                  </div>
+                </div>
+
+                {/* VIEW SELECTOR SEGMENTED BUTTONS */}
+                <div className="flex items-center bg-gray-100 p-1 rounded-xl border border-gray-200 text-xs font-bold">
+                  <button
+                    onClick={() => setDocumentView("BOTH")}
+                    className={cn(
+                      "px-3 py-1.5 rounded-lg transition flex items-center gap-1.5",
+                      documentView === "BOTH" ? "bg-white text-gray-900 shadow-sm font-black" : "text-gray-600 hover:text-black"
+                    )}
+                  >
+                    <FileText size={14} /> View Both Documents
+                  </button>
+                  <button
+                    onClick={() => setDocumentView("GRC")}
+                    className={cn(
+                      "px-3 py-1.5 rounded-lg transition flex items-center gap-1.5",
+                      documentView === "GRC" ? "bg-white text-gray-900 shadow-sm font-black" : "text-gray-600 hover:text-black"
+                    )}
+                  >
+                    <FileCheck2 size={14} /> 1. GRC (Consent)
+                  </button>
+                  <button
+                    onClick={() => setDocumentView("INVOICE")}
+                    className={cn(
+                      "px-3 py-1.5 rounded-lg transition flex items-center gap-1.5",
+                      documentView === "INVOICE" ? "bg-white text-gray-900 shadow-sm font-black" : "text-gray-600 hover:text-black"
+                    )}
+                  >
+                    <Receipt size={14} /> 2. GST Invoice
+                  </button>
+                </div>
+
+                {/* ACTION BUTTONS */}
+                <div className="flex items-center gap-2 flex-wrap">
+                  <button
+                    onClick={handlePrint}
+                    className="px-3.5 py-2 bg-white border border-gray-300 hover:bg-gray-50 rounded-xl font-bold text-xs text-gray-800 transition flex items-center gap-1.5 shadow-sm"
+                  >
+                    <FileCheck2 size={15} className="text-[#c9a227]" /> Print GRC
+                  </button>
+                  <button
+                    onClick={handlePrintInvoice}
+                    className="px-3.5 py-2 bg-white border border-gray-300 hover:bg-gray-50 rounded-xl font-bold text-xs text-gray-800 transition flex items-center gap-1.5 shadow-sm"
+                  >
+                    <Printer size={15} className="text-[#c9a227]" /> Print Invoice
+                  </button>
+                  <button
+                    onClick={() => navigate("/admin/front-desk")}
+                    className="px-5 py-2 bg-[#c9a227] hover:bg-black text-white rounded-xl font-black text-xs uppercase tracking-wider transition flex items-center gap-1.5 shadow-md"
+                  >
+                    <ArrowRight size={15} /> Go to In-House Stays
+                  </button>
+                </div>
+              </div>
+
+              {/* =====================================================================
+                  DOCUMENT 1: GUEST REGISTRATION CARD (GRC & CONSENT FORM) — PHOTO 2
+                  ===================================================================== */}
+              {(documentView === "BOTH" || documentView === "GRC") && (
+                <div className="bg-white rounded-xl border-2 border-black p-4 sm:p-6 shadow-xl space-y-4">
+                  {/* Document Ribbon */}
+                  <div className="flex items-center justify-between pb-2 border-b border-gray-300 print:hidden text-xs">
+                    <span className="font-bold text-gray-700 uppercase tracking-widest flex items-center gap-1.5">
+                      <FileCheck2 size={16} className="text-[#c9a227]" />
+                      Document 1: Guest Registration Card &amp; Consent Form (Photo 2 Standard)
+                    </span>
+                    <button
+                      onClick={handlePrint}
+                      className="px-3 py-1 bg-black text-white rounded text-[11px] font-bold hover:bg-gray-800 flex items-center gap-1 shadow-sm"
+                    >
+                      <Printer size={13} /> Print This GRC
+                    </button>
+                  </div>
+
+                  {/* Physical Card Border Container */}
+                  <div className="border-2 border-black p-3 text-[11px] leading-tight font-sans bg-white">
+                    {/* HEADER SECTION */}
+                    <div className="border-b-2 border-black pb-2 text-center relative">
+                      <div className="flex items-center justify-between">
+                        <div className="text-left w-2/3">
+                          <h1 className="text-3xl font-black tracking-widest font-serif uppercase text-black">
+                            YES HOTELS
+                          </h1>
+                          <p className="text-[10px] text-gray-800 font-medium mt-0.5 leading-snug">
+                            No. 51, Khata No. 749, Singasandra, Hosa Road Junction, Parappana Agrahara,<br />
+                            Electronic City Ph-2, Bengaluru-560100.
+                          </p>
+                        </div>
+                        <div className="text-right w-1/3 border-l border-black pl-3 py-1">
+                          <div className="text-[11px] font-bold text-gray-800">
+                            Bill No. <span className="text-red-700 text-lg font-black font-mono ml-1">{billNo}</span>
+                          </div>
+                          <div className="text-[9px] font-mono text-gray-600 mt-0.5">
+                            Ref: {registeredBooking.bookingReference}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="mt-2 border-t border-black pt-1">
+                        <h2 className="text-base font-black uppercase tracking-wider">
+                          GUEST REGISTRATION CARD
+                        </h2>
+                        <p className="text-[9px] font-bold text-gray-700 uppercase tracking-tight">
+                          THE REGISTRATION OF FOREIGNERS RULES - 1939 FORM - C HOTEL ARRIVAL REPORT, RULE 14, ID PROOF IS REQUIRED FOR CHECK - IN
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* ID PROOF BANNER */}
+                    <div className="flex border-b border-black py-1.5 px-2 bg-gray-50 text-[11px] font-bold items-center justify-between">
+                      <div className="flex items-center gap-4">
+                        <span>ID :</span>
+                        <label className="flex items-center gap-1 cursor-pointer">
+                          <input type="checkbox" checked={isAadhaar} readOnly className="accent-black w-3.5 h-3.5" />
+                          <span>AAD</span>
+                        </label>
+                        <label className="flex items-center gap-1 cursor-pointer">
+                          <input type="checkbox" checked={isDL} readOnly className="accent-black w-3.5 h-3.5" />
+                          <span>DL</span>
+                        </label>
+                        <label className="flex items-center gap-1 cursor-pointer">
+                          <input type="checkbox" checked={isVoter} readOnly className="accent-black w-3.5 h-3.5" />
+                          <span>E.C.I</span>
+                        </label>
+                        <label className="flex items-center gap-1 cursor-pointer">
+                          <input type="checkbox" checked={isGovt} readOnly className="accent-black w-3.5 h-3.5" />
+                          <span>Govt. ID</span>
+                        </label>
+                      </div>
+                      <div className="font-mono text-xs font-black">
+                        ID No. : <span className="tracking-wider bg-white px-2 py-0.5 border border-black">{guestDetails.idNumber || "—"}</span>
+                      </div>
+                    </div>
+
+                    {/* MAIN 2-COLUMN SECTION */}
+                    <div className="grid grid-cols-12 border-b border-black">
+                      {/* LEFT COLUMN: OFFICE USE & FOREIGNERS BOX (5 COLS) */}
+                      <div className="col-span-5 border-r border-black p-2 space-y-3 bg-gray-50/50">
+                        {/* BOX 1: FOR OFFICE USE ONLY */}
+                        <div className="border border-black p-2 bg-white">
+                          <div className="text-[10px] font-black uppercase text-center border-b border-black pb-1 mb-2 tracking-wide">
+                            For Office Use Only
+                          </div>
+                          <div className="space-y-1.5 text-[10.5px]">
+                            <div className="flex justify-between border-b border-dotted border-gray-400 pb-0.5">
+                              <span className="font-bold">Room No.</span>
+                              <span className="font-black text-sm font-mono">{allRoomNumbers}</span>
+                              <span className="font-bold ml-2">Tariff</span>
+                              <span className="font-black font-mono">₹{dailyTariff}/-</span>
+                            </div>
+                            <div className="flex justify-between border-b border-dotted border-gray-400 pb-0.5">
+                              <span className="font-bold">Extra Bed</span>
+                              <span className="font-mono">{stayDetails.extraPersonsWithBed || "—"}</span>
+                              <span className="font-bold ml-2">Bill No.</span>
+                              <span className="font-mono">{billNo}</span>
+                            </div>
+                            <div className="flex justify-between border-b border-dotted border-gray-400 pb-0.5">
+                              <span className="font-bold">Advance</span>
+                              <span className="font-black font-mono text-green-800">₹{advanceAmountNum}/-</span>
+                              <span className="font-bold ml-2">Receipt No.</span>
+                              <span className="font-mono">{billingDetails.advanceReference || "—"}</span>
+                            </div>
+
+                            <div className="pt-1">
+                              <div className="font-bold text-[9px] uppercase text-gray-700">Billing Instruction / Settlement :</div>
+                              <div className="grid grid-cols-2 gap-1 mt-1 text-[10px]">
+                                <span className="flex items-center gap-1">
+                                  <input type="checkbox" checked={billingDetails.advanceMethod === "CASH"} readOnly className="accent-black w-3 h-3" /> Cash
+                                </span>
+                                <span className="flex items-center gap-1">
+                                  <input type="checkbox" checked={billingDetails.advanceMethod === "CARD"} readOnly className="accent-black w-3 h-3" /> Card / DD
+                                </span>
+                                <span className="flex items-center gap-1">
+                                  <input type="checkbox" checked={billingDetails.advanceMethod === "UPI"} readOnly className="accent-black w-3 h-3" /> UPI
+                                </span>
+                                <span className="flex items-center gap-1">
+                                  <input type="checkbox" checked={advanceAmountNum >= totalInvoiceValue} readOnly className="accent-black w-3 h-3" /> Net Pay
+                                </span>
+                              </div>
+                            </div>
+
+                            <div className="pt-1 border-t border-dotted border-gray-400">
+                              <div className="font-bold text-[9px] uppercase text-gray-700">Type of Plan :</div>
+                              <div className="flex justify-between mt-1 text-[10px]">
+                                <span className="flex items-center gap-1">
+                                  <input type="checkbox" checked={stayDetails.mealPlan === "EP" || !stayDetails.mealPlan} readOnly className="accent-black w-3 h-3" /> EP
+                                </span>
+                                <span className="flex items-center gap-1">
+                                  <input type="checkbox" checked={stayDetails.mealPlan === "CP"} readOnly className="accent-black w-3 h-3" /> CP
+                                </span>
+                                <span className="flex items-center gap-1">
+                                  <input type="checkbox" checked={stayDetails.mealPlan === "MAP"} readOnly className="accent-black w-3 h-3" /> MAP
+                                </span>
+                                <span className="flex items-center gap-1">
+                                  <input type="checkbox" checked={stayDetails.mealPlan === "AP"} readOnly className="accent-black w-3 h-3" /> AP
+                                </span>
+                              </div>
+                            </div>
+
+                            <div className="pt-1 flex justify-between font-bold text-[10px]">
+                              <span>B/ID No.</span>
+                              <span className="font-mono">Walk-In</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* BOX 2: FOR FOREIGNERS ONLY */}
+                        <div className="border border-black p-2 bg-white">
+                          <div className="text-[10px] font-black uppercase text-center border-b border-black pb-1 mb-1.5 tracking-wide">
+                            For Foreigners Only
+                          </div>
+                          <div className="space-y-1 text-[10px]">
+                            <div className="flex justify-between border-b border-gray-200 pb-0.5">
+                              <span className="font-semibold text-gray-700">Passport No.</span>
+                              <span className="font-mono font-bold">{foreignDetails.passportNumber || "—"}</span>
+                            </div>
+                            <div className="flex justify-between border-b border-gray-200 pb-0.5">
+                              <span className="font-semibold text-gray-700">Place of Issue</span>
+                              <span>{foreignDetails.passportIssuePlace || "—"}</span>
+                            </div>
+                            <div className="flex justify-between border-b border-gray-200 pb-0.5">
+                              <span className="font-semibold text-gray-700">Date of Issue</span>
+                              <span>{foreignDetails.passportIssueDate ? new Date(foreignDetails.passportIssueDate).toLocaleDateString("en-IN") : "—"}</span>
+                            </div>
+                            <div className="flex justify-between border-b border-gray-200 pb-0.5">
+                              <span className="font-semibold text-gray-700">Date of Expiry</span>
+                              <span>{foreignDetails.passportExpiryDate ? new Date(foreignDetails.passportExpiryDate).toLocaleDateString("en-IN") : "—"}</span>
+                            </div>
+                            <div className="flex justify-between border-b border-gray-200 pb-0.5">
+                              <span className="font-semibold text-gray-700">Visa No.</span>
+                              <span className="font-mono font-bold">{foreignDetails.visaNumber || "—"}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="font-semibold text-gray-700">Visa Date / Place</span>
+                              <span>{foreignDetails.visaDate ? new Date(foreignDetails.visaDate).toLocaleDateString("en-IN") : "—"}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* RIGHT COLUMN: GUEST DETAILS (7 COLS) */}
+                      <div className="col-span-7 p-3 space-y-2">
+                        <div className="border-b border-gray-300 pb-1">
+                          <span className="text-[9px] uppercase font-bold text-gray-600 block">Name (in capital Letters)</span>
+                          <span className="text-base font-black tracking-wider uppercase">
+                            {guestDetails.guestFirstName} {guestDetails.guestLastName}
+                          </span>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2 border-b border-gray-300 pb-1">
+                          <div>
+                            <span className="text-[9px] uppercase font-bold text-gray-600 block">Designation</span>
+                            <span className="font-semibold">{guestDetails.designation || "—"}</span>
+                          </div>
+                          <div>
+                            <span className="text-[9px] uppercase font-bold text-gray-600 block">Name of Organization</span>
+                            <span className="font-semibold">{guestDetails.organization || "—"}</span>
+                          </div>
+                        </div>
+
+                        <div className="border-b border-gray-300 pb-1">
+                          <span className="text-[9px] uppercase font-bold text-gray-600 block">Address</span>
+                          <span className="font-medium">{guestDetails.address || "—"}</span>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2 border-b border-gray-300 pb-1">
+                          <div>
+                            <span className="text-[9px] uppercase font-bold text-gray-600 block">Mobile No.</span>
+                            <span className="font-mono font-bold">{guestDetails.mobile || "—"}</span>
+                          </div>
+                          <div>
+                            <span className="text-[9px] uppercase font-bold text-gray-600 block">Email</span>
+                            <span className="font-mono text-[10px] truncate block">{guestDetails.email || "—"}</span>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-3 gap-2 border-b border-gray-300 pb-1">
+                          <div>
+                            <span className="text-[9px] uppercase font-bold text-gray-600 block">Nationality</span>
+                            <span className="font-semibold">{guestDetails.nationality.toUpperCase()}</span>
+                          </div>
+                          <div>
+                            <span className="text-[9px] uppercase font-bold text-gray-600 block">DOB / Age</span>
+                            <span>{guestDetails.dateOfBirth ? new Date(guestDetails.dateOfBirth).toLocaleDateString("en-IN") : "—"}</span>
+                          </div>
+                          <div>
+                            <span className="text-[9px] uppercase font-bold text-gray-600 block">Vehicle Reg. No.</span>
+                            <span className="font-mono font-bold uppercase">{guestDetails.vehicleNumber || "—"}</span>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-3 gap-2 border-b border-gray-300 pb-1">
+                          <div>
+                            <span className="text-[9px] uppercase font-bold text-gray-600 block">No. of Persons</span>
+                            <span className="font-bold">Adult: {roomSearch.adults || 1}</span>
+                          </div>
+                          <div>
+                            <span className="text-[9px] uppercase font-bold text-gray-600 block">Child</span>
+                            <span>{roomSearch.children || 0}</span>
+                          </div>
+                          <div>
+                            <span className="text-[9px] uppercase font-bold text-gray-600 block">Stay Days</span>
+                            <span className="font-bold">{nights} Day(s)</span>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2 border-b border-gray-300 pb-1">
+                          <div>
+                            <span className="text-[9px] uppercase font-bold text-gray-600 block">Date of Arr &amp; Time</span>
+                            <span className="font-bold">{checkInDate.toLocaleDateString("en-IN")} &bull; {stayDetails.arrivalTime || "12:00 PM"}</span>
+                          </div>
+                          <div>
+                            <span className="text-[9px] uppercase font-bold text-gray-600 block">Date of Dep &amp; Time</span>
+                            <span className="font-bold">{checkOutDate.toLocaleDateString("en-IN")} &bull; {stayDetails.departureTime || "11:00 AM"}</span>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <span className="text-[9px] uppercase font-bold text-gray-600 block">Purpose of Visit</span>
+                            <span className="font-semibold">{guestDetails.purposeOfVisit || "Personal / Business"}</span>
+                          </div>
+                          <div>
+                            <span className="text-[9px] uppercase font-bold text-gray-600 block">Proceeding To</span>
+                            <span className="font-semibold">{guestDetails.proceedingTo || "Local / Airport"}</span>
+                          </div>
+                        </div>
+
+                        {guestDetails.gstin && (
+                          <div className="pt-1 border-t border-gray-200">
+                            <span className="text-[9px] uppercase font-bold text-gray-600">Company GSTIN: </span>
+                            <span className="font-mono font-bold">{guestDetails.gstin}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* CUSTOMER PHOTO & ID PROOF ATTACHMENTS */}
+                    {guestDetails.idProofImages && guestDetails.idProofImages.length > 0 && (
+                      <div className="border-b border-black p-2 bg-gray-50">
+                        <div className="text-[10px] font-bold uppercase tracking-wider text-gray-700 flex items-center gap-1.5 mb-1.5">
+                          <FileCheck2 size={13} className="text-black" />
+                          Verified Customer KYC Documents &amp; Identity Records:
+                        </div>
+                        <div className="flex gap-4 overflow-x-auto py-1">
+                          {guestDetails.idProofImages.map((img: string, idx: number) => (
+                            <div
+                              key={idx}
+                              onClick={() => setPreviewImage(img)}
+                              className="border border-black bg-white p-1 rounded shadow-sm text-center cursor-pointer hover:border-[#c9a227] transition"
+                            >
+                              {img.startsWith("data:image") || img.startsWith("http") ? (
+                                <img
+                                  src={img}
+                                  alt={`Customer Document ${idx + 1}`}
+                                  className="h-28 w-44 object-contain rounded border border-gray-200"
+                                />
+                              ) : (
+                                <div className="h-24 w-36 bg-gray-100 flex items-center justify-center text-[9px] text-gray-500">
+                                  ID Document #{idx + 1}
+                                </div>
+                              )}
+                              <span className="text-[9px] font-bold text-gray-600 mt-1 block uppercase">
+                                Document #{idx + 1} (Click to zoom)
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* HOTEL RULES & REGULATIONS */}
+                    <div className="border-b border-black p-2.5 text-[9.5px] leading-tight space-y-1.5 bg-gray-50/30">
+                      <div className="font-black uppercase tracking-wider text-black flex items-center gap-1">
+                        <ShieldCheck size={13} />
+                        Hotel Rules, Regulations &amp; Guest Consent Terms:
+                      </div>
+                      <ol className="list-decimal list-inside space-y-0.5 text-gray-800 font-normal">
+                        <li>Management reserves the right of admission and right to request any guest to vacate premises if necessary.</li>
+                        <li>Government issued photo identity proof (Aadhaar, Passport, DL, Voter ID) is mandatory for all adult occupants.</li>
+                        <li>Check-in is standard after 12:00 PM and Check-out time is strictly 11:00 AM. Late checkout is subject to availability and extra charge.</li>
+                        <li>Guests are solely responsible for their valuable items, cash, and belongings. Hotel is not responsible for any theft, damage or loss.</li>
+                        <li>Carrying contraband, hazardous goods, narcotics, ammunition, weapons or any banned substances is strictly prohibited on hotel property.</li>
+                        <li>Any damage caused to hotel property, linens, electrical appliances, or fixtures will be charged directly to the guest’s folio bill.</li>
+                        <li>Bills must be settled in full upon presentation, or prior to departure, in Indian Rupees (Cash, UPI or Approved Credit/Debit Cards).</li>
+                        <li>All disputes and legal jurisdiction arising from this contract are strictly subject to Bengaluru City Jurisdiction only.</li>
+                      </ol>
+                    </div>
+
+                    {/* SIGNATURES SECTION */}
+                    <div className="pt-6 pb-2 px-4 flex justify-between items-end text-center">
+                      <div>
+                        <div className="border-b border-black border-dashed w-56 mb-1"></div>
+                        <div className="text-[10.5px] font-bold uppercase tracking-wider">
+                          Signature of Guest
+                        </div>
+                      </div>
+                      <div>
+                        <div className="border-b border-black border-dashed w-56 mb-1"></div>
+                        <div className="text-[10.5px] font-bold uppercase tracking-wider">
+                          Signature of Receptionist / Duty Manager
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* =====================================================================
+                  DOCUMENT 2: GST TAX INVOICE — PHOTO 1
+                  ===================================================================== */}
+              {(documentView === "BOTH" || documentView === "INVOICE") && (
+                <div className="bg-white rounded-xl border-2 border-black p-4 sm:p-6 shadow-xl space-y-4">
+                  {/* Document Ribbon */}
+                  <div className="flex items-center justify-between pb-2 border-b border-gray-300 print:hidden text-xs">
+                    <span className="font-bold text-gray-700 uppercase tracking-widest flex items-center gap-1.5">
+                      <Receipt size={16} className="text-[#c9a227]" />
+                      Document 2: GST Tax Invoice (Photo 1 Standard)
+                    </span>
+                    <button
+                      onClick={handlePrintInvoice}
+                      className="px-3 py-1 bg-black text-white rounded text-[11px] font-bold hover:bg-gray-800 flex items-center gap-1 shadow-sm"
+                    >
+                      <Printer size={13} /> Print This Invoice
+                    </button>
+                  </div>
+
+                  {/* Physical Invoice Paper Container */}
+                  <div className="border-2 border-black p-5 text-[11px] leading-tight font-sans bg-white">
+                    {/* INVOICE HEADER */}
+                    <div className="border-b-2 border-black pb-3">
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <h1 className="text-3xl font-black tracking-widest font-serif uppercase text-black">
+                            YES HOTELS
+                          </h1>
+                          <p className="text-[10px] text-gray-800 font-medium mt-1 leading-snug">
+                            No. 51, Khata No. 749, Singasandra, Hosa Road Junction, Parappana Agrahara,<br />
+                            Electronic City Ph-2, Bengaluru-560100.<br />
+                            <strong>GSTIN:</strong> 29AAAFY1234A1Z5 &bull; <strong>State:</strong> Karnataka (Code: 29)
+                          </p>
+                        </div>
+                        <div className="text-right border-l-2 border-black pl-4">
+                          <h2 className="text-xl font-black uppercase text-black font-serif">TAX INVOICE</h2>
+                          <div className="text-xs font-bold text-gray-800 mt-1">
+                            Invoice No: <span className="font-mono text-red-700 font-black text-sm ml-1">{billNo}</span>
+                          </div>
+                          <div className="text-[10px] font-mono text-gray-600 mt-0.5">
+                            Date: {new Date().toLocaleDateString("en-IN")}
+                          </div>
+                          <div className="text-[10px] font-mono text-gray-600">
+                            Ref: {registeredBooking.bookingReference}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* BILLED TO & STAY META GRID */}
+                    <div className="grid grid-cols-2 border-b-2 border-black py-2.5 gap-4">
+                      <div>
+                        <span className="text-[9px] uppercase font-bold text-gray-500 block">Billed To (Guest Details):</span>
+                        <div className="text-sm font-black text-black uppercase mt-0.5">
+                          {guestDetails.guestFirstName} {guestDetails.guestLastName}
+                        </div>
+                        <div className="text-[10.5px] text-gray-700 mt-0.5">
+                          <strong>Phone:</strong> {guestDetails.mobile} &bull; <strong>Email:</strong> {guestDetails.email || "—"}
+                        </div>
+                        <div className="text-[10px] text-gray-600 mt-0.5">
+                          <strong>Address:</strong> {guestDetails.address || "Bengaluru"}
+                        </div>
+                        {guestDetails.gstin && (
+                          <div className="text-[10px] font-mono font-bold text-black mt-0.5">
+                            <strong>Guest GSTIN:</strong> {guestDetails.gstin}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="border-l border-black pl-4 space-y-1">
+                        <div className="flex justify-between">
+                          <span className="text-gray-600 font-bold">Assigned Room(s):</span>
+                          <span className="font-black text-black font-mono">{allRoomNumbers}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600 font-bold">Check-In:</span>
+                          <span className="font-mono font-semibold">{checkInDate.toLocaleDateString("en-IN")} at {stayDetails.arrivalTime || "12:00 PM"}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600 font-bold">Check-Out:</span>
+                          <span className="font-mono font-semibold">{checkOutDate.toLocaleDateString("en-IN")} at {stayDetails.departureTime || "11:00 AM"}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600 font-bold">Duration:</span>
+                          <span className="font-bold">{nights} Night(s)</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600 font-bold">SAC Service Code:</span>
+                          <span className="font-mono font-bold">996311 (Hospitality Services)</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* DAY-BY-DAY ITEMIZED CHARGES SCHEDULE */}
+                    <div className="py-3">
+                      <div className="border border-black overflow-hidden">
+                        <table className="w-full text-left text-[10.5px]">
+                          <thead className="bg-gray-100 border-b border-black text-black font-bold uppercase text-[9.5px]">
+                            <tr>
+                              <th className="p-2 border-r border-black">Date / Night Description</th>
+                              <th className="p-2 border-r border-black text-center">SAC</th>
+                              <th className="p-2 border-r border-black text-right">Tariff</th>
+                              <th className="p-2 border-r border-black text-right">Extra Bed</th>
+                              <th className="p-2 border-r border-black text-right">Taxable</th>
+                              <th className="p-2 border-r border-black text-right">CGST (6%)</th>
+                              <th className="p-2 border-r border-black text-right">SGST (6%)</th>
+                              <th className="p-2 text-right">Day Total</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-gray-300 font-mono">
+                            {daysSchedule.map((day) => (
+                              <tr key={day.night} className="hover:bg-gray-50/50">
+                                <td className="p-2 border-r border-black font-sans font-semibold text-black">
+                                  Night #{day.night} &bull; {day.dateStr}
+                                </td>
+                                <td className="p-2 border-r border-black text-center font-mono">996311</td>
+                                <td className="p-2 border-r border-black text-right">₹{day.tariff.toLocaleString("en-IN")}</td>
+                                <td className="p-2 border-r border-black text-right">{day.extraBed > 0 ? `₹${day.extraBed.toLocaleString("en-IN")}` : "—"}</td>
+                                <td className="p-2 border-r border-black text-right font-semibold">₹{day.taxable.toLocaleString("en-IN")}</td>
+                                <td className="p-2 border-r border-black text-right">₹{day.cgst.toLocaleString("en-IN")}</td>
+                                <td className="p-2 border-r border-black text-right">₹{day.sgst.toLocaleString("en-IN")}</td>
+                                <td className="p-2 text-right font-bold text-black">₹{day.total.toLocaleString("en-IN")}</td>
+                              </tr>
+                            ))}
+
+                            {/* Additional Service charges if any */}
+                            {rateBreakdown?.mealPlanTotal > 0 && (
+                              <tr className="bg-amber-50/40">
+                                <td colSpan={2} className="p-2 border-r border-black font-sans font-semibold">
+                                  Meal Plan ({stayDetails.mealPlan})
+                                </td>
+                                <td colSpan={5} className="p-2 border-r border-black text-right">Food Package</td>
+                                <td className="p-2 text-right font-bold">₹{rateBreakdown.mealPlanTotal.toLocaleString("en-IN")}</td>
+                              </tr>
+                            )}
+                          </tbody>
+                          <tfoot className="border-t-2 border-black bg-gray-50 font-bold font-mono text-[10.5px]">
+                            <tr>
+                              <td colSpan={2} className="p-2 border-r border-black uppercase font-sans">Sub Total</td>
+                              <td className="p-2 border-r border-black text-right">₹{(rateBreakdown?.roomCharges || 0).toLocaleString("en-IN")}</td>
+                              <td className="p-2 border-r border-black text-right">{rateBreakdown?.extraBedTotal > 0 ? `₹${rateBreakdown.extraBedTotal.toLocaleString("en-IN")}` : "—"}</td>
+                              <td className="p-2 border-r border-black text-right">₹{((rateBreakdown?.roomCharges || 0) + (rateBreakdown?.extraBedTotal || 0)).toLocaleString("en-IN")}</td>
+                              <td className="p-2 border-r border-black text-right">₹{(rateBreakdown?.tax?.cgst || 0).toLocaleString("en-IN")}</td>
+                              <td className="p-2 border-r border-black text-right">₹{(rateBreakdown?.tax?.sgst || 0).toLocaleString("en-IN")}</td>
+                              <td className="p-2 text-right font-black text-sm text-black">₹{totalInvoiceValue.toLocaleString("en-IN")}</td>
+                            </tr>
+                          </tfoot>
+                        </table>
+                      </div>
+                    </div>
+
+                    {/* SETTLEMENT & NET VALUE SECTION (MATCHING PHOTO 1) */}
+                    <div className="grid grid-cols-12 border-2 border-black mt-2">
+                      <div className="col-span-7 p-3 border-r-2 border-black space-y-2">
+                        <div className="text-[10px] uppercase font-bold text-gray-600">Net Amount Due in Words:</div>
+                        <div className="font-serif font-black text-xs text-black tracking-wide border-b border-gray-300 pb-2">
+                          {numberToWords(netPayable)}
+                        </div>
+
+                        <div className="pt-2 text-[9.5px] text-gray-700 leading-snug">
+                          <strong>Bank Payment Details:</strong><br />
+                          <strong>Bank:</strong> HDFC Bank Ltd &bull; <strong>Account:</strong> YES HOTELS<br />
+                          <strong>A/C No:</strong> 50200012345678 &bull; <strong>IFSC:</strong> HDFC0001234<br />
+                          <strong>Branch:</strong> Electronic City Branch, Bengaluru
+                        </div>
+                      </div>
+
+                      <div className="col-span-5 p-3 space-y-1.5 font-mono text-[11px] bg-gray-50/50">
+                        <div className="flex justify-between">
+                          <span className="font-sans font-bold text-gray-700">Total Invoice Value:</span>
+                          <span className="font-bold">₹{totalInvoiceValue.toLocaleString("en-IN")}</span>
+                        </div>
+                        <div className="flex justify-between text-green-800">
+                          <span className="font-sans font-bold">Advance Received ({billingDetails.advanceMethod}):</span>
+                          <span className="font-black">- ₹{advanceAmountNum.toLocaleString("en-IN")}</span>
+                        </div>
+                        <div className="border-t-2 border-black pt-2 flex justify-between items-center bg-[#c9a227]/10 -mx-3 -mb-3 p-3 mt-2">
+                          <span className="font-sans font-black text-xs uppercase text-gray-900">
+                            Net Balance Due:
+                          </span>
+                          <span className="font-sans font-black text-base text-[#c9a227]">
+                            ₹{netPayable.toLocaleString("en-IN")}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* STATUTORY JURISDICTION & SIGNATURES */}
+                    <div className="pt-6 pb-2 flex justify-between items-end text-center mt-4">
+                      <div className="text-left text-[9px] text-gray-500 max-w-sm">
+                        *Disputes subject to Bengaluru jurisdiction.<br />
+                        This is a computer generated invoice authenticated by YES HOTELS front desk reception.
+                      </div>
+                      <div>
+                        <div className="border-b border-black border-dashed w-52 mb-1"></div>
+                        <div className="text-[10px] font-bold uppercase tracking-wider">
+                          For YES HOTELS (Authorized Signatory)
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+            </div>
+          );
+        })()}
+
+        {/* LIGHTBOX MODAL FOR PREVIEWING ATTACHED DOCUMENTS & IMAGES */}
+        {previewImage && (
+          <div
+            onClick={() => setPreviewImage(null)}
+            className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200"
+          >
+            <div
+              onClick={e => e.stopPropagation()}
+              className="relative max-w-3xl w-full bg-white rounded-2xl overflow-hidden shadow-2xl flex flex-col"
+            >
+              <div className="p-3.5 bg-gray-900 text-white flex items-center justify-between">
+                <span className="text-xs font-bold uppercase tracking-wider flex items-center gap-2 text-[#c9a227]">
+                  <ImageIcon size={16} /> Attached KYC Document Preview
+                </span>
+                <button
+                  onClick={() => setPreviewImage(null)}
+                  className="w-7 h-7 rounded-full bg-white/20 hover:bg-white/30 text-white flex items-center justify-center transition"
+                >
+                  <X size={16} />
                 </button>
               </div>
-              <p className="text-xs text-gray-400 mt-6"><AlertCircle size={12} className="inline mr-1"/> "Check-in" will formally assign the room, create the folio, and post the tariff to the ledger.</p>
+              <div className="p-4 bg-gray-100 flex items-center justify-center overflow-auto max-h-[80vh]">
+                <img
+                  src={previewImage}
+                  alt="Document Preview"
+                  className="max-w-full max-h-[72vh] object-contain rounded-lg shadow-md"
+                />
+              </div>
             </div>
           </div>
         )}

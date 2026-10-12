@@ -29,6 +29,8 @@ import { FolioLine, FolioLineType } from "../models/FolioLine";
 import { AdvancePayment, AdvancePaymentMethod, AdvancePaymentStatus } from "../models/AdvancePayment";
 import { PaymentChannel } from "../models/PaymentChannel";
 import { HotelSettings } from "../models/HotelSettings";
+import { Property } from "../models/Property";
+import { User, UserRole } from "../models/User";
 import { createFolio, postCharge, calculateTaxBreakdown } from "../services/folio.service";
 import { receiveAdvance } from "../services/advance.service";
 import { createAuditLog } from "../services/audit.service";
@@ -190,20 +192,41 @@ export const getAvailableRoomsForRegistration = async (req: Request, res: Respon
 
 export const calculateRegistrationRate = async (req: Request, res: Response) => {
   try {
-    const { roomId, checkIn, checkOut, bookingType = "NIGHTLY", hours = 1, extraPersonsNoBed = 0, extraPersonsWithBed = 0, extraChildrenNoBed = 0, extraChildrenWithBed = 0, kidsUnder3 = 0, discountAmount = 0, otherCharges = 0, mealPlan = "EP", adults = 1, children = 0 } = req.body;
+    const {
+      roomId,
+      roomIds = [],
+      checkIn,
+      checkOut,
+      bookingType = "NIGHTLY",
+      hours = 1,
+      extraPersonsNoBed = 0,
+      extraPersonsWithBed = 0,
+      extraChildrenNoBed = 0,
+      extraChildrenWithBed = 0,
+      kidsUnder3 = 0,
+      discountAmount = 0,
+      otherCharges = 0,
+      mealPlan = "EP",
+      adults = 1,
+      children = 0,
+      rateOverrideAmount,
+    } = req.body;
 
-    if (!roomId || !checkIn || !checkOut) {
-      return res.status(400).json({ success: false, message: "roomId, checkIn, and checkOut are required" });
+    const allRoomIds: string[] = (Array.isArray(roomIds) && roomIds.length > 0)
+      ? roomIds.map(String)
+      : (roomId ? [String(roomId)] : []);
+
+    if (allRoomIds.length === 0 || !checkIn || !checkOut) {
+      return res.status(400).json({ success: false, message: "At least one roomId, checkIn, and checkOut are required" });
     }
 
     const checkInDate = new Date(checkIn);
     const checkOutDate = bookingType === "HOURLY" ? new Date(checkInDate.getTime() + Number(hours) * 3600000) : new Date(checkOut);
     const nights = bookingType === "HOURLY" ? 1 : Math.max(1, Math.ceil((checkOutDate.getTime() - checkInDate.getTime()) / (1000 * 60 * 60 * 24)));
 
-    const room = await Room.findById(roomId).populate("category", "name basePrice hourlyPrice").lean();
-    if (!room) return res.status(404).json({ success: false, message: "Room not found" });
+    const rooms = await Room.find({ _id: { $in: allRoomIds } }).populate("category", "name basePrice hourlyPrice").lean();
+    if (rooms.length === 0) return res.status(404).json({ success: false, message: "No matching rooms found" });
 
-    const category = room.category as any;
     const settings = await HotelSettings.findOne().lean();
     const mealPlanRates = settings?.mealPlanRates || { EP: 0, CP: 500, MAP: 1000, AP: 1500, RO: 0, BB: 500 };
     const extraPersonRate = settings?.extraPersonRate || 800;
@@ -212,11 +235,30 @@ export const calculateRegistrationRate = async (req: Request, res: Response) => 
     const childRateWithBed = settings?.childRateWithBed || 600;
 
     const mealPlanRatePP = mealPlanRates[mealPlan as keyof typeof mealPlanRates] || 0;
-    const totalGuestsForMealPlan = Number(adults) + Number(children) + Number(extraPersonsNoBed) + Number(extraPersonsWithBed) + Number(extraChildrenNoBed) + Number(extraChildrenWithBed); // Note: kids under 3 are free for meals too
+    const totalGuestsForMealPlan = Number(adults) + Number(children) + Number(extraPersonsNoBed) + Number(extraPersonsWithBed) + Number(extraChildrenNoBed) + Number(extraChildrenWithBed);
     const mealPlanTotal = mealPlanRatePP * totalGuestsForMealPlan * nights;
 
-    const ratePerNight = bookingType === "HOURLY" ? (category?.hourlyPrice ?? 0) * Number(hours) : (category?.basePrice ?? 0);
-    const roomCharges = ratePerNight * (bookingType === "HOURLY" ? 1 : nights);
+    // Calculate room charges across all selected rooms
+    let totalRoomCharges = 0;
+    const roomBreakdowns = rooms.map(rm => {
+      const cat = rm.category as any;
+      const baseRatePerNight = bookingType === "HOURLY" ? (cat?.hourlyPrice ?? 0) * Number(hours) : (cat?.basePrice ?? 0);
+      const rmRatePerNight = rateOverrideAmount !== undefined && rateOverrideAmount !== null && Number(rateOverrideAmount) > 0 
+        ? Number(rateOverrideAmount) 
+        : baseRatePerNight;
+      const cost = rmRatePerNight * (bookingType === "HOURLY" ? 1 : nights);
+      totalRoomCharges += cost;
+      return {
+        roomId: rm._id,
+        roomNumber: rm.roomNumber,
+        categoryName: cat?.name || "Suite",
+        ratePerNight: rmRatePerNight,
+        cost,
+      };
+    });
+
+    const averageRatePerNight = roomBreakdowns.length > 0 ? Math.round(totalRoomCharges / (roomBreakdowns.length * (bookingType === "HOURLY" ? 1 : nights))) : 0;
+    const roomCharges = totalRoomCharges;
     
     const extraPersonTotal = Number(extraPersonsNoBed) * extraPersonRate * nights;
     const extraBedTotal = Number(extraPersonsWithBed) * extraBedRate * nights;
@@ -232,7 +274,9 @@ export const calculateRegistrationRate = async (req: Request, res: Response) => 
       success: true,
       data: {
         nights,
-        ratePerNight,
+        roomCount: rooms.length,
+        rooms: roomBreakdowns,
+        ratePerNight: averageRatePerNight,
         roomCharges,
         extraPersonsNoBed: Number(extraPersonsNoBed),
         extraPersonsWithBed: Number(extraPersonsWithBed),
@@ -254,7 +298,7 @@ export const calculateRegistrationRate = async (req: Request, res: Response) => 
         tax: taxBreakdown,
         totalAmount: taxableAmount + taxBreakdown.totalTax,
         breakdown: {
-          roomCharges: bookingType === "HOURLY" ? `₹${(category?.hourlyPrice ?? 0).toLocaleString("en-IN")} × ${hours} hours` : `₹${ratePerNight.toLocaleString("en-IN")} × ${nights} nights`,
+          roomCharges: bookingType === "HOURLY" ? `₹${averageRatePerNight.toLocaleString("en-IN")} × ${hours} hours` : `₹${averageRatePerNight.toLocaleString("en-IN")} × ${nights} nights (${rooms.length} rooms)`,
           extraPersonCharges: extraPersonTotal > 0 ? `₹${extraPersonRate.toLocaleString("en-IN")} × ${Number(extraPersonsNoBed)} pax × ${nights} nights` : null,
           extraBedCharges: extraBedTotal > 0 ? `₹${extraBedRate.toLocaleString("en-IN")} × ${Number(extraPersonsWithBed)} bed(s) × ${nights} nights` : null,
           childNoBedCharges: childNoBedTotal > 0 ? `₹${childRateNoBed.toLocaleString("en-IN")} × ${Number(extraChildrenNoBed)} child(ren) × ${nights} nights` : null,
@@ -285,6 +329,7 @@ export const walkInArrivalRegistration = async (req: Request, res: Response) => 
   const session = await mongoose.startSession();
   let booking: any = null;
   let advance: any = null;
+  let createdBookings: any[] = [];
 
   try {
     await session.withTransaction(async () => {
@@ -323,6 +368,7 @@ export const walkInArrivalRegistration = async (req: Request, res: Response) => 
         arrivalTime,
         departureTime,
         roomId,
+        roomIds = [],
         mealPlan,
         extraPersonsNoBed = 0,
         extraPersonsWithBed = 0,
@@ -340,15 +386,20 @@ export const walkInArrivalRegistration = async (req: Request, res: Response) => 
         advanceMethod,
         advanceReference,
         advanceReceivedBy,
+        rateOverrideAmount,
 
         // Source
         isExistingGuest = false,
         existingGuestId,
       } = req.body;
 
+      const allRoomIds: string[] = (Array.isArray(roomIds) && roomIds.length > 0)
+        ? roomIds.map(String)
+        : (roomId ? [String(roomId)] : []);
+
       // Validate required fields
-      if (!mobile || !checkIn || !checkOut || !roomId) {
-        throw new Error("Mobile, check-in, check-out, and room selection are required");
+      if (!mobile || !checkIn || !checkOut || allRoomIds.length === 0) {
+        throw new Error("Mobile, check-in, check-out, and at least one room selection are required");
       }
 
       const checkInDate = new Date(checkIn);
@@ -360,73 +411,54 @@ export const walkInArrivalRegistration = async (req: Request, res: Response) => 
         throw new Error("Check-out must be after check-in");
       }
 
-      // Resolve room
-      const room = await Room.findById(roomId).populate("category").session(session);
-      if (!room) throw new Error("Selected room not found");
-
-      // Check room is actually available
-      if (room.sellStatus !== SellStatus.SELLABLE) {
-        throw new Error(`Room ${room.roomNumber} is ${room.sellStatus} and cannot be assigned`);
-      }
-      if (
-        room.housekeepingStatus !== HousekeepingRoomStatus.CLEAN &&
-        room.housekeepingStatus !== HousekeepingRoomStatus.READY
-      ) {
-        throw new Error(`Room ${room.roomNumber} is ${room.housekeepingStatus}. It must be CLEAN or READY for check-in.`);
-      }
-      if (room.occupancyStatus === OccupancyStatus.OCCUPIED) {
-        throw new Error(`Room ${room.roomNumber} is already occupied`);
+      // Resolve rooms
+      const rooms = await Room.find({ _id: { $in: allRoomIds } }).populate("category").session(session);
+      if (rooms.length !== allRoomIds.length) {
+        throw new Error(`Only ${rooms.length} of ${allRoomIds.length} selected rooms could be found`);
       }
 
-      // Check no overlapping confirmed/checked-in booking for this room
-      const overlap = await Booking.findOne({
-        assignedRoom: roomId,
-        status: { $in: [BookingStatus.CONFIRMED, BookingStatus.CHECKED_IN] },
-        checkInDate: { $lt: checkOutDate },
-        checkOutDate: { $gt: checkInDate },
-      }).session(session);
-      if (overlap) {
-        throw new Error(`Room ${room.roomNumber} already has a booking (${overlap.bookingReference}) for these dates`);
+      // Resolve property
+      let propertyId = (req as any).propertyId || rooms[0].propertyId;
+      if (!propertyId) {
+        const defaultProp = await Property.findOne().session(session).lean();
+        propertyId = defaultProp?._id;
       }
 
-      const category = room.category as any;
-      const nights = bookingType === "HOURLY" ? 1 : Math.max(1, Math.ceil((checkOutDate.getTime() - checkInDate.getTime()) / (1000 * 60 * 60 * 24)));
-      const ratePerNight = bookingType === "HOURLY" ? (category?.hourlyPrice ?? 0) * Number(hours) : (category?.basePrice ?? 0);
-      const roomCharges = ratePerNight * (bookingType === "HOURLY" ? 1 : nights);
-      
-      const settings = await HotelSettings.findOne().session(session).lean();
-      const extraPersonRate = settings?.extraPersonRate || 800;
-      const extraBedRate = settings?.extraBedRate || 1200;
-      const childRateNoBed = settings?.childRateNoBed || 400;
-      const childRateWithBed = settings?.childRateWithBed || 600;
-      
-      const extraPersonTotal = Number(extraPersonsNoBed) * extraPersonRate * nights;
-      const extraBedTotal = Number(extraPersonsWithBed) * extraBedRate * nights;
-      const childNoBedTotal = Number(extraChildrenNoBed) * childRateNoBed * nights;
-      const childWithBedTotal = Number(extraChildrenWithBed) * childRateWithBed * nights;
-      
-      const mealPlanRates = settings?.mealPlanRates || { EP: 0, CP: 500, MAP: 1000, AP: 1500, RO: 0, BB: 500 };
-      const mealPlanRatePP = mealPlanRates[mealPlan as keyof typeof mealPlanRates] || 0;
-      const totalGuestsForMealPlan = Number(adults) + Number(children) + Number(extraPersonsNoBed) + Number(extraPersonsWithBed) + Number(extraChildrenNoBed) + Number(extraChildrenWithBed);
-      const mealPlanTotal = mealPlanRatePP * totalGuestsForMealPlan * nights;
+      // Check each room is actually available and ready
+      for (const rm of rooms) {
+        if (rm.sellStatus !== SellStatus.SELLABLE) {
+          throw new Error(`Room ${rm.roomNumber} is ${rm.sellStatus} and cannot be assigned`);
+        }
+        if (
+          rm.housekeepingStatus !== HousekeepingRoomStatus.CLEAN &&
+          rm.housekeepingStatus !== HousekeepingRoomStatus.READY
+        ) {
+          throw new Error(`Room ${rm.roomNumber} is ${rm.housekeepingStatus}. It must be CLEAN or READY for check-in.`);
+        }
+        if (rm.occupancyStatus === OccupancyStatus.OCCUPIED) {
+          throw new Error(`Room ${rm.roomNumber} is already occupied`);
+        }
 
-      const subtotal = roomCharges + extraPersonTotal + extraBedTotal + childNoBedTotal + childWithBedTotal + mealPlanTotal + Number(otherCharges);
-      const taxableAmount = Math.max(0, subtotal);
-      const taxBreakdown = await calculateTaxBreakdown(taxableAmount);
-      const totalAmount = taxableAmount + taxBreakdown.totalTax;
+        const overlap = await Booking.findOne({
+          assignedRoom: rm._id,
+          status: { $in: [BookingStatus.CONFIRMED, BookingStatus.CHECKED_IN] },
+          checkInDate: { $lt: checkOutDate },
+          checkOutDate: { $gt: checkInDate },
+        }).session(session);
+        if (overlap) {
+          throw new Error(`Room ${rm.roomNumber} already has a booking (${overlap.bookingReference}) for these dates`);
+        }
+      }
 
       // Resolve / create Guest record
       let guestId: string;
-
       if (isExistingGuest && existingGuestId) {
         guestId = existingGuestId;
       } else {
-        // Build name
         const firstName = guestFirstName || (guestName ? guestName.split(" ")[0] : "Guest");
         const lastName = guestLastName || (guestName ? guestName.split(" ").slice(1).join(" ") || "." : ".");
         const guestEmail = email || `walkin+${mobile}@yes-hotels.local`;
 
-        // Upsert Guest by phone (primary) or email (fallback)
         const guestDoc = await Guest.findOneAndUpdate(
           { $or: [{ phone: mobile }, ...(email ? [{ email: guestEmail }] : [])] },
           {
@@ -449,98 +481,152 @@ export const walkInArrivalRegistration = async (req: Request, res: Response) => 
         guestId = guestDoc._id.toString();
       }
 
-      // Generate unique bill number
-      let billNumber: string | undefined;
-      try {
-        billNumber = await generateBillNumber();
-      } catch {
-        billNumber = undefined;
+      const nights = bookingType === "HOURLY" ? 1 : Math.max(1, Math.ceil((checkOutDate.getTime() - checkInDate.getTime()) / (1000 * 60 * 60 * 24)));
+      const settings = await HotelSettings.findOne().session(session).lean();
+      const extraPersonRate = settings?.extraPersonRate || 800;
+      const extraBedRate = settings?.extraBedRate || 1200;
+      const childRateNoBed = settings?.childRateNoBed || 400;
+      const childRateWithBed = settings?.childRateWithBed || 600;
+
+      const extraPersonTotal = Number(extraPersonsNoBed) * extraPersonRate * nights;
+      const extraBedTotal = Number(extraPersonsWithBed) * extraBedRate * nights;
+      const childNoBedTotal = Number(extraChildrenNoBed) * childRateNoBed * nights;
+      const childWithBedTotal = Number(extraChildrenWithBed) * childRateWithBed * nights;
+
+      const mealPlanRates = settings?.mealPlanRates || { EP: 0, CP: 500, MAP: 1000, AP: 1500, RO: 0, BB: 500 };
+      const mealPlanRatePP = mealPlanRates[mealPlan as keyof typeof mealPlanRates] || 0;
+      const totalGuestsForMealPlan = Number(adults) + Number(children) + Number(extraPersonsNoBed) + Number(extraPersonsWithBed) + Number(extraChildrenNoBed) + Number(extraChildrenWithBed);
+      const mealPlanTotal = mealPlanRatePP * totalGuestsForMealPlan * nights;
+
+      // Group ID for linking multiple rooms
+      const groupId = rooms.length > 1 ? new mongoose.Types.ObjectId() : undefined;
+      createdBookings = [];
+
+      for (let i = 0; i < rooms.length; i++) {
+        const rm = rooms[i];
+        const category = rm.category as any;
+        const baseRatePerNight = bookingType === "HOURLY" ? (category?.hourlyPrice ?? 0) * Number(hours) : (category?.basePrice ?? 0);
+        const rmRatePerNight = rateOverrideAmount !== undefined && rateOverrideAmount !== null && Number(rateOverrideAmount) > 0 ? Number(rateOverrideAmount) : baseRatePerNight;
+        const rmRoomCharges = rmRatePerNight * (bookingType === "HOURLY" ? 1 : nights);
+
+        // Put extra guest charges on the primary room (first room)
+        const rmExtraPersonTotal = i === 0 ? extraPersonTotal : 0;
+        const rmExtraBedTotal = i === 0 ? extraBedTotal : 0;
+        const rmChildNoBedTotal = i === 0 ? childNoBedTotal : 0;
+        const rmChildWithBedTotal = i === 0 ? childWithBedTotal : 0;
+        const rmMealPlanTotal = i === 0 ? mealPlanTotal : 0;
+        const rmOtherCharges = i === 0 ? Number(otherCharges) : 0;
+
+        const rmSubtotal = rmRoomCharges + rmExtraPersonTotal + rmExtraBedTotal + rmChildNoBedTotal + rmChildWithBedTotal + rmMealPlanTotal + rmOtherCharges;
+        const rmTaxableAmount = Math.max(0, rmSubtotal);
+        const rmTaxBreakdown = await calculateTaxBreakdown(rmTaxableAmount);
+        const rmTotalAmount = rmTaxableAmount + rmTaxBreakdown.totalTax;
+
+        let billNumber: string | undefined;
+        try {
+          billNumber = await generateBillNumber(session);
+        } catch {
+          billNumber = `BILL-${new Date().getFullYear()}-${Date.now().toString().slice(-6)}`;
+        }
+
+        const bookingReference = await generateBookingReference("WALKIN", session);
+
+        const created = await Booking.create(
+          [
+            {
+              propertyId,
+              groupId,
+              bookingReference,
+              billNumber,
+              customer: undefined,
+              guestDetails: {
+                firstName: guestFirstName || (guestName ? guestName.split(" ")[0] : "Guest"),
+                lastName: guestLastName || (guestName ? guestName.split(" ").slice(1).join(" ") || "." : "."),
+                email: email || `walkin+${mobile}@yes-hotels.local`,
+                phone: mobile,
+                idType: idType || undefined,
+                idNumber: idNumber || undefined,
+                idProofImages: idProofImages,
+                nationality: nationality || undefined,
+                address: address || undefined,
+                gender: gender || undefined,
+                dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : undefined,
+                organization: organization || undefined,
+                designation: designation || undefined,
+                purposeOfVisit: purposeOfVisit || undefined,
+                gstin: gstin || undefined,
+                vehicleNumber: vehicleNumber || undefined,
+                proceedingTo: proceedingTo || undefined,
+              },
+              foreignGuestDetails: isForeignGuest && foreignGuestDetails ? foreignGuestDetails : undefined,
+              roomCategory: rm.category._id,
+              assignedRoom: rm._id,
+              checkInDate: checkInDate,
+              checkOutDate: checkOutDate,
+              stayType: bookingType,
+              hours: bookingType === "HOURLY" ? Number(hours) : undefined,
+              arrivalTime: arrivalTime || undefined,
+              departureTime: departureTime || undefined,
+              mealPlan: mealPlan || undefined,
+              extraPersonsNoBed: i === 0 ? Number(extraPersonsNoBed) : 0,
+              extraPersonsWithBed: i === 0 ? Number(extraPersonsWithBed) : 0,
+              extraChildrenNoBed: i === 0 ? Number(extraChildrenNoBed) : 0,
+              extraChildrenWithBed: i === 0 ? Number(extraChildrenWithBed) : 0,
+              kidsUnder3: i === 0 ? Number(kidsUnder3) : 0,
+              ratePerNight: rmRatePerNight,
+              billingInstruction: billingInstruction || undefined,
+              adults: i === 0 ? Number(adults) : 1,
+              children: i === 0 ? Number(children) : 0,
+              status: BookingStatus.CHECKED_IN,
+              checkedInAt: new Date(),
+              checkedInBy: (req as any).user?.id ? new mongoose.Types.ObjectId((req as any).user.id) : undefined,
+              totalAmount: rmTotalAmount,
+              taxAmount: rmTaxBreakdown.totalTax,
+              cgstAmount: rmTaxBreakdown.cgst,
+              sgstAmount: rmTaxBreakdown.sgst,
+              discountAmount: 0,
+              specialRequests: (i === 0 && otherCharges > 0) ? `Other Charges (₹${otherCharges}): ${otherChargesDesc || 'Additional items'}` : undefined,
+              paymentStatus: PaymentStatus.UNPAID,
+              source: BookingSource.WALK_IN,
+              bookingType: rooms.length > 1 ? BookingType.GROUP : BookingType.WALK_IN,
+              registrationStatus: RegistrationStatus.CONFIRMED,
+              signatureStatus: SignatureStatus.NOT_COLLECTED,
+            },
+          ],
+          { session }
+        );
+        createdBookings.push(created[0]);
+
+        // Mark assigned room OCCUPIED immediately for walk-in arrivals
+        rm.status = RoomStatus.OCCUPIED;
+        rm.occupancyStatus = OccupancyStatus.OCCUPIED;
+        rm.currentBooking = created[0]._id as mongoose.Types.ObjectId;
+        await rm.save({ session });
       }
 
-      // Generate booking reference
-      const bookingReference = await generateBookingReference("WALKIN");
+      booking = createdBookings[0];
 
-      // Create the Booking (status = CONFIRMED for walk-in)
-      // Walk-ins go directly to CONFIRMED — they are at the desk
-      const created = await Booking.create(
-        [
-          {
-            bookingReference,
-            billNumber,
-            customer: undefined,
-            guestDetails: {
-              firstName: guestFirstName || (guestName ? guestName.split(" ")[0] : "Guest"),
-              lastName: guestLastName || (guestName ? guestName.split(" ").slice(1).join(" ") || "." : "."),
-              email: email || `walkin+${mobile}@yes-hotels.local`,
-              phone: mobile,
-              idType: idType || undefined,
-              idNumber: idNumber || undefined,
-              idProofImages: idProofImages,
-              nationality: nationality || undefined,
-              address: address || undefined,
-              gender: gender || undefined,
-              dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : undefined,
-              organization: organization || undefined,
-              designation: designation || undefined,
-              purposeOfVisit: purposeOfVisit || undefined,
-              gstin: gstin || undefined,
-              vehicleNumber: vehicleNumber || undefined,
-              proceedingTo: proceedingTo || undefined,
-            },
-            foreignGuestDetails: isForeignGuest && foreignGuestDetails ? foreignGuestDetails : undefined,
-            roomCategory: room.category._id,
-            assignedRoom: roomId,
-            checkInDate: checkInDate,
-            checkOutDate: checkOutDate,
-            stayType: bookingType,
-            hours: bookingType === "HOURLY" ? Number(hours) : undefined,
-            arrivalTime: arrivalTime || undefined,
-            departureTime: departureTime || undefined,
-            mealPlan: mealPlan || undefined,
-            extraPersonsNoBed: Number(extraPersonsNoBed),
-            extraPersonsWithBed: Number(extraPersonsWithBed),
-            extraChildrenNoBed: Number(extraChildrenNoBed),
-            extraChildrenWithBed: Number(extraChildrenWithBed),
-            kidsUnder3: Number(kidsUnder3),
-            ratePerNight,
-            billingInstruction: billingInstruction || undefined,
-            adults: Number(adults),
-            children: Number(children),
-            status: BookingStatus.CONFIRMED,
-            totalAmount,
-            taxAmount: taxBreakdown.totalTax,
-            cgstAmount: taxBreakdown.cgst,
-            sgstAmount: taxBreakdown.sgst,
-            discountAmount: 0,
-            specialRequests: otherCharges > 0 ? `Other Charges (₹${otherCharges}): ${otherChargesDesc || 'Additional items'}` : undefined,
-            paymentStatus: PaymentStatus.UNPAID,
-            source: BookingSource.WALK_IN,
-            bookingType: BookingType.WALK_IN,
-            registrationStatus: RegistrationStatus.COMPLETED,
-            signatureStatus: SignatureStatus.NOT_COLLECTED,
-          },
-        ],
-        { session }
-      );
-      booking = created[0];
-
-      // If advance payment provided, record it (NOT revenue)
+      // If advance payment provided, record it on the primary booking (or folio)
       if (advanceAmount && Number(advanceAmount) > 0) {
         const resolvedMethod = (advanceMethod as AdvancePaymentMethod) || AdvancePaymentMethod.CASH;
-        // Find payment channel by code if possible
         const channel = await PaymentChannel.findOne({ code: advanceMethod, isActive: true }).session(session);
 
-        // Generate advance number outside the transaction since receiveAdvance doesn't use session
-        // We create the record manually here to keep it in the transaction
         const settings = await HotelSettings.findOne().sort({ updatedAt: -1 }).lean();
         const advPrefix = settings?.advancePrefix ?? "ADV";
         const dateStr = new Date().toISOString().slice(0, 7).replace("-", "");
         const advCount = await AdvancePayment.countDocuments().session(session);
         const advanceNumber = `${advPrefix}-${dateStr}-${String(advCount + 1).padStart(4, "0")}`;
 
+        let resolvedReceivedBy = advanceReceivedBy || (req as any).user?.id || (req as any).user?._id;
+        if (!resolvedReceivedBy || !mongoose.isValidObjectId(resolvedReceivedBy)) {
+          const adminUser = await User.findOne({ role: { $in: [UserRole.ADMIN, UserRole.RECEPTIONIST, UserRole.SUPER_ADMIN] } }).session(session).lean();
+          resolvedReceivedBy = adminUser?._id;
+        }
+
         const advanceDocs = await AdvancePayment.create(
           [
             {
+              propertyId,
               advanceNumber,
               booking: booking._id,
               guest: guestId,
@@ -553,8 +639,8 @@ export const walkInArrivalRegistration = async (req: Request, res: Response) => 
               referenceNumber: advanceReference || undefined,
               status: AdvancePaymentStatus.RECEIVED,
               receivedAt: new Date(),
-              receivedBy: advanceReceivedBy || (req as any).user?.id,
-              purpose: `Walk-in Advance — ${bookingReference}`,
+              receivedBy: resolvedReceivedBy,
+              purpose: `Walk-in Advance — ${booking.bookingReference}${rooms.length > 1 ? ` (${rooms.length} Rooms)` : ''}`,
             },
           ],
           { session }
@@ -562,11 +648,62 @@ export const walkInArrivalRegistration = async (req: Request, res: Response) => 
         advance = advanceDocs[0];
       }
 
+      // Pre-create OPEN Folios for all created bookings
+      for (const cb of createdBookings) {
+        try {
+          const f = await createFolio(
+            {
+              bookingId: cb._id.toString(),
+              guestId: guestId.toString(),
+              roomId: cb.assignedRoom?.toString(),
+              checkInDate: cb.checkInDate,
+              checkOutDate: cb.checkOutDate,
+            },
+            { req, session }
+          );
+
+          // Post initial room charge for stay
+          await postCharge(
+            {
+              folioId: f._id.toString(),
+              bookingId: cb._id.toString(),
+              lineType: FolioLineType.ROOM_CHARGE,
+              description: `Room Charge (${cb.bookingReference})`,
+              amount: cb.ratePerNight,
+              date: new Date(),
+              postedBy: (req as any).user?.id || (req as any).user?._id || "SYSTEM",
+            },
+            { req, session }
+          );
+
+          if (cb._id.toString() === booking._id.toString() && advanceAmount && Number(advanceAmount) > 0) {
+            await postCharge(
+              {
+                folioId: f._id.toString(),
+                bookingId: cb._id.toString(),
+                lineType: FolioLineType.ADVANCE_ADJUSTMENT,
+                description: `Advance Payment Received (${advanceMethod || "CASH"})`,
+                amount: Number(advanceAmount),
+                date: new Date(),
+                postedBy: (req as any).user?.id || (req as any).user?._id || "SYSTEM",
+              },
+              { req, session }
+            );
+          }
+        } catch (fErr) {
+          console.error("Error initializing folio during walk-in registration:", fErr);
+        }
+      }
+
       // Update guest stats
-      await Guest.findByIdAndUpdate(guestId, { $inc: { totalBookings: 1 } }).session(session);
+      const walkInGrandTotal = createdBookings.reduce((sum, b) => sum + (b.totalAmount || 0), 0);
+      await Guest.findByIdAndUpdate(guestId, {
+        $inc: { totalBookings: rooms.length, totalSpend: walkInGrandTotal },
+        $set: { lastStay: checkOutDate },
+      }).session(session);
     });
 
-    // Audit log (outside transaction — fire and forget)
+    // Audit log
     createAuditLog({
       req,
       action: "booking.walk_in_registration",
@@ -586,6 +723,7 @@ export const walkInArrivalRegistration = async (req: Request, res: Response) => 
       message: "Guest registered successfully. Proceed to check-in.",
       data: {
         booking,
+        bookings: createdBookings,
         advance,
         nextStep: "check-in",
       },
@@ -846,13 +984,17 @@ export const printRegistrationCard = async (req: Request, res: Response) => {
     }
 
     const settings = await HotelSettings.findOne().sort({ updatedAt: -1 }).lean();
-    const hotelName = settings?.hotelName ?? "YES Hotels";
-    const hotelAddress = settings?.address ?? "";
-    const hotelPhone = settings?.phone ?? "";
-    const hotelGST = settings?.gstNumber ?? "";
+    const advance = await AdvancePayment.findOne({ booking: booking._id }).lean();
+
+    const hotelName = "YES HOTELS";
+    const hotelAddress = "No. 51, Khata No. 749, Singasandra, Hosa Road Junction, Parappana Agrahara, Electronic City Ph-2, Bengaluru-560100.";
+    const hotelPhone = settings?.phone ?? "080-28522333 / 9902391178";
+    const hotelGST = settings?.gstNumber ?? "29AAAFY1234A1Z5";
 
     const room = booking.assignedRoom as any;
     const category = booking.roomCategory as any;
+    const guest = booking.guestDetails as any;
+    const foreign = (booking as any).foreignGuestDetails as any;
 
     const esc = (s: any) =>
       String(s ?? "—").replace(/[<>&]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;" }[c] as string));
@@ -861,167 +1003,262 @@ export const printRegistrationCard = async (req: Request, res: Response) => {
       1,
       Math.ceil((new Date(booking.checkOutDate).getTime() - new Date(booking.checkInDate).getTime()) / (1000 * 60 * 60 * 24))
     );
-    const isForeign = !!(booking as any).foreignGuestDetails?.passportNumber;
-    const bookingCreatedAt: Date = (booking as any).createdAt ?? new Date();
+
+    const idType = (guest.idType || "").toUpperCase();
+    const isAadhaar = idType.includes("AAD");
+    const isDL = idType.includes("DRIV") || idType.includes("DL");
+    const isVoter = idType.includes("VOTER") || idType.includes("ECI");
+    const isGovt = !isAadhaar && !isDL && !isVoter;
+
+    const billNo = booking.billNumber || booking.bookingReference?.slice(-4) || "—";
+    const ratePerNight = (booking as any).ratePerNight ?? Math.round((booking.totalAmount - (booking.taxAmount || 0)) / nights);
+    const advanceAmount = advance?.amount ?? (booking as any).advanceAmount ?? 0;
+    const advanceMethod = advance?.method ?? (booking as any).paymentMethod ?? "CASH";
+
+    const idProofImages = guest.idProofImages || [];
 
     const html = `<!DOCTYPE html>
 <html>
 <head>
 <meta charset="utf-8">
-<title>Guest Registration Card — ${esc(booking.billNumber || booking.bookingReference)}</title>
+<title>Guest Registration Card — ${esc(billNo)}</title>
 <style>
-  @page { margin: 10mm; size: A4; }
+  @page { margin: 8mm; size: A4 portrait; }
   * { box-sizing: border-box; }
-  body { font-family: Arial, sans-serif; font-size: 11px; color: #111; margin: 0; padding: 0; }
-  .page { width: 100%; max-width: 210mm; margin: 0 auto; padding: 8px; }
-  .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 8px; margin-bottom: 8px; }
-  .hotel-name { font-size: 18px; font-weight: bold; letter-spacing: 2px; text-transform: uppercase; }
-  .hotel-sub { font-size: 10px; color: #444; margin-top: 2px; }
-  .card-title { font-size: 13px; font-weight: bold; text-align: center; letter-spacing: 1px; text-transform: uppercase; margin: 6px 0; border: 1px solid #000; padding: 4px; }
-  .bill-row { display: flex; justify-content: space-between; margin: 4px 0; }
-  .bill-label { font-size: 10px; color: #444; }
-  .bill-value { font-weight: bold; font-size: 12px; }
-  .section { margin: 8px 0; border: 1px solid #ccc; padding: 6px; }
-  .section-title { font-size: 10px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid #ccc; padding-bottom: 3px; margin-bottom: 5px; color: #333; }
-  .field-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 16px; }
-  .field-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 4px 12px; }
-  .field { margin-bottom: 4px; }
-  .field-label { font-size: 9px; color: #666; text-transform: uppercase; letter-spacing: 0.5px; }
-  .field-value { border-bottom: 1px solid #999; min-height: 16px; font-size: 11px; padding: 1px 2px; }
-  .tariff-table { width: 100%; border-collapse: collapse; margin-top: 4px; }
-  .tariff-table th { background: #f0f0f0; text-align: left; padding: 3px 6px; font-size: 10px; border: 1px solid #ccc; }
-  .tariff-table td { padding: 3px 6px; font-size: 11px; border: 1px solid #ccc; }
-  .tariff-table .right { text-align: right; }
-  .total-row td { font-weight: bold; background: #f9f9f9; }
-  .signature-section { display: flex; gap: 20px; margin-top: 12px; }
-  .sig-box { flex: 1; border: 1px solid #ccc; padding: 8px; min-height: 60px; }
-  .sig-label { font-size: 9px; text-transform: uppercase; color: #666; border-top: 1px solid #999; padding-top: 4px; margin-top: 40px; }
-  .declaration { font-size: 9px; color: #444; margin: 8px 0; border: 1px solid #ddd; padding: 5px; background: #fafafa; }
-  .footer { text-align: center; font-size: 9px; color: #666; margin-top: 8px; border-top: 1px solid #ccc; padding-top: 5px; }
-  @media print { body { -webkit-print-color-adjust: exact; } }
+  body { font-family: Arial, Helvetica, sans-serif; font-size: 11px; color: #000; margin: 0; padding: 0; background: #fff; }
+  .page { width: 100%; max-width: 210mm; margin: 0 auto; border: 2px solid #000; padding: 10px; }
+  .header { display: flex; justify-content: space-between; border-bottom: 2px solid #000; padding-bottom: 6px; }
+  .brand-title { font-size: 24px; font-weight: 900; letter-spacing: 2px; text-transform: uppercase; margin: 0; }
+  .hotel-address { font-size: 9.5px; color: #222; margin-top: 2px; line-height: 1.3; }
+  .bill-box { text-align: right; border-left: 1px solid #000; padding-left: 10px; min-width: 140px; }
+  .bill-num { font-size: 18px; font-weight: 900; color: #b91c1c; font-family: monospace; }
+  .title-strip { text-align: center; border-bottom: 1.5px solid #000; padding: 4px 0 6px 0; }
+  .grc-title { font-size: 14px; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; margin: 0; }
+  .form-c-sub { font-size: 8.5px; font-weight: bold; color: #333; text-transform: uppercase; margin-top: 2px; }
+  .id-strip { display: flex; justify-content: space-between; align-items: center; border-bottom: 1.5px solid #000; padding: 4px 8px; background: #fbfbfb; font-weight: bold; font-size: 10.5px; }
+  .id-options { display: flex; gap: 14px; align-items: center; }
+  .id-val { font-family: monospace; font-size: 11px; background: #fff; border: 1px solid #000; padding: 1px 6px; }
+  .main-grid { display: flex; border-bottom: 1.5px solid #000; }
+  .left-col { width: 42%; border-right: 1.5px solid #000; padding: 6px; background: #fafafa; }
+  .right-col { width: 58%; padding: 8px; }
+  .box { border: 1px solid #000; padding: 6px; background: #fff; margin-bottom: 6px; }
+  .box-title { font-size: 10px; font-weight: 900; text-transform: uppercase; text-align: center; border-bottom: 1px solid #000; padding-bottom: 3px; margin-bottom: 5px; }
+  .row-field { display: flex; justify-content: space-between; border-bottom: 1px dotted #aaa; padding: 2px 0; font-size: 10px; }
+  .f-label { font-size: 8.5px; font-weight: bold; text-transform: uppercase; color: #444; }
+  .f-val { font-size: 11px; font-weight: bold; color: #000; }
+  .rg-row { border-bottom: 1px solid #ddd; padding: 3px 0; }
+  .rg-label { font-size: 8.5px; font-weight: bold; text-transform: uppercase; color: #555; }
+  .rg-val { font-size: 11.5px; font-weight: bold; text-transform: uppercase; }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
+  .kyc-docs { border-bottom: 1.5px solid #000; padding: 6px 8px; background: #f9f9f9; }
+  .kyc-title { font-size: 9.5px; font-weight: 900; text-transform: uppercase; margin-bottom: 4px; }
+  .img-row { display: flex; gap: 10px; overflow: hidden; }
+  .img-card { border: 1px solid #000; padding: 3px; background: #fff; text-align: center; border-radius: 3px; }
+  .img-card img { height: 90px; width: 140px; object-fit: contain; }
+  .rules-box { border-bottom: 1.5px solid #000; padding: 6px 8px; font-size: 9px; line-height: 1.35; background: #fff; }
+  .rules-title { font-size: 9.5px; font-weight: 900; text-transform: uppercase; margin-bottom: 3px; }
+  .rules-list { margin: 0; padding-left: 14px; }
+  .rules-list li { margin-bottom: 1.5px; }
+  .declaration-txt { font-weight: bold; font-size: 9px; margin-top: 4px; color: #111; }
+  .sig-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; text-align: center; padding-top: 32px; padding-bottom: 6px; font-size: 10px; font-weight: bold; text-transform: uppercase; }
+  .sig-line { border-top: 1px solid #000; margin: 0 16px; padding-top: 3px; }
+  .guest-sig-line { border-top: 2px solid #000; margin: 0 16px; padding-top: 3px; font-weight: 900; }
+  .print-footer { text-align: center; font-size: 8.5px; color: #666; margin-top: 4px; font-family: monospace; }
+  @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
 </style>
 </head>
 <body>
 <div class="page">
+  
   <!-- HEADER -->
   <div class="header">
-    <div class="hotel-name">${esc(hotelName)}</div>
-    <div class="hotel-sub">${esc(hotelAddress)} | ${esc(hotelPhone)}${hotelGST ? ` | GSTIN: ${esc(hotelGST)}` : ""}</div>
-  </div>
-
-  <div class="card-title">Guest Registration Card</div>
-
-  <!-- SECTION A: BILL INFORMATION -->
-  <div class="bill-row">
     <div>
-      <div class="bill-label">Bill Number</div>
-      <div class="bill-value">${esc(booking.billNumber || booking.bookingReference)}</div>
+      <h1 class="brand-title">${esc(hotelName)}</h1>
+      <div class="hotel-address">${esc(hotelAddress)}</div>
     </div>
-    <div style="text-align:right">
-      <div class="bill-label">Date</div>
-      <div class="bill-value">${bookingCreatedAt.toLocaleDateString("en-IN")}</div>
-    </div>
-  </div>
-
-  <!-- SECTION B: GUEST IDENTITY -->
-  <div class="section">
-    <div class="section-title">Section B — Guest Information</div>
-    <div class="field-grid">
-      <div class="field"><div class="field-label">Guest Name</div><div class="field-value">${esc(booking.guestDetails.firstName)} ${esc(booking.guestDetails.lastName)}</div></div>
-      <div class="field"><div class="field-label">Mobile Number</div><div class="field-value">${esc(booking.guestDetails.phone)}</div></div>
-      <div class="field"><div class="field-label">Email</div><div class="field-value">${esc(booking.guestDetails.email)}</div></div>
-      <div class="field"><div class="field-label">Nationality</div><div class="field-value">${esc(booking.guestDetails.nationality)}</div></div>
-      <div class="field"><div class="field-label">Date of Birth</div><div class="field-value">${booking.guestDetails.dateOfBirth ? new Date(booking.guestDetails.dateOfBirth).toLocaleDateString("en-IN") : "—"}</div></div>
-      <div class="field"><div class="field-label">Gender</div><div class="field-value">${esc(booking.guestDetails.gender)}</div></div>
-      <div class="field"><div class="field-label">Organization</div><div class="field-value">${esc((booking.guestDetails as any).organization)}</div></div>
-      <div class="field"><div class="field-label">Designation</div><div class="field-value">${esc((booking.guestDetails as any).designation)}</div></div>
-    </div>
-    <div class="field" style="margin-top:4px"><div class="field-label">Address</div><div class="field-value">${esc(booking.guestDetails.address)}</div></div>
-    <div class="field-grid" style="margin-top:4px">
-      <div class="field"><div class="field-label">Purpose of Visit</div><div class="field-value">${esc((booking.guestDetails as any).purposeOfVisit)}</div></div>
-      <div class="field"><div class="field-label">No. of Persons (Adults / Children)</div><div class="field-value">${booking.adults} / ${booking.children}</div></div>
+    <div class="bill-box">
+      <div>Bill No: <span class="bill-num">${esc(billNo)}</span></div>
+      <div style="font-size:9px;color:#555;font-family:monospace;margin-top:2px">Ref: ${esc(booking.bookingReference)}</div>
     </div>
   </div>
 
-  <!-- SECTION C: IDENTIFICATION -->
-  <div class="section">
-    <div class="section-title">Section C — Identification</div>
-    <div class="field-grid">
-      <div class="field"><div class="field-label">ID Type</div><div class="field-value">${esc(booking.guestDetails.idType)}</div></div>
-      <div class="field"><div class="field-label">ID Number</div><div class="field-value">${esc(booking.guestDetails.idNumber)}</div></div>
+  <!-- TITLE & STATUTORY FORM-C NOTICE -->
+  <div class="title-strip">
+    <h2 class="grc-title">Guest Registration Card</h2>
+    <div class="form-c-sub">THE REGISTRATION OF FOREIGNERS RULES - 1939 FORM - C HOTEL ARRIVAL REPORT, RULE 14, ID PROOF IS REQUIRED FOR CHECK - IN</div>
+  </div>
+
+  <!-- ID CHECKBOXES BANNER -->
+  <div class="id-strip">
+    <div class="id-options">
+      <span>ID :</span>
+      <span>[${isAadhaar ? "✓" : " "}] AAD</span>
+      <span>[${isDL ? "✓" : " "}] DL</span>
+      <span>[${isVoter ? "✓" : " "}] E.C.I</span>
+      <span>[${isGovt ? "✓" : " "}] Govt. ID</span>
     </div>
-    ${isForeign ? `
-    <div style="margin-top:6px;border-top:1px dashed #ccc;padding-top:6px">
-      <div class="section-title">Foreign Guest — Passport &amp; Visa</div>
-      <div class="field-grid-3">
-        <div class="field"><div class="field-label">Passport No.</div><div class="field-value">${esc((booking as any).foreignGuestDetails?.passportNumber)}</div></div>
-        <div class="field"><div class="field-label">Issue Date</div><div class="field-value">${(booking as any).foreignGuestDetails?.passportIssueDate ? new Date((booking as any).foreignGuestDetails.passportIssueDate).toLocaleDateString("en-IN") : "—"}</div></div>
-        <div class="field"><div class="field-label">Expiry Date</div><div class="field-value">${(booking as any).foreignGuestDetails?.passportExpiryDate ? new Date((booking as any).foreignGuestDetails.passportExpiryDate).toLocaleDateString("en-IN") : "—"}</div></div>
-        <div class="field"><div class="field-label">Visa No.</div><div class="field-value">${esc((booking as any).foreignGuestDetails?.visaNumber)}</div></div>
-        <div class="field"><div class="field-label">Visa Date</div><div class="field-value">${(booking as any).foreignGuestDetails?.visaDate ? new Date((booking as any).foreignGuestDetails.visaDate).toLocaleDateString("en-IN") : "—"}</div></div>
-        <div class="field"><div class="field-label">Visa Expiry</div><div class="field-value">${(booking as any).foreignGuestDetails?.visaExpiryDate ? new Date((booking as any).foreignGuestDetails.visaExpiryDate).toLocaleDateString("en-IN") : "—"}</div></div>
+    <div>
+      ID No. : <span class="id-val">${esc(guest.idNumber || "—")}</span>
+    </div>
+  </div>
+
+  <!-- MAIN 2-COLUMN SECTION -->
+  <div class="main-grid">
+    
+    <!-- LEFT: OFFICE USE & FOREIGNERS (MATCHING IMAGE 2) -->
+    <div class="left-col">
+      
+      <!-- BOX 1: FOR OFFICE USE ONLY -->
+      <div class="box">
+        <div class="box-title">For Office Use Only</div>
+        <div class="row-field">
+          <span><strong>Room No.</strong> <span style="font-size:12px;font-weight:900">${esc(room?.roomNumber)}</span></span>
+          <span><strong>Tariff</strong> ₹${esc(ratePerNight)}/-</span>
+        </div>
+        <div class="row-field">
+          <span><strong>Extra Bed</strong> ${esc((booking as any).extraPersonsWithBed || "—")}</span>
+          <span><strong>Bill No.</strong> ${esc(billNo)}</span>
+        </div>
+        <div class="row-field">
+          <span><strong>Advance</strong> <span style="font-weight:900;color:#15803d">₹${esc(advanceAmount)}/-</span></span>
+          <span><strong>Receipt No.</strong> ${esc(advance?.advanceNumber?.slice(-6) || "—")}</span>
+        </div>
+        <div style="margin-top:4px">
+          <div class="f-label">Billing Instruction / Payment Details:</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:2px;margin-top:2px;font-size:9.5px">
+            <span>[${advanceMethod === "CASH" ? "✓" : " "}] Cash</span>
+            <span>[${advanceMethod === "CARD" ? "✓" : " "}] Card / DD</span>
+            <span>[${advanceMethod === "UPI" ? "✓" : " "}] UPI</span>
+            <span>[${booking.paymentStatus === "PAID" ? "✓" : " "}] Net Pay</span>
+          </div>
+        </div>
+        <div style="margin-top:4px;border-top:1px dotted #aaa;padding-top:2px">
+          <div class="f-label">Type of Plan:</div>
+          <div style="display:flex;justify-content:space-between;margin-top:2px;font-size:9.5px">
+            <span>[${(booking as any).mealPlan === "EP" || !(booking as any).mealPlan ? "✓" : " "}] EP</span>
+            <span>[${(booking as any).mealPlan === "CP" ? "✓" : " "}] CP</span>
+            <span>[${(booking as any).mealPlan === "MAP" ? "✓" : " "}] MAP</span>
+            <span>[${(booking as any).mealPlan === "AP" ? "✓" : " "}] AP</span>
+          </div>
+        </div>
+        <div class="row-field" style="border:none;margin-top:3px">
+          <span><strong>B/ID No.</strong> ${esc(booking.source || "Walk-In")}</span>
+        </div>
       </div>
+
+      <!-- BOX 2: FOR FOREIGNERS ONLY -->
+      <div class="box" style="margin-bottom:0">
+        <div class="box-title">For Foreigners Only</div>
+        <div class="row-field"><span>Passport No.</span><span class="f-val">${esc(foreign?.passportNumber)}</span></div>
+        <div class="row-field"><span>Place of Issue</span><span>${esc(foreign?.passportIssuePlace)}</span></div>
+        <div class="row-field"><span>Date of Issue</span><span>${foreign?.passportIssueDate ? new Date(foreign.passportIssueDate).toLocaleDateString("en-IN") : "—"}</span></div>
+        <div class="row-field"><span>Date of Expiry</span><span>${foreign?.passportExpiryDate ? new Date(foreign.passportExpiryDate).toLocaleDateString("en-IN") : "—"}</span></div>
+        <div class="row-field"><span>Visa No.</span><span class="f-val">${esc(foreign?.visaNumber)}</span></div>
+        <div class="row-field" style="border:none"><span>Visa Date / Place</span><span>${foreign?.visaDate ? new Date(foreign.visaDate).toLocaleDateString("en-IN") : "—"}</span></div>
+      </div>
+
     </div>
-    ` : ""}
+
+    <!-- RIGHT: GUEST IDENTITY & STAY (MATCHING IMAGE 2) -->
+    <div class="right-col">
+      <div class="rg-row">
+        <div class="rg-label">Name (in capital Letters)</div>
+        <div class="rg-val" style="font-size:14px;letter-spacing:1px">${esc(guest.firstName)} ${esc(guest.lastName)}</div>
+      </div>
+
+      <div class="rg-row grid-2">
+        <div><div class="rg-label">Designation</div><div class="rg-val" style="font-size:11px">${esc(guest.designation)}</div></div>
+        <div><div class="rg-label">Name of Organization</div><div class="rg-val" style="font-size:11px">${esc(guest.organization)}</div></div>
+      </div>
+
+      <div class="rg-row">
+        <div class="rg-label">Address</div>
+        <div class="rg-val" style="font-size:11px;font-weight:normal">${esc(guest.address)}</div>
+      </div>
+
+      <div class="rg-row grid-2">
+        <div><div class="rg-label">Mob. No.</div><div class="rg-val" style="font-family:monospace">${esc(guest.phone)}</div></div>
+        <div><div class="rg-label">Email</div><div class="rg-val" style="font-size:10px;text-transform:none;font-family:monospace">${esc(guest.email)}</div></div>
+      </div>
+
+      <div class="rg-row grid-3">
+        <div><div class="rg-label">Nationality</div><div class="rg-val" style="font-size:11px">${esc(guest.nationality || "INDIAN")}</div></div>
+        <div><div class="rg-label">DOB / Age</div><div class="rg-val" style="font-size:11px">${guest.dateOfBirth ? new Date(guest.dateOfBirth).toLocaleDateString("en-IN") : "—"}</div></div>
+        <div><div class="rg-label">Vech. Reg. No.</div><div class="rg-val" style="font-size:11px;font-family:monospace">${esc(guest.vehicleNumber)}</div></div>
+      </div>
+
+      <div class="rg-row grid-3">
+        <div><div class="rg-label">No. of Persons</div><div class="rg-val" style="font-size:11px">Adult: ${booking.adults || 1}</div></div>
+        <div><div class="rg-label">Child</div><div class="rg-val" style="font-size:11px">${booking.children || 0}</div></div>
+        <div><div class="rg-label">Stay Days</div><div class="rg-val" style="font-size:11px">${nights} Night(s)</div></div>
+      </div>
+
+      <div class="rg-row grid-2">
+        <div><div class="rg-label">Date of Arr &amp; Time</div><div class="rg-val" style="font-size:11px">${new Date(booking.checkInDate).toLocaleDateString("en-IN")} &bull; ${esc((booking as any).arrivalTime || "12:00 PM")}</div></div>
+        <div><div class="rg-label">Date of Dep &amp; Time</div><div class="rg-val" style="font-size:11px">${new Date(booking.checkOutDate).toLocaleDateString("en-IN")} &bull; ${esc((booking as any).departureTime || "11:00 AM")}</div></div>
+      </div>
+
+      <div class="rg-row grid-2" style="border:none">
+        <div><div class="rg-label">Purpose of Visit</div><div class="rg-val" style="font-size:11px">${esc(guest.purposeOfVisit || "Personal / Business")}</div></div>
+        <div><div class="rg-label">Proceeding To</div><div class="rg-val" style="font-size:11px">${esc(guest.proceedingTo || "Local / Airport")}</div></div>
+      </div>
+
+      ${guest.gstin ? `<div style="margin-top:3px;font-size:9px;border-top:1px dotted #ccc;padding-top:2px"><strong>Company GSTIN:</strong> <span style="font-family:monospace;font-weight:bold">${esc(guest.gstin)}</span></div>` : ""}
+    </div>
+
   </div>
 
-  <!-- SECTION D: STAY INFORMATION -->
-  <div class="section">
-    <div class="section-title">Section D — Stay Information</div>
-    <div class="field-grid-3">
-      <div class="field"><div class="field-label">Arrival Date</div><div class="field-value">${new Date(booking.checkInDate).toLocaleDateString("en-IN")}</div></div>
-      <div class="field"><div class="field-label">Arrival Time</div><div class="field-value">${esc((booking as any).arrivalTime)}</div></div>
-      <div class="field"><div class="field-label">Room No.</div><div class="field-value">${esc(room?.roomNumber)}</div></div>
-      <div class="field"><div class="field-label">Departure Date</div><div class="field-value">${new Date(booking.checkOutDate).toLocaleDateString("en-IN")}</div></div>
-      <div class="field"><div class="field-label">Departure Time</div><div class="field-value">${esc((booking as any).departureTime)}</div></div>
-      <div class="field"><div class="field-label">Room Type</div><div class="field-value">${esc(category?.name)}</div></div>
-      <div class="field"><div class="field-label">No. of Nights</div><div class="field-value">${nights}</div></div>
-      <div class="field"><div class="field-label">Meal Plan</div><div class="field-value">${esc((booking as any).mealPlan)}</div></div>
-      <div class="field"><div class="field-label">Extra Bed</div><div class="field-value">${(booking as any).extraBed || 0}</div></div>
+  <!-- CUSTOMER KYC IMAGES (IF UPLOADED) -->
+  ${idProofImages.length > 0 ? `
+  <div class="kyc-docs">
+    <div class="kyc-title">Verified Customer Photo &amp; Government ID Proof Records:</div>
+    <div class="img-row">
+      ${idProofImages.map((src: string, i: number) => `
+        <div class="img-card">
+          <img src="${src}" alt="ID Document ${i + 1}" />
+          <div style="font-size:8px;font-weight:bold;margin-top:2px">DOCUMENT #${i + 1}</div>
+        </div>
+      `).join("")}
+    </div>
+  </div>
+  ` : ""}
+
+  <!-- HOTEL RULES, REGULATIONS & CONSENT DECLARATION -->
+  <div class="rules-box">
+    <div class="rules-title">Hotel Rules, Regulations &amp; Guest Consent Terms:</div>
+    <ol class="rules-list">
+      <li><strong>Check-in: 12:00 Noon | Check-out: 11:00 AM.</strong> Extensions are subject to room availability and front office approval.</li>
+      <li><strong>Statutory ID Mandate:</strong> Original valid Government ID proof is mandatory for every guest upon check-in as per local police regulations. Foreign guests must present valid Passport &amp; Visa (Form-C).</li>
+      <li><strong>Valuables:</strong> Management shall not be responsible for cash, jewelry or unattended valuables left in rooms. Safety lockers are available.</li>
+      <li><strong>Non-Smoking Policy:</strong> Smoking and consumption of contraband substances are strictly prohibited inside guest rooms and indoor areas.</li>
+      <li><strong>Visitors:</strong> Non-resident visitors are permitted in the lobby only and not allowed in guest rooms after 10:00 PM without registration.</li>
+      <li><strong>Damages:</strong> Any loss, breakages, or staining of hotel linen, electronics, or fixtures will be billed directly to the guest's folio.</li>
+      <li><strong>Billing Liability:</strong> Regardless of corporate or third-party billing instructions, the guest remains personally liable for the full settlement of the bill.</li>
+      <li><strong>Key Return:</strong> Room keys must be deposited at the reception desk upon departure.</li>
+    </ol>
+    <div class="declaration-txt">
+      DECLARATION: I hereby declare that all particulars furnished above are true and accurate. I have read, understood, and agree to abide by the rules and regulations of YES HOTELS.
     </div>
   </div>
 
-  <!-- TARIFF TABLE -->
-  <div class="section">
-    <div class="section-title">Tariff</div>
-    <table class="tariff-table">
-      <tr><th>Description</th><th class="right">Rate / Night</th><th class="right">Nights</th><th class="right">Amount (₹)</th></tr>
-      <tr><td>${esc(category?.name || "Room")}</td><td class="right">₹${((booking as any).ratePerNight ?? 0).toLocaleString("en-IN")}</td><td class="right">${nights}</td><td class="right">₹${(((booking as any).ratePerNight ?? 0) * nights).toLocaleString("en-IN")}</td></tr>
-      ${(booking as any).extraBed > 0 ? `<tr><td>Extra Bed</td><td class="right">₹${((booking as any).extraBedCharge ?? 0).toLocaleString("en-IN")}</td><td class="right">${nights}</td><td class="right">₹${(((booking as any).extraBed ?? 0) * ((booking as any).extraBedCharge ?? 0) * nights).toLocaleString("en-IN")}</td></tr>` : ""}
-      <tr><td>CGST</td><td class="right"></td><td class="right"></td><td class="right">₹${booking.cgstAmount.toLocaleString("en-IN")}</td></tr>
-      <tr><td>SGST</td><td class="right"></td><td class="right"></td><td class="right">₹${booking.sgstAmount.toLocaleString("en-IN")}</td></tr>
-      <tr class="total-row"><td><strong>Total</strong></td><td></td><td></td><td class="right"><strong>₹${booking.totalAmount.toLocaleString("en-IN")}</strong></td></tr>
-    </table>
-  </div>
-
-  <!-- SECTION E/F: BILLING & ADVANCE -->
-  <div class="section">
-    <div class="section-title">Section E &amp; F — Billing &amp; Advance Payment</div>
-    <div class="field-grid">
-      <div class="field"><div class="field-label">Billing Instruction</div><div class="field-value">${esc((booking as any).billingInstruction)}</div></div>
-      <div class="field"><div class="field-label">Advance Received</div><div class="field-value">₹ _______________</div></div>
-      <div class="field"><div class="field-label">Payment Method</div><div class="field-value">_________________</div></div>
-      <div class="field"><div class="field-label">Receipt Number</div><div class="field-value">_________________</div></div>
+  <!-- SIGNATURES -->
+  <div class="sig-grid">
+    <div>
+      <div class="sig-line">Receptionist</div>
+    </div>
+    <div>
+      <div class="sig-line">Front Office Manager</div>
+    </div>
+    <div>
+      <div class="guest-sig-line">Guest Signature</div>
     </div>
   </div>
 
-  <!-- GUEST DECLARATION & SIGNATURE -->
-  <div class="declaration">
-    I hereby declare that the particulars given above are correct and I agree to abide by the rules and regulations of the hotel. I acknowledge that I am responsible for all charges incurred during my stay.
-  </div>
+</div>
 
-  <div class="signature-section">
-    <div class="sig-box">
-      <div class="sig-label">Guest Signature &amp; Date</div>
-    </div>
-    <div class="sig-box">
-      <div class="sig-label">Reception / Front Office</div>
-    </div>
-  </div>
-
-  <div class="footer">
-    Thank you for choosing ${esc(hotelName)} &bull; ${esc(hotelAddress)}
-  </div>
+<div class="print-footer">
+  Printed via YES HOTELS PMS &bull; Bengaluru &bull; All Rights Reserved
 </div>
 </body>
 </html>`;

@@ -4,11 +4,12 @@ import {
   LogIn, LogOut, Users, BedDouble, AlertCircle, RefreshCw,
   CheckCircle2, Clock, Calendar, ArrowRight, ShieldCheck, FileText, ChevronRight,
   Search, Filter, Plus, X, DollarSign, ArrowLeftRight, UserCheck, CreditCard,
-  Sparkles, Eye, AlertTriangle, ChevronDown
+  Sparkles, Eye, AlertTriangle, ChevronDown, Printer, Edit2, Trash2, Save, PlusCircle, Receipt
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { getStoredAuthToken } from "../../lib/authStorage";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { cn } from "@/lib/utils";
 
 interface FrontDeskSummary {
   todaysArrivals: any[];
@@ -36,6 +37,12 @@ export default function AdminFrontDesk() {
   const [vipOnlyFilter, setVipOnlyFilter] = useState(false);
   const [unpaidOnlyFilter, setUnpaidOnlyFilter] = useState(false);
 
+  // Expanded multi-room groups state
+  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
+  const toggleGroupExpand = (key: string) => {
+    setExpandedGroups(prev => ({ ...prev, [key]: !prev[key] }));
+  };
+
 
   // Modals state
   const [checkInModal, setCheckInModal] = useState<{ open: boolean; booking: any | null }>({ open: false, booking: null });
@@ -46,6 +53,9 @@ export default function AdminFrontDesk() {
 
   const [checkOutModal, setCheckOutModal] = useState<{ open: boolean; booking: any | null; preview: any | null }>({ open: false, booking: null, preview: null });
   const [paymentMode, setPaymentMode] = useState("CARD");
+  const [settlementAmount, setSettlementAmount] = useState<number | string>("");
+  const [isManualOverride, setIsManualOverride] = useState(false);
+  const [checkoutNotes, setCheckoutNotes] = useState("");
   
   const [roomMoveModal, setRoomMoveModal] = useState<{ open: boolean; booking: any | null }>({ open: false, booking: null });
   const [moveReason, setMoveReason] = useState("");
@@ -55,9 +65,27 @@ export default function AdminFrontDesk() {
   const [extensionConflict, setExtensionConflict] = useState<string | null>(null);
   const [extensionCost, setExtensionCost] = useState<number>(0);
 
-  const [folioDrawer, setFolioDrawer] = useState<{ open: boolean; booking: any | null; folio: any | null }>({ open: false, booking: null, folio: null });
+  const [folioDrawer, setFolioDrawer] = useState<{ 
+    open: boolean; 
+    booking: any | null; 
+    folio: any | null;
+    isGroupFolio?: boolean;
+    allGroupBookings?: any[];
+  }>({ open: false, booking: null, folio: null, isGroupFolio: false, allGroupBookings: [] });
   const [newChargeDesc, setNewChargeDesc] = useState("");
   const [newChargeAmount, setNewChargeAmount] = useState("");
+  const [newChargeType, setNewChargeType] = useState("ANCILLARY");
+  const [showAddCharge, setShowAddCharge] = useState(false);
+  const [isEditingBill, setIsEditingBill] = useState(false);
+  const [editBillForm, setEditBillForm] = useState({
+    ratePerNight: 0,
+    extraBedAmount: 0,
+    otherCharges: 0,
+    otherChargesDesc: "",
+    discountAmount: 0,
+    paidAmount: 0,
+    applyTax: true,
+  });
 
   const { data: summary, isLoading: loading } = useQuery({
     queryKey: ["front-desk-summary"],
@@ -149,6 +177,10 @@ export default function AdminFrontDesk() {
       });
       const json = await res.json();
       if (json.success) {
+        const bal = json.data?.summary?.balanceDue ?? 0;
+        setSettlementAmount(bal);
+        setIsManualOverride(false);
+        setCheckoutNotes("Front Desk Express Checkout");
         setCheckOutModal({ open: true, booking, preview: json.data });
       } else {
         toast({ title: "Failed to generate checkout preview", description: json.message, variant: "destructive" });
@@ -165,6 +197,7 @@ export default function AdminFrontDesk() {
     setSubmittingAction(true);
     try {
       const token = getStoredAuthToken();
+      const finalPayAmount = settlementAmount !== "" ? Math.max(0, Number(settlementAmount)) : (checkOutModal.preview?.summary?.balanceDue || 0);
       const res = await fetch(`/api/bookings/${checkOutModal.booking._id}/check-out`, {
         method: "POST",
         headers: {
@@ -173,12 +206,14 @@ export default function AdminFrontDesk() {
         },
         body: JSON.stringify({
           paymentMode,
-          paymentAmount: checkOutModal.preview?.summary?.balanceDue || 0,
+          paymentAmount: finalPayAmount,
+          refundAmount: checkOutModal.preview?.summary?.refundDue || 0,
           advanceAdjustmentAmount: Math.min(
             checkOutModal.preview?.totalAdvanceAvailable || 0, 
-            checkOutModal.preview?.summary?.currentBalance || 0
+            Math.max(0, checkOutModal.preview?.summary?.currentBalance || 0)
           ),
-          notes: "Front Desk Express Checkout",
+          forceBypassBalance: true,
+          notes: checkoutNotes || "Front Desk Express Checkout",
         }),
       });
       const json = await res.json();
@@ -236,18 +271,28 @@ export default function AdminFrontDesk() {
 
   // Handlers for Stay Extension
   const openExtendStay = (booking: any) => {
-    setNewCheckOutDate("");
+    let nextDateStr = "";
+    if (booking.checkOutDate) {
+      const d = new Date(booking.checkOutDate);
+      d.setDate(d.getDate() + 1);
+      nextDateStr = d.toISOString().split("T")[0];
+    }
+    setNewCheckOutDate(nextDateStr);
     setExtensionConflict(null);
     setExtensionCost(0);
     setExtendModal({ open: true, booking });
+    if (nextDateStr) {
+      handleCheckExtension(nextDateStr, booking);
+    }
   };
 
-  const handleCheckExtension = async (dateVal: string) => {
+  const handleCheckExtension = async (dateVal: string, targetBooking?: any) => {
     setNewCheckOutDate(dateVal);
-    if (!extendModal.booking || !dateVal) return;
+    const b = targetBooking || extendModal.booking;
+    if (!b || !dateVal) return;
     try {
       const token = getStoredAuthToken();
-      const res = await fetch(`/api/bookings/${extendModal.booking._id}/extension-check`, {
+      const res = await fetch(`/api/bookings/${b._id}/extension-check`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -256,9 +301,9 @@ export default function AdminFrontDesk() {
         body: JSON.stringify({ newCheckOutDate: dateVal }),
       });
       const json = await res.json();
-      if (json.success) {
+      if (json.success && json.data) {
         setExtensionConflict(null);
-        setExtensionCost(json.data?.additionalAmount || 0);
+        setExtensionCost(json.data?.additionalTotal || json.data?.additionalAmount || json.data?.additionalTariff || 0);
       } else {
         setExtensionConflict(json.message || "Room unavailable for selected dates");
       }
@@ -284,7 +329,7 @@ export default function AdminFrontDesk() {
       if (json.success) {
         toast({ title: "Stay Extended", description: `Check-out extended to ${new Date(newCheckOutDate).toLocaleDateString()}` });
         setExtendModal({ open: false, booking: null });
-        
+        queryClient.invalidateQueries();
       } else {
         toast({ title: "Extension Failed", description: json.message, variant: "destructive" });
       }
@@ -295,28 +340,100 @@ export default function AdminFrontDesk() {
     }
   };
 
-  // Handlers for Folio Drawer
-  const openFolioDrawer = async (booking: any) => {
-    
+  // Handlers for Folio Drawer & Bill Command Center
+  const openFolioDrawer = async (booking: any, isGroup: boolean = false, allBookings?: any[]) => {
     try {
       const token = getStoredAuthToken();
-      const res = await fetch(`/api/folios/booking/${booking._id}`, {
+      const url = `/api/folios/booking/${booking._id}${isGroup ? "?group=true" : ""}`;
+      const res = await fetch(url, {
         headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
       });
       const json = await res.json();
       if (json.success) {
+        const fetchedFolio = json.data.folio;
+        const fetchedLines = json.data.lines || [];
+        const groupList = allBookings || booking.groupBookings || (booking.groupId ? [booking] : []);
+
         setFolioDrawer({ 
           open: true, 
           booking, 
-          folio: { ...json.data.folio, charges: json.data.lines } 
+          folio: { ...fetchedFolio, charges: fetchedLines },
+          isGroupFolio: isGroup,
+          allGroupBookings: groupList
         });
+
+        // Initialize edit bill form with current particulars
+        const nights = Math.max(1, Math.ceil((new Date(booking.checkOutDate).getTime() - new Date(booking.checkInDate).getTime()) / (1000 * 60 * 60 * 24)));
+        const currentRate = booking.ratePerNight || Math.round((booking.totalAmount - (booking.taxAmount || 0)) / nights) || 2000;
+        setEditBillForm({
+          ratePerNight: currentRate,
+          extraBedAmount: (booking.extraPersonsWithBed || 0) * 1200,
+          otherCharges: 0,
+          otherChargesDesc: "",
+          discountAmount: booking.discountAmount || 0,
+          paidAmount: booking.paidAmount || 0,
+          applyTax: Boolean(booking.taxAmount && booking.taxAmount > 0) || true,
+        });
+        setIsEditingBill(false);
+        setShowAddCharge(false);
       } else {
         toast({ title: "Failed to load guest folio", description: json.message, variant: "destructive" });
       }
     } catch (err: any) {
       toast({ title: "Error", description: err.message, variant: "destructive" });
+    }
+  };
+
+  const handleSaveBillEdit = async () => {
+    if (!folioDrawer.booking) return;
+    setSubmittingAction(true);
+    try {
+      const token = getStoredAuthToken();
+      const res = await fetch(`/api/folios/booking/${folioDrawer.booking._id}/bill-edit`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify(editBillForm),
+      });
+      const json = await res.json();
+      if (json.success) {
+        toast({ title: "Bill Updated & Recalculated", description: "Rates, GST breakdown and balance updated successfully." });
+        setIsEditingBill(false);
+        await openFolioDrawer(json.data.booking, folioDrawer.isGroupFolio, folioDrawer.allGroupBookings);
+        queryClient.invalidateQueries({ queryKey: ["front-desk-summary"] });
+      } else {
+        toast({ title: "Failed to update bill", description: json.message, variant: "destructive" });
+      }
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
     } finally {
-      
+      setSubmittingAction(false);
+    }
+  };
+
+  const handleDeleteLine = async (lineId: string) => {
+    if (!folioDrawer.folio) return;
+    setSubmittingAction(true);
+    try {
+      const token = getStoredAuthToken();
+      const res = await fetch(`/api/folios/${folioDrawer.folio._id}/lines/${lineId}`, {
+        method: "DELETE",
+        headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      });
+      const json = await res.json();
+      if (json.success) {
+        toast({ title: "Line Item Removed", description: "Recalculated folio balance." });
+        await openFolioDrawer(folioDrawer.booking, folioDrawer.isGroupFolio, folioDrawer.allGroupBookings);
+        queryClient.invalidateQueries({ queryKey: ["front-desk-summary"] });
+      } else {
+        toast({ title: "Failed to delete line", description: json.message, variant: "destructive" });
+      }
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    } finally {
+      setSubmittingAction(false);
     }
   };
 
@@ -334,7 +451,7 @@ export default function AdminFrontDesk() {
         body: JSON.stringify({
           description: newChargeDesc,
           amount: parseFloat(newChargeAmount),
-          type: "ANCILLARY",
+          lineType: newChargeType || "ANCILLARY",
         }),
       });
       const json = await res.json();
@@ -342,8 +459,9 @@ export default function AdminFrontDesk() {
         toast({ title: "Charge Posted", description: `Added ₹${newChargeAmount} to folio.` });
         setNewChargeDesc("");
         setNewChargeAmount("");
-        // Reload folio
-        openFolioDrawer(folioDrawer.booking);
+        setShowAddCharge(false);
+        await openFolioDrawer(folioDrawer.booking, folioDrawer.isGroupFolio, folioDrawer.allGroupBookings);
+        queryClient.invalidateQueries({ queryKey: ["front-desk-summary"] });
       } else {
         toast({ title: "Failed to post charge", description: json.message, variant: "destructive" });
       }
@@ -353,6 +471,65 @@ export default function AdminFrontDesk() {
       setSubmittingAction(false);
     }
   };
+
+  // Helper to group bookings by groupId or shared guest identity & stay dates
+  const groupBookingsList = (rawList: any[]) => {
+    if (!rawList || !Array.isArray(rawList)) return [];
+
+    const groupMap = new Map<string, any[]>();
+    for (const b of rawList) {
+      if (!b) continue;
+      let groupKey: string;
+      const phone = (b.guestDetails?.phone || b.guestDetails?.phoneNumber || "").trim();
+      const cin = b.checkInDate ? new Date(b.checkInDate).toISOString().slice(0, 10) : "";
+      const cout = b.checkOutDate ? new Date(b.checkOutDate).toISOString().slice(0, 10) : "";
+      const gId = b.groupId ? String(b.groupId) : "";
+
+      if (gId) {
+        groupKey = `grp_${gId}`;
+      } else if (phone && cin) {
+        groupKey = `guest_${phone}_${cin}_${cout}`;
+      } else {
+        groupKey = `b_${b._id}`;
+      }
+
+      if (!groupMap.has(groupKey)) {
+        groupMap.set(groupKey, []);
+      }
+      groupMap.get(groupKey)!.push(b);
+    }
+
+    const consolidated: any[] = [];
+    groupMap.forEach((bookings, groupKey) => {
+      const primary = bookings[0];
+      const combinedTotal = bookings.reduce(
+        (sum, item) => sum + (item.totalAmount || item.totalPrice || 0),
+        0
+      );
+      const combinedPaid = bookings.reduce(
+        (sum, item) => sum + (item.paidAmount || 0),
+        0
+      );
+      const combinedBalance = combinedTotal - combinedPaid;
+
+      consolidated.push({
+        ...primary,
+        _groupKey: groupKey,
+        isGroup: bookings.length > 1,
+        roomCount: bookings.length,
+        groupBookings: bookings,
+        totalPriceCombined: combinedTotal,
+        paidAmountCombined: combinedPaid,
+        balanceCombined: combinedBalance,
+      });
+    });
+    return consolidated;
+  };
+
+  const arrivalsGrouped = groupBookingsList(summary?.todaysArrivals || []);
+  const departuresGrouped = groupBookingsList(summary?.todaysDepartures || []);
+  const inHouseGrouped = groupBookingsList(summary?.inHouse || []);
+  const unassignedGrouped = groupBookingsList(summary?.unassignedBookings || []);
 
   const counts = summary?.counts || { arrivals: 0, departures: 0, inHouse: 0, dirtyRooms: 0, unassignedBookings: 0 };
   const vipsCount = (summary?.inHouse?.filter((b: any) => b.isVipGuest) || []).length +
@@ -367,21 +544,34 @@ export default function AdminFrontDesk() {
     if (activeTab === "UNASSIGNED") rawList = summary?.unassignedBookings || [];
     if (activeTab === "DIRTY") rawList = summary?.dirtyRooms || [];
 
-    return rawList.filter((item: any) => {
-      // Search text match
-      const guestName = `${item.guestDetails?.firstName || ''} ${item.guestDetails?.lastName || ''}`.toLowerCase();
-      const ref = (item.bookingReference || '').toLowerCase();
-      const phone = (item.guestDetails?.phoneNumber || item.guestDetails?.phone || '').toLowerCase();
-      const roomNum = (item.assignedRoom?.roomNumber || item.roomNumber || '').toString().toLowerCase();
-      
+    if (activeTab === "DIRTY") {
+      return rawList.filter((item: any) => {
+        const roomNum = (item.roomNumber || '').toString().toLowerCase();
+        const q = searchQuery.toLowerCase().trim();
+        return !q || roomNum.includes(q);
+      });
+    }
+
+    // Group multi-room bookings together
+    const grouped = groupBookingsList(rawList);
+
+    return grouped.filter((item: any) => {
       const q = searchQuery.toLowerCase().trim();
-      const matchesQuery = !q || guestName.includes(q) || ref.includes(q) || phone.includes(q) || roomNum.includes(q);
+      const matchesQuery =
+        !q ||
+        item.groupBookings.some((b: any) => {
+          const guestName = `${b.guestDetails?.firstName || ''} ${b.guestDetails?.lastName || ''}`.toLowerCase();
+          const ref = (b.bookingReference || '').toLowerCase();
+          const phone = (b.guestDetails?.phoneNumber || b.guestDetails?.phone || '').toLowerCase();
+          const roomNum = (b.assignedRoom?.roomNumber || b.roomNumber || '').toString().toLowerCase();
+          return guestName.includes(q) || ref.includes(q) || phone.includes(q) || roomNum.includes(q);
+        });
 
-      // VIP filter
-      const matchesVip = !vipOnlyFilter || Boolean(item.isVipGuest);
+      // VIP filter matches if any booking in group is VIP
+      const matchesVip = !vipOnlyFilter || item.groupBookings.some((b: any) => Boolean(b.isVipGuest));
 
-      // Unpaid filter
-      const matchesUnpaid = !unpaidOnlyFilter || ((item.totalPrice || 0) - (item.paidAmount || 0) > 0);
+      // Unpaid filter matches on combined group balance
+      const matchesUnpaid = !unpaidOnlyFilter || item.balanceCombined > 0;
 
       return matchesQuery && matchesVip && matchesUnpaid;
     });
@@ -603,7 +793,7 @@ export default function AdminFrontDesk() {
               activeTab === "ARRIVALS" ? "border-emerald-500 text-emerald-400" : "border-transparent text-gray-500 hover:text-gray-800"
             }`}
           >
-            <LogIn size={15} /> Expected Arrivals ({summary?.todaysArrivals?.length || 0})
+            <LogIn size={15} /> Expected Arrivals ({arrivalsGrouped.length}{summary?.todaysArrivals?.length && summary.todaysArrivals.length !== arrivalsGrouped.length ? ` · ${summary.todaysArrivals.length} Rms` : ""})
           </button>
           <button
             onClick={() => setActiveTab("DEPARTURES")}
@@ -611,7 +801,7 @@ export default function AdminFrontDesk() {
               activeTab === "DEPARTURES" ? "border-blue-500 text-blue-400" : "border-transparent text-gray-500 hover:text-gray-800"
             }`}
           >
-            <LogOut size={15} /> Scheduled Departures ({summary?.todaysDepartures?.length || 0})
+            <LogOut size={15} /> Scheduled Departures ({departuresGrouped.length}{summary?.todaysDepartures?.length && summary.todaysDepartures.length !== departuresGrouped.length ? ` · ${summary.todaysDepartures.length} Rms` : ""})
           </button>
           <button
             onClick={() => setActiveTab("IN_HOUSE")}
@@ -619,7 +809,7 @@ export default function AdminFrontDesk() {
               activeTab === "IN_HOUSE" ? "border-purple-500 text-purple-400" : "border-transparent text-gray-500 hover:text-gray-800"
             }`}
           >
-            <Users size={15} /> In-House Stays ({summary?.inHouse?.length || 0})
+            <Users size={15} /> In-House Stays ({inHouseGrouped.length}{summary?.inHouse?.length && summary.inHouse.length !== inHouseGrouped.length ? ` · ${summary.inHouse.length} Rms` : ""})
           </button>
           <button
             onClick={() => setActiveTab("UNASSIGNED")}
@@ -627,7 +817,7 @@ export default function AdminFrontDesk() {
               activeTab === "UNASSIGNED" ? "border-amber-500 text-amber-400" : "border-transparent text-gray-500 hover:text-gray-800"
             }`}
           >
-            <AlertCircle size={15} /> Unassigned Bookings ({summary?.unassignedBookings?.length || 0})
+            <AlertCircle size={15} /> Unassigned Bookings ({unassignedGrouped.length}{summary?.unassignedBookings?.length && summary.unassignedBookings.length !== unassignedGrouped.length ? ` · ${summary.unassignedBookings.length} Rms` : ""})
           </button>
           <button
             onClick={() => setActiveTab("DIRTY")}
@@ -683,142 +873,347 @@ export default function AdminFrontDesk() {
                 </thead>
                 <tbody className="divide-y divide-[#262930]/60 text-gray-200">
                   {filteredItems.map((b: any) => {
-                    const guestName = `${b.guestDetails?.firstName || "Guest"} ${b.guestDetails?.lastName || ""}`;
+                    const guestName = `${b.guestDetails?.firstName || "Guest"} ${b.guestDetails?.lastName || ""}`.trim();
                     const roomNum = b.assignedRoom?.roomNumber || b.roomNumber;
-                    const paid = b.paidAmount || 0;
-                    const total = b.totalPrice || 0;
+                    const paid = b.paidAmountCombined !== undefined ? b.paidAmountCombined : (b.paidAmount || 0);
+                    const total = b.totalPriceCombined !== undefined ? b.totalPriceCombined : (b.totalAmount || b.totalPrice || 0);
                     const balance = total - paid;
+                    const isGroup = Boolean(b.isGroup);
+                    const roomCount = b.roomCount || 1;
+                    const isExpanded = Boolean(expandedGroups[b._groupKey]);
 
                     return (
-                      <tr key={b._id} className="hover:bg-gray-100/80 transition">
-                        {/* Guest & Ref */}
-                        <td className="p-3.5">
-                          <div className="flex items-center gap-3">
-                            <div className="w-9 h-9 rounded-full bg-[#262930] flex items-center justify-center font-bold text-xs text-[#c9a227] border border-[#c9a227]/30">
-                              {guestName.charAt(0)}
+                      <React.Fragment key={b._id}>
+                        <tr className="hover:bg-gray-100/80 transition">
+                          {/* Guest & Ref */}
+                          <td className="p-3.5">
+                            <div className="flex items-center gap-3">
+                              <div className="w-9 h-9 rounded-full bg-[#262930] flex items-center justify-center font-bold text-xs text-[#c9a227] border border-[#c9a227]/30 flex-shrink-0">
+                                {guestName.charAt(0)}
+                              </div>
+                              <div>
+                                <div className="font-semibold text-gray-800 flex items-center gap-1.5 flex-wrap">
+                                  <span>{guestName}</span>
+                                  {isGroup && (
+                                    <span className="text-[10px] bg-amber-500/20 text-amber-800 px-2 py-0.5 rounded-full font-bold border border-amber-500/40 flex items-center gap-1 shadow-sm">
+                                      <Users size={11} className="text-amber-700" /> Group ({roomCount} Rooms)
+                                    </span>
+                                  )}
+                                  {b.isVipGuest && (
+                                    <span className="text-[10px] bg-[#c9a227]/20 text-[#e5c76b] px-1.5 py-0.5 rounded font-bold border border-[#c9a227]/40 flex items-center gap-0.5">
+                                      <Sparkles size={10} /> VIP
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="text-xs font-mono text-gray-500 flex items-center gap-2 mt-0.5">
+                                  <span>#{b.bookingReference}{isGroup ? ` (+${roomCount - 1} more)` : ""}</span>
+                                  <span>·</span>
+                                  <span>{b.guestDetails?.phoneNumber || b.guestDetails?.phone || "No phone"}</span>
+                                </div>
+                              </div>
                             </div>
-                            <div>
-                              <div className="font-semibold text-gray-800 flex items-center gap-1.5">
-                                {guestName}
-                                {b.isVipGuest && (
-                                  <span className="text-[10px] bg-[#c9a227]/20 text-[#e5c76b] px-1.5 py-0.5 rounded font-bold border border-[#c9a227]/40 flex items-center gap-0.5">
-                                    <Sparkles size={10} /> VIP
-                                  </span>
+                          </td>
+
+                          {/* Room & Category */}
+                          <td className="p-3.5">
+                            {isGroup ? (
+                              <div className="space-y-1.5">
+                                <div className="flex flex-wrap items-center gap-1.5">
+                                  {b.groupBookings.map((gb: any) => {
+                                    const rm = gb.assignedRoom?.roomNumber || gb.roomNumber;
+                                    return (
+                                      <span
+                                        key={gb._id}
+                                        className="font-serif font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-300 text-xs flex items-center gap-1 shadow-sm"
+                                      >
+                                        <BedDouble size={12} className="text-emerald-600" />
+                                        Room {rm || "Unassigned"}
+                                        <span className="text-[10px] text-gray-500 font-normal font-sans ml-0.5">
+                                          ({gb.roomCategory?.name || "Suite"})
+                                        </span>
+                                      </span>
+                                    );
+                                  })}
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => toggleGroupExpand(b._groupKey)}
+                                  className="text-[11px] font-semibold text-amber-700 hover:text-amber-900 flex items-center gap-1 transition"
+                                >
+                                  <span>{isExpanded ? "Hide room controls" : `Manage all ${roomCount} rooms`}</span>
+                                  <ChevronDown size={13} className={cn("transition-transform", isExpanded && "rotate-180")} />
+                                </button>
+                              </div>
+                            ) : (
+                              <div>
+                                <div className="text-xs font-medium text-gray-600">{b.roomCategory?.name || "Standard Luxury Suite"}</div>
+                                <div className="mt-1">
+                                  {roomNum ? (
+                                    <span className="font-serif font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/30 text-xs">
+                                      Room {roomNum}
+                                    </span>
+                                  ) : (
+                                    <span className="text-[11px] bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded font-mono border border-amber-500/30">
+                                      Unassigned
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            )}
+                          </td>
+
+                          {/* Stay Dates */}
+                          <td className="p-3.5 text-xs text-gray-600">
+                            <div className="flex items-center gap-1 text-gray-500 font-mono">
+                              <Calendar size={13} className="text-[#c9a227]" />
+                              {new Date(b.checkInDate).toLocaleDateString()} → {new Date(b.checkOutDate).toLocaleDateString()}
+                            </div>
+                            <div className="text-[11px] text-gray-500 mt-0.5">{b.numberOfNights || 1} Night(s)</div>
+                          </td>
+
+                          {/* Financial Status */}
+                          <td className="p-3.5 text-xs">
+                            <div className="font-mono text-gray-800 font-semibold">
+                              Total: ₹{total.toLocaleString()}
+                              {isGroup && (
+                                <span className="text-[10px] text-gray-500 block font-normal">
+                                  ({roomCount} rooms combined)
+                                </span>
+                              )}
+                            </div>
+                            <div className="mt-0.5">
+                              {balance <= 0 ? (
+                                <span className="text-[10px] bg-emerald-500/20 text-emerald-700 px-1.5 py-0.5 rounded font-bold border border-emerald-500/30">
+                                  PAID IN FULL
+                                </span>
+                              ) : (
+                                <span className="text-[10px] bg-red-500/20 text-red-700 px-1.5 py-0.5 rounded font-bold border border-red-500/30">
+                                  BAL DUE: ₹{balance.toLocaleString()}
+                                </span>
+                              )}
+                            </div>
+                          </td>
+
+                          {/* Actions */}
+                          <td className="p-3.5 text-right space-x-1.5">
+                            {/* Print GRC Card */}
+                            <Link
+                              to={`/admin/bookings/${b._id}/grc-print`}
+                              target="_blank"
+                              className="inline-flex items-center gap-1 text-xs font-semibold bg-gray-100 text-gray-700 hover:text-black px-2.5 py-1.5 rounded-lg border border-gray-200 hover:border-[#c9a227] transition"
+                              title="Print GRC Card & Consent Form (All Rooms)"
+                            >
+                              <Printer size={13} className="text-[#c9a227]" /> GRC
+                            </Link>
+
+                            {/* Print GST Invoice */}
+                            <Link
+                              to={`/admin/bookings/${b._id}/folio-print`}
+                              target="_blank"
+                              className="inline-flex items-center gap-1 text-xs font-semibold bg-gray-100 text-gray-700 hover:text-black px-2.5 py-1.5 rounded-lg border border-gray-200 hover:border-[#c9a227] transition"
+                              title="Print GST Invoice (Day-by-Day Folio)"
+                            >
+                              <Printer size={13} className="text-emerald-600" /> Invoice
+                            </Link>
+
+                            {/* Folio Drawer Button */}
+                            <button
+                              onClick={() => openFolioDrawer(b)}
+                              className="inline-flex items-center gap-1 text-xs font-semibold bg-gray-100 text-gray-600 hover:text-gray-800 px-2.5 py-1.5 rounded-lg border border-gray-200 hover:border-[#c9a227]/40 transition"
+                              title="Inspect Guest Folio"
+                            >
+                              <FileText size={13} className="text-[#c9a227]" /> Folio
+                            </button>
+
+                            {/* Specific Actions based on Tab */}
+                            {activeTab === "ARRIVALS" && (
+                              <button
+                                onClick={() => openCheckIn(b)}
+                                className="inline-flex items-center gap-1 text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded-lg shadow-md transition"
+                              >
+                                <LogIn size={13} /> {isGroup ? "Check In Group" : "Check In"}
+                              </button>
+                            )}
+
+                            {activeTab === "DEPARTURES" && (
+                              <div className="inline-flex items-center gap-1.5">
+                                <button
+                                  onClick={() => openExtendStay(b)}
+                                  className="inline-flex items-center gap-1 text-xs font-semibold bg-purple-50 hover:bg-purple-100 text-purple-700 hover:text-purple-900 px-2.5 py-1.5 rounded-lg border border-purple-200 transition shadow-xs"
+                                  title="Extend Stay / Postpone Departure"
+                                >
+                                  <Clock size={13} className="text-purple-600" /> Extend Stay
+                                </button>
+                                <button
+                                  onClick={() => openCheckOut(b)}
+                                  className="inline-flex items-center gap-1 text-xs font-bold bg-blue-600 hover:bg-blue-500 text-white px-3 py-1.5 rounded-lg shadow-md transition"
+                                >
+                                  <LogOut size={13} /> Check Out
+                                </button>
+                              </div>
+                            )}
+
+                            {activeTab === "IN_HOUSE" && (
+                              <>
+                                {isGroup ? (
+                                  <>
+                                    <button
+                                      type="button"
+                                      onClick={() => toggleGroupExpand(b._groupKey)}
+                                      className="inline-flex items-center gap-1 text-xs font-semibold bg-amber-50 text-amber-800 hover:bg-amber-100 px-2.5 py-1.5 rounded-lg border border-amber-300 transition"
+                                    >
+                                      <BedDouble size={13} /> {isExpanded ? "Close Rooms" : "Manage Rooms"}
+                                    </button>
+                                    <button
+                                      onClick={() => openExtendStay(b)}
+                                      className="inline-flex items-center gap-1 text-xs font-semibold bg-purple-50 hover:bg-purple-100 text-purple-700 hover:text-purple-900 px-2.5 py-1.5 rounded-lg border border-purple-200 transition shadow-xs"
+                                      title="Extend Stay for All Rooms"
+                                    >
+                                      <Clock size={13} className="text-purple-600" /> Extend Stay
+                                    </button>
+                                    <button
+                                      onClick={() => openCheckOut(b)}
+                                      className="inline-flex items-center gap-1 text-xs font-bold bg-blue-600 hover:bg-blue-500 text-white px-3 py-1.5 rounded-lg shadow-md transition"
+                                    >
+                                      Express Checkout
+                                    </button>
+                                  </>
+                                ) : (
+                                  <>
+                                    <button
+                                      onClick={() => openRoomMove(b)}
+                                      className="inline-flex items-center gap-1 text-xs font-semibold bg-gray-100 text-amber-600 hover:bg-amber-500/20 px-2.5 py-1.5 rounded-lg border border-amber-500/30 transition"
+                                    >
+                                      <ArrowLeftRight size={13} /> Move
+                                    </button>
+                                    <button
+                                      onClick={() => openExtendStay(b)}
+                                      className="inline-flex items-center gap-1 text-xs font-semibold bg-gray-100 text-purple-600 hover:bg-purple-500/20 px-2.5 py-1.5 rounded-lg border border-purple-500/30 transition"
+                                    >
+                                      <Clock size={13} /> Extend
+                                    </button>
+                                    <button
+                                      onClick={() => openCheckOut(b)}
+                                      className="inline-flex items-center gap-1 text-xs font-bold bg-blue-600 hover:bg-blue-500 text-white px-3 py-1.5 rounded-lg shadow-md transition"
+                                    >
+                                      Express Checkout
+                                    </button>
+                                  </>
                                 )}
-                              </div>
-                              <div className="text-xs font-mono text-gray-500 flex items-center gap-2">
-                                <span>#{b.bookingReference}</span>
-                                <span>·</span>
-                                <span>{b.guestDetails?.phoneNumber || b.guestDetails?.phone || "No phone"}</span>
-                              </div>
-                            </div>
-                          </div>
-                        </td>
-
-                        {/* Room & Category */}
-                        <td className="p-3.5">
-                          <div className="text-xs font-medium text-gray-600">{b.roomCategory?.name || "Standard Luxury Suite"}</div>
-                          <div className="mt-1">
-                            {roomNum ? (
-                              <span className="font-serif font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/30 text-xs">
-                                Room {roomNum}
-                              </span>
-                            ) : (
-                              <span className="text-[11px] bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded font-mono border border-amber-500/30">
-                                Unassigned
-                              </span>
+                              </>
                             )}
-                          </div>
-                        </td>
 
-                        {/* Stay Dates */}
-                        <td className="p-3.5 text-xs text-gray-600">
-                          <div className="flex items-center gap-1 text-gray-500 font-mono">
-                            <Calendar size={13} className="text-[#c9a227]" />
-                            {new Date(b.checkInDate).toLocaleDateString()} → {new Date(b.checkOutDate).toLocaleDateString()}
-                          </div>
-                          <div className="text-[11px] text-gray-500 mt-0.5">{b.numberOfNights || 1} Night(s)</div>
-                        </td>
-
-                        {/* Financial Status */}
-                        <td className="p-3.5 text-xs">
-                          <div className="font-mono text-gray-800">Total: ₹{total.toLocaleString()}</div>
-                          <div className="mt-0.5">
-                            {balance <= 0 ? (
-                              <span className="text-[10px] bg-emerald-500/20 text-emerald-300 px-1.5 py-0.5 rounded font-bold border border-emerald-500/30">
-                                PAID IN FULL
-                              </span>
-                            ) : (
-                              <span className="text-[10px] bg-red-500/20 text-red-300 px-1.5 py-0.5 rounded font-bold border border-red-500/30">
-                                BAL DUE: ₹{balance.toLocaleString()}
-                              </span>
+                            {activeTab === "UNASSIGNED" && (
+                              <button
+                                onClick={() => openCheckIn(b)}
+                                className="inline-flex items-center gap-1 text-xs font-bold bg-amber-600 hover:bg-amber-500 text-white px-3 py-1.5 rounded-lg shadow-md transition"
+                              >
+                                <BedDouble size={13} /> Allocate & Check In
+                              </button>
                             )}
-                          </div>
-                        </td>
+                          </td>
+                        </tr>
 
-                        {/* Actions */}
-                        <td className="p-3.5 text-right space-x-1.5">
-                          {/* Folio Drawer Button */}
-                          <button
-                            onClick={() => openFolioDrawer(b)}
-                            className="inline-flex items-center gap-1 text-xs font-semibold bg-gray-100 text-gray-600 hover:text-gray-800 px-2.5 py-1.5 rounded-lg border border-gray-200 hover:border-[#c9a227]/40 transition"
-                            title="Inspect Guest Folio"
-                          >
-                            <FileText size={13} className="text-[#c9a227]" /> Folio
-                          </button>
+                        {/* ACCORDION: Multi-Room Group Breakdown Sub-Row */}
+                        {isGroup && isExpanded && (
+                          <tr className="bg-amber-50/40 border-b border-amber-200/60">
+                            <td colSpan={5} className="p-4 pl-12">
+                              <div className="bg-white rounded-xl border border-amber-200 p-4 shadow-sm space-y-3">
+                                <div className="flex items-center justify-between border-b border-gray-100 pb-2">
+                                  <div className="text-xs font-bold text-amber-900 flex items-center gap-1.5 uppercase tracking-wider">
+                                    <BedDouble size={14} className="text-amber-700" />
+                                    Group Room Breakdown ({roomCount} Rooms booked by {guestName})
+                                  </div>
+                                  <div className="text-xs text-gray-500 font-mono">
+                                    Primary Ref: #{b.bookingReference}
+                                  </div>
+                                </div>
 
-                          {/* Specific Actions based on Tab */}
-                          {activeTab === "ARRIVALS" && (
-                            <button
-                              onClick={() => openCheckIn(b)}
-                              className="inline-flex items-center gap-1 text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-gray-800 px-3 py-1.5 rounded-lg shadow-md transition"
-                            >
-                              <LogIn size={13} /> Check In
-                            </button>
-                          )}
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                  {b.groupBookings.map((gb: any) => {
+                                    const rNum = gb.assignedRoom?.roomNumber || gb.roomNumber || "Unassigned";
+                                    const rCat = gb.roomCategory?.name || "Standard";
+                                    const rTotal = gb.totalAmount || gb.totalPrice || 0;
+                                    const rPaid = gb.paidAmount || 0;
+                                    const rBal = rTotal - rPaid;
 
-                          {activeTab === "DEPARTURES" && (
-                            <button
-                              onClick={() => openCheckOut(b)}
-                              className="inline-flex items-center gap-1 text-xs font-bold bg-blue-600 hover:bg-blue-500 text-gray-800 px-3 py-1.5 rounded-lg shadow-md transition"
-                            >
-                              <LogOut size={13} /> Check Out
-                            </button>
-                          )}
+                                    return (
+                                      <div key={gb._id} className="p-3 bg-gray-50 rounded-lg border border-gray-200 flex flex-col justify-between gap-3 shadow-xs">
+                                        <div className="flex items-start justify-between">
+                                          <div>
+                                            <div className="flex items-center gap-2">
+                                              <span className="font-serif font-bold text-gray-900 text-sm">Room {rNum}</span>
+                                              <span className="text-[10px] bg-indigo-50 text-indigo-700 px-1.5 py-0.5 rounded font-medium border border-indigo-200">{rCat}</span>
+                                            </div>
+                                            <div className="text-[11px] font-mono text-gray-500 mt-0.5">
+                                              Ref: #{gb.bookingReference}
+                                            </div>
+                                          </div>
+                                          <div className="text-right">
+                                            <div className="text-xs font-bold text-gray-800">₹{rTotal.toLocaleString()}</div>
+                                            <div className="text-[10px] font-medium text-gray-500">
+                                              {rBal <= 0 ? (
+                                                <span className="text-emerald-700 font-bold">Paid</span>
+                                              ) : (
+                                                <span className="text-red-600 font-bold">Bal: ₹{rBal.toLocaleString()}</span>
+                                              )}
+                                            </div>
+                                          </div>
+                                        </div>
 
-                          {activeTab === "IN_HOUSE" && (
-                            <>
-                              <button
-                                onClick={() => openRoomMove(b)}
-                                className="inline-flex items-center gap-1 text-xs font-semibold bg-gray-100 text-amber-300 hover:bg-amber-500/20 px-2.5 py-1.5 rounded-lg border border-amber-500/30 transition"
-                              >
-                                <ArrowLeftRight size={13} /> Move
-                              </button>
-                              <button
-                                onClick={() => openExtendStay(b)}
-                                className="inline-flex items-center gap-1 text-xs font-semibold bg-gray-100 text-purple-300 hover:bg-purple-500/20 px-2.5 py-1.5 rounded-lg border border-purple-500/30 transition"
-                              >
-                                <Clock size={13} /> Extend
-                              </button>
-                              <button
-                                onClick={() => openCheckOut(b)}
-                                className="inline-flex items-center gap-1 text-xs font-bold bg-blue-600 hover:bg-blue-500 text-gray-800 px-3 py-1.5 rounded-lg shadow-md transition"
-                              >
-                                Express Checkout
-                              </button>
-                            </>
-                          )}
-
-                          {activeTab === "UNASSIGNED" && (
-                            <button
-                              onClick={() => openCheckIn(b)}
-                              className="inline-flex items-center gap-1 text-xs font-bold bg-amber-600 hover:bg-amber-500 text-gray-800 px-3 py-1.5 rounded-lg shadow-md transition"
-                            >
-                              <BedDouble size={13} /> Allocate & Check In
-                            </button>
-                          )}
-                        </td>
-                      </tr>
+                                        {/* Room Specific Actions */}
+                                        <div className="flex items-center justify-end gap-1.5 pt-2 border-t border-gray-200">
+                                          <button
+                                            type="button"
+                                            onClick={() => openFolioDrawer(gb)}
+                                            className="px-2.5 py-1 text-[11px] font-semibold bg-white hover:bg-gray-100 text-gray-700 rounded border border-gray-300 transition"
+                                          >
+                                            Room Folio
+                                          </button>
+                                          {(activeTab === "IN_HOUSE" || activeTab === "DEPARTURES") && (
+                                            <>
+                                              <button
+                                                type="button"
+                                                onClick={() => openRoomMove(gb)}
+                                                className="px-2.5 py-1 text-[11px] font-semibold bg-white hover:bg-amber-50 text-amber-700 rounded border border-amber-300 transition"
+                                              >
+                                                Move
+                                              </button>
+                                              <button
+                                                type="button"
+                                                onClick={() => openExtendStay(gb)}
+                                                className="px-2.5 py-1 text-[11px] font-semibold bg-white hover:bg-purple-50 text-purple-700 rounded border border-purple-300 transition"
+                                              >
+                                                Extend
+                                              </button>
+                                              <button
+                                                type="button"
+                                                onClick={() => openCheckOut(gb)}
+                                                className="px-2.5 py-1 text-[11px] font-bold bg-blue-600 hover:bg-blue-700 text-white rounded transition shadow-sm"
+                                              >
+                                                Checkout
+                                              </button>
+                                            </>
+                                          )}
+                                          {activeTab === "ARRIVALS" && (
+                                            <button
+                                              type="button"
+                                              onClick={() => openCheckIn(gb)}
+                                              className="px-2.5 py-1 text-[11px] font-bold bg-emerald-600 hover:bg-emerald-700 text-white rounded transition shadow-sm"
+                                            >
+                                              Check In
+                                            </button>
+                                          )}
+                                        </div>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </React.Fragment>
                     );
                   })}
                 </tbody>
@@ -854,6 +1249,20 @@ export default function AdminFrontDesk() {
               <div className="flex justify-between">
                 <span className="text-gray-500">Category Reserved:</span>
                 <span className="text-gray-800">{checkInModal.booking.roomCategory?.name || "Standard Suite"}</span>
+              </div>
+              <div className="grid grid-cols-2 gap-2 pt-2 border-t border-gray-200 text-[11px]">
+                <div>
+                  <span className="text-gray-500 block">Check-In Arrival:</span>
+                  <span className="font-semibold text-gray-800">{new Date(checkInModal.booking.checkInDate).toLocaleDateString()} {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                </div>
+                <div>
+                  <span className="text-gray-500 block">Scheduled Check-Out:</span>
+                  <span className="font-semibold text-gray-800">{new Date(checkInModal.booking.checkOutDate).toLocaleDateString()} (11:00 AM)</span>
+                </div>
+              </div>
+              <div className="flex justify-between items-center pt-1 border-t border-gray-200 text-gray-700 font-semibold">
+                <span>Booked Tariff: ₹{(checkInModal.booking.totalPrice || checkInModal.booking.totalAmount || 0).toLocaleString()}</span>
+                <span className="text-emerald-600">Advance Paid: ₹{(checkInModal.booking.paidAmount || 0).toLocaleString()}</span>
               </div>
             </div>
 
@@ -934,6 +1343,31 @@ export default function AdminFrontDesk() {
               </button>
             </div>
 
+            {/* Stay Timing & Duration Information */}
+            {checkOutModal.booking && (
+              <div className="bg-blue-50/70 border border-blue-200 rounded-xl p-3 text-xs space-y-1.5">
+                <div className="flex justify-between items-center text-blue-900 font-bold">
+                  <span>Guest: {checkOutModal.booking.guestDetails?.firstName} {checkOutModal.booking.guestDetails?.lastName}</span>
+                  <span className="font-mono bg-blue-100 text-blue-800 px-2 py-0.5 rounded text-[11px]">
+                    Room {checkOutModal.booking.assignedRoom?.roomNumber || checkOutModal.booking.assignedRoomNumber || "Assigned"}
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 gap-2 pt-1 border-t border-blue-200/60 text-gray-700 text-[11px]">
+                  <div>
+                    <span className="text-gray-500 block">Check-In Time:</span>
+                    <span className="font-semibold">{new Date(checkOutModal.booking.checkInDate).toLocaleDateString()} {checkOutModal.booking.checkedInAt ? new Date(checkOutModal.booking.checkedInAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "Standard (12:00 PM)"}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500 block">Check-Out Time:</span>
+                    <span className="font-semibold">{new Date(checkOutModal.booking.checkOutDate).toLocaleDateString()} {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} (Now)</span>
+                  </div>
+                </div>
+                <div className="text-[11px] text-blue-800 font-medium">
+                  Stay Duration: {Math.max(1, Math.ceil((new Date(checkOutModal.booking.checkOutDate).getTime() - new Date(checkOutModal.booking.checkInDate).getTime()) / (1000 * 60 * 60 * 24)))} night(s) booked
+                </div>
+              </div>
+            )}
+
             <div className="bg-gray-100 p-4 rounded-xl border border-gray-200 space-y-3 font-mono text-xs">
               <div className="flex justify-between text-gray-500">
                 <span>Total Charges (Room & Ancillary):</span>
@@ -952,41 +1386,124 @@ export default function AdminFrontDesk() {
                 <span>- ₹{((checkOutModal.preview?.summary?.totalPaid || 0) + (checkOutModal.preview?.summary?.totalAdvanceAdjusted || 0)).toLocaleString()}</span>
               </div>
               <div className="border-t border-gray-200 pt-2 flex justify-between font-bold text-sm text-gray-800">
-                <span>Balance Due at Checkout:</span>
-                <span className="text-amber-400">₹{(checkOutModal.preview?.summary?.balanceDue || 0).toLocaleString()}</span>
+                <span>Computed Balance Due:</span>
+                <span className="text-amber-500 font-black">₹{(checkOutModal.preview?.summary?.balanceDue || 0).toLocaleString()}</span>
+              </div>
+              {(checkOutModal.preview?.summary?.refundDue || 0) > 0 && (
+                <div className="flex justify-between items-center font-bold text-xs text-blue-700 bg-blue-50 border border-blue-200 p-2.5 rounded-lg">
+                  <span>Surplus Credit / Refund to Guest:</span>
+                  <span className="font-mono text-sm">₹{checkOutModal.preview?.summary?.refundDue.toLocaleString()} (Auto-settled)</span>
+                </div>
+              )}
+            </div>
+
+            {/* Payment & Amount Entry: Auto vs Manual */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold text-gray-700">Settlement Amount to Collect (₹)</label>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const newMode = !isManualOverride;
+                    setIsManualOverride(newMode);
+                    if (!newMode) {
+                      setSettlementAmount(checkOutModal.preview?.summary?.balanceDue || 0);
+                    }
+                  }}
+                  className="text-[11px] font-bold text-blue-600 hover:text-blue-800 underline"
+                >
+                  {isManualOverride ? "Reset to Auto Computed" : "✏️ Enter Manual Amount"}
+                </button>
+              </div>
+
+              <div className="relative">
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={settlementAmount}
+                  onChange={(e) => {
+                    setIsManualOverride(true);
+                    setSettlementAmount(e.target.value);
+                  }}
+                  className={cn(
+                    "w-full text-sm font-bold rounded-xl p-2.5 border transition",
+                    isManualOverride
+                      ? "bg-amber-50 border-amber-400 text-amber-950 focus:border-amber-600"
+                      : "bg-gray-100 border-gray-300 text-gray-800 focus:border-[#c9a227]"
+                  )}
+                  placeholder="0.00"
+                />
+                <span className="absolute right-3 top-2.5 text-[11px] font-semibold text-gray-500">
+                  {isManualOverride ? "MANUAL ENTRY" : "AUTO COMPUTED"}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">Payment Method</label>
+                  <select
+                    value={paymentMode}
+                    onChange={(e) => setPaymentMode(e.target.value)}
+                    className="w-full bg-gray-100 border border-gray-200 text-sm text-gray-800 rounded-xl p-2.5 focus:border-[#c9a227]"
+                  >
+                    <option value="CARD">Credit / Debit Card</option>
+                    <option value="Unified Payments Interface">UPI / GPay / QR Scan</option>
+                    <option value="CASH">Cash in Hand</option>
+                    <option value="CITY_LEDGER">Direct Bill / Corporate City Ledger</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">Checkout Reference / Notes</label>
+                  <input
+                    type="text"
+                    value={checkoutNotes}
+                    onChange={(e) => setCheckoutNotes(e.target.value)}
+                    placeholder="e.g. Transaction Ref, Split Bill"
+                    className="w-full bg-gray-100 border border-gray-200 text-sm text-gray-800 rounded-xl p-2.5 focus:border-[#c9a227]"
+                  />
+                </div>
               </div>
             </div>
 
-            {(checkOutModal.preview?.summary?.balanceDue || 0) > 0 && (
-              <div>
-                <label className="block text-xs font-semibold text-gray-600 mb-1">Select Payment Mode to Settle</label>
-                <select
-                  value={paymentMode}
-                  onChange={(e) => setPaymentMode(e.target.value)}
-                  className="w-full bg-gray-100 border border-gray-200 text-sm text-gray-800 rounded-xl p-2.5 focus:border-[#c9a227]"
+            <div className="flex justify-between items-center border-t border-gray-200 pt-4 mt-4">
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => {
+                    const b = checkOutModal.booking;
+                    setCheckOutModal({ open: false, booking: null, preview: null });
+                    openFolioDrawer(b);
+                  }}
+                  className="px-3.5 py-2 bg-indigo-50 text-indigo-600 rounded-xl text-xs font-semibold hover:bg-indigo-100"
                 >
-                  <option value="CARD">Credit / Debit Card</option>
-                  <option value="Unified Payments Interface">UPI / GPay / QR Scan</option>
-                  <option value="CASH">Cash in Hand</option>
-                  <option value="CITY_LEDGER">Direct Bill / Corporate City Ledger</option>
-                </select>
+                  + Add Additional Charge
+                </button>
+                <button
+                  onClick={() => {
+                    const b = checkOutModal.booking;
+                    setCheckOutModal({ open: false, booking: null, preview: null });
+                    openExtendStay(b);
+                  }}
+                  className="px-3.5 py-2 bg-purple-50 text-purple-700 hover:bg-purple-100 rounded-xl text-xs font-semibold flex items-center gap-1.5 border border-purple-200"
+                >
+                  <Clock size={13} className="text-purple-600" /> Extend Stay Instead
+                </button>
               </div>
-            )}
-
-            <div className="flex justify-end gap-3 border-t border-gray-200 pt-4">
-              <button
-                onClick={() => setCheckOutModal({ open: false, booking: null, preview: null })}
-                className="px-4 py-2 bg-gray-100 text-gray-600 rounded-xl text-xs font-semibold hover:bg-[#262930]"
-              >
-                Cancel
-              </button>
-              <button
-                disabled={submittingAction}
-                onClick={handleProcessCheckOut}
-                className="px-5 py-2 bg-blue-600 hover:bg-blue-500 text-gray-800 rounded-xl text-xs font-bold shadow-lg disabled:opacity-50"
-              >
-                {submittingAction ? "Processing..." : "Settle Folio & Complete Checkout"}
-              </button>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setCheckOutModal({ open: false, booking: null, preview: null })}
+                  className="px-4 py-2 bg-gray-100 text-gray-600 rounded-xl text-xs font-semibold hover:bg-[#262930] hover:text-white"
+                >
+                  Cancel
+                </button>
+                <button
+                  disabled={submittingAction}
+                  onClick={handleProcessCheckOut}
+                  className="px-5 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold shadow-lg disabled:opacity-50"
+                >
+                  {submittingAction ? "Processing..." : "Settle Folio & Complete Checkout"}
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -1074,25 +1591,31 @@ export default function AdminFrontDesk() {
             </div>
 
             {extensionConflict && (
-              <div className="bg-red-500/10 border border-red-500/30 p-3 rounded-xl text-xs text-red-300">
-                {extensionConflict}
+              <div className="bg-red-50 border border-red-200 p-3 rounded-xl text-xs text-red-700 font-medium">
+                ⚠️ {extensionConflict}
               </div>
             )}
 
             {newCheckOutDate && !extensionConflict && (
-              <div className="bg-purple-500/10 border border-purple-500/30 p-3 rounded-xl text-xs text-purple-200">
-                Additional Room Tariff: <span className="font-mono font-bold text-gray-800">₹{extensionCost.toLocaleString()}</span>
+              <div className="bg-purple-50 border border-purple-200 p-3.5 rounded-xl text-xs text-purple-900 space-y-1">
+                <div className="flex items-center justify-between">
+                  <span className="font-medium text-purple-800">Additional Room Tariff + Tax:</span>
+                  <span className="font-mono font-black text-sm text-purple-950">₹{extensionCost.toLocaleString()}</span>
+                </div>
+                <p className="text-[11px] text-purple-700">
+                  This extension amount will automatically be posted to the guest's folio ledger with applicable 12% GST.
+                </p>
               </div>
             )}
 
             <div className="flex justify-end gap-3 border-t border-gray-200 pt-4">
-              <button onClick={() => setExtendModal({ open: false, booking: null })} className="px-4 py-2 bg-gray-100 text-gray-600 rounded-xl text-xs font-semibold">
+              <button onClick={() => setExtendModal({ open: false, booking: null })} className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl text-xs font-semibold transition">
                 Cancel
               </button>
               <button
                 disabled={submittingAction || !newCheckOutDate || Boolean(extensionConflict)}
                 onClick={handleProcessExtend}
-                className="px-5 py-2 bg-purple-600 hover:bg-purple-500 text-gray-800 rounded-xl text-xs font-bold shadow-lg disabled:opacity-50"
+                className="px-5 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-xs font-bold shadow-md hover:shadow-lg disabled:opacity-50 transition"
               >
                 {submittingAction ? "Extending..." : "Confirm Extension"}
               </button>
@@ -1101,105 +1624,521 @@ export default function AdminFrontDesk() {
         </div>
       )}
 
-      {/* DRAWER: FOLIO DETAILS */}
+      {/* MODAL: FOLIO & BILLING COMMAND CENTER */}
       {folioDrawer.open && folioDrawer.booking && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex justify-end">
-          <div className="bg-white border-l border-gray-200 w-full max-w-xl h-full p-6 shadow-2xl overflow-y-auto space-y-6 text-gray-800 flex flex-col justify-between">
-            <div className="space-y-6">
-              <div className="flex items-center justify-between border-b border-gray-200 pb-4">
-                <div className="flex items-center gap-2">
-                  <FileText className="text-[#c9a227]" size={22} />
-                  <div>
-                    <h3 className="font-serif text-lg font-bold">Guest Folio Inspection</h3>
-                    <p className="text-xs text-gray-500 font-mono">Folio #{folioDrawer.folio?._id || "N/A"}</p>
-                  </div>
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-3 md:p-6 overflow-y-auto">
+          <div className="bg-white rounded-3xl border border-gray-200 w-full max-w-5xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh] animate-in fade-in zoom-in-95 duration-200">
+            {/* 1. TOP HEADER */}
+            <div className="p-5 border-b border-gray-200 flex items-center justify-between bg-gray-50/80">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-[#c9a227]/10 text-[#c9a227] flex items-center justify-center border border-[#c9a227]/30 shadow-sm">
+                  <Receipt size={22} />
                 </div>
-                <button onClick={() => setFolioDrawer({ open: false, booking: null, folio: null })} className="text-gray-500 hover:text-gray-800">
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="px-2.5 py-0.5 bg-[#c9a227]/15 text-[#9e7b16] font-bold text-[10px] rounded-full border border-[#c9a227]/30 font-mono tracking-wider">
+                      YES HOTELS BILLING
+                    </span>
+                    <span className="text-xs font-mono text-gray-500">
+                      Folio #{folioDrawer.folio?._id ? folioDrawer.folio._id.toString().slice(-8) : "N/A"}
+                    </span>
+                    <span className="text-xs font-mono font-bold text-gray-700 bg-gray-200 px-2 py-0.5 rounded">
+                      Ref #{folioDrawer.booking.billNumber || folioDrawer.booking.bookingReference}
+                    </span>
+                  </div>
+                  <h3 className="font-serif text-lg md:text-xl font-black text-gray-900 mt-0.5">
+                    Guest Folio & Itemized Billing Statement
+                  </h3>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Link
+                  to={`/admin/bookings/${folioDrawer.booking._id}/folio-print`}
+                  target="_blank"
+                  className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#c9a227] hover:bg-[#b08d20] text-black text-xs font-bold rounded-xl transition shadow-sm"
+                  title="Print GST Invoice"
+                >
+                  <Printer size={14} /> Print GST Invoice
+                </Link>
+                <button
+                  onClick={() => setFolioDrawer({ open: false, booking: null, folio: null, isGroupFolio: false, allGroupBookings: [] })}
+                  className="p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-200 rounded-full transition"
+                >
                   <X size={20} />
                 </button>
               </div>
+            </div>
 
-              {/* Guest Card */}
-              <div className="bg-gray-100 p-4 rounded-xl border border-gray-200 space-y-2 text-xs">
-                <div className="flex justify-between font-bold text-gray-800 text-sm">
-                  <span>{folioDrawer.booking.guestDetails?.firstName} {folioDrawer.booking.guestDetails?.lastName}</span>
-                  <span className="text-[#c9a227]">Room {folioDrawer.booking.assignedRoom?.roomNumber || "N/A"}</span>
+            {/* 2. MULTI-ROOM / GROUP SELECTOR BAR (IF MULTI-ROOM) */}
+            {folioDrawer.allGroupBookings && folioDrawer.allGroupBookings.length > 1 && (
+              <div className="px-5 py-2.5 bg-amber-50/70 border-b border-amber-200/60 flex items-center gap-2 overflow-x-auto text-xs">
+                <span className="font-bold text-amber-900 text-xs flex items-center gap-1 whitespace-nowrap">
+                  <Users size={13} className="text-amber-700" /> Multi-Room Group:
+                </span>
+                <button
+                  type="button"
+                  onClick={() => openFolioDrawer(folioDrawer.booking, true, folioDrawer.allGroupBookings)}
+                  className={cn(
+                    "px-3 py-1 rounded-lg font-bold transition whitespace-nowrap flex items-center gap-1",
+                    folioDrawer.isGroupFolio
+                      ? "bg-amber-600 text-white shadow-sm"
+                      : "bg-white text-gray-700 hover:bg-amber-100 border border-gray-300"
+                  )}
+                >
+                  <Sparkles size={12} /> Combined Group Bill ({folioDrawer.allGroupBookings.length} Rooms)
+                </button>
+                {folioDrawer.allGroupBookings.map((gb: any) => {
+                  const rm = gb.assignedRoom?.roomNumber || gb.roomNumber || "Unassigned";
+                  const isSelected = !folioDrawer.isGroupFolio && folioDrawer.booking._id === gb._id;
+                  return (
+                    <button
+                      key={gb._id}
+                      type="button"
+                      onClick={() => openFolioDrawer(gb, false, folioDrawer.allGroupBookings)}
+                      className={cn(
+                        "px-3 py-1 rounded-lg font-bold transition whitespace-nowrap flex items-center gap-1",
+                        isSelected
+                          ? "bg-gray-900 text-white shadow-sm"
+                          : "bg-white text-gray-700 hover:bg-gray-100 border border-gray-300"
+                      )}
+                    >
+                      <BedDouble size={12} /> Room {rm}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* 3. GUEST & STAY PROFILE CARD */}
+            <div className="px-5 py-4 bg-white border-b border-gray-200 flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-indigo-50 border border-indigo-200 text-indigo-700 flex items-center justify-center font-bold text-sm shadow-sm flex-shrink-0">
+                  {(folioDrawer.booking.guestDetails?.firstName || "G").charAt(0)}
                 </div>
-                <div className="flex justify-between text-gray-500 font-mono">
-                  <span>Booking Ref: #{folioDrawer.booking.bookingReference}</span>
-                  <span>{new Date(folioDrawer.booking.checkInDate).toLocaleDateString()} - {new Date(folioDrawer.booking.checkOutDate).toLocaleDateString()}</span>
+                <div>
+                  <div className="font-bold text-gray-900 text-sm flex items-center gap-2">
+                    <span>{folioDrawer.booking.guestDetails?.firstName} {folioDrawer.booking.guestDetails?.lastName}</span>
+                    <span className="text-[10px] bg-emerald-50 text-emerald-800 px-2 py-0.5 rounded font-mono font-bold border border-emerald-300">
+                      {folioDrawer.isGroupFolio
+                        ? `Group (${folioDrawer.allGroupBookings?.length} Rooms)`
+                        : `Room ${folioDrawer.booking.assignedRoom?.roomNumber || folioDrawer.booking.roomNumber || "N/A"}`}
+                    </span>
+                  </div>
+                  <div className="text-gray-500 font-mono mt-0.5">
+                    Phone: {folioDrawer.booking.guestDetails?.phoneNumber || folioDrawer.booking.guestDetails?.phone || "No phone"} &bull; {folioDrawer.booking.guestDetails?.email || "No email"}
+                  </div>
                 </div>
               </div>
 
-              {/* Post Charge Form */}
-              <div className="bg-gray-100 p-4 rounded-xl border border-gray-200 space-y-3">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-[#c9a227]">Post Room / Ancillary Charge</h4>
-                <div className="grid grid-cols-3 gap-2">
-                  <input
-                    type="text"
-                    placeholder="Item description (e.g. Minibar, Laundry)"
-                    value={newChargeDesc}
-                    onChange={(e) => setNewChargeDesc(e.target.value)}
-                    className="col-span-2 bg-white border border-gray-200 text-xs text-gray-800 rounded-lg p-2 focus:border-[#c9a227]"
-                  />
-                  <input
-                    type="number"
-                    placeholder="Amount (₹)"
-                    value={newChargeAmount}
-                    onChange={(e) => setNewChargeAmount(e.target.value)}
-                    className="bg-white border border-gray-200 text-xs text-gray-800 rounded-lg p-2 focus:border-[#c9a227]"
-                  />
+              <div className="flex items-center gap-4 text-gray-600 font-mono">
+                <div>
+                  <span className="text-[10px] uppercase text-gray-400 block font-sans">Check-In &rarr; Check-Out</span>
+                  <span className="font-bold text-gray-800">
+                    {new Date(folioDrawer.booking.checkInDate).toLocaleDateString()} &rarr; {new Date(folioDrawer.booking.checkOutDate).toLocaleDateString()}
+                  </span>
                 </div>
+                <div className="border-l border-gray-200 pl-4">
+                  <span className="text-[10px] uppercase text-gray-400 block font-sans">Duration</span>
+                  <span className="font-bold text-gray-800">
+                    {Math.max(1, Math.ceil((new Date(folioDrawer.booking.checkOutDate).getTime() - new Date(folioDrawer.booking.checkInDate).getTime()) / (1000 * 60 * 60 * 24)))} Night(s)
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* 4. ACTIONS COMMAND STRIP */}
+            <div className="px-5 py-3 bg-gray-50 border-b border-gray-200 flex flex-wrap items-center justify-between gap-2 text-xs">
+              <div className="flex items-center gap-2">
                 <button
-                  disabled={submittingAction || !newChargeDesc || !newChargeAmount}
-                  onClick={handleAddFolioCharge}
-                  className="w-full py-2 bg-[#c9a227] text-black text-xs font-bold rounded-lg hover:bg-[#e5c76b] transition disabled:opacity-50"
+                  type="button"
+                  onClick={() => setIsEditingBill(!isEditingBill)}
+                  className={cn(
+                    "px-3.5 py-1.5 rounded-xl font-bold transition flex items-center gap-1.5 shadow-sm",
+                    isEditingBill
+                      ? "bg-amber-600 text-white"
+                      : "bg-[#c9a227] hover:bg-[#b08d20] text-black"
+                  )}
                 >
-                  Post Charge to Folio
+                  <Edit2 size={13} /> {isEditingBill ? "Hide Bill Editor" : "✏️ Edit Bill & Tariff Anytime"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowAddCharge(!showAddCharge)}
+                  className={cn(
+                    "px-3 py-1.5 rounded-xl font-bold transition flex items-center gap-1.5 border",
+                    showAddCharge
+                      ? "bg-indigo-600 text-white border-indigo-600"
+                      : "bg-white text-gray-700 hover:bg-gray-100 border-gray-300"
+                  )}
+                >
+                  <PlusCircle size={13} /> + Post Ancillary Charge
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const bookingToExtend = folioDrawer.booking;
+                    setFolioDrawer({ open: false, booking: null, folio: null, isGroupFolio: false, allGroupBookings: [] });
+                    openExtendStay(bookingToExtend);
+                  }}
+                  className="px-3 py-1.5 bg-purple-50 hover:bg-purple-100 text-purple-700 rounded-xl font-bold border border-purple-200 transition flex items-center gap-1.5 shadow-xs"
+                  title="Extend Guest Stay / Room Duration"
+                >
+                  <Clock size={13} className="text-purple-600" /> Extend Stay
                 </button>
               </div>
 
-              {/* Folio Items Table */}
+              <div className="flex items-center gap-2">
+                <Link
+                  to={`/admin/bookings/${folioDrawer.booking._id}/grc-print`}
+                  target="_blank"
+                  className="px-3 py-1.5 bg-white hover:bg-gray-100 text-gray-700 font-bold rounded-xl border border-gray-300 transition flex items-center gap-1"
+                >
+                  <Printer size={13} className="text-[#c9a227]" /> Print GRC
+                </Link>
+                <Link
+                  to={`/admin/bookings/${folioDrawer.booking._id}/folio-print`}
+                  target="_blank"
+                  className="px-3 py-1.5 bg-[#c9a227] hover:bg-[#b08d20] text-black font-bold rounded-xl transition flex items-center gap-1"
+                >
+                  <Printer size={13} /> Print GST Invoice
+                </Link>
+              </div>
+            </div>
+
+            {/* SCROLLABLE BODY AREA */}
+            <div className="flex-1 overflow-y-auto p-5 space-y-5">
+              {/* 5. LIVE BILL EDITOR PANEL (WHEN ACTIVATED) */}
+              {isEditingBill && (
+                <div className="p-4 bg-amber-50/70 border-2 border-amber-300 rounded-2xl space-y-4 animate-in fade-in duration-200">
+                  <div className="flex items-center justify-between border-b border-amber-200/80 pb-2">
+                    <div>
+                      <h4 className="font-serif text-sm font-black text-amber-950 flex items-center gap-1.5">
+                        <Edit2 size={15} className="text-amber-700" /> Live Bill & Tariff Modifier
+                      </h4>
+                      <p className="text-[11px] text-amber-800 mt-0.5">
+                        Change base tariff, extra bed, ancillary charges, discounts or advances. All ledger entries & 12% GST will recalculate automatically.
+                      </p>
+                    </div>
+                    <span className="text-[10px] font-mono font-bold bg-amber-200 text-amber-900 px-2 py-0.5 rounded">
+                      EDITABLE ANYTIME
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 text-xs">
+                    <div>
+                      <label className="block font-bold text-gray-700 mb-1">
+                        Room Tariff Rate / Night (₹)
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={editBillForm.ratePerNight}
+                        onChange={(e) => setEditBillForm({ ...editBillForm, ratePerNight: parseFloat(e.target.value) || 0 })}
+                        className="w-full bg-white border border-gray-300 text-sm text-gray-900 font-bold p-2.5 rounded-xl focus:border-amber-500 focus:outline-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block font-bold text-gray-700 mb-1">
+                        Extra Bed / Person Total (₹)
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={editBillForm.extraBedAmount}
+                        onChange={(e) => setEditBillForm({ ...editBillForm, extraBedAmount: parseFloat(e.target.value) || 0 })}
+                        className="w-full bg-white border border-gray-300 text-sm text-gray-900 font-bold p-2.5 rounded-xl focus:border-amber-500 focus:outline-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block font-bold text-gray-700 mb-1">
+                        Discount / Concession (₹)
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={editBillForm.discountAmount}
+                        onChange={(e) => setEditBillForm({ ...editBillForm, discountAmount: parseFloat(e.target.value) || 0 })}
+                        className="w-full bg-white border border-gray-300 text-sm text-gray-900 font-bold p-2.5 rounded-xl focus:border-amber-500 focus:outline-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block font-bold text-gray-700 mb-1">
+                        Other / Ancillary Charges (₹)
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={editBillForm.otherCharges}
+                        onChange={(e) => setEditBillForm({ ...editBillForm, otherCharges: parseFloat(e.target.value) || 0 })}
+                        className="w-full bg-white border border-gray-300 text-sm text-gray-900 font-bold p-2.5 rounded-xl focus:border-amber-500 focus:outline-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block font-bold text-gray-700 mb-1">
+                        Other Charges Description
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Laundry, Airport Pickup, F&B"
+                        value={editBillForm.otherChargesDesc}
+                        onChange={(e) => setEditBillForm({ ...editBillForm, otherChargesDesc: e.target.value })}
+                        className="w-full bg-white border border-gray-300 text-sm text-gray-900 p-2.5 rounded-xl focus:border-amber-500 focus:outline-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block font-bold text-gray-700 mb-1">
+                        Advance / Paid Amount (₹)
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={editBillForm.paidAmount}
+                        onChange={(e) => setEditBillForm({ ...editBillForm, paidAmount: parseFloat(e.target.value) || 0 })}
+                        className="w-full bg-white border border-gray-300 text-sm text-gray-900 font-bold p-2.5 rounded-xl focus:border-amber-500 focus:outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2 border-t border-amber-200">
+                    <label className="flex items-center gap-2 text-xs font-bold text-gray-700 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={editBillForm.applyTax}
+                        onChange={(e) => setEditBillForm({ ...editBillForm, applyTax: e.target.checked })}
+                        className="w-4 h-4 rounded text-amber-600 focus:ring-amber-500"
+                      />
+                      <span>Apply 12% GST (6% CGST + 6% SGST SAC 996311)</span>
+                    </label>
+
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setIsEditingBill(false)}
+                        className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold rounded-xl text-xs transition"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        disabled={submittingAction}
+                        onClick={handleSaveBillEdit}
+                        className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs shadow-md transition flex items-center gap-1.5 disabled:opacity-50"
+                      >
+                        <Save size={14} /> {submittingAction ? "Saving & Recalculating..." : "Save & Recalculate Bill"}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* 6. QUICK POST CHARGE PANEL (WHEN OPEN) */}
+              {showAddCharge && (
+                <div className="p-4 bg-indigo-50/70 border border-indigo-200 rounded-2xl space-y-3 animate-in fade-in duration-200">
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-bold text-indigo-900 text-xs flex items-center gap-1.5 uppercase tracking-wider">
+                      <PlusCircle size={14} className="text-indigo-600" /> Post One-Off Ancillary Charge / Service
+                    </h4>
+                    <button onClick={() => setShowAddCharge(false)} className="text-gray-400 hover:text-gray-600">
+                      <X size={16} />
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-4 gap-2">
+                    <input
+                      type="text"
+                      placeholder="Item description (e.g. Minibar, Laundry, Food)"
+                      value={newChargeDesc}
+                      onChange={(e) => setNewChargeDesc(e.target.value)}
+                      className="sm:col-span-2 bg-white border border-gray-300 text-xs text-gray-900 rounded-xl p-2.5 focus:border-indigo-500"
+                    />
+                    <select
+                      value={newChargeType}
+                      onChange={(e) => setNewChargeType(e.target.value)}
+                      className="bg-white border border-gray-300 text-xs text-gray-900 rounded-xl p-2.5"
+                    >
+                      <option value="ANCILLARY">Ancillary Service</option>
+                      <option value="MINIBAR">Minibar</option>
+                      <option value="LAUNDRY">Laundry</option>
+                      <option value="RESTAURANT">Food & Beverage</option>
+                      <option value="MISCELLANEOUS">Miscellaneous</option>
+                    </select>
+                    <input
+                      type="number"
+                      placeholder="Amount (₹)"
+                      value={newChargeAmount}
+                      onChange={(e) => setNewChargeAmount(e.target.value)}
+                      className="bg-white border border-gray-300 text-xs text-gray-900 font-bold rounded-xl p-2.5 focus:border-indigo-500"
+                    />
+                  </div>
+                  <div className="flex justify-end">
+                    <button
+                      type="button"
+                      disabled={submittingAction || !newChargeDesc || !newChargeAmount}
+                      onClick={handleAddFolioCharge}
+                      className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow-md transition disabled:opacity-50"
+                    >
+                      {submittingAction ? "Posting..." : "Post Charge to Ledger"}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* 7. ITEMIZED BILLING LEDGER TABLE */}
               <div className="space-y-2">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-gray-500">Itemized Charges & Credits</h4>
-                <div className="overflow-x-auto border border-gray-200 rounded-xl bg-gray-100">
-                  <table className="w-full text-left text-xs font-mono">
-                    <thead className="bg-white text-gray-500 border-b border-gray-200">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-gray-700 flex items-center gap-1.5 font-mono">
+                    <FileText size={14} className="text-[#c9a227]" />
+                    Itemized Billing Ledger & Statement ({folioDrawer.folio?.charges?.length || 0} items)
+                  </h4>
+                  <span className="text-[11px] font-mono text-gray-500">
+                    SAC Code: 996311 (Hotel Accommodation Services)
+                  </span>
+                </div>
+
+                <div className="overflow-x-auto border border-gray-200 rounded-2xl bg-white shadow-xs">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-gray-100 text-gray-600 font-mono text-[11px] uppercase border-b border-gray-200">
                       <tr>
-                        <th className="p-2.5">Date & Item</th>
-                        <th className="p-2.5">Type</th>
-                        <th className="p-2.5 text-right">Amount</th>
+                        <th className="p-3">Date</th>
+                        <th className="p-3">Particulars / Description</th>
+                        <th className="p-3">Type</th>
+                        <th className="p-3 text-right">Debit (Charge ₹)</th>
+                        <th className="p-3 text-right">Credit (Paid ₹)</th>
+                        <th className="p-3 text-center">Action</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-[#262930]">
-                      {(folioDrawer.folio?.charges || []).map((item: any, idx: number) => (
-                        <tr key={idx}>
-                          <td className="p-2.5">
-                            <div className="text-gray-800 font-sans">{item.description}</div>
-                            <div className="text-[10px] text-gray-500">{new Date(item.createdAt || Date.now()).toLocaleDateString()}</div>
+                    <tbody className="divide-y divide-gray-100 font-mono">
+                      {(folioDrawer.folio?.charges || []).length === 0 ? (
+                        <tr>
+                          <td colSpan={6} className="p-8 text-center text-gray-400">
+                            No ledger lines found. Click "Edit Bill & Tariff Anytime" above to generate charges.
                           </td>
-                          <td className="p-2.5 text-gray-500">{item.type || "CHARGE"}</td>
-                          <td className="p-2.5 text-right text-gray-800">₹{(item.amount || 0).toLocaleString()}</td>
                         </tr>
-                      ))}
+                      ) : (
+                        (folioDrawer.folio?.charges || []).map((item: any, idx: number) => {
+                          const isCredit = item.direction === "CREDIT" || item.lineType === "ADVANCE_ADJUSTMENT" || item.lineType === "PAYMENT" || item.lineType === "DISCOUNT";
+                          return (
+                            <tr key={item._id || idx} className="hover:bg-gray-50/80 transition">
+                              <td className="p-3 text-gray-500 whitespace-nowrap">
+                                {new Date(item.date || item.createdAt || Date.now()).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
+                              </td>
+                              <td className="p-3 font-sans font-medium text-gray-900">
+                                <div className="flex items-center gap-1.5">
+                                  <span>{item.description}</span>
+                                  {item.lineType === "ROOM_CHARGE" && (
+                                    <span className="text-[10px] bg-emerald-50 text-emerald-800 px-1.5 py-0.2 rounded border border-emerald-200">SAC 996311</span>
+                                  )}
+                                </div>
+                              </td>
+                              <td className="p-3 text-gray-500 text-[10px]">
+                                <span className={cn(
+                                  "px-2 py-0.5 rounded font-bold",
+                                  isCredit ? "bg-emerald-50 text-emerald-800 border border-emerald-200" : "bg-gray-100 text-gray-700"
+                                )}>
+                                  {item.lineType}
+                                </span>
+                              </td>
+                              <td className="p-3 text-right font-bold text-gray-900">
+                                {!isCredit ? `₹${(item.amount || 0).toLocaleString()}` : "—"}
+                              </td>
+                              <td className="p-3 text-right font-bold text-emerald-700">
+                                {isCredit ? `₹${(item.amount || 0).toLocaleString()}` : "—"}
+                              </td>
+                              <td className="p-3 text-center">
+                                <button
+                                  type="button"
+                                  disabled={submittingAction}
+                                  onClick={() => handleDeleteLine(item._id)}
+                                  className="text-red-400 hover:text-red-700 p-1 rounded hover:bg-red-50 transition"
+                                  title="Delete line item"
+                                >
+                                  <Trash2 size={13} />
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })
+                      )}
                     </tbody>
                   </table>
                 </div>
               </div>
             </div>
 
-            {/* Bottom Summary & Close */}
-            <div className="border-t border-gray-200 pt-4 space-y-3 bg-white">
-              <div className="flex justify-between text-sm font-bold">
-                <span className="text-gray-600">Total Net Balance:</span>
-                <span className="text-[#c9a227] font-mono">₹{(folioDrawer.folio?.balance || 0).toLocaleString()}</span>
+            {/* 8. FINANCIAL SUMMARY & BOTTOM ACTIONS */}
+            <div className="p-5 border-t border-gray-200 bg-gray-50 space-y-4">
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 text-xs font-mono">
+                <div className="p-3 bg-white rounded-xl border border-gray-200 shadow-2xs">
+                  <span className="text-[10px] text-gray-500 block uppercase font-sans">Gross Charges</span>
+                  <span className="text-sm font-bold text-gray-900">
+                    ₹{(folioDrawer.folio?.totalCharges || 0).toLocaleString()}
+                  </span>
+                </div>
+                <div className="p-3 bg-white rounded-xl border border-gray-200 shadow-2xs">
+                  <span className="text-[10px] text-gray-500 block uppercase font-sans">GST Taxes (12%)</span>
+                  <span className="text-sm font-bold text-gray-900">
+                    ₹{(folioDrawer.folio?.totalTax || 0).toLocaleString()}
+                  </span>
+                </div>
+                <div className="p-3 bg-white rounded-xl border border-gray-200 shadow-2xs">
+                  <span className="text-[10px] text-gray-500 block uppercase font-sans">Total Bill</span>
+                  <span className="text-sm font-black text-gray-900">
+                    ₹{((folioDrawer.folio?.totalCharges || 0) + (folioDrawer.folio?.totalTax || 0)).toLocaleString()}
+                  </span>
+                </div>
+                <div className="p-3 bg-white rounded-xl border border-gray-200 shadow-2xs">
+                  <span className="text-[10px] text-emerald-700 block uppercase font-sans font-bold">Advance / Paid</span>
+                  <span className="text-sm font-black text-emerald-700">
+                    - ₹{((folioDrawer.folio?.totalPaid || 0) + (folioDrawer.folio?.totalAdvanceAdjusted || 0)).toLocaleString()}
+                  </span>
+                </div>
+                <div className={cn(
+                  "p-3 rounded-xl border shadow-2xs col-span-2 sm:col-span-1",
+                  (folioDrawer.folio?.balance || 0) <= 0
+                    ? "bg-emerald-50 border-emerald-300 text-emerald-900"
+                    : "bg-red-50 border-red-300 text-red-900"
+                )}>
+                  <span className="text-[10px] block uppercase font-sans font-bold">Net Balance Due</span>
+                  <span className="text-base font-black">
+                    ₹{(folioDrawer.folio?.balance || 0).toLocaleString()}
+                  </span>
+                  <span className="text-[9px] font-sans font-black block mt-0.5">
+                    {(folioDrawer.folio?.balance || 0) <= 0 ? "PAID IN FULL" : "SETTLEMENT REQUIRED"}
+                  </span>
+                </div>
               </div>
-              <button
-                onClick={() => setFolioDrawer({ open: false, booking: null, folio: null })}
-                className="w-full py-2.5 bg-[#262930] text-gray-600 hover:text-gray-800 rounded-xl text-xs font-bold transition"
-              >
-                Close Folio Inspector
-              </button>
+
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2">
+                <div className="flex items-center gap-2 w-full sm:w-auto">
+                  <Link
+                    to={`/admin/bookings/${folioDrawer.booking._id}/grc-print`}
+                    target="_blank"
+                    className="flex-1 sm:flex-initial px-4 py-2 bg-white hover:bg-gray-100 text-gray-800 rounded-xl text-xs font-bold border border-gray-300 flex items-center justify-center gap-1.5 transition"
+                  >
+                    <Printer size={14} className="text-[#c9a227]" /> Print GRC Card
+                  </Link>
+                  <Link
+                    to={`/admin/bookings/${folioDrawer.booking._id}/folio-print`}
+                    target="_blank"
+                    className="flex-1 sm:flex-initial px-5 py-2 bg-[#c9a227] hover:bg-[#b08d20] text-black rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition shadow-sm"
+                  >
+                    <Printer size={14} /> Print GST Tax Invoice
+                  </Link>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setFolioDrawer({ open: false, booking: null, folio: null, isGroupFolio: false, allGroupBookings: [] })}
+                  className="w-full sm:w-auto px-6 py-2 bg-gray-900 hover:bg-black text-white rounded-xl text-xs font-bold transition shadow-md"
+                >
+                  Close Folio Inspector
+                </button>
+              </div>
             </div>
           </div>
         </div>
