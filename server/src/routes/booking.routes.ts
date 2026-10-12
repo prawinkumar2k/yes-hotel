@@ -1,8 +1,7 @@
 import { Router } from "express";
 import { requirePropertyAccess } from "../middleware/propertyAuth";
 import { requirePermission } from "../middleware/permissionAuth";
-import { protect, authorize, optionalProtect } from "../middleware/auth.middleware";
-import { UserRole } from "../models/User";
+import { protect, optionalProtect } from "../middleware/auth.middleware";
 import {
   checkAvailability, createBooking, getMyBookings, getMyBookingById, getMyBookingInvoice, checkIn, checkOut,
   getCheckoutPreview, checkExtensionConflict, extendStay
@@ -12,7 +11,6 @@ import { confirmDemoBooking } from "../controllers/payment.controller";
 
 const router = Router();
 
-const ADMIN_ROLES = [UserRole.ADMIN, UserRole.MANAGER, UserRole.RECEPTIONIST];
 
 // Public availability
 router.get("/availability", checkAvailability);

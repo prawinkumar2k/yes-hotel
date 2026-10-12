@@ -5,6 +5,9 @@ export interface IRolePermission extends Document {
   pageKey: string;
   actions: string[]; // the subset of actions allowed for this role
   isActive: boolean;
+  // "UI" = edited in the Access Matrix and overrides config/permissions.ts.
+  // Rows without it (legacy seed output) are ignored by PermissionService.
+  source?: "UI";
 }
 
 const RolePermissionSchema = new Schema<IRolePermission>(
@@ -13,6 +16,7 @@ const RolePermissionSchema = new Schema<IRolePermission>(
     pageKey: { type: String, required: true, uppercase: true },
     actions: [{ type: String, uppercase: true }],
     isActive: { type: Boolean, default: true },
+    source: { type: String, enum: ["UI"] },
   },
   { timestamps: true }
 );

@@ -267,6 +267,70 @@ Schema migrations needed (the scripts will be written and shown before running):
 
 ---
 
+## 8. Phase 1 progress log
+
+Branch `hardening/phase-1`. After every step: full test suite, the GET sweep, and `npx tsx scripts/audit/consistency-check.ts` (results kept in `docs/consistency/`).
+
+### Step 0 — Safety
+
+| Item | Result |
+|---|---|
+| `npm run db:backup` / `npm run db:restore -- <dir> --yes` | Added: mongodump/mongorestore with gzip. Restore refuses without `--yes` and checks the database name. |
+| Backup taken | `backups/2026-10-12T16-41-50-793`. Restored into a scratch DB: 59 collections, 842 docs, **0 count mismatches**. |
+| Replica set | Dev Mongo is replica set `rs0` (PRIMARY on :27027), and a transaction probe succeeded. No `docker-compose.yml` exists yet; when it's created, it must start Mongo with `--replSet`. |
+| Test baseline | 1 pre-existing failure (`night-audit-concurrency.spec.ts`, caused by H8). Vitest was also collecting a stale git worktree under `.claude/worktrees/hardening` (branch `fix/hardening-work`), which double-counted the tests; it is now excluded. |
+
+### Step 1 — Security
+
+| Issue | Root cause | Fix | Test |
+|---|---|---|---|
+| H1: any logged-in user (incl. CUSTOMER) could post folio charges, void lines, edit the bill, settle or finalize | `folio.routes.ts` used only `protect` | Every folio mutation requires `FOLIOS:<action>`, held only by the money desk (MANAGER, RECEPTIONIST, CASHIER) plus full-access roles | `rbac.integration.spec.ts`: CUSTOMER → 403 on all 16 money mutations |
+| Customer could read any guest's folio, and the read wrote data | GET had no ownership check; it seeded folios; group detection pulled other guests' bookings by phone number | `requirePermissionOrBookingOwner`: CUSTOMER may read only their own booking, read-only (no seeding, no group aggregation) | own folio → 200; other's → 403; a read never creates a folio |
+| H4: two RBAC systems; SUPER_ADMIN got 403 on Settings, Staff, Gallery, Payment Channels, Group Bookings, Complaints, FAQ/Testimonial/Content writes | Legacy `authorize(...roles)` lists omitted SUPER_ADMIN; the permission system lived in seed-generated DB rows | **One map**, `server/src/config/permissions.ts`, keyed by the single `UserRole` enum. `authorize()` is deleted. All 16 call sites and 8 controller role arrays now use `requirePermission` / `PermissionService.can`. DB `rolepermissions` rows override the map only when written by the Access Matrix UI (`source: "UI"`); the 99 seed rows (never edited) are inert, so **no data change** | `permissions.spec.ts` (map invariants); SUPER_ADMIN not denied on the 5 formerly-403 pages |
+| Cashier shifts could only be opened/closed by admins | Routes asked for `CASHIER_SHIFTS:CREATE`; grants used `OPEN_SHIFT/CLOSE_SHIFT/RECONCILE` | Routes use the granted vocabulary | integration spec: RECEPTIONIST/CASHIER/MANAGER pass auth on shift mutations |
+| `requirePropertyAccess` could never pass for non-admin staff | It read `propertyId` from the JWT, which only holds `{id, role}` | Loads the property assignment from the User record. CUSTOMER now gets 403 (was 400) | integration spec |
+| H9: rate limiting disabled | All limiters commented out | General `/api` limiter, strict limiter on login/register/forgot/reset/payment-verify, separate refresh limiter; all configurable via `RATE_LIMIT_*` env (see `.env.example`) | `RateLimit-*` headers present on live responses |
+| `/users/:id/effective` computed another user's permissions from the requester's role | Requester role passed as fallback | Resolves the target user's role | — |
+
+**Access diff (generated, not hand-written):** `docs/rbac/step1-access-diff.txt`, produced by `scripts/audit/rbac-matrix.ts` (before = DB grants + legacy `authorize`; after = new map). It contains only the approved changes:
+
+- SUPER_ADMIN gains the 38 routes that were behind legacy role lists.
+- Folio mutations lose 9 roles.
+- Advance/refund mutations gain RECEPTIONIST and lose FINANCE.
+- Shift mutations gain MANAGER, RECEPTIONIST and CASHIER.
+- Group advance gains CASHIER.
+
+Capability checks inside controllers (`CAP.*` keys) keep their previous role sets and add SUPER_ADMIN where it was missing: cancel any booking, maintenance approval, demo-confirm, the admin-target guard on staff edits, and task-approval tiers.
+
+**Mutation-route audit** (logged in but no role/ownership check), after the fix:
+- **Customer-reachable, non-public:** `PATCH /auth/profile` and `POST /complaints/my` are self-scoped. `POST /bookings/:id/cancel` and `POST /reviews` check ownership.
+- **Public by design:** auth, booking create, enquiry, contact, coupon validate, the Razorpay webhook (signature-verified), and `payments/create-order|verify`.
+- **Open item:** `POST /payments/create-order` has no ownership check (anyone can create an order for any booking id; low impact).
+- **Open item:** `confirm-demo` is anonymous outside production.
+- No mutation route is open to every staff role.
+
+**Verification:**
+- Tests: 145 pass, 1 fail (the pre-existing night-audit failure). 45 tests are new; the 6 tests of the deleted `authorize()` were removed.
+- `tsc`: 0 errors.
+- GET sweep: 2xx went from 84 to 90, and the 8 SUPER_ADMIN 403s are gone.
+- Consistency check: 0/5 (unchanged, as expected for a security step; see `docs/consistency/step-1-security.md`).
+
+### New findings during Step 1 (need a decision)
+
+| # | Finding | Impact | Proposed |
+|---|---|---|---|
+| N1 | **No staff user has a `propertyId`**, so every property-scoped route returns 400 for RECEPTIONIST, CASHIER, HOUSEKEEPING, MAINTENANCE, RESTAURANT and FINANCE (verified live). | Non-admin staff cannot use the app | Assign the single property (YES-BLR) to all staff: a data change, needs approval. The rewritten seeds will do it too. |
+| N2 | 42 permission checks can't be passed by any non-admin role (no grants, or action-name mismatch). Examples: `HOUSEKEEPING:EDIT` (HK staff can't update room status), `MAINTENANCE:UPDATE`, `RESTAURANT_POS:*`, `COUPONS:*`, `BANQUETS:*`, `REPORTS_LAYOUT:VIEW`, `TASK_APPROVALS:*`, `NIGHT_AUDIT:CREATE`. | Roles can't do their jobs | Proposed grants table to follow; it changes access, so it needs approval. |
+| N3 | A MANAGER can edit or reset the password of a **SUPER_ADMIN** (the guard protects ADMIN targets only). | Privilege escalation | Restrict SUPER_ADMIN targets to SUPER_ADMIN. This reduces MANAGER access, so it needs approval. |
+| N4 | Seed grants give HOUSEKEEPING `ROOMS: CREATE/EDIT/DELETE`. | Housekeepers can delete rooms | Reduce to `VIEW`, needs approval. |
+| N5 | `GET /api/properties` is reachable by CUSTOMER. | Info leak (low) | Require `PROPERTIES:VIEW`. |
+| N6 | `GET /folios/booking/:id` (staff) **fabricates "Advance Payment Received (CASH)" credit lines** when seeding folios. About 200 lines were created today 13:00–13:07 IST across historical bookings. | Ledger corruption on read | Fix in the folio-ledger step; include these in the repair-script report. |
+| N7 | The ₹1,050 cash checkout payment exists only as a folio line; no `Payment` document was written. | Collections and revenue widgets that read `payments` miss it | Fix in the folio/payment step: one write path. |
+| N8 | The in-house **report** returns 4 rows; every other module says 2. HK task list doesn't populate the room category (source of "Standard Luxury Suite"). | Inconsistent counts | Step 3 (room status service). |
+| N9 | Staff create/edit only allows 5 roles (no CASHIER, SUPERVISOR, FINANCE…). | Can't onboard cashiers from the UI | Step 3 or Phase 2. |
+
+---
+
 ## Appendix A — All mounted endpoints (243)
 
 | Method | Path | Handler | Auth | RBAC | Live GET (SUPER_ADMIN) | Used by FE |

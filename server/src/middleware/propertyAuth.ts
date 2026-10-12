@@ -12,10 +12,19 @@ export const requirePropertyAccess = async (
   next: NextFunction
 ) => {
   try {
-    const user = req.user;
-    if (!user) {
+    const tokenUser = req.user;
+    if (!tokenUser) {
       return res.status(401).json({ message: "Unauthorized" });
     }
+    // Guests never operate a property.
+    if (tokenUser.role === "CUSTOMER") {
+      return res.status(403).json({ success: false, message: "Forbidden: staff only" });
+    }
+
+    // The JWT carries only { id, role }; property assignment lives on the User record.
+    const { User } = await import("../models/User");
+    const record = await User.findById(tokenUser.id || tokenUser._id).select("propertyId propertyIds").lean();
+    const user = { ...tokenUser, propertyId: record?.propertyId, propertyIds: record?.propertyIds };
 
     // 1. System-level roles that are not property-scoped
     const systemRoles = ["SUPER_ADMIN", "ADMIN", "MANAGER", "SUPERVISOR"];

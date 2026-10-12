@@ -1,6 +1,6 @@
 import { Router } from "express";
-import { protect, authorize } from "../middleware/auth.middleware";
-import { UserRole } from "../models/User";
+import { protect } from "../middleware/auth.middleware";
+import { requirePermission } from "../middleware/permissionAuth";
 import { getTestimonials, createTestimonial, updateTestimonial, deleteTestimonial } from "../controllers/testimonial.controller";
 
 const router = Router();
@@ -9,9 +9,8 @@ const router = Router();
 router.get("/", getTestimonials);
 
 // Admin / Manager only
-const ADMIN_ROLES = [UserRole.ADMIN, UserRole.MANAGER];
-router.post("/", protect, authorize(...ADMIN_ROLES), createTestimonial);
-router.patch("/:id", protect, authorize(...ADMIN_ROLES), updateTestimonial);
-router.delete("/:id", protect, authorize(...ADMIN_ROLES), deleteTestimonial);
+router.post("/", protect, requirePermission("TESTIMONIALS", "CREATE"), createTestimonial);
+router.patch("/:id", protect, requirePermission("TESTIMONIALS", "EDIT"), updateTestimonial);
+router.delete("/:id", protect, requirePermission("TESTIMONIALS", "DELETE"), deleteTestimonial);
 
 export default router;

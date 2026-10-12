@@ -71,7 +71,7 @@ async function auditRolesAndPermissions() {
       });
     }
 
-    const perms = await PermissionService.getEffectivePermissions(user._id, property._id);
+    const perms = await PermissionService.getEffectivePermissions(user._id, property._id, user.role);
 
     console.log(`\n--------------------------------------------------`);
     console.log(`ROLE: ${roleKey} (User: ${user.email})`);

@@ -9,7 +9,7 @@
 import { Router } from "express";
 import { requirePropertyAccess } from "../middleware/propertyAuth";
 import { requirePermission } from "../middleware/permissionAuth";
-import { protect, authorize } from "../middleware/auth.middleware";
+import { protect } from "../middleware/auth.middleware";
 import {
   searchGuest,
   getAvailableRoomsForRegistration,

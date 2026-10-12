@@ -1,6 +1,6 @@
 import { Router } from "express";
-import { protect, authorize } from "../middleware/auth.middleware";
-import { UserRole } from "../models/User";
+import { protect } from "../middleware/auth.middleware";
+import { requirePermission } from "../middleware/permissionAuth";
 import { getFAQs, createFAQ, updateFAQ, deleteFAQ } from "../controllers/faq.controller";
 
 const router = Router();
@@ -9,9 +9,8 @@ const router = Router();
 router.get("/", getFAQs);
 
 // Admin / Manager only
-const ADMIN_ROLES = [UserRole.ADMIN, UserRole.MANAGER];
-router.post("/", protect, authorize(...ADMIN_ROLES), createFAQ);
-router.patch("/:id", protect, authorize(...ADMIN_ROLES), updateFAQ);
-router.delete("/:id", protect, authorize(...ADMIN_ROLES), deleteFAQ);
+router.post("/", protect, requirePermission("FAQS", "CREATE"), createFAQ);
+router.patch("/:id", protect, requirePermission("FAQS", "EDIT"), updateFAQ);
+router.delete("/:id", protect, requirePermission("FAQS", "DELETE"), deleteFAQ);
 
 export default router;

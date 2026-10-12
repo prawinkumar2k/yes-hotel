@@ -8,6 +8,8 @@ import {
   ConfidentialLevel,
 } from "../models/TaskApproval";
 import { createAuditLog } from "../services/audit.service";
+import { PermissionService } from "../services/PermissionService";
+import { isFullAccessRole } from "../config/permissions";
 
 // ─── Validation Schemas ─────────────────────────────────────────────────────
 
@@ -28,16 +30,17 @@ const actionSchema = z.object({
   actionNote: z.string().optional(),
 });
 
-// ─── Allowed approver roles ──────────────────────────────────────────────────
+// ─── Allowed approvers (config/permissions.ts) ───────────────────────────────
+// SUPER_ADMIN_ONLY items: full-access roles only. EXECUTIVE / MANAGER tiers: CAP.APPROVAL_TIER_*.
 
-const CAN_APPROVE_SUPER_ADMIN_ONLY = ["SUPER_ADMIN", "ADMIN"];
-const CAN_APPROVE_EXECUTIVE = ["SUPER_ADMIN", "ADMIN", "MANAGER", "FINANCE"];
-const CAN_APPROVE_MANAGER = ["SUPER_ADMIN", "ADMIN", "MANAGER", "FINANCE", "RECEPTIONIST"];
+function seesSuperAdminOnly(actor: any): boolean {
+  return isFullAccessRole(actor?.role);
+}
 
-function canApprove(role: string, confidentialLevel: ConfidentialLevel): boolean {
-  if (confidentialLevel === ConfidentialLevel.SUPER_ADMIN_ONLY) return CAN_APPROVE_SUPER_ADMIN_ONLY.includes(role);
-  if (confidentialLevel === ConfidentialLevel.EXECUTIVE) return CAN_APPROVE_EXECUTIVE.includes(role);
-  return CAN_APPROVE_MANAGER.includes(role);
+async function canApprove(actor: any, confidentialLevel: ConfidentialLevel): Promise<boolean> {
+  if (confidentialLevel === ConfidentialLevel.SUPER_ADMIN_ONLY) return seesSuperAdminOnly(actor);
+  if (confidentialLevel === ConfidentialLevel.EXECUTIVE) return PermissionService.can(actor, "CAP.APPROVAL_TIER_EXECUTIVE");
+  return PermissionService.can(actor, "CAP.APPROVAL_TIER_MANAGER");
 }
 
 // ─── Controllers ─────────────────────────────────────────────────────────────
@@ -56,7 +59,7 @@ export const getTaskApprovals = async (req: Request, res: Response) => {
     if (category) filter.category = category;
 
     // Restrict SUPER_ADMIN_ONLY items to SUPER_ADMIN/ADMIN
-    if (!CAN_APPROVE_SUPER_ADMIN_ONLY.includes(actor?.role)) {
+    if (!seesSuperAdminOnly(actor)) {
       filter.confidentialLevel = { $ne: ConfidentialLevel.SUPER_ADMIN_ONLY };
     }
 
@@ -120,7 +123,7 @@ export const approveTaskApproval = async (req: Request, res: Response) => {
     if (approval.status !== ApprovalStatus.PENDING) {
       return res.status(400).json({ success: false, message: `Approval is already ${approval.status}` });
     }
-    if (!canApprove(actor?.role, approval.confidentialLevel as ConfidentialLevel)) {
+    if (!(await canApprove(actor, approval.confidentialLevel as ConfidentialLevel))) {
       return res.status(403).json({ success: false, message: "You do not have authority to approve this request" });
     }
 
@@ -159,7 +162,7 @@ export const rejectTaskApproval = async (req: Request, res: Response) => {
     if (approval.status !== ApprovalStatus.PENDING) {
       return res.status(400).json({ success: false, message: `Approval is already ${approval.status}` });
     }
-    if (!canApprove(actor?.role, approval.confidentialLevel as ConfidentialLevel)) {
+    if (!(await canApprove(actor, approval.confidentialLevel as ConfidentialLevel))) {
       return res.status(403).json({ success: false, message: "You do not have authority to reject this request" });
     }
 
@@ -191,7 +194,7 @@ export const rejectTaskApproval = async (req: Request, res: Response) => {
 export const getApprovalStats = async (req: Request, res: Response) => {
   try {
     const actor = (req as any).user;
-    const confidentialFilter = CAN_APPROVE_SUPER_ADMIN_ONLY.includes(actor?.role)
+    const confidentialFilter = seesSuperAdminOnly(actor)
       ? {}
       : { confidentialLevel: { $ne: ConfidentialLevel.SUPER_ADMIN_ONLY } };
 

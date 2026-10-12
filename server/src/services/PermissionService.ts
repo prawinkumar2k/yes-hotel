@@ -1,127 +1,81 @@
 import mongoose from "mongoose";
-import { User, IUser } from "../models/User";
 import { Role } from "../models/Role";
 import { RolePermission } from "../models/RolePermission";
 import { UserPermissionOverride } from "../models/UserPermissionOverride";
 import { PageResource } from "../models/PageResource";
+import {
+  ALL_ACTIONS,
+  ALL_PAGE_KEYS,
+  DEFAULT_ROLE_PERMISSIONS,
+  isFullAccessRole,
+} from "../config/permissions";
 
 export interface PermissionCache {
   [pageKey: string]: string[]; // Array of allowed actions, e.g. { "FRONT_DESK": ["VIEW", "EDIT"] }
 }
 
+type Actor = { id?: string; _id?: unknown; role?: string } | undefined | null;
+
 export class PermissionService {
   /**
-   * Calculates the effective permissions for a user at a given property.
-   * SUPER_ADMIN always gets full access.
+   * Effective permissions for a role (+ optional user) at a property.
+   * See config/permissions.ts for the resolution order.
    */
   static async getEffectivePermissions(
-    userId: mongoose.Types.ObjectId | string,
+    userId: mongoose.Types.ObjectId | string | undefined,
     propertyId: mongoose.Types.ObjectId | string,
-    fallbackRole?: string
+    role: string | undefined,
   ): Promise<PermissionCache> {
-    const user = await User.findById(userId);
-    const role = user?.role || fallbackRole;
-    if (!user && !fallbackRole) throw new Error("User not found");
+    if (!role) throw new Error("User not found");
 
-    // 1. If Super Admin or Admin, return full access
-    if (role === "SUPER_ADMIN" || role === "ADMIN") {
-      const allPages = await PageResource.find({ isActive: true });
-      const allRolePermKeys = await RolePermission.distinct("pageKey");
-      
+    if (isFullAccessRole(role)) {
       const fullAccess: PermissionCache = {};
-      const allActions = ["VIEW", "CREATE", "EDIT", "DELETE", "APPROVE", "REJECT", "EXPORT", "PRINT"];
-      
-      allPages.forEach(p => {
-        fullAccess[p.key] = p.actions && p.actions.length > 0 ? p.actions : allActions;
-      });
-      
-      allRolePermKeys.forEach(key => {
-        if (!fullAccess[key]) {
-          fullAccess[key] = allActions;
-        }
-      });
-      
-      const manualKeys = [
-        "DASHBOARD.ADMIN",
-        "DASHBOARD.EXECUTIVE",
-        "REPORTS_LAYOUT",
-        "COUPONS",
-        "TASK_APPROVALS",
-        "CORPORATE_ACCOUNTS",
-        "GROUP_BOOKINGS",
-        "INVENTORY",
-        "PROCUREMENT",
-        "VENDORS",
-        "FRONT_DESK",
-        "ROOMS",
-        "ROOM_CATEGORIES",
-        "SETTINGS"
-      ];
-      manualKeys.forEach(key => {
-        if (!fullAccess[key]) {
-          fullAccess[key] = allActions;
-        }
-      });
-      
+      const pages = await PageResource.find({ isActive: true }).select("key").lean();
+      for (const key of [...ALL_PAGE_KEYS, ...pages.map((p) => p.key)]) fullAccess[key] = [...ALL_ACTIONS];
       return fullAccess;
     }
 
-    const effectivePermissions: PermissionCache = {};
+    const effective: PermissionCache = {};
+    for (const [page, actions] of Object.entries(DEFAULT_ROLE_PERMISSIONS[role as keyof typeof DEFAULT_ROLE_PERMISSIONS] ?? {})) {
+      effective[page] = [...(actions ?? [])];
+    }
 
-    // 2. Map string role to DB Role
-    const roleDoc = await Role.findOne({ key: role, isActive: true });
-    
-    // 3. Get Role Permissions
+    // Access Matrix edits (source "UI") replace the default action list for that page.
+    const roleDoc = await Role.findOne({ key: role, isActive: true }).select("_id").lean();
     if (roleDoc) {
-      const rolePerms = await RolePermission.find({ roleId: roleDoc._id, isActive: true });
-      rolePerms.forEach(rp => {
-        effectivePermissions[rp.pageKey] = [...rp.actions];
-      });
+      const edits = await RolePermission.find({ roleId: roleDoc._id, isActive: true, source: "UI" }).lean();
+      for (const rp of edits) effective[rp.pageKey] = [...rp.actions];
     }
 
-    // 4. Get User Overrides
-    // Overrides can be global (propertyId = null) or specific to the requested property
-    const orConditions: any[] = [
-      { propertyId: { $exists: false } },
-      { propertyId: null }
-    ];
-    
-    if (propertyId && propertyId !== "default") {
-      orConditions.push({ propertyId: propertyId });
+    if (userId) {
+      const scope: any[] = [{ propertyId: { $exists: false } }, { propertyId: null }];
+      if (propertyId && propertyId !== "default") scope.push({ propertyId });
+      const overrides = await UserPermissionOverride.find({ userId, $or: scope }).lean();
+      for (const ov of overrides) {
+        const allowed = new Set([...(effective[ov.pageKey] || []), ...ov.allowActions]);
+        ov.denyActions.forEach((a) => allowed.delete(a));
+        effective[ov.pageKey] = [...allowed];
+      }
     }
-
-    const overrides = userId ? await UserPermissionOverride.find({
-      userId,
-      $or: orConditions
-    }) : [];
-
-    overrides.forEach(ov => {
-      const currentActions = effectivePermissions[ov.pageKey] || [];
-      
-      // Add allowActions
-      const allowed = new Set([...currentActions, ...ov.allowActions]);
-      
-      // Remove denyActions
-      ov.denyActions.forEach(action => allowed.delete(action));
-      
-      effectivePermissions[ov.pageKey] = Array.from(allowed);
-    });
-
-    return effectivePermissions;
+    return effective;
   }
 
-  /**
-   * Validates if a user has a specific permission
-   */
   static async hasPermission(
-    userId: mongoose.Types.ObjectId | string,
+    userId: mongoose.Types.ObjectId | string | undefined,
     propertyId: mongoose.Types.ObjectId | string,
     pageKey: string,
     action: string,
-    fallbackRole?: string
+    role: string | undefined,
   ): Promise<boolean> {
-    const perms = await this.getEffectivePermissions(userId, propertyId, fallbackRole);
-    if (!perms[pageKey]) return false;
-    return perms[pageKey].includes(action);
+    if (isFullAccessRole(role)) return true;
+    const perms = await this.getEffectivePermissions(userId, propertyId, role);
+    return (perms[pageKey] || []).includes(action);
+  }
+
+  /** Controller-level check for the request's user, e.g. can(req.user, "CAP.BOOKING_CANCEL_ANY"). */
+  static async can(user: Actor, pageKey: string, action = "ALLOW", propertyId: string = "default"): Promise<boolean> {
+    if (!user?.role) return false;
+    const userId = (user.id ?? (user._id ? String(user._id) : undefined)) as string | undefined;
+    return this.hasPermission(userId, propertyId, pageKey, action, user.role);
   }
 }

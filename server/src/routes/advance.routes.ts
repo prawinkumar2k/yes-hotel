@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { requirePropertyAccess } from "../middleware/propertyAuth";
 import { requirePermission } from "../middleware/permissionAuth";
-import { protect, authorize } from "../middleware/auth.middleware";
+import { protect } from "../middleware/auth.middleware";
 import { Request, Response } from "express";
 import { AdvancePayment, AdvancePaymentMethod } from "../models/AdvancePayment";
 import { Guest } from "../models/Guest";
@@ -91,7 +91,7 @@ router.get("/summary/:bookingId", requirePropertyAccess, requirePermission("ADVA
 );
 
 // POST /api/advances/:id/adjust — apply advance to folio
-router.post("/:id/adjust", requirePropertyAccess, requirePermission("ADVANCES", "CREATE"), async (req: Request, res: Response) => {
+router.post("/:id/adjust", requirePropertyAccess, requirePermission("ADVANCES", "ADJUST"), async (req: Request, res: Response) => {
     try {
       const { folioId, bookingId, amount, reason } = req.body;
       if (!folioId || !bookingId || !amount) {
@@ -109,7 +109,7 @@ router.post("/:id/adjust", requirePropertyAccess, requirePermission("ADVANCES", 
 );
 
 // POST /api/advances/:id/refund — refund remaining balance to guest
-router.post("/:id/refund", requirePropertyAccess, requirePermission("ADVANCES", "CREATE"), async (req: Request, res: Response) => {
+router.post("/:id/refund", requirePropertyAccess, requirePermission("ADVANCES", "REFUND"), async (req: Request, res: Response) => {
     try {
       const { amount, reason } = req.body;
       if (!amount || !reason) {

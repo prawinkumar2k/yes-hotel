@@ -1,8 +1,7 @@
 import { Router } from "express";
 import { requirePropertyAccess } from "../middleware/propertyAuth";
 import { requirePermission } from "../middleware/permissionAuth";
-import { protect, authorize } from "../middleware/auth.middleware";
-import { UserRole } from "../models/User";
+import { protect } from "../middleware/auth.middleware";
 import { getSettings, updateSettings } from "../controllers/settings.controller";
 
 const router = Router();
@@ -11,8 +10,8 @@ const router = Router();
 router.get("/public", getSettings);
 
 // Admin routes
-router.use(protect, authorize(UserRole.ADMIN, UserRole.MANAGER));
-router.get("/", getSettings);
-router.patch("/", updateSettings);
+router.use(protect);
+router.get("/", requirePermission("SETTINGS", "VIEW"), getSettings);
+router.patch("/", requirePermission("SETTINGS", "EDIT"), updateSettings);
 
 export default router;

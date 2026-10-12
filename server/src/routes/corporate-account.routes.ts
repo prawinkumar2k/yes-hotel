@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { requirePropertyAccess } from "../middleware/propertyAuth";
 import { requirePermission } from "../middleware/permissionAuth";
-import { protect, authorize } from "../middleware/auth.middleware";
+import { protect } from "../middleware/auth.middleware";
 import {
   getCorporateAccounts,
   createCorporateAccount,
@@ -11,7 +11,6 @@ import {
 } from "../controllers/corporate-account.controller";
 
 const router = Router();
-const ADMIN_ROLES = ["ADMIN", "MANAGER"];
 
 router.get("/", protect, requirePropertyAccess, requirePermission("CORPORATE_ACCOUNTS", "VIEW"), getCorporateAccounts);
 router.post("/", protect, requirePropertyAccess, requirePermission("CORPORATE_ACCOUNTS", "CREATE"), createCorporateAccount);

@@ -645,7 +645,8 @@ export const closeShift = async (req: Request, res: Response) => {
     const cashVariance = countedTotal - ledger.expectedCash;
 
     // Check variance threshold (default threshold: ₹100 or non-zero)
-    const isSupervisor = ["ADMIN", "MANAGER", "SUPER_ADMIN", "SUPERVISOR"].includes((req as any).user?.role);
+    const { PermissionService } = await import("../services/PermissionService");
+    const isSupervisor = await PermissionService.can((req as any).user, "CAP.SHIFT_SUPERVISOR_OVERRIDE");
     if (Math.abs(cashVariance) > 0 && !parsed.data.varianceReason && !parsed.data.supervisorOverrideNotes) {
       return res.status(400).json({
         success: false,

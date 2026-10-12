@@ -200,23 +200,36 @@ export function createServer() {
     // normal working session and starts 429ing real traffic. Not a
     // production concern (one IP per real hotel/office), so only relaxed
     // outside production.
-    max: process.env.NODE_ENV === "production" ? 300 : 5000,
+    max: Number(process.env.RATE_LIMIT_API_MAX) || (process.env.NODE_ENV === "production" ? 300 : 5000),
+    standardHeaders: true,
+    legacyHeaders: false,
     message: "Too many requests from this IP, please try again after 15 minutes",
   });
   const strictLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
-    max: 10,
+    // Brute-force budget for credential and payment-verification endpoints.
+    // Dev/test get a looser default so e2e suites that log in repeatedly do not trip it.
+    max: Number(process.env.RATE_LIMIT_AUTH_MAX) || (process.env.NODE_ENV === "production" ? 10 : 200),
     message: "Too many attempts from this IP, please try again after 15 minutes",
     standardHeaders: true,
     legacyHeaders: false,
   });
-  // app.use("/api", generalLimiter);
-  // app.use("/api/auth/login", strictLimiter);
-  // app.use("/api/auth/register", strictLimiter);
-  // app.use("/api/auth/forgot-password", strictLimiter);
-  // app.use("/api/auth/reset-password", strictLimiter);
-  // app.use("/api/payments/verify", strictLimiter);
-  // app.use("/api/auth/refresh", strictLimiter);
+  // Token refresh is legitimate background traffic (one per expiry per tab), so
+  // it gets its own moderate budget instead of the credential-guessing one.
+  const refreshLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: Number(process.env.RATE_LIMIT_REFRESH_MAX) || (process.env.NODE_ENV === "production" ? 60 : 1000),
+    message: "Too many attempts from this IP, please try again after 15 minutes",
+    standardHeaders: true,
+    legacyHeaders: false,
+  });
+  app.use("/api", generalLimiter);
+  app.use("/api/auth/login", strictLimiter);
+  app.use("/api/auth/register", strictLimiter);
+  app.use("/api/auth/forgot-password", strictLimiter);
+  app.use("/api/auth/reset-password", strictLimiter);
+  app.use("/api/payments/verify", strictLimiter);
+  app.use("/api/auth/refresh", refreshLimiter);
 
   // Razorpay webhook signature verification needs the exact raw request
   // bytes — must be captured BEFORE express.json() parses (and thereby

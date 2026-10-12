@@ -94,7 +94,8 @@ export const updateMaintenanceTicket = async (req: Request, res: Response) => {
 
     const userRole = (req as any).user?.role || "";
     const userId = (req as any).user?._id;
-    const isAdminOrManager = ["ADMIN", "MANAGER"].includes(userRole);
+    const { PermissionService } = await import("../services/PermissionService");
+    const isAdminOrManager = await PermissionService.can((req as any).user, "CAP.MAINTENANCE_APPROVE");
     const isCompleting = data.status === MaintenanceStatus.RESOLVED || data.status === MaintenanceStatus.CLOSED;
     const isCriticalOrHigh = existing.priority === MaintenancePriority.CRITICAL || existing.priority === MaintenancePriority.HIGH;
 

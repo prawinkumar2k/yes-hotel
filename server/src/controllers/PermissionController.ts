@@ -5,6 +5,8 @@ import { RolePermission } from '../models/RolePermission';
 import { UserPermissionOverride } from '../models/UserPermissionOverride';
 import { PermissionService } from '../services/PermissionService';
 import { AuthenticatedRequest } from '../middleware/propertyAuth';
+import { User } from '../models/User';
+import { isFullAccessRole } from '../config/permissions';
 
 export const getPages = async (req: Request, res: Response) => {
   try {
@@ -27,8 +29,22 @@ export const getRoles = async (req: Request, res: Response) => {
 export const getRolePermissions = async (req: Request, res: Response) => {
   try {
     const { roleId } = req.params;
-    const permissions = await RolePermission.find({ roleId });
-    res.json(permissions);
+    const role = await Role.findById(roleId).select("key").lean();
+    if (!role) return res.status(404).json({ message: 'Role not found' });
+    // Effective map for the role: code defaults (config/permissions.ts) plus Access Matrix edits.
+    const effective = await PermissionService.getEffectivePermissions(undefined, "default", role.key);
+    const edited = new Set(
+      (await RolePermission.find({ roleId, source: "UI" }).select("pageKey").lean()).map((r) => r.pageKey)
+    );
+    res.json(
+      Object.entries(effective).map(([pageKey, actions]) => ({
+        roleId,
+        pageKey,
+        actions,
+        isActive: true,
+        source: edited.has(pageKey) ? "UI" : "DEFAULT",
+      }))
+    );
   } catch (error) {
     res.status(500).json({ message: 'Error fetching role permissions' });
   }
@@ -39,11 +55,10 @@ export const updateRolePermission = async (req: AuthenticatedRequest, res: Respo
     const { roleId } = req.params;
     const { pageKey, actions } = req.body;
 
-    // Optional: Add audit logic here
-
+    // source "UI" marks this row as an Access Matrix edit, which overrides the code default.
     const perm = await RolePermission.findOneAndUpdate(
       { roleId, pageKey },
-      { actions },
+      { actions, isActive: true, source: "UI" },
       { upsert: true, new: true }
     );
 
@@ -87,12 +102,11 @@ export const updateUserOverride = async (req: AuthenticatedRequest, res: Respons
 export const getEffectivePermissions = async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { userId } = req.params;
-    console.log("DEBUG: req.user.id =", req.user?.id, "userId =", userId);
     
     // Security: Only allow users to fetch their own permissions unless they have PERMISSIONS.VIEW
     // For simplicity right now, just ensure it's their own ID or they are a SUPER_ADMIN or ADMIN.
     const reqUserId = req.user?.id || req.user?._id?.toString();
-    if (reqUserId !== userId && req.user?.role !== "SUPER_ADMIN" && req.user?.role !== "ADMIN") {
+    if (reqUserId !== userId && !isFullAccessRole(req.user?.role)) {
       return res.status(403).json({ message: 'Forbidden: Cannot fetch permissions for another user' });
     }
 
@@ -100,7 +114,11 @@ export const getEffectivePermissions = async (req: AuthenticatedRequest, res: Re
       ? String(req.query.propertyId[0]) 
       : (req.query.propertyId ? String(req.query.propertyId) : "");
 
-    const perms = await PermissionService.getEffectivePermissions(String(userId), propertyId, req.user?.role);
+    // Resolve the TARGET user's role (not the requester's) when an admin inspects someone else.
+    const role = reqUserId === userId
+      ? req.user?.role
+      : (await User.findById(userId).select("role").lean())?.role;
+    const perms = await PermissionService.getEffectivePermissions(String(userId), propertyId, role);
     res.json(perms);
   } catch (error: any) {
     if (error?.message === "User not found") {

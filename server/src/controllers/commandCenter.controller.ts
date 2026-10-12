@@ -16,17 +16,17 @@ import { User } from "../models/User";
 void User.modelName;
 import { startOfDay, endOfDay, startOfMonth, addDays } from "date-fns";
 
-// ─────────────────────────────────────────────────────────────
-// Role groups for data scoping
-// ─────────────────────────────────────────────────────────────
-const FINANCE_ROLES = ["ADMIN", "SUPER_ADMIN", "MANAGER", "FINANCE", "CASHIER"];
-const FRONT_OFFICE_ROLES = ["ADMIN", "SUPER_ADMIN", "MANAGER", "RECEPTIONIST", "CASHIER", "FINANCE"];
-const RESTAURANT_ROLES = ["ADMIN", "SUPER_ADMIN", "MANAGER", "RESTAURANT", "FINANCE"];
-const CORPORATE_ROLES = ["ADMIN", "SUPER_ADMIN", "MANAGER", "FINANCE", "RECEPTIONIST"];
+// Data scoping per section uses CAP.CC_* capabilities from config/permissions.ts.
+import { PermissionService } from "../services/PermissionService";
+
+const CC_CAPS = ["CC_FINANCE", "CC_FRONT_OFFICE", "CC_OPERATIONS", "CC_RESTAURANT", "CC_CORPORATE", "CC_FORECAST", "CC_APPROVALS"] as const;
 
 export const getCommandCenterData = async (req: Request, res: Response) => {
   try {
     const role = req.user?.role || "CUSTOMER";
+    const caps: Record<(typeof CC_CAPS)[number], boolean> = Object.fromEntries(
+      await Promise.all(CC_CAPS.map(async (c) => [c, await PermissionService.can(req.user, `CAP.${c}`)] as const))
+    ) as any;
     const today = new Date();
     const startToday = startOfDay(today);
     const endToday = endOfDay(today);
@@ -67,7 +67,7 @@ export const getCommandCenterData = async (req: Request, res: Response) => {
     let departuresData: any[] = [];
     let inHouseData: any[] = [];
 
-    if (FRONT_OFFICE_ROLES.includes(role) || role === "HOUSEKEEPING" || role === "MAINTENANCE") {
+    if (caps.CC_OPERATIONS) {
       const todayBookings = await Booking.find({
         ...propertyFilter,
         $or: [
@@ -106,7 +106,7 @@ export const getCommandCenterData = async (req: Request, res: Response) => {
 
     // ── 3. REVENUE (finance roles only) ─────────────────────────────
     let revenue: any = null;
-    if (FINANCE_ROLES.includes(role)) {
+    if (caps.CC_FINANCE) {
       const [todayAgg, monthAgg, pendingFolios, openCashierShifts] = await Promise.all([
         Payment.aggregate([
           { $match: { ...propertyFilter, createdAt: { $gte: startToday, $lte: endToday }, status: "COMPLETED" } },
@@ -183,7 +183,7 @@ export const getCommandCenterData = async (req: Request, res: Response) => {
 
     // ── 6. RESTAURANT / F&B (restaurant roles only) ──────────────────
     let restaurant: any = null;
-    if (RESTAURANT_ROLES.includes(role)) {
+    if (caps.CC_RESTAURANT) {
       const [openOrders, todayFnBRevenue] = await Promise.all([
         RestaurantOrder.find({
           ...propertyFilter,
@@ -220,7 +220,7 @@ export const getCommandCenterData = async (req: Request, res: Response) => {
 
     // ── 8. CORPORATE (corporate roles) ───────────────────────────────
     let corporate: any = null;
-    if (CORPORATE_ROLES.includes(role)) {
+    if (caps.CC_CORPORATE) {
       const { GroupBooking, GroupBookingStatus } = await import("../models/GroupBooking");
       const [totalAccounts, activeAccounts, activeGroupsList] = await Promise.all([
         CorporateAccount.countDocuments({ ...propertyFilter }),
@@ -237,7 +237,7 @@ export const getCommandCenterData = async (req: Request, res: Response) => {
 
     // ── 9. BANQUETS ──────────────────────────────────────────────────
     let banquets: any = null;
-    if (FRONT_OFFICE_ROLES.includes(role)) {
+    if (caps.CC_FRONT_OFFICE) {
       const today7days = addDays(today, 7);
       const [todayEventsList, upcomingEvents] = await Promise.all([
         BanquetBooking.find({
@@ -265,7 +265,7 @@ export const getCommandCenterData = async (req: Request, res: Response) => {
 
     // ── 10. AUDIT & BUSINESS DATE (admin/finance roles) ─────────────
     let audit: any = null;
-    if (FINANCE_ROLES.includes(role)) {
+    if (caps.CC_FINANCE) {
       const businessDate = await BusinessDate.findOne({ ...propertyFilter }).sort({ date: -1 }).lean();
       audit = {
         currentBusinessDate: businessDate ? (businessDate as any).date : null,
@@ -277,7 +277,7 @@ export const getCommandCenterData = async (req: Request, res: Response) => {
     let forecast: any = null;
     let revenueTrend: any = [];
     let bookingSources: any = [];
-    if (["ADMIN", "SUPER_ADMIN", "MANAGER", "FINANCE"].includes(role)) {
+    if (caps.CC_FORECAST) {
       const next7 = addDays(today, 7);
       const past7 = addDays(today, -7);
 
@@ -359,7 +359,7 @@ export const getCommandCenterData = async (req: Request, res: Response) => {
 
     // ── 12. GUEST INTELLIGENCE (front office roles) ──────────────────
     let guests: any = null;
-    if (FRONT_OFFICE_ROLES.includes(role)) {
+    if (caps.CC_FRONT_OFFICE) {
       const [totalGuests, vipGuests, newComplaints] = await Promise.all([
         Guest.countDocuments({ ...propertyFilter }),
         Guest.countDocuments({ ...propertyFilter, isVip: true }),
@@ -384,7 +384,7 @@ export const getCommandCenterData = async (req: Request, res: Response) => {
     // ── 15. APPROVALS ────────────────────────────────────────────────
     const { TaskApproval } = await import("../models/TaskApproval");
     let approvals: any = null;
-    if (["ADMIN", "SUPER_ADMIN", "MANAGER"].includes(role)) {
+    if (caps.CC_APPROVALS) {
        const pendingApprovals = await TaskApproval.countDocuments({ ...propertyFilter, status: "PENDING" as any });
        approvals = { pendingApprovals };
     }

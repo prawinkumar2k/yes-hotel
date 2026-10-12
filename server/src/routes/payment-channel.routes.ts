@@ -8,17 +8,17 @@ import {
   updatePaymentChannel,
   deletePaymentChannel
 } from "../controllers/payment-channel.controller";
-import { protect, authorize } from "../middleware/auth.middleware";
+import { protect } from "../middleware/auth.middleware";
 
 const router = Router();
 
 // Only ADMIN, SUPER_ADMIN or authorized MANAGER can manage payment channels
-router.use(protect, authorize("ADMIN", "MANAGER"));
+router.use(protect);
 
-router.get("/", getPaymentChannels);
-router.get("/:id", getPaymentChannel);
-router.post("/", createPaymentChannel);
-router.patch("/:id", updatePaymentChannel);
-router.delete("/:id", deletePaymentChannel);
+router.get("/", requirePermission("PAYMENT_CHANNELS", "VIEW"), getPaymentChannels);
+router.get("/:id", requirePermission("PAYMENT_CHANNELS", "VIEW"), getPaymentChannel);
+router.post("/", requirePermission("PAYMENT_CHANNELS", "CREATE"), createPaymentChannel);
+router.patch("/:id", requirePermission("PAYMENT_CHANNELS", "EDIT"), updatePaymentChannel);
+router.delete("/:id", requirePermission("PAYMENT_CHANNELS", "DELETE"), deletePaymentChannel);
 
 export default router;

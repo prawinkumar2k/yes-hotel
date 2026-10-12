@@ -1,13 +1,11 @@
 import { Router } from "express";
 import { requirePropertyAccess } from "../middleware/propertyAuth";
 import { requirePermission } from "../middleware/permissionAuth";
-import { protect, authorize } from "../middleware/auth.middleware";
-import { UserRole } from "../models/User";
+import { protect } from "../middleware/auth.middleware";
 import { getGuests, getGuestById, createGuest, updateGuest, toggleGuestBlock, getMyGuestProfile } from "../controllers/guest.controller";
 
 const router = Router();
 
-const STAFF_ROLES = [UserRole.ADMIN, UserRole.MANAGER, UserRole.RECEPTIONIST];
 
 // Customer route
 router.get("/my/profile", protect, getMyGuestProfile);

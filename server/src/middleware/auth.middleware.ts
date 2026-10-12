@@ -54,12 +54,3 @@ export const optionalProtect = (req: Request, _res: Response, next: NextFunction
   tryAttachUser(req);
   next();
 };
-
-export const authorize = (...roles: string[]) => {
-  return (req: Request, res: Response, next: NextFunction) => {
-    if (!req.user || !roles.includes(req.user.role)) {
-      return res.status(403).json({ success: false, message: "User role not authorized" });
-    }
-    next();
-  };
-};

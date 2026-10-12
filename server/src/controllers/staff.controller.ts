@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import { User, UserRole } from "../models/User";
+import { isFullAccessRole } from "../config/permissions";
 import { StaffProfile, Department, EmploymentStatus } from "../models/StaffProfile";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
@@ -95,7 +96,7 @@ export const createStaff = async (req: Request, res: Response) => {
     const reqUser = (req as any).user;
     
     // Only admin can create admin
-    if (data.role === UserRole.ADMIN && reqUser.role !== UserRole.ADMIN) {
+    if (data.role === UserRole.ADMIN && !isFullAccessRole(reqUser.role)) {
       return res.status(403).json({ success: false, message: "Only an ADMIN can create another ADMIN" });
     }
     
@@ -152,10 +153,10 @@ export const updateStaff = async (req: Request, res: Response) => {
     if (!user) return res.status(404).json({ success: false, message: "Staff not found" });
     
     // Prevent privilege escalation
-    if (data.role === UserRole.ADMIN && reqUser.role !== UserRole.ADMIN) {
+    if (data.role === UserRole.ADMIN && !isFullAccessRole(reqUser.role)) {
       return res.status(403).json({ success: false, message: "Only an ADMIN can grant ADMIN role" });
     }
-    if (user.role === UserRole.ADMIN && reqUser.role !== UserRole.ADMIN) {
+    if (user.role === UserRole.ADMIN && !isFullAccessRole(reqUser.role)) {
       return res.status(403).json({ success: false, message: "Only an ADMIN can edit another ADMIN" });
     }
     
@@ -205,7 +206,7 @@ export const resetStaffPassword = async (req: Request, res: Response) => {
     const user = await User.findById(req.params.id);
     if (!user) return res.status(404).json({ success: false, message: "Staff not found" });
     
-    if (user.role === UserRole.ADMIN && reqUser.role !== UserRole.ADMIN) {
+    if (user.role === UserRole.ADMIN && !isFullAccessRole(reqUser.role)) {
       return res.status(403).json({ success: false, message: "Only an ADMIN can reset an ADMIN's password" });
     }
     

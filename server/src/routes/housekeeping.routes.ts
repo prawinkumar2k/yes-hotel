@@ -1,8 +1,7 @@
 import { Router } from "express";
 import { requirePropertyAccess } from "../middleware/propertyAuth";
 import { requirePermission } from "../middleware/permissionAuth";
-import { protect, authorize } from "../middleware/auth.middleware";
-import { UserRole } from "../models/User";
+import { protect } from "../middleware/auth.middleware";
 import { getHousekeepingDashboard, updateRoomHousekeepingStatus } from "../controllers/housekeeping.controller";
 
 const router = Router();

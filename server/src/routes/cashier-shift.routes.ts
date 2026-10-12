@@ -29,16 +29,16 @@ router.get("/", protect, requirePropertyAccess, requirePermission("CASHIER_SHIFT
 router.get("/:id/details", protect, requirePropertyAccess, requirePermission("CASHIER_SHIFTS", "VIEW"), getShiftDetails);
 
 // Open shift
-router.post("/open", protect, requirePropertyAccess, requirePermission("CASHIER_SHIFTS", "CREATE"), openShift);
+router.post("/open", protect, requirePropertyAccess, requirePermission("CASHIER_SHIFTS", "OPEN_SHIFT"), openShift);
 
 // Record paid-out (cash drop / petty expense)
-router.post("/:id/paid-out", protect, requirePropertyAccess, requirePermission("CASHIER_SHIFTS", "CREATE"), recordPaidOut);
+router.post("/:id/paid-out", protect, requirePropertyAccess, requirePermission("CASHIER_SHIFTS", "RECONCILE"), recordPaidOut);
 
 // Handover workflows
-router.post("/:id/handover/initiate", protect, requirePropertyAccess, requirePermission("CASHIER_SHIFTS", "CREATE"), initiateHandover);
-router.post("/:id/handover/confirm", protect, requirePropertyAccess, requirePermission("CASHIER_SHIFTS", "CREATE"), confirmHandover);
+router.post("/:id/handover/initiate", protect, requirePropertyAccess, requirePermission("CASHIER_SHIFTS", "CLOSE_SHIFT"), initiateHandover);
+router.post("/:id/handover/confirm", protect, requirePropertyAccess, requirePermission("CASHIER_SHIFTS", "OPEN_SHIFT"), confirmHandover);
 
 // Reconcile and close shift
-router.post("/:id/close", protect, requirePropertyAccess, requirePermission("CASHIER_SHIFTS", "CREATE"), closeShift);
+router.post("/:id/close", protect, requirePropertyAccess, requirePermission("CASHIER_SHIFTS", "CLOSE_SHIFT"), closeShift);
 
 export default router;

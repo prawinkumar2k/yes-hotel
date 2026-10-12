@@ -2,8 +2,7 @@ import { Router } from "express";
 import { requirePropertyAccess } from "../middleware/propertyAuth";
 import { requirePermission } from "../middleware/permissionAuth";
 import { getComplaints, createComplaint, updateComplaintStatus, getMyComplaints, createMyComplaint } from "../controllers/complaint.controller";
-import { protect, authorize } from "../middleware/auth.middleware";
-import { UserRole } from "../models/User";
+import { protect } from "../middleware/auth.middleware";
 
 const router = Router();
 
@@ -19,13 +18,10 @@ router.post("/my", protect, createMyComplaint);
 // or close any of them. Confirmed live during this audit: a freshly
 // registered customer successfully PATCHed another guest's complaint to
 // RESOLVED.
-router.use(
-  protect,
-  authorize(UserRole.ADMIN, UserRole.MANAGER, UserRole.RECEPTIONIST, UserRole.HOUSEKEEPING, UserRole.MAINTENANCE)
-);
+router.use(protect);
 
-router.get("/", getComplaints);
-router.post("/", createComplaint);
-router.patch("/:id/status", updateComplaintStatus);
+router.get("/", requirePermission("GUEST_COMPLAINTS", "VIEW"), getComplaints);
+router.post("/", requirePermission("GUEST_COMPLAINTS", "CREATE"), createComplaint);
+router.patch("/:id/status", requirePermission("GUEST_COMPLAINTS", "EDIT"), updateComplaintStatus);
 
 export default router;

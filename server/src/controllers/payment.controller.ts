@@ -227,7 +227,8 @@ export const confirmDemoBooking = async (req: Request, res: Response) => {
     // someone ELSE's booking just by guessing its id.
     const requester = (req as any).user;
     if (requester) {
-      const isPrivileged = ["ADMIN", "MANAGER"].includes(requester.role);
+      const { PermissionService } = await import("../services/PermissionService");
+      const isPrivileged = await PermissionService.can(requester, "CAP.PAYMENT_CONFIRM_DEMO_ANY");
       const isOwner = booking.customer?.toString() === requester.id;
       if (!isPrivileged && !isOwner) {
         return res.status(403).json({ success: false, message: "Not authorized to confirm this booking" });

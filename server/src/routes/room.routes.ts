@@ -2,8 +2,7 @@ import { Router } from "express";
 import { requirePropertyAccess } from "../middleware/propertyAuth";
 import { requirePermission } from "../middleware/permissionAuth";
 import { getRoomCategories, getRoomCategoryBySlug, getRooms, createRoom, updateRoom, deleteRoom, updateRoomStatus } from "../controllers/room.controller";
-import { protect, authorize } from "../middleware/auth.middleware";
-import { UserRole } from "../models/User";
+import { protect } from "../middleware/auth.middleware";
 
 const router = Router();
 

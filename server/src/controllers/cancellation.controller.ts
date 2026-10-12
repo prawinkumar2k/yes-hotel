@@ -17,9 +17,10 @@ export const cancelBooking = async (req: Request, res: Response) => {
     const booking = await Booking.findById(req.params.id);
     if (!booking) return res.status(404).json({ success: false, message: "Booking not found" });
 
-    // Ownership check — customer can only cancel their own booking
-    // Admin/Manager can cancel any booking
-    const isAdmin = ["ADMIN", "MANAGER", "RECEPTIONIST"].includes(req.user?.role || "");
+    // Ownership check — customer can only cancel their own booking;
+    // staff holding CAP.BOOKING_CANCEL_ANY can cancel any booking.
+    const { PermissionService } = await import("../services/PermissionService");
+    const isAdmin = await PermissionService.can(req.user, "CAP.BOOKING_CANCEL_ANY");
     const isOwner = booking.customer?.toString() === req.user?.id;
     if (!isAdmin && !isOwner) {
       return res.status(403).json({ success: false, message: "Not authorized to cancel this booking" });

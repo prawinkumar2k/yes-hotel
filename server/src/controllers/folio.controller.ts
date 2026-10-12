@@ -164,6 +164,30 @@ export const getFolioByBooking = async (req: Request, res: Response) => {
 
     const actorId = (req as any).user?.id || (req as any).user?._id || "SYSTEM";
 
+    // Customer (owner) access is read-only and scoped to this one booking: no
+    // folio seeding, and no group aggregation (group detection matches other
+    // guests' bookings by phone number).
+    if ((req as any).ownerAccess) {
+      const ownFolio = await Folio.findOne({ booking: booking._id })
+        .populate("room", "roomNumber floor")
+        .lean();
+      if (!ownFolio) {
+        return res.status(404).json({ success: false, message: "Folio not available yet for this booking" });
+      }
+      const ownLines = await FolioLine.find({ folio: ownFolio._id }).sort({ date: 1, postedAt: 1 }).lean();
+      return res.json({
+        success: true,
+        data: {
+          folio: ownFolio,
+          lines: ownLines,
+          groupFolios: [ownFolio],
+          groupBookings: [],
+          isGroup: false,
+          roomsSummary: (booking.assignedRoom as any)?.roomNumber || "",
+        },
+      });
+    }
+
     // 1. Ensure target booking has seeded folio
     const targetFolio = await ensureAndSeedFolioForBooking(booking, actorId, req);
     if (!targetFolio) {

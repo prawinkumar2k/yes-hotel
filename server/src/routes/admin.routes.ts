@@ -1,8 +1,7 @@
 import { Router } from "express";
 import { requirePropertyAccess } from "../middleware/propertyAuth";
 import { requirePermission } from "../middleware/permissionAuth";
-import { protect, authorize } from "../middleware/auth.middleware";
-import { UserRole } from "../models/User";
+import { protect } from "../middleware/auth.middleware";
 import {
   getAdminStats, getAdminBookings, getAdminBookingById, updateBookingStatus, getAdminCalendar
 } from "../controllers/admin.controller";
@@ -30,7 +29,6 @@ import { getReportsOverview } from "../controllers/reports.controller";
 
 const router = Router();
 
-const ADMIN_ROLES = [UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.MANAGER, UserRole.RECEPTIONIST];
 
 // Stats
 router.get("/stats", protect, requirePropertyAccess, requirePermission("DASHBOARD.ADMIN", "VIEW"), getAdminStats);
