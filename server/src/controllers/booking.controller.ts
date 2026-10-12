@@ -20,12 +20,11 @@ import { BookingConflictError, buildBookingRequestHash, reserveInventoryDays, bu
 import { assertGuestNotBlocked, GuestBlockedError, syncGuestOnBookingCreated } from "../services/guest.service";
 import { Folio, FolioStatus } from "../models/Folio";
 import { FolioLine, FolioLineType } from "../models/FolioLine";
-import { createFolio, postCharge, finalizeFolio, settleFolio, recomputeFolioBalance } from "../services/folio.service";
+import { createFolio, postCharge, finalizeFolio, settleFolio, recomputeFolioBalance, findFolioForBooking, openFolioForBooking, postRecordedPaymentsToFolio } from "../services/folio.service";
 import { AdvancePayment, AdvancePaymentStatus } from "../models/AdvancePayment";
 import { adjustAdvance } from "../services/advance.service";
 import { BookingEvent, BookingEventType } from "../models/BookingEvent";
 import { BookingInventoryDay } from "../models/BookingInventoryDay";
-import { ensureAndSeedFolioForBooking } from "./folio.controller";
 import { BookingEnquiry, BookingEnquiryStatus } from "../models/BookingEnquiry";
 
 const guestDetailsSchema = z.object({
@@ -680,22 +679,14 @@ export const checkIn = async (req: Request, res: Response) => {
             }
           }
 
-          // If prepayment was made upon online booking, credit to Folio
-          if (booking.paidAmount > 0) {
-            await postCharge(
-              {
-                folioId: folio._id.toString(),
-                bookingId: booking._id.toString(),
-                lineType: FolioLineType.PAYMENT,
-                description: "Prepayment received online",
-                amount: booking.paidAmount,
-                date: new Date(),
-                postedBy: "SYSTEM_PAYMENT",
-                notes: "Razorpay / Online payment credited to folio",
-              },
-              { req, session }
-            );
-          }
+          // Credit prepayments from their Payment records (never from booking.paidAmount,
+          // which has no backing record and double-counts once payments are also posted).
+          await postRecordedPaymentsToFolio(
+            folio._id.toString(),
+            booking._id.toString(),
+            (req as any).user?.id || "SYSTEM_PAYMENT",
+            { req, session }
+          );
         }
 
         booking.folio = folio._id as mongoose.Types.ObjectId;
@@ -753,15 +744,8 @@ export const getCheckoutPreview = async (req: Request, res: Response) => {
 
     if (!booking) return res.status(404).json({ success: false, message: "Booking not found" });
 
-    const actorId = (req as any).user?.id || (req as any).user?._id || "SYSTEM";
-    let folio: any = await ensureAndSeedFolioForBooking(booking, actorId, req);
-
-    if (!folio) {
-      folio = await Folio.findOne({
-        booking: booking._id,
-        status: { $in: [FolioStatus.OPEN, FolioStatus.FINALIZED] },
-      }).lean();
-    }
+    // Read-only preview: never creates a folio or posts lines.
+    const folio: any = await findFolioForBooking(booking._id);
 
     let lines: any[] = [];
     if (folio) {
@@ -825,7 +809,6 @@ export const checkOut = async (req: Request, res: Response) => {
   if (!booking) return res.status(404).json({ success: false, message: "Booking not found" });
 
   const actorId = (req as any).user?.id || (req as any).user?._id;
-  await ensureAndSeedFolioForBooking(booking, actorId?.toString() || "CHECKOUT", req);
 
   if (booking.status !== BookingStatus.CHECKED_IN) {
     return res.status(400).json({
@@ -833,6 +816,10 @@ export const checkOut = async (req: Request, res: Response) => {
       message: `Booking is in ${booking.status} state. Guest must be CHECKED_IN to checkout.`,
     });
   }
+
+  // Explicit, idempotent: a stay checked in before folios existed gets its folio
+  // (stay charges + recorded payments) opened here, in its own transaction.
+  await openFolioForBooking(booking, actorId?.toString() || "CHECKOUT", { req });
 
   const {
     advanceAdjustmentAmount,

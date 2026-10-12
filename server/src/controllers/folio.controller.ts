@@ -10,141 +10,8 @@ import {
   settleFolio,
   recomputeFolioBalance,
   calculateTaxBreakdown,
+  findFolioForBooking,
 } from "../services/folio.service";
-
-/**
- * Helper to ensure a folio exists and has its initial stay charges populated.
- */
-export async function ensureAndSeedFolioForBooking(bookingDoc: any, actorId: string, req?: Request): Promise<any> {
-  let f: any = await Folio.findOne({ booking: bookingDoc._id })
-    .populate("guest", "firstName lastName email phone")
-    .populate("room", "roomNumber floor")
-    .populate("booking");
-
-  if (!f) {
-    const guestId = bookingDoc.customer?.toString() || new mongoose.Types.ObjectId().toString();
-    const createdFolio = await createFolio(
-      {
-        bookingId: bookingDoc._id.toString(),
-        guestId,
-        roomId: (bookingDoc.assignedRoom as any)?._id?.toString() || (bookingDoc.assignedRoom as any)?.toString(),
-        checkInDate: bookingDoc.checkInDate,
-        checkOutDate: bookingDoc.checkOutDate,
-      },
-      { req }
-    );
-    f = await Folio.findById(createdFolio._id)
-      .populate("guest", "firstName lastName email phone")
-      .populate("room", "roomNumber floor")
-      .populate("booking");
-  }
-
-  if (!f) return null;
-
-  const hasRoomCharge = await FolioLine.findOne({ folio: f._id, lineType: FolioLineType.ROOM_CHARGE });
-  let neededRecompute = false;
-
-  if (!hasRoomCharge) {
-    const bCheckIn = new Date(bookingDoc.checkInDate || Date.now());
-    const bCheckOut = new Date(bookingDoc.checkOutDate || Date.now());
-    const bNights = Math.max(1, Math.ceil((bCheckOut.getTime() - bCheckIn.getTime()) / (1000 * 60 * 60 * 24)));
-    const bRate = bookingDoc.ratePerNight || Math.round((bookingDoc.totalAmount - (bookingDoc.taxAmount || 0)) / bNights) || 2000;
-    const bRoomTotal = bRate * bNights;
-
-    // 1. Room Charge
-    if (bRoomTotal > 0) {
-      await FolioLine.create({
-        folio: f._id,
-        booking: bookingDoc._id,
-        lineType: FolioLineType.ROOM_CHARGE,
-        direction: FolioLineDirection.DEBIT,
-        description: `Room Tariff (${bNights} Night${bNights > 1 ? 's' : ''} @ ₹${bRate.toLocaleString()}/night)`,
-        amount: bRoomTotal,
-        date: bCheckIn,
-        postedBy: actorId,
-      });
-      neededRecompute = true;
-    }
-
-    // 2. Extra Bed
-    const extraBedAmt = (bookingDoc.extraPersonsWithBed || 0) * 1200 * bNights;
-    if (extraBedAmt > 0) {
-      await FolioLine.create({
-        folio: f._id,
-        booking: bookingDoc._id,
-        lineType: FolioLineType.EXTRA_BED,
-        direction: FolioLineDirection.DEBIT,
-        description: `Extra Bed Charges`,
-        amount: extraBedAmt,
-        date: bCheckIn,
-        postedBy: actorId,
-      });
-      neededRecompute = true;
-    }
-
-    // 3. Taxes
-    const taxable = bRoomTotal + extraBedAmt;
-    const taxBreak = await calculateTaxBreakdown(taxable);
-    if (taxBreak.cgst > 0) {
-      await FolioLine.create({
-        folio: f._id,
-        booking: bookingDoc._id,
-        lineType: FolioLineType.TAX_CGST,
-        direction: FolioLineDirection.DEBIT,
-        description: `CGST (6%) on Room Tariff`,
-        amount: taxBreak.cgst,
-        date: bCheckIn,
-        postedBy: actorId,
-      });
-      neededRecompute = true;
-    }
-    if (taxBreak.sgst > 0) {
-      await FolioLine.create({
-        folio: f._id,
-        booking: bookingDoc._id,
-        lineType: FolioLineType.TAX_SGST,
-        direction: FolioLineDirection.DEBIT,
-        description: `SGST (6%) on Room Tariff`,
-        amount: taxBreak.sgst,
-        date: bCheckIn,
-        postedBy: actorId,
-      });
-      neededRecompute = true;
-    }
-  }
-
-  // 4. Advance payment check
-  const hasAdvance = await FolioLine.findOne({ folio: f._id, lineType: FolioLineType.ADVANCE_ADJUSTMENT });
-  if (!hasAdvance && bookingDoc.paidAmount && bookingDoc.paidAmount > 0) {
-    await FolioLine.create({
-      folio: f._id,
-      booking: bookingDoc._id,
-      lineType: FolioLineType.ADVANCE_ADJUSTMENT,
-      direction: FolioLineDirection.CREDIT,
-      description: `Advance Payment Received (${bookingDoc.billingInstruction || "CASH"})`,
-      amount: bookingDoc.paidAmount,
-      date: new Date(),
-      postedBy: actorId,
-    });
-    neededRecompute = true;
-  }
-
-  if (neededRecompute) {
-    const auditTotals = await recomputeFolioBalance(f._id.toString());
-    f.totalCharges = auditTotals.totalCharges;
-    f.totalTax = auditTotals.totalTax;
-    f.cgst = auditTotals.cgst;
-    f.sgst = auditTotals.sgst;
-    f.igst = auditTotals.igst;
-    f.totalDiscounts = auditTotals.totalDiscounts;
-    f.totalPaid = auditTotals.totalPaid;
-    f.totalAdvanceAdjusted = auditTotals.totalAdvanceAdjusted;
-    f.balance = auditTotals.balance;
-    await f.save();
-  }
-
-  return f;
-}
 
 /**
  * GET /api/folios/booking/:bookingId
@@ -188,10 +55,10 @@ export const getFolioByBooking = async (req: Request, res: Response) => {
       });
     }
 
-    // 1. Ensure target booking has seeded folio
-    const targetFolio = await ensureAndSeedFolioForBooking(booking, actorId, req);
+    // 1. Read-only: a folio is opened by check-in (or another explicit action), never by a read.
+    const targetFolio: any = await findFolioForBooking(booking._id);
     if (!targetFolio) {
-      return res.status(404).json({ success: false, message: "Could not initialize folio for this booking" });
+      return res.status(404).json({ success: false, message: "No folio yet for this booking: a folio is opened at check-in" });
     }
 
     // 2. Discover if this booking is part of a group / multi-room reservation
@@ -214,11 +81,11 @@ export const getFolioByBooking = async (req: Request, res: Response) => {
       }
     }
 
-    // 3. Ensure folios are created and seeded for ALL bookings in the group
+    // 3. Collect the existing folios of every booking in the group (read-only)
     const allGroupFolios: any[] = [];
     if (groupBookings.length > 1) {
       for (const gb of groupBookings) {
-        const gf = await ensureAndSeedFolioForBooking(gb, actorId, req);
+        const gf = await findFolioForBooking(gb._id);
         if (gf) allGroupFolios.push(gf);
       }
     } else {

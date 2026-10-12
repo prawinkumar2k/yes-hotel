@@ -684,6 +684,7 @@ export const walkInArrivalRegistration = async (req: Request, res: Response) => 
                 lineType: FolioLineType.ADVANCE_ADJUSTMENT,
                 description: `Advance Payment Received (${advanceMethod || "CASH"})`,
                 amount: Number(advanceAmount),
+                advancePaymentId: advance?._id?.toString(),
                 date: new Date(),
                 postedBy: (req as any).user?.id || (req as any).user?._id || "SYSTEM",
               },

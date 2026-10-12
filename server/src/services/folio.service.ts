@@ -399,3 +399,152 @@ export async function recomputeFolioBalance(
     igst: Math.round(igst * 100) / 100,
   };
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// READ vs OPEN
+// Reads never write. A folio is created only by an explicit action
+// (check-in, checkout of a legacy stay, bill edit) via openFolioForBooking.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Read-only lookup of a booking's folio. Never creates or posts anything. */
+export function findFolioForBooking(bookingId: string | mongoose.Types.ObjectId) {
+  return Folio.findOne({ booking: bookingId })
+    .populate("guest", "firstName lastName email phone")
+    .populate("room", "roomNumber floor")
+    .populate("booking");
+}
+
+/**
+ * Credit the folio with every recorded Payment for the booking that is not on it yet.
+ * Idempotent: a payment is posted at most once per folio (keyed by paymentId).
+ * Posts the net amount actually kept (amount − refundedAmount); nothing is
+ * posted from booking.paidAmount, which has no backing record.
+ */
+export async function postRecordedPaymentsToFolio(
+  folioId: string,
+  bookingId: string,
+  actorId: string,
+  opts: { req?: Request; session?: mongoose.ClientSession },
+): Promise<number> {
+  const { Payment } = await import("../models/Payment");
+  const payments = await Payment.find({ booking: bookingId, status: { $in: ["COMPLETED", "REFUNDED"] as any[] } })
+    .session(opts.session ?? null)
+    .lean();
+  const posted = new Set(
+    (await FolioLine.find({ folio: folioId, paymentId: { $ne: null } }).select("paymentId").session(opts.session ?? null).lean())
+      .map((l) => String(l.paymentId)),
+  );
+  let count = 0;
+  for (const p of payments as any[]) {
+    if (posted.has(String(p._id))) continue;
+    const net = Math.round(((p.amount || 0) - (p.refundedAmount || 0)) * 100) / 100;
+    if (net <= 0) continue;
+    await postCharge(
+      {
+        folioId,
+        bookingId,
+        lineType: FolioLineType.PAYMENT,
+        description: `Payment received (${p.method || "ONLINE"})${p.transactionId ? ` — ${p.transactionId}` : ""}`,
+        amount: net,
+        date: p.createdAt || new Date(),
+        postedBy: actorId,
+        paymentId: String(p._id),
+        notes: p.refundedAmount ? `Gross ₹${p.amount}, refunded ₹${p.refundedAmount}` : undefined,
+      },
+      opts,
+    );
+    count++;
+  }
+  return count;
+}
+
+/**
+ * Explicit, idempotent "open folio" action: creates the folio if missing, posts the
+ * stay charges once, and credits recorded payments once. Runs in a transaction
+ * (its own, or the caller's). Concurrent calls for the same booking serialise on a
+ * write to the booking document, so only one folio is ever created.
+ */
+export async function openFolioForBooking(
+  booking: any,
+  actorId: string,
+  opts: { req?: Request; session?: mongoose.ClientSession } = {},
+): Promise<IFolio> {
+  const run = async (session: mongoose.ClientSession) => {
+    // Write-lock the booking for this transaction (conflicting opens abort and retry).
+    await Booking.updateOne({ _id: booking._id }, { $currentDate: { updatedAt: true } }, { session });
+
+    let folio: any = await Folio.findOne({ booking: booking._id }).session(session);
+    if (!folio) {
+      folio = await createFolio(
+        {
+          bookingId: booking._id.toString(),
+          guestId: (booking.customer ?? new mongoose.Types.ObjectId()).toString(),
+          roomId: (booking.assignedRoom?._id ?? booking.assignedRoom)?.toString(),
+          checkInDate: booking.checkInDate,
+          checkOutDate: booking.checkOutDate,
+        } as any,
+        { req: opts.req, session },
+      );
+    }
+    const folioId = folio._id.toString();
+    const bookingId = booking._id.toString();
+
+    const hasRoomCharge = await FolioLine.exists({ folio: folio._id, lineType: FolioLineType.ROOM_CHARGE }).session(session);
+    if (!hasRoomCharge) {
+      const checkIn = new Date(booking.checkInDate || Date.now());
+      const checkOut = new Date(booking.checkOutDate || Date.now());
+      const nights = Math.max(1, Math.ceil((checkOut.getTime() - checkIn.getTime()) / 86_400_000));
+      const rate = booking.ratePerNight || Math.round(((booking.totalAmount || 0) - (booking.taxAmount || 0)) / nights);
+      const roomTotal = rate * nights;
+      if (roomTotal > 0) {
+        await postCharge(
+          {
+            folioId,
+            bookingId,
+            lineType: FolioLineType.ROOM_CHARGE,
+            description: `Room Tariff (${nights} Night${nights > 1 ? "s" : ""} @ ₹${rate.toLocaleString()}/night)`,
+            amount: roomTotal,
+            date: checkIn,
+            postedBy: actorId,
+          },
+          { req: opts.req, session },
+        );
+        // TODO(step 2): extra-bed rate and tax slab come from settings / taxService.
+        const extraBed = (booking.extraPersonsWithBed || 0) * 1200 * nights;
+        if (extraBed > 0) {
+          await postCharge(
+            { folioId, bookingId, lineType: FolioLineType.EXTRA_BED, description: "Extra Bed Charges", amount: extraBed, date: checkIn, postedBy: actorId },
+            { req: opts.req, session },
+          );
+        }
+        const tax = await calculateTaxBreakdown(roomTotal + extraBed);
+        for (const [lineType, amount, label] of [
+          [FolioLineType.TAX_CGST, tax.cgst, "CGST"],
+          [FolioLineType.TAX_SGST, tax.sgst, "SGST"],
+        ] as const) {
+          if (amount > 0) {
+            await postCharge(
+              { folioId, bookingId, lineType, description: `${label} on Room Tariff`, amount, date: checkIn, postedBy: actorId },
+              { req: opts.req, session },
+            );
+          }
+        }
+      }
+    }
+
+    await postRecordedPaymentsToFolio(folioId, bookingId, actorId, { req: opts.req, session });
+    return (await Folio.findById(folio._id).session(session))!;
+  };
+
+  if (opts.session) return run(opts.session);
+  const session = await mongoose.startSession();
+  try {
+    let result!: IFolio;
+    await session.withTransaction(async () => {
+      result = await run(session);
+    });
+    return result;
+  } finally {
+    await session.endSession();
+  }
+}
