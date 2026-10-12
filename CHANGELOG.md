@@ -1,7 +1,18 @@
-# Changelog
+# YES HOTELS — CHANGELOG
 
-## [Unreleased]
+All changes, fixes, hardened services, and architectural migrations are documented chronologically in this file.
 
-### Phase 0: Recon & wiring audit (2026-10-12)
-- Added `AUDIT_REPORT.md` with the connectivity matrix, the live cross-module disagreement table, the duplicated-logic inventory and 17 wiring defects (P0-01 to P0-17).
-- No application code changed.
+---
+
+## [Phase 0 — Reconnaissance & Connectivity Audit] - 2026-10-12
+
+### Added
+- `AUDIT_REPORT.md`: a connectivity matrix generated from source (94 frontend routes → client API calls → 243 mounted endpoints → controllers → models), a live read-only GET sweep against the seeded DB, RBAC probes, a duplicated-logic inventory, and the reproduction status of defects A–M.
+- `CHANGELOG.md`.
+
+### Changed
+- Replaced the earlier, unverified Phase 0 draft of `AUDIT_REPORT.md`. It referenced non-existent models and listed unmounted endpoints as connected.
+
+### Notes
+- No application code changed in this phase.
+- Router counts: 46 route files, 43 mounted, 3 unmounted (`pos`, `menu`, `ota`).
