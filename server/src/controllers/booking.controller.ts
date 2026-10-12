@@ -7,7 +7,7 @@ import { Payment } from "../models/Payment";
 import { Property } from "../models/Property";
 import { HousekeepingTask, HousekeepingStatus, HousekeepingPriority, HousekeepingTaskType } from "../models/HousekeepingTask";
 import { validateAndCalculateCoupon } from "../services/coupon.service";
-import { calculateBookingTotals } from "../services/pricing.service";
+import { computeRoomTax, loadGstRules, splitTax } from "../services/tax.service";
 import { logger } from "../services/logger.service";
 import { IllegalBookingTransitionError, transitionBookingStatus } from "../services/booking-state.service";
 import { transitionRoomStatus } from "../services/room-state.service";
@@ -26,6 +26,7 @@ import { adjustAdvance } from "../services/advance.service";
 import { BookingEvent, BookingEventType } from "../models/BookingEvent";
 import { BookingInventoryDay } from "../models/BookingInventoryDay";
 import { BookingEnquiry, BookingEnquiryStatus } from "../models/BookingEnquiry";
+import { nights as countNights, toBusinessDate, todayBusinessDate } from "@shared/dates";
 
 const guestDetailsSchema = z.object({
   firstName: z.string().trim().min(1, "Guest first name is required"),
@@ -63,12 +64,11 @@ export const checkAvailability = async (req: Request, res: Response) => {
     const checkInDate = new Date(checkIn as string);
     const checkOutDate = new Date(checkOut as string);
 
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
     if (Number.isNaN(checkInDate.getTime()) || Number.isNaN(checkOutDate.getTime())) {
       return res.status(400).json({ success: false, message: "Valid check-in and check-out dates are required" });
     }
-    if (checkInDate < today) {
+    // Compare calendar dates at the property, not server-local midnight.
+    if (toBusinessDate(checkInDate) < todayBusinessDate()) {
       return res.status(400).json({ success: false, message: "Check-in date cannot be in the past" });
     }
     if (Number(adults) < 1 || Number(children) < 0 || Number(rooms) < 1) {
@@ -111,7 +111,7 @@ export const checkAvailability = async (req: Request, res: Response) => {
       const availableCount = totalRooms - bookedCount;
 
       if (availableCount >= Number(rooms)) {
-        const nights = Math.ceil((checkOutDate.getTime() - checkInDate.getTime()) / (1000 * 60 * 60 * 24));
+        const nights = countNights(checkInDate, checkOutDate);
         available.push({
           ...cat.toObject(),
           availableCount,
@@ -125,6 +125,75 @@ export const checkAvailability = async (req: Request, res: Response) => {
     return res.status(200).json({ success: true, data: available });
   } catch (error: any) {
     return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+/**
+ * The price of a stay exactly as createBooking will charge it: room charges for the
+ * stay's nights, coupon discount, and GST per night via taxService on the
+ * post-discount nightly value. Used by createBooking and POST /api/bookings/quote.
+ */
+export async function priceStay(params: {
+  category: { _id: any; basePrice: number };
+  checkIn: Date;
+  checkOut: Date;
+  couponCode?: string;
+  guestEmail?: string;
+}) {
+  const nights = countNights(params.checkIn, params.checkOut);
+  const roomCharges = params.category.basePrice * nights;
+
+  let discountAmount = 0;
+  let appliedCoupon: string | undefined;
+  if (params.couponCode) {
+    const { coupon, discount } = await validateAndCalculateCoupon({
+      code: params.couponCode,
+      bookingAmount: roomCharges,
+      roomCategoryId: String(params.category._id),
+      guestEmail: params.guestEmail,
+    });
+    discountAmount = discount;
+    appliedCoupon = coupon.code;
+  }
+
+  const tax = computeRoomTax(await loadGstRules(), {
+    checkIn: params.checkIn,
+    checkOut: params.checkOut,
+    nightlyValue: Math.max(0, roomCharges - discountAmount) / Math.max(1, nights),
+  });
+  return {
+    nights,
+    roomCharges,
+    discountAmount,
+    appliedCoupon,
+    taxableAmount: tax.taxable,
+    cgst: tax.cgst,
+    sgst: tax.sgst,
+    taxAmount: tax.tax,
+    totalAmount: tax.total,
+    taxLines: tax.lines,
+  };
+}
+
+/** POST /api/bookings/quote — public, read-only: the price createBooking would charge. */
+export const quoteBooking = async (req: Request, res: Response) => {
+  try {
+    const { roomCategoryId, checkIn, checkOut, couponCode, guestEmail } = req.body ?? {};
+    const ci = new Date(checkIn);
+    const co = new Date(checkOut);
+    if (!roomCategoryId || !mongoose.Types.ObjectId.isValid(String(roomCategoryId))) {
+      return res.status(400).json({ success: false, message: "A valid roomCategoryId is required" });
+    }
+    if (Number.isNaN(ci.getTime()) || Number.isNaN(co.getTime()) || countNights(ci, co) < 1) {
+      return res.status(400).json({ success: false, message: "checkIn and checkOut must be valid dates at least one night apart" });
+    }
+    const category = await RoomCategory.findById(roomCategoryId).select("basePrice").lean();
+    if (!category) return res.status(404).json({ success: false, message: "Room category not found" });
+    const quote = await priceStay({ category: category as any, checkIn: ci, checkOut: co, couponCode, guestEmail });
+    return res.json({ success: true, data: quote });
+  } catch (error: any) {
+    // Coupon validation failures are user errors.
+    return res.status(400).json({ success: false, message: error.message });
   }
 };
 
@@ -226,26 +295,16 @@ export const createBooking = async (req: Request, res: Response) => {
       });
     }
 
-    // Calculate price — server is the sole source of truth for pricing
+    // Calculate price — server is the sole source of truth for pricing (same function as /quote)
     const category = await RoomCategory.findById(roomCategoryId);
     if (!category) return res.status(404).json({ success: false, message: "Room category not found" });
-    const nights = Math.ceil((checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24));
-    const roomCharges = category.basePrice * nights;
-
-    let discountAmount = 0;
-    let appliedCoupon: string | undefined;
-    if (couponCode) {
-      const { coupon, discount } = await validateAndCalculateCoupon({
-        code: couponCode,
-        bookingAmount: roomCharges,
-        roomCategoryId,
-        guestEmail: guestDetails?.email,
-      });
-      discountAmount = discount;
-      appliedCoupon = coupon.code;
-    }
-
-    const { taxAmount, totalAmount } = calculateBookingTotals(roomCharges, discountAmount);
+    const { nights, discountAmount, appliedCoupon, taxAmount, totalAmount } = await priceStay({
+      category,
+      checkIn,
+      checkOut,
+      couponCode,
+      guestEmail: guestDetails?.email,
+    });
 
     // The reservation claim, booking creation, and idempotency finalization all
     // happen inside a single MongoDB transaction. This is what actually closes
@@ -460,9 +519,7 @@ export const getMyBookingInvoice = async (req: Request, res: Response) => {
       createdAt: -1,
     });
     const category: any = booking.roomCategory;
-    const nights = Math.ceil(
-      (new Date(booking.checkOutDate).getTime() - new Date(booking.checkInDate).getTime()) / (1000 * 60 * 60 * 24)
-    );
+    const nights = countNights(new Date(booking.checkInDate), new Date(booking.checkOutDate));
     const roomCharges = booking.totalAmount - booking.taxAmount + (booking.discountAmount || 0);
 
     const esc = (s: any) => String(s ?? "").replace(/[<>&]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;" }[c] as string));
@@ -613,7 +670,7 @@ export const checkIn = async (req: Request, res: Response) => {
           );
 
           // Post initial room tariff
-          const nights = Math.max(1, Math.ceil((new Date(booking.checkOutDate).getTime() - new Date(booking.checkInDate).getTime()) / (1000 * 60 * 60 * 24)));
+          const nights = Math.max(1, countNights(new Date(booking.checkInDate), new Date(booking.checkOutDate)));
           const baseTariff = Math.max(0, (booking.totalAmount || 0) - (booking.taxAmount || 0));
 
           if (baseTariff > 0) {
@@ -632,23 +689,11 @@ export const checkIn = async (req: Request, res: Response) => {
 
             // Post GST lines — split the tax the guest was already quoted
             // and charged at booking time (booking.taxAmount, computed by
-            // pricing.service.ts's room-rate GST slab: 12% at/under ₹7500
-            // per night, 18% above), NOT a freshly recomputed flat-rate
-            // amount. calculateTaxBreakdown() ignores the slab and always
-            // applies HotelSettings' flat cgst/sgst rate (default 9%+9% =
-            // 18%), which silently overcharges every stay booked under the
-            // ₹7500 slab (18% posted to the folio vs the 12% actually
-            // quoted/paid) — the resulting mismatch then correctly trips
-            // the checkout balance-invariant check and blocks checkout
-            // entirely. Reproduced live during this audit: a ₹3500/night
-            // room showed a ₹210 phantom outstanding balance at checkout
-            // (630 posted vs 420 quoted, on a ₹3500 taxable amount).
-            // CGST and SGST are always equal for a single intrastate
-            // property, so an even split reconstructs the correct
-            // breakdown without re-deriving the rate.
+            // taxService at booking), NOT a freshly recomputed amount: a
+            // recomputation that differs from the quote would make the folio
+            // disagree with what the guest paid and block checkout.
             const bookingTax = Math.max(0, booking.taxAmount || 0);
-            const cgst = Math.round((bookingTax / 2) * 100) / 100;
-            const sgst = Math.round((bookingTax - cgst) * 100) / 100;
+            const { cgst, sgst } = splitTax(bookingTax);
             if (cgst > 0) {
               await postCharge(
                 {
@@ -1082,15 +1127,13 @@ export const checkExtensionConflict = async (req: Request, res: Response) => {
       checkOutDate: { $gt: currentCheckOut },
     }).lean();
 
-    const additionalNights = Math.ceil((targetCheckOut.getTime() - currentCheckOut.getTime()) / (1000 * 60 * 60 * 24));
+    const additionalNights = countNights(currentCheckOut, targetCheckOut);
     const basePrice = (booking.roomCategory as any)?.basePrice || 0;
     const additionalTariff = basePrice * additionalNights;
-    // Same room-rate GST slab extendStay actually posts (see its comment) —
-    // this preview must quote the same total the guest will really be
-    // charged, not calculateTaxBreakdown's flat rate.
-    const extensionTaxRate = basePrice > 7500 ? 0.18 : 0.12;
-    const additionalTax = Math.round(additionalTariff * extensionTaxRate * 100) / 100;
-    const additionalTotal = additionalTariff + additionalTax;
+    // Quote exactly what extendStay posts: taxService room GST per added night.
+    const extTax = computeRoomTax(await loadGstRules(), { checkIn: currentCheckOut, checkOut: targetCheckOut, nightlyValue: basePrice });
+    const additionalTax = extTax.tax;
+    const additionalTotal = extTax.total;
 
     const isConflict = conflicts.length > 0 && booking.assignedRoom
       ? conflicts.some((c) => c.assignedRoom?.toString() === booking.assignedRoom?.toString())
@@ -1136,23 +1179,16 @@ export const extendStay = async (req: Request, res: Response) => {
       });
     }
 
-    const additionalNights = Math.ceil((targetCheckOut.getTime() - currentCheckOut.getTime()) / (1000 * 60 * 60 * 24));
+    const additionalNights = countNights(currentCheckOut, targetCheckOut);
     const basePrice = (booking.roomCategory as any)?.basePrice || 0;
     const additionalTariff = basePrice * additionalNights;
-    // Same room-rate GST slab used at booking time and check-in (12% at/under
-    // ₹7500/night, 18% above) — NOT calculateTaxBreakdown's flat HotelSettings
-    // rate (default 9%+9%=18% regardless of rate). Using the flat rate here
-    // silently overcharged every extension on a sub-₹7500 room by 6% (posted
-    // 18% vs the 12% the guest was quoted/charged for every other night of
-    // the same stay) — reproduced live during this audit on a ₹3500/night
-    // room: extending by 1 night posted ₹630 tax instead of the correct
-    // ₹420, a ₹210 overcharge invisible until someone reconciled the folio
-    // against the room's actual rate.
-    const extensionTaxRate = basePrice > 7500 ? 0.18 : 0.12;
-    const additionalTaxCgst = Math.round((additionalTariff * (extensionTaxRate / 2)) * 100) / 100;
-    const additionalTaxSgst = Math.round((additionalTariff * (extensionTaxRate / 2)) * 100) / 100;
-    const additionalTax = additionalTaxCgst + additionalTaxSgst;
-    const additionalTotal = additionalTariff + additionalTax;
+    // Room GST per added night via taxService (slab by per-night value, rule in force on each night).
+    const extTax = computeRoomTax(await loadGstRules(), { checkIn: currentCheckOut, checkOut: targetCheckOut, nightlyValue: basePrice });
+    const extensionRatePct = Math.max(...extTax.lines.map((l) => l.rate));
+    const additionalTaxCgst = extTax.cgst;
+    const additionalTaxSgst = extTax.sgst;
+    const additionalTax = extTax.tax;
+    const additionalTotal = extTax.total;
     const tax = { cgst: additionalTaxCgst, sgst: additionalTaxSgst, totalTax: additionalTax, totalWithTax: additionalTotal };
 
     // ── INVENTORY SAFETY: Reserve inventory days for extension ──
@@ -1226,7 +1262,7 @@ export const extendStay = async (req: Request, res: Response) => {
             folioId: folio._id.toString(),
             bookingId: booking._id.toString(),
             lineType: FolioLineType.TAX_CGST,
-            description: `CGST on Stay Extension (${(extensionTaxRate / 2) * 100}%)`,
+            description: `CGST on Stay Extension (${extensionRatePct / 2}%)`,
             amount: tax.cgst,
             date: new Date(),
             postedBy: "SYSTEM_TAX",
@@ -1240,7 +1276,7 @@ export const extendStay = async (req: Request, res: Response) => {
             folioId: folio._id.toString(),
             bookingId: booking._id.toString(),
             lineType: FolioLineType.TAX_SGST,
-            description: `SGST on Stay Extension (${(extensionTaxRate / 2) * 100}%)`,
+            description: `SGST on Stay Extension (${extensionRatePct / 2}%)`,
             amount: tax.sgst,
             date: new Date(),
             postedBy: "SYSTEM_TAX",

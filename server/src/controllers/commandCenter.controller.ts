@@ -14,7 +14,7 @@ import { Complaint } from "../models/Complaint";
 import { Guest } from "../models/Guest";
 import { User } from "../models/User";
 void User.modelName;
-import { startOfDay, endOfDay, startOfMonth, addDays } from "date-fns";
+import { addDays as addBizDays, businessDayRange, businessMonthRange, todayBusinessDate, PROPERTY_TIMEZONE } from "@shared/dates";
 
 // Data scoping per section uses CAP.CC_* capabilities from config/permissions.ts.
 import { PermissionService } from "../services/PermissionService";
@@ -27,10 +27,13 @@ export const getCommandCenterData = async (req: Request, res: Response) => {
     const caps: Record<(typeof CC_CAPS)[number], boolean> = Object.fromEntries(
       await Promise.all(CC_CAPS.map(async (c) => [c, await PermissionService.can(req.user, `CAP.${c}`)] as const))
     ) as any;
-    const today = new Date();
-    const startToday = startOfDay(today);
-    const endToday = endOfDay(today);
-    const startMonth = startOfMonth(today);
+    // Day/month boundaries at the property (Asia/Kolkata), independent of the server timezone.
+    const todayYmd = todayBusinessDate();
+    const { start: startToday, end: endOfTodayExclusive } = businessDayRange(todayYmd);
+    const endToday = new Date(endOfTodayExclusive.getTime() - 1);
+    const startMonth = businessMonthRange(todayYmd).start;
+    const endOfBizDay = (offsetDays: number) => new Date(businessDayRange(addBizDays(todayYmd, offsetDays)).end.getTime() - 1);
+    const weekday = (ymd: string) => new Date(`${ymd}T12:00:00+05:30`).toLocaleDateString("en-US", { weekday: "short", timeZone: PROPERTY_TIMEZONE });
     
     const propertyId = (req.user as any)?.propertyId;
     const propertyFilter = propertyId ? { propertyId } : {};
@@ -238,7 +241,7 @@ export const getCommandCenterData = async (req: Request, res: Response) => {
     // ── 9. BANQUETS ──────────────────────────────────────────────────
     let banquets: any = null;
     if (caps.CC_FRONT_OFFICE) {
-      const today7days = addDays(today, 7);
+      const today7days = endOfBizDay(7);
       const [todayEventsList, upcomingEvents] = await Promise.all([
         BanquetBooking.find({
           ...propertyFilter,
@@ -278,8 +281,8 @@ export const getCommandCenterData = async (req: Request, res: Response) => {
     let revenueTrend: any = [];
     let bookingSources: any = [];
     if (caps.CC_FORECAST) {
-      const next7 = addDays(today, 7);
-      const past7 = addDays(today, -7);
+      const next7 = endOfBizDay(7);
+      const past7Start = businessDayRange(addBizDays(todayYmd, -7)).start;
 
       const upcomingBookings = await Booking.aggregate([
         {
@@ -291,7 +294,7 @@ export const getCommandCenterData = async (req: Request, res: Response) => {
         },
         {
           $group: {
-            _id: { $dateToString: { format: "%Y-%m-%d", date: "$checkInDate" } },
+            _id: { $dateToString: { format: "%Y-%m-%d", date: "$checkInDate", timezone: PROPERTY_TIMEZONE } },
             count: { $sum: 1 },
             revenue: { $sum: "$totalAmount" }
           }
@@ -303,13 +306,13 @@ export const getCommandCenterData = async (req: Request, res: Response) => {
         {
           $match: {
             ...propertyFilter,
-            createdAt: { $gte: startOfDay(past7), $lte: endToday },
+            createdAt: { $gte: past7Start, $lte: endToday },
             status: "COMPLETED"
           }
         },
         {
           $group: {
-            _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
+            _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt", timezone: PROPERTY_TIMEZONE } },
             revenue: { $sum: "$amount" }
           }
         },
@@ -318,24 +321,22 @@ export const getCommandCenterData = async (req: Request, res: Response) => {
 
       const sources = await Booking.aggregate([
         { $match: { ...propertyFilter, createdAt: { $gte: startMonth } } },
-        { $group: { _id: "$bookingSource", value: { $sum: 1 } } },
+        // Booking.source (OTA, WALK_IN, DIRECT_WEBSITE…); "$bookingSource" does not exist and grouped everything as Direct.
+        { $group: { _id: "$source", value: { $sum: 1 } } },
         { $project: { name: { $ifNull: ["$_id", "Direct"] }, value: 1, _id: 0 } },
         { $sort: { value: -1 } }
       ]);
 
-      bookingSources = sources.length > 0 ? sources : [
-        { name: "Direct Website", value: 45 },
-        { name: "Booking.com", value: 30 },
-        { name: "Walk-in", value: 25 }
-      ];
+      // Real data only: an empty month shows as empty, never as placeholder figures.
+      bookingSources = sources;
 
       // Merge past revenue and future expected revenue into a 7-day window array
       for (let i = 6; i >= 0; i--) {
-        const d = addDays(today, -i);
-        const dateStr = d.toISOString().split('T')[0];
-        const dayName = d.toLocaleDateString('en-US', { weekday: 'short' });
+        const dateStr = addBizDays(todayYmd, -i);
+        const dayName = weekday(dateStr);
         const actualRev = pastPayments.find((p: any) => p._id === dateStr)?.revenue || 0;
-        const expectedRev = upcomingBookings.find((p: any) => p._id === dateStr)?.revenue || (actualRev > 0 ? actualRev : Math.floor(Math.random() * 5000));
+        // No fabricated values: "expected" is the booked revenue for that date, else 0.
+        const expectedRev = upcomingBookings.find((p: any) => p._id === dateStr)?.revenue || 0;
         revenueTrend.push({
           name: dayName,
           revenue: actualRev,
@@ -345,9 +346,8 @@ export const getCommandCenterData = async (req: Request, res: Response) => {
 
       forecast = [];
       for (let i = 0; i < 7; i++) {
-        const d = addDays(today, i);
-        const dateStr = d.toISOString().split('T')[0];
-        const dayName = d.toLocaleDateString('en-US', { weekday: 'short' });
+        const dateStr = addBizDays(todayYmd, i);
+        const dayName = weekday(dateStr);
         const b = upcomingBookings.find((p: any) => p._id === dateStr);
         forecast.push({
           date: dayName,

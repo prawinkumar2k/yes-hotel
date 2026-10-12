@@ -10,6 +10,7 @@ import { NotificationType } from "../models/NotificationLog";
 import { sendNotification } from "../services/notification.service";
 import { createAuditLog } from "../services/audit.service";
 import mongoose from "mongoose";
+import { nights as countNights, toBusinessDate, todayBusinessDate } from "@shared/dates";
 
 // ─── Chatbot enquiry schema (public — strict, minimal) ─────────────────────
 const publicEnquirySchema = z.object({
@@ -73,8 +74,7 @@ const adminEnquirySchema = z.object({
 
 // ─── Generate enquiry number ───────────────────────────────────────────────
 async function generateEnquiryNumber(): Promise<string> {
-  const d = new Date();
-  const prefix = `ENQ-${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}`;
+  const prefix = `ENQ-${todayBusinessDate().slice(0, 7).replace("-", "")}`; // YYYYMM at the property
   const count = await BookingEnquiry.countDocuments({
     enquiryNumber: { $regex: `^${prefix}` },
   });
@@ -88,7 +88,7 @@ export const submitBookingEnquiry = async (req: Request, res: Response) => {
     return res.status(400).json({ success: false, message: "Please check the enquiry details", errors: parsed.error.issues });
   }
   try {
-    const calculatedNights = Math.max(1, Math.round((parsed.data.checkOut.getTime() - parsed.data.checkIn.getTime()) / (1000 * 60 * 60 * 24)));
+    const calculatedNights = Math.max(1, countNights(parsed.data.checkIn, parsed.data.checkOut));
     const nights = parsed.data.nights || calculatedNights;
 
     // Check for an existing open enquiry for this guest in the last 48 hours to update rather than flood duplicates
@@ -152,8 +152,8 @@ export const submitBookingEnquiry = async (req: Request, res: Response) => {
       `Guest: ${parsed.data.guestName}`,
       `Phone: ${parsed.data.phone}`,
       `Email: ${parsed.data.email || "Not provided"}`,
-      `Check-in: ${parsed.data.checkIn.toISOString().slice(0, 10)}`,
-      `Check-out: ${parsed.data.checkOut.toISOString().slice(0, 10)}`,
+      `Check-in: ${toBusinessDate(parsed.data.checkIn)}`,
+      `Check-out: ${toBusinessDate(parsed.data.checkOut)}`,
       `Nights: ${nights}`,
       `Guests: ${parsed.data.adults} adults, ${parsed.data.children} children`,
       `Rooms: ${parsed.data.rooms} × ${parsed.data.roomType}`,
@@ -265,7 +265,7 @@ export const createAdminEnquiry = async (req: Request, res: Response) => {
   }
   try {
     const enquiryNumber = await generateEnquiryNumber();
-    const nights = Math.ceil((parsed.data.checkOut.getTime() - parsed.data.checkIn.getTime()) / 86400000);
+    const nights = countNights(parsed.data.checkIn, parsed.data.checkOut);
 
     const enquiry = await BookingEnquiry.create({
       ...parsed.data,
@@ -307,7 +307,7 @@ export const updateBookingEnquiry = async (req: Request, res: Response) => {
       if (enquiry) {
         const checkIn = update.checkIn ? new Date(update.checkIn) : enquiry.checkIn;
         const checkOut = update.checkOut ? new Date(update.checkOut) : enquiry.checkOut;
-        update.nights = Math.ceil((checkOut.getTime() - checkIn.getTime()) / 86400000);
+        update.nights = countNights(checkIn, checkOut);
       }
     }
 

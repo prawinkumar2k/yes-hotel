@@ -4,6 +4,23 @@ All changes, fixes, hardened services, and architectural migrations are document
 
 ---
 
+## [Phase 1 · Step 2 — Foundations: business date, nights, tax] - 2026-10-13
+
+### Added
+- `shared/dates.ts`: business dates in Asia/Kolkata, one `nights()`; shared by server and client.
+- `server/src/services/tax.service.ts`: effective-dated GST slabs (ROOM by per-night value after discount, FOOD, SERVICE), CGST/SGST split, configurable through `HotelSettings.gstRules`.
+- `POST /api/bookings/quote` and `POST /api/pos/orders/quote`: read-only price quotes using the same functions as booking and order creation.
+- Migration dry runs (not applied): `scripts/migrations/2026-10-13-business-date-strings.mjs`, `scripts/migrations/2026-10-13-money-to-paise.mjs`.
+
+### Fixed
+- Day bucketing everywhere uses IST, not the server timezone or UTC.
+- Nights are calendar-date changes; YES-BKG-3010 shows 2 nights.
+- GST: ≤ ₹7,500/night is 5% (was 12%); the slab is chosen per night after discount (was the whole stay's total for online bookings); no client-side tax.
+- Dashboard: no random or placeholder figures; booking sources group by the real `source` field.
+- Coupon editor no longer shifts validity by 5h30 on each save.
+
+---
+
 ## [Phase 1 · Step 1b — Folio hotfix, property assignment, access rules N1–N5] - 2026-10-12
 
 ### Fixed

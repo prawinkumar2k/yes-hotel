@@ -6,7 +6,8 @@ import { useToast } from "@/components/ui/use-toast";
 import Navbar from "@/components/hotel/Navbar";
 import Footer from "@/components/hotel/Footer";
 import { GoldButton, OutlineButton } from "@/components/hotel/HotelButtons";
-import { format, differenceInDays } from "date-fns";
+import { format } from "date-fns";
+import { nights as countNights } from "@shared/dates";
 import { Loader2, ArrowLeft, Download, AlertTriangle, Calendar, User, CreditCard } from "lucide-react";
 
 async function apiFetch(url: string, token?: string, method = "GET", body?: any) {
@@ -70,7 +71,7 @@ export default function CustomerBookingDetails() {
   }
 
   const booking = data.data;
-  const nights = differenceInDays(new Date(booking.checkOutDate), new Date(booking.checkInDate));
+  const nights = countNights(booking.checkInDate, booking.checkOutDate);
   const isCancellable = ["PENDING", "CONFIRMED"].includes(booking.status);
 
   const getStatusColor = (status: string) => {

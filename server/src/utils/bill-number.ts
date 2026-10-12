@@ -1,6 +1,7 @@
 import { ClientSession } from "mongoose";
 import { Booking } from "../models/Booking";
 import { HotelSettings } from "../models/HotelSettings";
+import { todayBusinessDate } from "@shared/dates";
 
 /**
  * Generates a unique, sequential bill number for the Guest Registration Card.
@@ -8,7 +9,7 @@ import { HotelSettings } from "../models/HotelSettings";
  */
 export async function generateBillNumber(session?: ClientSession): Promise<string> {
   const prefix = "BILL";
-  const year = new Date().getFullYear();
+  const year = todayBusinessDate().slice(0, 4); // calendar year at the property
   const pattern = new RegExp(`^${prefix}-${year}-(\\d+)`);
 
   // Query highest existing billNumber for current year to avoid collisions

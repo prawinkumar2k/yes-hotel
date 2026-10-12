@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowUp, LoaderCircle, Minus, RotateCcw, X } from "lucide-react";
-import { differenceInCalendarDays, format, parseISO } from "date-fns";
+import { format, parseISO } from "date-fns";
+import { nights as countNights, addDays, todayBusinessDate } from "@shared/dates";
 import { checkRoomAvailability, type AvailableRoom } from "@/services/availabilityService";
 import { submitBookingEnquiry } from "@/services/bookingEnquiryService";
 import { getHotelInformation, hotelContact } from "@/services/chatService";
@@ -155,7 +156,7 @@ export default function ChatWindow({ onMinimize, onClose }: { onMinimize: () => 
   function handleDate(value: string) {
     if (step === "checkin") { setBooking((current) => ({ ...current, checkIn: value })); userSays(format(parseISO(value), "d MMMM yyyy")); say("Please select your check-out date."); setStep("checkout"); return; }
     if (value <= booking.checkIn) { say("Check-out must be after check-in. Please choose a later date."); return; }
-    const nights = differenceInCalendarDays(parseISO(value), parseISO(booking.checkIn));
+    const nights = countNights(booking.checkIn, value);
     setBooking((current) => ({ ...current, checkOut: value, nights })); userSays(format(parseISO(value), "d MMMM yyyy")); say("How many guests will be staying?"); setStep("guests");
   }
 
@@ -224,14 +225,10 @@ export default function ChatWindow({ onMinimize, onClose }: { onMinimize: () => 
 
     // Sync enquiry lead in the background as soon as contact details are gathered
     if (updated.guestName && updated.phone) {
-      const tomorrow = new Date();
-      tomorrow.setDate(tomorrow.getDate() + 1);
-      const dayAfter = new Date();
-      dayAfter.setDate(dayAfter.getDate() + 2);
       submitBookingEnquiry({
         ...updated,
-        checkIn: updated.checkIn || tomorrow.toISOString().slice(0, 10),
-        checkOut: updated.checkOut || dayAfter.toISOString().slice(0, 10),
+        checkIn: updated.checkIn || addDays(todayBusinessDate(), 1),
+        checkOut: updated.checkOut || addDays(todayBusinessDate(), 2),
         nights: updated.nights || 1,
         source: "CHATBOT",
         bookingStage: "CHATBOT_CONTACT_COLLECTED",

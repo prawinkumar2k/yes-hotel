@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 import { useToast } from "@/components/ui/use-toast";
 import { useState } from "react";
 import { Loader2, Plus, Edit, Trash2 } from "lucide-react";
+import { toBusinessDate } from "@shared/dates";
 
 export default function AdminPricing() {
   const { user } = useAuth();
@@ -103,8 +104,8 @@ export default function AdminPricing() {
         name: rule.name,
         roomCategory: rule.roomCategory._id,
         type: rule.type,
-        startDate: rule.startDate ? new Date(rule.startDate).toISOString().split('T')[0] : "",
-        endDate: rule.endDate ? new Date(rule.endDate).toISOString().split('T')[0] : "",
+        startDate: rule.startDate ? toBusinessDate(rule.startDate) : "",
+        endDate: rule.endDate ? toBusinessDate(rule.endDate) : "",
         price: rule.price,
         priority: rule.priority,
         isActive: rule.isActive,

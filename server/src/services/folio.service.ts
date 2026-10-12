@@ -4,59 +4,10 @@ import { Booking } from "../models/Booking";
 import { FolioLine, FolioLineType, FolioLineDirection, LINE_TYPE_DIRECTION } from "../models/FolioLine";
 import { HotelSettings } from "../models/HotelSettings";
 import { createAuditLog } from "./audit.service";
+import { computeRoomTax, loadGstRules } from "./tax.service";
 import type { Request } from "express";
+import { nights as countNights } from "@shared/dates";
 
-// ─────────────────────────────────────────────────────────────────────────────
-// GST CALCULATION
-// ─────────────────────────────────────────────────────────────────────────────
-
-export interface TaxBreakdown {
-  taxableAmount: number;
-  cgst: number;
-  sgst: number;
-  igst: number;
-  totalTax: number;
-  totalWithTax: number;
-}
-
-/**
- * Calculates CGST + SGST (or IGST for interstate) from a taxable amount.
- * Reads the current hotel tax configuration. Never trust client-sent tax.
- */
-export async function calculateTaxBreakdown(
-  taxableAmount: number,
-  opts: { interstate?: boolean } = {}
-): Promise<TaxBreakdown> {
-  const settings = await HotelSettings.findOne().sort({ updatedAt: -1 }).lean();
-  const cgstRate = settings?.cgstPercentage ?? 2.5;
-  const sgstRate = settings?.sgstPercentage ?? 2.5;
-  const igstRate = settings?.igstPercentage ?? 5;
-
-  const base = Math.max(0, taxableAmount);
-
-  if (opts.interstate) {
-    const igst = Math.round(base * igstRate) / 100;
-    return {
-      taxableAmount: base,
-      cgst: 0,
-      sgst: 0,
-      igst,
-      totalTax: igst,
-      totalWithTax: base + igst,
-    };
-  }
-
-  const cgst = Math.round(base * cgstRate) / 100;
-  const sgst = Math.round(base * sgstRate) / 100;
-  return {
-    taxableAmount: base,
-    cgst,
-    sgst,
-    igst: 0,
-    totalTax: cgst + sgst,
-    totalWithTax: base + cgst + sgst,
-  };
-}
 
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -493,7 +444,7 @@ export async function openFolioForBooking(
     if (!hasRoomCharge) {
       const checkIn = new Date(booking.checkInDate || Date.now());
       const checkOut = new Date(booking.checkOutDate || Date.now());
-      const nights = Math.max(1, Math.ceil((checkOut.getTime() - checkIn.getTime()) / 86_400_000));
+      const nights = Math.max(1, countNights(checkIn, checkOut));
       const rate = booking.ratePerNight || Math.round(((booking.totalAmount || 0) - (booking.taxAmount || 0)) / nights);
       const roomTotal = rate * nights;
       if (roomTotal > 0) {
@@ -517,7 +468,7 @@ export async function openFolioForBooking(
             { req: opts.req, session },
           );
         }
-        const tax = await calculateTaxBreakdown(roomTotal + extraBed);
+        const tax = computeRoomTax(await loadGstRules(), { checkIn, checkOut, nightlyValue: (roomTotal + extraBed) / nights });
         for (const [lineType, amount, label] of [
           [FolioLineType.TAX_CGST, tax.cgst, "CGST"],
           [FolioLineType.TAX_SGST, tax.sgst, "SGST"],

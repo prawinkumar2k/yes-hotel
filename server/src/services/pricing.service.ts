@@ -4,6 +4,8 @@
  * discount caps by role, dynamic surge on high occupancy, and Indian GST rate tiers)
  * are enforced server-side.
  */
+import { addDays, todayBusinessDate, type BusinessDate } from "@shared/dates";
+import { computeRoomTax, type GstRule } from "./tax.service";
 
 export interface DynamicPricingParams {
   basePrice: number;
@@ -12,6 +14,10 @@ export interface DynamicPricingParams {
   occupancyPct?: number; // 0 to 100
   requestedDiscountAmount?: number;
   userRole?: string; // "RECEPTIONIST", "MANAGER", "ADMIN", etc.
+  /** GST rules in force (taxService.rules()). */
+  gstRules: GstRule[];
+  /** First night of the stay; defaults to today at the property. Each night is taxed under the rule of its date. */
+  checkIn?: BusinessDate;
 }
 
 export interface DynamicPricingResult {
@@ -72,15 +78,18 @@ export function calculateDynamicBookingTotals(params: DynamicPricingParams): Dyn
 
   const taxableAmount = Math.max(0, grossRoomCharges - appliedDiscountAmount);
 
-  // Indian Hospitality GST Tiers:
-  // Nightly rate <= ₹7,500 -> 12% GST (6% CGST + 6% SGST)
-  // Nightly rate > ₹7,500 -> 18% GST (9% CGST + 9% SGST)
-  const taxRate = effectiveNightlyRate > 7500 ? 0.18 : 0.12;
-
-  const cgst = Math.round((taxableAmount * (taxRate / 2)) * 100) / 100;
-  const sgst = Math.round((taxableAmount * (taxRate / 2)) * 100) / 100;
-  const taxAmount = Math.round((cgst + sgst) * 100) / 100;
-  const totalAmount = Math.round((taxableAmount + taxAmount) * 100) / 100;
+  // GST via taxService: the slab is chosen by the value actually charged per
+  // night (after discount), and each night uses the rule in force on its date.
+  const checkIn = params.checkIn ?? todayBusinessDate();
+  const tax = computeRoomTax(params.gstRules, {
+    checkIn,
+    checkOut: addDays(checkIn, nights),
+    nightlyValue: taxableAmount / nights,
+  });
+  const taxRate = Math.max(...tax.lines.map((l) => l.rate)) / 100;
+  const { cgst, sgst } = tax;
+  const taxAmount = tax.tax;
+  const totalAmount = tax.total;
 
   return {
     nightlyRate: effectiveNightlyRate,
@@ -96,19 +105,3 @@ export function calculateDynamicBookingTotals(params: DynamicPricingParams): Dyn
   };
 }
 
-/**
- * Backward compatibility wrapper for legacy calculateBookingTotals
- */
-export function calculateBookingTotals(roomCharges: number, discountAmount: number): { taxableAmount: number; taxAmount: number; totalAmount: number } {
-  const res = calculateDynamicBookingTotals({
-    basePrice: roomCharges,
-    nights: 1,
-    requestedDiscountAmount: discountAmount,
-    userRole: "ADMIN",
-  });
-  return {
-    taxableAmount: res.taxableAmount,
-    taxAmount: res.taxAmount,
-    totalAmount: res.totalAmount,
-  };
-}

@@ -36,7 +36,8 @@ export interface IMenuItem extends Document {
   category: MenuItemCategory;
   description?: string;
   price: number;
-  taxRatePercent: number; // e.g. 5 for 5% restaurant GST — stored per-item so rates can differ by category later
+  /** @deprecated Not used for GST: restaurant GST comes from taxService (FOOD rule, Property Settings). */
+  taxRatePercent: number;
   foodType: FoodType;
   isAvailable: boolean; // 86'd today (kitchen out of stock) without disabling the item entirely
   isActive: boolean; // soft-delete — disabled items are hidden from POS but historical orders keep their snapshot

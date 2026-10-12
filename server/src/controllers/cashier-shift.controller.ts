@@ -11,6 +11,7 @@ import { Property } from "../models/Property";
 import { User, UserRole } from "../models/User";
 import { createAuditLog } from "../services/audit.service";
 import { AuthenticatedRequest } from "../middleware/propertyAuth";
+import { todayBusinessDate } from "@shared/dates";
 
 // ─── Helper: Compute denomination total authoritatively ────────────────────
 export function computeDenominationTotal(d?: Partial<IDenominationBreakdown>): number {
@@ -29,8 +30,7 @@ export function computeDenominationTotal(d?: Partial<IDenominationBreakdown>): n
 
 // ─── Helper: Generate unique concurrency-safe shift number ──────────────────
 async function generateShiftNumber(propertyId: mongoose.Types.ObjectId): Promise<string> {
-  const d = new Date();
-  const prefix = `SHF-${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}`;
+  const prefix = `SHF-${todayBusinessDate().slice(0, 7).replace("-", "")}`; // YYYYMM at the property
   const count = await CashierShift.countDocuments({
     propertyId,
     shiftNumber: { $regex: `^${prefix}` },

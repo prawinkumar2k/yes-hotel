@@ -420,6 +420,51 @@ API errors per role: only `night-audit/status` → 500 (H8).
 - HOUSEKEEPING at Housekeeping: `GET /staff` and `/room-rack` → 403, so the staff picker and rack are missing.
 - SUPERVISOR at Executive: report sub-calls → 403.
 
+### Step 2 — Foundations: business date, nights, tax
+
+| Issue | Root cause | Fix | Test |
+|---|---|---|---|
+| **B:** a ₹1,050 payment at 02:06 IST counted on the previous day; the shift `businessDate` was 11 Oct 19:47 UTC | Day boundaries came from `setHours` / date-fns (server-local timezone: IST on this machine, UTC in a container) or `toISOString()` (always UTC) in ~45 places | `shared/dates.ts`: the one implementation for the server and client. It provides `toBusinessDate`, `todayBusinessDate`, `businessDayRange`, `businessMonthRange`, `addDays`, `stayNights`… in Asia/Kolkata. All server day bucketing is replaced, including Mongo `$dateToString` / `$dateDiff`, which now pass `timezone`. The client date pickers' UTC defaults are replaced too (Day Summary and Cash Sheet used to open on *yesterday* before 05:30 IST) | `shared/dates.spec.ts`: 14 cases, including 02:06 IST → 12 Oct and the stored shift date → 12 Oct |
+| **F:** YES-BKG-3010 (12→14 Oct) shown as "1 Night(s)" | [AdminFrontDesk.tsx](client/pages/admin/AdminFrontDesk.tsx) rendered `numberOfNights \|\| 1`, a field no booking has. Elsewhere, 27 more independent calculations: 22 used `ceil`/`round` on milliseconds, 4 used date-fns `differenceInDays` (24-hour periods), and 1 Mongo aggregation summed fractional days | One `nights()` (calendar-date changes in IST), used at every site (server, client, and the reports aggregation via `$dateDiff`). Billing floors (`Math.max(1, …)`) kept where they existed | `nights` cases incl. YES-BKG-3010 = 2 and IST-vs-UTC edges |
+| **I:** GST computed in 8+ places with 5 rule sets; 12% slab outdated | Hardcoded rates per call site; `calculateTaxBreakdown` used a flat settings rate; online booking picked the slab from the **whole stay total** (`nights: 1`), so 3 × ₹3,500 was taxed at 18% | `server/src/services/tax.service.ts`: effective-dated slabs per category (ROOM by per-night value **after discount**, rule in force on each night's date: ≤ ₹7,500 → 5%, above → 18% from 22 Sep 2025; FOOD 5%; SERVICE 18%), always CGST + SGST. Configurable via `HotelSettings.gstRules` (validated; `GET /settings` returns `effectiveGstRules`). Every server site moved to it. The client computes no tax: the booking payment page uses the new `POST /api/bookings/quote` (same `priceStay()` as `createBooking`), POS uses `POST /api/pos/orders/quote` (same `priceOrder()` as `createPosOrder`), and walk-in registration renders the server's per-night tax | `tax.service.spec.ts` (13), the rewritten pricing invariants (incl. per-night slab, slab after discount) |
+
+**Grep proof** (excluding tests, `shared/dates.ts` and `tax.service.ts`):
+- **Nights:** no `86400000` / `1000*60*60*24` / `24*60*60*1000` / `differenceIn(Calendar)Days` / `numberOfNights` remain, except in the two files you asked me not to touch (`AdminBulkDocViewer.tsx`, `AdminFolioPrint.tsx`).
+- **GST:** no rate literals, slab thresholds or flat-rate settings remain, except the same two files (6%+6%).
+  - The deprecated `gstPercentage` / `taxRatePercent` fields are still accepted but not used for tax.
+  - `AdminMenu.tsx` (orphan page, step 6) still shows `taxRatePercent`.
+- **Day bucketing (server):** none remain. Excluded on purpose: the 30-day refresh-token TTLs (durations), `sitemap.xml` lastmod (UTC is correct there), and the seed scripts (rewritten in step 5).
+- **Day bucketing (client):** none remain except `AdminCalendar.tsx` cell logic (step F) and the two protected files.
+
+**Also fixed in passing, all inside approved scope (K / L):**
+- **Fabricated dashboard data:** the revenue trend's "expected" fell back to `Math.random() * 5000`, and Booking Sources fell back to a hard-coded 45/30/25 split. Both now show real data only.
+- **Booking Sources grouped by `$bookingSource`**, a field that doesn't exist, so everything appeared as "Direct". It now groups by `$source`.
+- **POS** took GST from a per-item rate. It now uses the FOOD rule; all 18 menu items were 5%, so totals are unchanged.
+- **The coupon editor** filled local-time inputs with UTC strings, shifting the validity window 5h30 on each save.
+- **Number prefixes** (enquiry, shift, bill, booking reference, advance) took year/month from server-local time.
+
+**Found, not changed (recorded for their steps):**
+- **Night audit:** check-in already posts the whole stay's tariff and the night audit posts it again every night (double charge), using the category base price instead of the booking rate.
+- **Monthly MIS / daily summary:** F&B is bucketed under a non-existent `POS_CHARGE` line type, so restaurant revenue always reads 0 (K).
+- **Advance and enquiry numbers** use `countDocuments() + 1`, which races under concurrency (C, atomic counters).
+- **Walk-in:** the quote subtracts the discount, but create doesn't (folio step).
+- **Property Settings loads empty (L):** the form uses uncontrolled inputs with `defaultValue`, applied before the async settings arrive.
+- **Command center:** `propertyId` is read from the JWT, so it's never set.
+- **Dashboard in-house:** counted by date window, so an overdue checkout drops out after midnight (step 3).
+
+**Verification:**
+- Tests: 212 pass, 1 pre-existing failure (night-audit concurrency, H8). `tsc` clean.
+- Per-role sweep `docs/verification/role-sweep-step-2.md`: 512 page loads = 390 🔒 · 120 ✅ · 2 ❌ (both `/admin/night-audit`, H8). API: the only real error is `night-audit/status` 500 (H8).
+- Consistency check `docs/consistency/step-2-foundations.md`: 1/5. The business date rolled to 13 Oct since step 1. Occupancy and dirty-room counts still disagree (step 3). The Dashboard now shows 1 in-house vs 2 elsewhere: overdue WALKIN-1011-002 drops out of the Dashboard’s date-window definition after midnight (step 3).
+- Dev server note: the usual :8080 server stopped responding overnight. Checks ran against this branch on :8095.
+
+**Data migrations prepared (dry run only, awaiting approval):**
+- `docs/migrations/business-date-dry-run.md`:
+  - 310 documents get a `YYYY-MM-DD` `businessDate`: 3 Date fields converted, and payments, refunds, advances, adjustments, POS orders, ancillary, HK tasks and maintenance tickets backfilled.
+  - 11 of them sit on a different day under UTC bucketing.
+  - None of the 226 folio lines had a `businessDate`.
+- `docs/migrations/money-to-paise-dry-run.md`: 1,413 values in 460 documents across 25 collections; 0 carry float drift.
+
 ---
 
 ## Appendix A — All mounted endpoints (243)

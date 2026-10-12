@@ -6,6 +6,7 @@ import { useAuth } from "../../context/AuthContext";
 import { useToast } from "@/components/ui/use-toast";
 import { format } from "date-fns";
 import { ChevronRight, ShieldCheck, Loader2, AlertCircle } from "lucide-react";
+import { nights as countNights } from "@shared/dates";
 
 // Declare Razorpay global type
 declare global {
@@ -42,15 +43,45 @@ export default function PaymentPage() {
   const [appliedCoupon, setAppliedCoupon] = useState<{ code: string; discount: number } | null>(null);
 
   const nights = bookingData && categoryData
-    ? Math.ceil((new Date(bookingData.checkOut).getTime() - new Date(bookingData.checkIn).getTime()) / (1000 * 60 * 60 * 24))
+    ? countNights(new Date(bookingData.checkIn), new Date(bookingData.checkOut))
     : 0;
-  const roomCharges = categoryData ? categoryData.basePrice * nights : 0;
-  // This preview mirrors the backend's GST-after-discount calculation; the server
-  // recalculates it authoritatively when the booking is created — this is a display hint only.
-  const previewDiscount = appliedCoupon?.discount ?? 0;
-  const taxableAmount = Math.max(roomCharges - previewDiscount, 0);
-  const taxAmount = Math.round(taxableAmount * 0.18);
-  const totalAmount = taxableAmount + taxAmount;
+  // Price shown = the server's quote (POST /api/bookings/quote), the same calculation
+  // createBooking charges: no tax is computed in the browser.
+  const [quote, setQuote] = useState<{
+    roomCharges: number; discountAmount: number; cgst: number; sgst: number; taxAmount: number; totalAmount: number;
+    taxLines: Array<{ rate: number }>;
+  } | null>(null);
+  const [quoteError, setQuoteError] = useState<string | null>(null);
+  useEffect(() => {
+    if (!bookingData?.category || !bookingData.checkIn || !bookingData.checkOut) return;
+    let cancelled = false;
+    setQuoteError(null);
+    fetch("/api/bookings/quote", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        roomCategoryId: bookingData.category,
+        checkIn: bookingData.checkIn,
+        checkOut: bookingData.checkOut,
+        couponCode: appliedCoupon?.code,
+        guestEmail: bookingData.guestDetails?.email,
+      }),
+    })
+      .then((r) => r.json())
+      .then((json) => {
+        if (cancelled) return;
+        if (json.success) setQuote(json.data);
+        else setQuoteError(json.message || "Could not price this stay");
+      })
+      .catch(() => !cancelled && setQuoteError("Could not price this stay"));
+    return () => { cancelled = true; };
+  }, [bookingData?.category, bookingData?.checkIn, bookingData?.checkOut, appliedCoupon?.code]);
+  const roomCharges = quote?.roomCharges ?? 0;
+  const previewDiscount = quote?.discountAmount ?? 0;
+  const taxAmount = quote?.taxAmount ?? 0;
+  const totalAmount = quote?.totalAmount ?? 0;
+  const gstRates = [...new Set((quote?.taxLines ?? []).map((l) => l.rate))].join("% / ");
+  const inr = (n: number) => `₹${n.toLocaleString("en-IN")}`;
 
   const handleApplyCoupon = async () => {
     if (!couponInput.trim() || !bookingData) return;
@@ -342,9 +373,10 @@ export default function PaymentPage() {
                   </div>
                 )}
                 <div className="flex justify-between">
-                  <span>GST (18%)</span>
+                  <span>GST{gstRates && quote ? ` (${gstRates}%: CGST ${inr(quote.cgst)} + SGST ${inr(quote.sgst)})` : ""}</span>
                   <span>₹{taxAmount.toLocaleString("en-IN")}</span>
                 </div>
+                {quoteError && <p className="text-red-400 text-xs">{quoteError}</p>}
               </div>
 
               <div className="flex justify-between items-end border-t border-hotel-white/10 pt-6">

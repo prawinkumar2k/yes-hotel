@@ -13,6 +13,34 @@ import { MaintenanceTicket, MaintenanceStatus } from "../models/MaintenanceTicke
 
 import { CorporateAccount } from "../models/CorporateAccount";
 import { CashierShift } from "../models/CashierShift";
+import {
+  addDays,
+  businessDayRange,
+  businessMonthRange,
+  daysBetween,
+  endOfBusinessMonth,
+  isBusinessDate,
+  nights as countNights,
+  PROPERTY_TIMEZONE,
+  startOfBusinessMonth,
+  startOfBusinessWeek,
+  stayNights,
+  toBusinessDate,
+  todayBusinessDate,
+} from "@shared/dates";
+
+/** [start, endInclusive] of a business date at the property, for $gte/$lte queries. */
+function dayBounds(ymd: string) {
+  const r = businessDayRange(ymd);
+  return { start: r.start, end: new Date(r.end.getTime() - 1) };
+}
+/** A ?date-style query value as a business date (YYYY-MM-DD), or the fallback. */
+function ymdParam(value: unknown, fallback: string = todayBusinessDate()): string {
+  if (isBusinessDate(value)) return value;
+  return value ? toBusinessDate(String(value)) : fallback;
+}
+/** Day of month (1-31) of an instant at the property. */
+const bizDayOfMonth = (d: Date | string) => Number(toBusinessDate(d).slice(8, 10));
 
 /**
  * GET /api/admin/reports/overview?dateFrom&dateTo
@@ -32,15 +60,14 @@ import { CashierShift } from "../models/CashierShift";
  */
 export const getReportsOverview = async (req: Request, res: Response) => {
   try {
-    const now = new Date();
-    const from = req.query.dateFrom ? new Date(req.query.dateFrom as string) : new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-    const to = req.query.dateTo ? new Date(req.query.dateTo as string) : now;
-    // Make `to` inclusive of the whole day.
-    const toInclusive = new Date(to);
-    toInclusive.setHours(23, 59, 59, 999);
+    // Business dates at the property; `to` is inclusive of its whole day.
+    const toYmd = ymdParam(req.query.dateTo);
+    const fromYmd = ymdParam(req.query.dateFrom, addDays(toYmd, -30));
+    const from = dayBounds(fromYmd).start;
+    const toInclusive = dayBounds(toYmd).end;
 
     const rangeMatch = { checkInDate: { $gte: from, $lte: toInclusive } };
-    const daysInRange = Math.max(1, Math.ceil((toInclusive.getTime() - from.getTime()) / (24 * 60 * 60 * 1000)));
+    const daysInRange = Math.max(1, daysBetween(fromYmd, toYmd) + 1);
 
     const [totalRooms, summaryAgg, categoryPerformanceRaw] = await Promise.all([
       Room.countDocuments(),
@@ -57,7 +84,8 @@ export const getReportsOverview = async (req: Request, res: Response) => {
               $sum: {
                 $cond: [
                   { $ne: ["$status", BookingStatus.CANCELLED] },
-                  { $divide: [{ $subtract: ["$checkOutDate", "$checkInDate"] }, 1000 * 60 * 60 * 24] },
+                  // Same rule as shared nights(): calendar-date changes at the property, not 24h periods.
+                  { $dateDiff: { startDate: "$checkInDate", endDate: "$checkOutDate", unit: "day", timezone: PROPERTY_TIMEZONE } },
                   0,
                 ],
               },
@@ -280,14 +308,14 @@ export const getAdvanceReport = async (_req: Request, res: Response) => {
 export const getRevenueTrend = async (req: Request, res: Response) => {
   try {
     const days = parseInt((req.query.days as string) || "30");
-    const since = new Date();
-    since.setDate(since.getDate() - days);
+    const todayYmd = todayBusinessDate();
+    const since = dayBounds(addDays(todayYmd, -(days - 1))).start;
 
     const pipeline: any[] = [
       { $match: { direction: FolioLineDirection.DEBIT, createdAt: { $gte: since } } },
       {
         $group: {
-          _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
+          _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt", timezone: PROPERTY_TIMEZONE } },
           revenue: { $sum: "$amount" },
           transactions: { $sum: 1 },
         },
@@ -302,10 +330,9 @@ export const getRevenueTrend = async (req: Request, res: Response) => {
     for (const r of rows) map[r._id] = { revenue: Math.round(r.revenue), transactions: r.transactions };
 
     const trend: { date: string; revenue: number; transactions: number }[] = [];
+    // Continuous series of business dates (no gaps, no future dates).
     for (let i = days - 1; i >= 0; i--) {
-      const d = new Date();
-      d.setDate(d.getDate() - i);
-      const key = d.toISOString().slice(0, 10);
+      const key = addDays(todayYmd, -i);
       trend.push({ date: key, ...(map[key] || { revenue: 0, transactions: 0 }) });
     }
 
@@ -375,8 +402,7 @@ export const getDepartmentPL = async (req: Request, res: Response) => {
 export const getOccupancyHeatmap = async (_req: Request, res: Response) => {
   try {
     const totalRooms = await Room.countDocuments();
-    const since = new Date();
-    since.setDate(since.getDate() - 30);
+    const since = dayBounds(addDays(todayBusinessDate(), -30)).start;
 
     const bookings = await Booking.find({
       status: { $in: [BookingStatus.CHECKED_IN, BookingStatus.CHECKED_OUT] },
@@ -385,10 +411,8 @@ export const getOccupancyHeatmap = async (_req: Request, res: Response) => {
 
     const map: Record<string, number> = {};
     for (const b of bookings) {
-      const checkin = new Date(b.checkInDate);
-      const checkout = new Date(b.checkOutDate);
-      for (let d = new Date(checkin); d < checkout; d.setDate(d.getDate() + 1)) {
-        const key = d.toISOString().slice(0, 10);
+      // One room-night per business date of the stay.
+      for (const key of stayNights(b.checkInDate, b.checkOutDate)) {
         map[key] = (map[key] || 0) + 1;
       }
     }
@@ -411,9 +435,9 @@ export const getOccupancyHeatmap = async (_req: Request, res: Response) => {
  */
 export const getExecutiveSummary = async (_req: Request, res: Response) => {
   try {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+    const todayYmd = todayBusinessDate();
+    const today = dayBounds(todayYmd).start;
+    const monthStart = businessMonthRange(todayYmd).start;
 
     const [
       totalRooms,
@@ -475,12 +499,7 @@ export const getExecutiveSummary = async (_req: Request, res: Response) => {
 export const getInHouseList = async (req: Request, res: Response) => {
   try {
     const dateParam = req.query.date as string;
-    const targetDate = dateParam ? new Date(dateParam) : new Date();
-
-    const startOfDay = new Date(targetDate);
-    startOfDay.setHours(0, 0, 0, 0);
-    const endOfDay = new Date(targetDate);
-    endOfDay.setHours(23, 59, 59, 999);
+    const { start: startOfDay, end: endOfDay } = dayBounds(ymdParam(dateParam));
 
     // Active in-house stays + any guests who checked out today or were in-house today.
     // Once entered in the physical logbook, entries are NEVER deleted upon checkout!
@@ -578,7 +597,7 @@ export const getInHouseList = async (req: Request, res: Response) => {
         // Calculate nights
         const checkIn = booking.checkInDate ? new Date(booking.checkInDate) : new Date();
         const checkOut = booking.checkOutDate ? new Date(booking.checkOutDate) : new Date();
-        const nights = Math.max(1, Math.round((checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24)) || 1);
+        const nights = Math.max(1, countNights(checkIn, checkOut) || 1);
 
         // Tariff = Base Room Charge per night
         const tariff = booking.ratePerNight ?? (nights > 0 ? Math.round((booking.totalAmount || 0) / nights) : 0);
@@ -634,11 +653,9 @@ export const getInHouseList = async (req: Request, res: Response) => {
 export const getDaySummary = async (req: Request, res: Response) => {
   try {
     // Support ?date=YYYY-MM-DD param (default: today)
-    const targetDate = req.query.date ? new Date(req.query.date as string) : new Date();
-    const dayStart = new Date(targetDate);
-    dayStart.setHours(0, 0, 0, 0);
-    const dayEnd = new Date(targetDate);
-    dayEnd.setHours(23, 59, 59, 999);
+    const targetYmd = ymdParam(req.query.date);
+    const targetDate = dayBounds(targetYmd).start;
+    const { start: dayStart, end: dayEnd } = dayBounds(targetYmd);
     // A date-range condition only; property scoping is propertyMatch below (putting
     // propertyId inside this operator object made Mongo reject the query).
     const dayQuery: any = { $gte: dayStart, $lte: dayEnd };
@@ -779,23 +796,24 @@ export const getDaySummary = async (req: Request, res: Response) => {
  */
 export const getMonthlyMIS = async (req: Request, res: Response) => {
   try {
-    const month = req.query.month ? String(req.query.month) : new Date().toISOString().substring(0, 7);
+    const month = /^\d{4}-\d{2}$/.test(String(req.query.month)) ? String(req.query.month) : todayBusinessDate().slice(0, 7);
     const [year, m] = month.split('-');
-    
-    // Create dates in local time roughly
-    const startOfMonth = new Date(parseInt(year), parseInt(m) - 1, 1);
-    const endOfMonth = new Date(parseInt(year), parseInt(m), 0, 23, 59, 59, 999);
-    
-    const daysInMonth = endOfMonth.getDate();
+
+    // Month boundaries at the property (Asia/Kolkata).
+    const monthRange = businessMonthRange(month);
+    const startOfMonth = monthRange.start;
+    const endOfMonth = new Date(monthRange.end.getTime() - 1);
+
+    const daysInMonth = Number(endOfBusinessMonth(`${month}-01`).slice(8, 10));
     const query = { createdAt: { $gte: startOfMonth, $lte: endOfMonth } };
 
     // Grouping by day mapping
     const dailyData: Record<number, any> = {};
     for (let i = 1; i <= daysInMonth; i++) {
-      const d = new Date(parseInt(year), parseInt(m) - 1, i);
+      const ymd = `${month}-${String(i).padStart(2, "0")}`;
       dailyData[i] = {
-        date: d.toISOString(),
-        day: d.toLocaleDateString("en-US", { weekday: "short" }),
+        date: ymd, // business date (YYYY-MM-DD)
+        day: new Date(`${ymd}T12:00:00+05:30`).toLocaleDateString("en-US", { weekday: "short", timeZone: PROPERTY_TIMEZONE }),
         cash: 0,
         card: 0,
         upi: 0,
@@ -818,7 +836,7 @@ export const getMonthlyMIS = async (req: Request, res: Response) => {
     const payments = await Payment.find(query).populate("booking");
     payments.forEach(p => {
       const anyP = p as any;
-      const day = new Date(anyP.createdAt).getDate();
+      const day = bizDayOfMonth(anyP.createdAt);
       const amount = p.amount;
       
       const method = (p.method || "").toUpperCase();
@@ -844,7 +862,7 @@ export const getMonthlyMIS = async (req: Request, res: Response) => {
 
     const advances = await AdvancePayment.find({ receivedAt: { $gte: startOfMonth, $lte: endOfMonth } });
     advances.forEach(a => {
-      const day = new Date(a.receivedAt).getDate();
+      const day = bizDayOfMonth(a.receivedAt);
       const amt = a.amount;
       const adj = a.totalAdjusted || 0;
       dailyData[day].advances += amt;
@@ -855,7 +873,7 @@ export const getMonthlyMIS = async (req: Request, res: Response) => {
     const folios = await FolioLine.find({ ...query, direction: FolioLineDirection.DEBIT });
     folios.forEach(f => {
       const anyF = f as any;
-      const day = new Date(anyF.createdAt).getDate();
+      const day = bizDayOfMonth(anyF.createdAt);
       if (anyF.lineType === "ROOM_CHARGE") dailyData[day].salesRoom += f.amount;
       else if (anyF.lineType === "POS_CHARGE") dailyData[day].salesFb += f.amount;
     });
@@ -882,37 +900,29 @@ export const getDynamicReport = async (req: Request, res: Response) => {
     const { reportId } = req.params;
     const range = req.query.range as string || "today";
     
-    // Set date bounds
+    // Date bounds as business dates at the property (Asia/Kolkata), inclusive.
     const now = new Date();
-    let startDate = new Date();
-    startDate.setHours(0, 0, 0, 0);
-    let endDate = new Date();
-    endDate.setHours(23, 59, 59, 999);
-    
+    const todayYmd = todayBusinessDate();
+    let fromYmd = todayYmd;
+    let toYmd = todayYmd;
+    if (range === "yesterday") {
+      fromYmd = toYmd = addDays(todayYmd, -1);
+    } else if (range === "this-week") {
+      fromYmd = startOfBusinessWeek(todayYmd);
+    } else if (range === "this-month") {
+      fromYmd = startOfBusinessMonth(todayYmd);
+    } else if (range === "last-month") {
+      fromYmd = startOfBusinessMonth(addDays(startOfBusinessMonth(todayYmd), -1));
+      toYmd = endOfBusinessMonth(fromYmd);
+    }
+    const startDate = dayBounds(fromYmd).start;
+    const endDate = dayBounds(toYmd).end;
+
     let dateQuery: any = { $gte: startDate, $lte: endDate };
     let createdAtQuery: any = { createdAt: dateQuery };
-
     if (range === "all-time") {
       dateQuery = {};
       createdAtQuery = {};
-    } else if (range === "yesterday") {
-      startDate.setDate(startDate.getDate() - 1);
-      endDate.setDate(endDate.getDate() - 1);
-      dateQuery = { $gte: startDate, $lte: endDate };
-      createdAtQuery = { createdAt: dateQuery };
-    } else if (range === "this-week") {
-      startDate.setDate(startDate.getDate() - startDate.getDay());
-      dateQuery = { $gte: startDate, $lte: endDate };
-      createdAtQuery = { createdAt: dateQuery };
-    } else if (range === "this-month") {
-      startDate.setDate(1);
-      dateQuery = { $gte: startDate, $lte: endDate };
-      createdAtQuery = { createdAt: dateQuery };
-    } else if (range === "last-month") {
-      startDate.setMonth(startDate.getMonth() - 1, 1);
-      endDate.setMonth(endDate.getMonth(), 0);
-      dateQuery = { $gte: startDate, $lte: endDate };
-      createdAtQuery = { createdAt: dateQuery };
     }
 
     let kpis = {};

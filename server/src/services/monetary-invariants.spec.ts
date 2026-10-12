@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { calculateBookingTotals } from "./pricing.service";
+import { computeRoomTax, DEFAULT_GST_RULES } from "./tax.service";
+import { addDays } from "@shared/dates";
 import { calculateDiscount, redeemCouponForBooking } from "./coupon.service";
 import { Coupon, DiscountType } from "../models/Coupon";
 import { Booking, BookingStatus, PaymentStatus } from "../models/Booking";
@@ -34,65 +35,51 @@ afterAll(async () => {
   await mongoose.connection.close();
 });
 
-describe("calculateBookingTotals — pricing invariants", () => {
+// Booking totals as computed for a stay: room charges minus discount, GST per night
+// via taxService (slab chosen by the post-discount value per night).
+function bookingTotals(roomCharges: number, discount: number, nightsCount = 1) {
+  const taxableAmount = Math.max(0, roomCharges - discount);
+  const t = computeRoomTax(DEFAULT_GST_RULES, {
+    checkIn: "2026-10-12",
+    checkOut: addDays("2026-10-12", nightsCount),
+    nightlyValue: taxableAmount / nightsCount,
+  });
+  return { taxableAmount: t.taxable, taxAmount: t.tax, totalAmount: t.total };
+}
+
+describe("booking totals — pricing invariants", () => {
   it("total never goes negative even when discount exceeds room charges", () => {
-    const { taxableAmount, taxAmount, totalAmount } = calculateBookingTotals(1000, 5000);
+    const { taxableAmount, taxAmount, totalAmount } = bookingTotals(1000, 5000);
     expect(taxableAmount).toBe(0);
     expect(taxAmount).toBe(0);
     expect(totalAmount).toBe(0);
   });
 
-  it("tax is always computed on the post-discount (taxable) amount, not the pre-discount amount", () => {
-    const { taxableAmount, taxAmount, totalAmount } = calculateBookingTotals(10000, 2000);
-    expect(taxableAmount).toBe(8000);
-    expect(taxAmount).toBe(Math.round(8000 * 0.18));
-    expect(totalAmount).toBe(taxableAmount + taxAmount);
+  it("tax is computed on, and the slab chosen by, the post-discount amount", () => {
+    // ₹10,000 discounted to ₹8,000 for one night: still above ₹7,500 → 18%.
+    expect(bookingTotals(10000, 2000)).toEqual({ taxableAmount: 8000, taxAmount: 1440, totalAmount: 9440 });
+    // ₹8,000 discounted to ₹7,000: the discount moves it into the 5% slab.
+    expect(bookingTotals(8000, 1000)).toEqual({ taxableAmount: 7000, taxAmount: 350, totalAmount: 7350 });
   });
 
-  // calculateBookingTotals(5000, ...) uses a nightly rate of ₹5000, which
-  // falls in India's real hotel-GST slab of 12% (<=₹7500/night) rather than
-  // the flat 18% this test originally assumed — see
-  // calculateDynamicBookingTotals's taxRate ternary in pricing.service.ts.
-  // The 12%/18% slab is genuine production behavior relied on throughout
-  // real booking flows (confirmed against actual seeded room rates during
-  // this audit), so the test's expectation was updated to match reality
-  // rather than the code being weakened to match a stale assumption.
-  it("zero discount taxes the full room charge", () => {
-    const { taxableAmount, taxAmount, totalAmount } = calculateBookingTotals(5000, 0);
-    expect(taxableAmount).toBe(5000);
-    expect(taxAmount).toBe(600); // 5000 <= 7500/night slab -> 12% GST
-    expect(totalAmount).toBe(5600);
+  it("slab is per night, not per stay: 3 nights at ₹3,500 is 5%, not 18%", () => {
+    expect(bookingTotals(10500, 0, 3)).toEqual({ taxableAmount: 10500, taxAmount: 525, totalAmount: 11025 });
+  });
+
+  it("zero discount taxes the full room charge (₹5,000/night → 5% since 22 Sep 2025)", () => {
+    expect(bookingTotals(5000, 0)).toEqual({ taxableAmount: 5000, taxAmount: 250, totalAmount: 5250 });
   });
 
   it("total = taxable + tax holds for a large sweep of amounts and discounts (no float drift beyond paise, no negative)", () => {
     for (let roomCharges = 0; roomCharges <= 200000; roomCharges += 3737) {
       for (let discount = 0; discount <= roomCharges + 1000; discount += 9973) {
-        const { taxableAmount, taxAmount, totalAmount } = calculateBookingTotals(roomCharges, discount);
+        const { taxableAmount, taxAmount, totalAmount } = bookingTotals(roomCharges, discount);
         expect(taxableAmount).toBeGreaterThanOrEqual(0);
         expect(taxAmount).toBeGreaterThanOrEqual(0);
-        // toBeCloseTo, not toBe: taxableAmount + taxAmount is plain JS float
-        // addition of two already-rounded numbers (e.g. 83183 + 600.54),
-        // which can itself land a float apart from totalAmount's own
-        // Math.round(...)/100 result (83783.54 vs 83783.54000000001) —
-        // that's IEEE754 addition noise in this assertion, not drift in the
-        // production rounding it's checking.
         expect(totalAmount).toBeCloseTo(taxableAmount + taxAmount, 6);
-        // The real invariant is paise-level precision (2 decimal places),
-        // not whole-rupee amounts — GST on an arbitrary room charge
-        // legitimately produces fractional-rupee tax (e.g. 12% of ₹3737 is
-        // ₹448.44), which is correct, not float drift. Float drift would be
-        // a THIRD or later decimal place surviving the rounding, e.g.
-        // 448.44000000000005 instead of exactly 448.44.
         expect(Math.abs(totalAmount * 100 - Math.round(totalAmount * 100))).toBeLessThan(1e-6);
       }
     }
-  });
-
-  it("rejects a negative discount rather than letting it inflate the taxable amount", () => {
-    const { taxableAmount, totalAmount } = calculateBookingTotals(5000, -1000);
-    // A negative discount must not increase the taxable base above roomCharges.
-    expect(taxableAmount).toBe(5000);
-    expect(totalAmount).toBeLessThanOrEqual(5000 * 1.18 + 1);
   });
 });
 

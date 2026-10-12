@@ -209,11 +209,11 @@ export default function AdminCoupons() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium">Start Date</label>
-                <Input name="startDate" type="datetime-local" required defaultValue={editingCoupon?.startDate ? new Date(editingCoupon.startDate).toISOString().slice(0,16) : ""} />
+                <Input name="startDate" type="datetime-local" required defaultValue={editingCoupon?.startDate ? format(new Date(editingCoupon.startDate), "yyyy-MM-dd'T'HH:mm") : ""} />
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium">Expiry Date</label>
-                <Input name="expiryDate" type="datetime-local" required defaultValue={editingCoupon?.expiryDate ? new Date(editingCoupon.expiryDate).toISOString().slice(0,16) : ""} />
+                <Input name="expiryDate" type="datetime-local" required defaultValue={editingCoupon?.expiryDate ? format(new Date(editingCoupon.expiryDate), "yyyy-MM-dd'T'HH:mm") : ""} />
               </div>
             </div>
 

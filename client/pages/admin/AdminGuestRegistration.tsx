@@ -9,6 +9,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { getStoredAuthToken } from "../../lib/authStorage";
 import { cn } from "@/lib/utils";
+import { addDays, todayBusinessDate, toBusinessDate } from "@shared/dates";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // TYPES
@@ -85,8 +86,8 @@ export default function AdminGuestRegistration() {
 
   // ROOM SELECTION STEP
   const [roomSearch, setRoomSearch] = useState({
-    checkIn: new Date().toISOString().split("T")[0],
-    checkOut: new Date(Date.now() + 86400000).toISOString().split("T")[0],
+    checkIn: todayBusinessDate(),
+    checkOut: addDays(todayBusinessDate(), 1),
     adults: "1",
     children: "0",
     bookingType: "NIGHTLY" as "NIGHTLY" | "HOURLY",
@@ -239,8 +240,8 @@ export default function AdminGuestRegistration() {
     });
     setRoomSearch({
       ...roomSearch,
-      checkIn: new Date(booking.checkInDate).toISOString().split("T")[0],
-      checkOut: new Date(booking.checkOutDate).toISOString().split("T")[0],
+      checkIn: toBusinessDate(booking.checkInDate),
+      checkOut: toBusinessDate(booking.checkOutDate),
       adults: String(booking.adults || 1),
       children: String(booking.children || 0),
     });
@@ -886,9 +887,8 @@ export default function AdminGuestRegistration() {
           const dailyTariff = Math.round(rateBreakdown.roomCharges / nights);
           const dailyExtraBed = Math.round((rateBreakdown.extraBedTotal || 0) / nights);
           const dailyTaxable = dailyTariff + dailyExtraBed;
-          const dailyCgst = Math.round(dailyTaxable * 0.06 * 100) / 100;
-          const dailySgst = Math.round(dailyTaxable * 0.06 * 100) / 100;
-          const dailyTotal = dailyTaxable + dailyCgst + dailySgst;
+          // Per-night GST comes from the server quote (taxService), never a client-side rate.
+          const nightTax = (i: number) => rateBreakdown.dailyTax?.[i] ?? { cgst: 0, sgst: 0 };
 
           const advanceAmountNum = Number(billingDetails.advanceAmount) || 0;
           const netPayable = Math.max(0, rateBreakdown.totalAmount - advanceAmountNum);
@@ -903,9 +903,9 @@ export default function AdminGuestRegistration() {
               tariff: dailyTariff,
               extraBed: dailyExtraBed,
               taxable: dailyTaxable,
-              cgst: dailyCgst,
-              sgst: dailySgst,
-              total: dailyTotal,
+              cgst: nightTax(i).cgst,
+              sgst: nightTax(i).sgst,
+              total: dailyTaxable + nightTax(i).cgst + nightTax(i).sgst,
             });
           }
 
@@ -1374,9 +1374,8 @@ export default function AdminGuestRegistration() {
           const dailyTariff = Math.round((rateBreakdown?.roomCharges || 0) / nights);
           const dailyExtraBed = Math.round(((rateBreakdown?.extraBedTotal || 0)) / nights);
           const dailyTaxable = dailyTariff + dailyExtraBed;
-          const dailyCgst = Math.round(dailyTaxable * 0.06 * 100) / 100;
-          const dailySgst = Math.round(dailyTaxable * 0.06 * 100) / 100;
-          const dailyTotal = dailyTaxable + dailyCgst + dailySgst;
+          // Per-night GST comes from the server quote (taxService), never a client-side rate.
+          const nightTax = (i: number) => rateBreakdown?.dailyTax?.[i] ?? { cgst: 0, sgst: 0 };
 
           const advanceAmountNum = Number(billingDetails.advanceAmount) || 0;
           const totalInvoiceValue = rateBreakdown?.totalAmount || 0;
@@ -1392,9 +1391,9 @@ export default function AdminGuestRegistration() {
               tariff: dailyTariff,
               extraBed: dailyExtraBed,
               taxable: dailyTaxable,
-              cgst: dailyCgst,
-              sgst: dailySgst,
-              total: dailyTotal,
+              cgst: nightTax(i).cgst,
+              sgst: nightTax(i).sgst,
+              total: dailyTaxable + nightTax(i).cgst + nightTax(i).sgst,
             });
           }
 

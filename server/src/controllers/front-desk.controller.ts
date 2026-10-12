@@ -6,6 +6,7 @@ import { MaintenanceTicket, MaintenanceStatus } from "../models/MaintenanceTicke
 import { AdvancePayment, AdvancePaymentStatus } from "../models/AdvancePayment";
 import { HotelSettings } from "../models/HotelSettings";
 import { BusinessDate, BusinessDateState } from "../models/BusinessDate";
+import { businessDayRange, todayBusinessDate, addDays } from "@shared/dates";
 
 /**
  * GET /api/admin/front-desk/summary
@@ -27,12 +28,9 @@ export const getFrontDeskSummary = async (req: Request, res: Response) => {
     const checkInTime = settings?.checkInTime ?? "14:00";
     const checkOutTime = settings?.checkOutTime ?? "11:00";
 
-    // Build today's date range
-    const today = new Date();
-    const todayStart = new Date(today);
-    todayStart.setHours(0, 0, 0, 0);
-    const todayEnd = new Date(today);
-    todayEnd.setHours(23, 59, 59, 999);
+    // Today at the property (Asia/Kolkata), independent of the server timezone.
+    const { start: todayStart, end: todayEndExclusive } = businessDayRange(todayBusinessDate());
+    const todayEnd = new Date(todayEndExclusive.getTime() - 1);
 
     // Current business date
     const businessDate = await BusinessDate.findOne({ isCurrentDate: true }).lean();
@@ -75,7 +73,7 @@ export const getFrontDeskSummary = async (req: Request, res: Response) => {
       Booking.find({ status: BookingStatus.CHECKED_IN })
         .populate("assignedRoom", "roomNumber floor")
         .populate("roomCategory", "name")
-        .select("bookingReference groupId billNumber guestDetails checkInDate checkOutDate assignedRoom roomCategory paymentStatus paidAmount totalAmount ratePerNight isVipGuest source numberOfNights")
+        .select("bookingReference groupId billNumber guestDetails checkInDate checkOutDate assignedRoom roomCategory paymentStatus paidAmount totalAmount ratePerNight isVipGuest source")
         .lean(),
 
       // Dirty rooms (need housekeeping)
@@ -120,7 +118,7 @@ export const getFrontDeskSummary = async (req: Request, res: Response) => {
       Booking.find({
         status: BookingStatus.CONFIRMED,
         isVipGuest: true,
-        checkInDate: { $gte: todayStart, $lte: new Date(todayEnd.getTime() + 2 * 24 * 60 * 60 * 1000) },
+        checkInDate: { $gte: todayStart, $lt: businessDayRange(addDays(todayBusinessDate(), 2)).end },
       })
         .select("bookingReference guestDetails checkInDate checkOutDate isVipGuest vipNotes source")
         .sort({ checkInDate: 1 })
@@ -208,9 +206,9 @@ export const getFrontDeskSummary = async (req: Request, res: Response) => {
  */
 export const getTodayArrivals = async (req: Request, res: Response) => {
   try {
-    const today = new Date();
-    const todayStart = new Date(today.setHours(0, 0, 0, 0));
-    const todayEnd = new Date(today.setHours(23, 59, 59, 999));
+    // Today at the property (Asia/Kolkata), independent of the server timezone.
+    const { start: todayStart, end: todayEndExclusive } = businessDayRange(todayBusinessDate());
+    const todayEnd = new Date(todayEndExclusive.getTime() - 1);
 
     const { q } = req.query;
     const filter: Record<string, any> = {
@@ -248,9 +246,9 @@ export const getTodayArrivals = async (req: Request, res: Response) => {
  */
 export const getTodayDepartures = async (req: Request, res: Response) => {
   try {
-    const today = new Date();
-    const todayStart = new Date(today.setHours(0, 0, 0, 0));
-    const todayEnd = new Date(today.setHours(23, 59, 59, 999));
+    // Today at the property (Asia/Kolkata), independent of the server timezone.
+    const { start: todayStart, end: todayEndExclusive } = businessDayRange(todayBusinessDate());
+    const todayEnd = new Date(todayEndExclusive.getTime() - 1);
 
     const { q } = req.query;
     const filter: Record<string, any> = {

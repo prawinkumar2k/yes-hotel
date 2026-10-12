@@ -6,6 +6,7 @@ import { FolioLineType } from "../models/FolioLine";
 import { HotelSettings } from "../models/HotelSettings";
 import { createAuditLog } from "./audit.service";
 import type { Request } from "express";
+import { todayBusinessDate } from "@shared/dates";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // ADVANCE NUMBER GENERATION
@@ -14,7 +15,7 @@ import type { Request } from "express";
 async function generateAdvanceNumber(): Promise<string> {
   const settings = await HotelSettings.findOne().sort({ updatedAt: -1 }).lean();
   const prefix = settings?.advancePrefix ?? "ADV";
-  const dateStr = new Date().toISOString().slice(0, 7).replace("-", ""); // YYYYMM
+  const dateStr = todayBusinessDate().slice(0, 7).replace("-", ""); // YYYYMM at the property
   const count = await AdvancePayment.countDocuments();
   return `${prefix}-${dateStr}-${String(count + 1).padStart(4, "0")}`;
 }

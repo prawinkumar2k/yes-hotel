@@ -2,7 +2,8 @@ import { useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-import { format, differenceInDays } from "date-fns";
+import { format } from "date-fns";
+import { nights as countNights } from "@shared/dates";
 import { Loader2, Printer, ArrowLeft, ShieldCheck, FileCheck2 } from "lucide-react";
 
 export default function AdminGRCPrint() {
@@ -64,7 +65,7 @@ export default function AdminGRCPrint() {
     return <div className="p-8 text-center text-red-600 font-bold">Booking record not found.</div>;
   }
 
-  const nights = differenceInDays(new Date(booking.checkOutDate), new Date(booking.checkInDate)) || 1;
+  const nights = Math.max(1, countNights(booking.checkInDate, booking.checkOutDate));
   const checkInDate = new Date(booking.checkInDate);
   const checkOutDate = new Date(booking.checkOutDate);
 

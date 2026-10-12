@@ -3,7 +3,7 @@ import { requirePropertyAccess } from "../middleware/propertyAuth";
 import { requirePermission } from "../middleware/permissionAuth";
 import { protect, optionalProtect } from "../middleware/auth.middleware";
 import {
-  checkAvailability, createBooking, getMyBookings, getMyBookingById, getMyBookingInvoice, checkIn, checkOut,
+  checkAvailability, quoteBooking, createBooking, getMyBookings, getMyBookingById, getMyBookingInvoice, checkIn, checkOut,
   getCheckoutPreview, checkExtensionConflict, extendStay
 } from "../controllers/booking.controller";
 import { cancelBooking } from "../controllers/cancellation.controller";
@@ -15,6 +15,8 @@ const router = Router();
 // Public availability
 router.get("/availability", checkAvailability);
 router.post("/availability", checkAvailability);
+// Public, read-only price quote (same calculation createBooking charges)
+router.post("/quote", quoteBooking);
 
 // Create booking (public or logged-in customer)
 router.post("/", optionalProtect, createBooking);

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { getStoredAuthToken } from "@/lib/authStorage";
 import { useQuery } from "@tanstack/react-query";
+import { todayBusinessDate } from "@shared/dates";
 
 const formatAmount = (val: any) => {
   if (val === undefined || val === null || val === "") return "0.00";
@@ -10,7 +11,7 @@ const formatAmount = (val: any) => {
 };
 
 export default function DaySummaryReport() {
-  const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
+  const [date, setDate] = useState(todayBusinessDate());
 
   const { data, isLoading } = useQuery({
     queryKey: ["report", "day-summary", date],

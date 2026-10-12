@@ -3,7 +3,8 @@ import { useParams, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "../../context/AuthContext";
 import { useToast } from "@/components/ui/use-toast";
-import { format, differenceInDays } from "date-fns";
+import { format } from "date-fns";
+import { nights as countNights } from "@shared/dates";
 import { ArrowLeft, Loader2, Calendar, User, CreditCard, Building, Edit, LogIn, LogOut, Ban, Check, ShieldCheck, MapPin, Briefcase, FileImage } from "lucide-react";
 
 async function apiFetch(url: string, token?: string, method = "GET", body?: any) {
@@ -69,7 +70,7 @@ export default function AdminBookingDetails() {
   const booking = data?.data;
   if (!booking) return <div className="p-6">Booking not found.</div>;
 
-  const nights = differenceInDays(new Date(booking.checkOutDate), new Date(booking.checkInDate));
+  const nights = countNights(booking.checkInDate, booking.checkOutDate);
 
   return (
     <div className="p-6 max-w-6xl mx-auto space-y-6">

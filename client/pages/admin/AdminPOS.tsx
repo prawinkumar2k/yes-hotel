@@ -118,9 +118,27 @@ export default function AdminPOS() {
     setCart(prev => prev.map(c => c.menuItemId === menuItemId ? { ...c, quantity: qty } : c));
   };
 
-  const subtotal = cart.reduce((s, c) => s + c.quantity * c.unitPrice, 0);
-  const tax = Math.round(cart.reduce((s, c) => s + c.quantity * c.unitPrice * (c.taxRatePercent / 100), 0));
-  const total = subtotal + tax;
+  // Cart totals come from the server (POST /api/pos/orders/quote): the same pricing and
+  // restaurant GST that creating the order applies. No tax is computed here.
+  const [cartQuote, setCartQuote] = useState<{ subtotal: number; taxAmount: number; grandTotal: number } | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    const items = cart.map((c) => ({ menuItemId: c.menuItemId, quantity: c.quantity }));
+    if (!items.length) { setCartQuote(null); return; }
+    fetch("/api/pos/orders/quote", {
+      method: "POST",
+      headers: { ...getAuthHeaders(), "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ items }),
+    })
+      .then((r) => r.json())
+      .then((j) => { if (!cancelled && j.success) setCartQuote(j.data); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [cart]);
+  const subtotal = cartQuote?.subtotal ?? cart.reduce((s, c) => s + c.quantity * c.unitPrice, 0);
+  const tax = cartQuote?.taxAmount ?? 0;
+  const total = cartQuote?.grandTotal ?? subtotal;
 
   const categories = Array.from(new Set(menuItems.map(m => m.category))).sort();
 

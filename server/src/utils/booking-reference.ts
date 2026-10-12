@@ -1,10 +1,10 @@
 import { ClientSession } from "mongoose";
 import { Booking } from "../models/Booking";
+import { todayBusinessDate } from "@shared/dates";
 
 export async function generateBookingReference(source: string, session?: ClientSession): Promise<string> {
-  const today = new Date();
-  const month = String(today.getMonth() + 1).padStart(2, "0");
-  const date = String(today.getDate()).padStart(2, "0");
+  // MMDD of the business date at the property (Asia/Kolkata).
+  const [, month, date] = todayBusinessDate().split("-");
   
   // Format source (e.g. WALK_IN -> WALKIN)
   const formattedSource = source.replace(/[^a-zA-Z]/g, "").toUpperCase();

@@ -8,14 +8,12 @@ import { exportToCSV } from "@/lib/utils";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import DaySummaryTab from "@/components/admin/reports/DaySummaryTab";
 import MonthlyMISTab from "@/components/admin/reports/MonthlyMISTab";
+import { addDays, todayBusinessDate } from "@shared/dates";
 
-function toInputDate(d: Date) {
-  return d.toISOString().slice(0, 10);
-}
 
 export default function AdminReports() {
-  const [dateFrom, setDateFrom] = useState(toInputDate(new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)));
-  const [dateTo, setDateTo] = useState(toInputDate(new Date()));
+  const [dateFrom, setDateFrom] = useState(addDays(todayBusinessDate(), -30));
+  const [dateTo, setDateTo] = useState(todayBusinessDate());
 
   const { data, isLoading } = useQuery({
     queryKey: ["reports-overview", dateFrom, dateTo],

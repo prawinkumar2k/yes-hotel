@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { GroupBooking, GroupBookingStatus } from "../models/GroupBooking";
 import { createAuditLog } from "../services/audit.service";
+import { nights as countNights } from "@shared/dates";
 
 /**
  * GET /api/group-bookings
@@ -47,7 +48,7 @@ export const createGroupBooking = async (req: Request, res: Response) => {
 
     const ciDate = new Date(checkIn);
     const coDate = new Date(checkOut);
-    const nights = Math.ceil((coDate.getTime() - ciDate.getTime()) / (1000 * 60 * 60 * 24));
+    const nights = countNights(ciDate, coDate);
     if (nights < 1) return res.status(400).json({ success: false, message: "Check-out must be after check-in" });
 
     // Auto-generate group code

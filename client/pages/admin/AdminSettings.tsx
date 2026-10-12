@@ -41,7 +41,6 @@ export default function AdminSettings() {
     
     const data = {
       ...rawData,
-      gstPercentage: Number(rawData.gstPercentage),
       extraPersonRate: Number(rawData.extraPersonRate),
       extraBedRate: Number(rawData.extraBedRate),
       childRateNoBed: Number(rawData.childRateNoBed),
@@ -149,9 +148,19 @@ export default function AdminSettings() {
                 <label className="text-sm font-bold text-black block">Currency Code</label>
                 <Input name="currency" required defaultValue={settings?.currency} placeholder="INR" className="border-gray-400 text-black font-medium" />
               </div>
-              <div className="space-y-2">
-                <label className="text-sm font-bold text-black block">GST Percentage (%)</label>
-                <Input name="gstPercentage" type="number" step="0.1" required defaultValue={settings?.gstPercentage} className="border-gray-400 text-black font-medium" />
+              <div className="space-y-2 col-span-2">
+                <label className="text-sm font-bold text-black block">
+                  GST rules in force {settings?.gstRulesSource === "DEFAULT" ? "(built-in defaults)" : "(from settings)"}
+                </label>
+                <ul className="text-sm text-black space-y-1">
+                  {(settings?.effectiveGstRules ?? []).map((r: any) => (
+                    <li key={`${r.category}-${r.effectiveFrom}`}>
+                      <span className="font-semibold">{r.category}</span> from {r.effectiveFrom}{r.effectiveTo ? ` to ${r.effectiveTo}` : ""}:{" "}
+                      {r.bands.map((b: any) => (b.upTo === null ? `${b.rate}% above` : `${b.rate}% up to ₹${b.upTo.toLocaleString("en-IN")}/night`)).join(", ")}
+                    </li>
+                  ))}
+                </ul>
+                <p className="text-xs text-gray-500">Split equally into CGST and SGST. Editing slabs comes with Property Settings.</p>
               </div>
               <div className="space-y-2 col-span-2">
                 <label className="text-sm font-bold text-black block">Cancellation Policy</label>

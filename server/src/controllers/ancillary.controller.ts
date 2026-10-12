@@ -4,6 +4,7 @@ import { Room } from "../models/Room";
 import { Folio, FolioStatus } from "../models/Folio";
 import { FolioLineType } from "../models/FolioLine";
 import { postCharge } from "../services/folio.service";
+import { taxService } from "../services/tax.service";
 import { createAuditLog } from "../services/audit.service";
 
 /**
@@ -37,8 +38,10 @@ export const createAncillaryService = async (req: Request, res: Response) => {
     }
 
     const amt = Number(amount);
-    const taxAmount = Math.round(amt * 0.18); // 18% Service GST
-    const totalAmount = amt + taxAmount;
+    // Service GST (laundry, spa, transport, add-ons) via taxService.
+    const serviceTax = await taxService.supply("SERVICE", new Date(), amt);
+    const taxAmount = serviceTax.tax;
+    const totalAmount = serviceTax.total;
     const serviceNumber = `SVC-${Date.now().toString(36).toUpperCase()}`;
 
     let folioId: string | undefined = undefined;
@@ -89,8 +92,7 @@ export const createAncillaryService = async (req: Request, res: Response) => {
       );
 
       if (taxAmount > 0) {
-        const cgst = Math.round((taxAmount / 2) * 100) / 100;
-        const sgst = Math.round((taxAmount - cgst) * 100) / 100;
+        const { cgst, sgst } = serviceTax;
 
         await postCharge(
           {

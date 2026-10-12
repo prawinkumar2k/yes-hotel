@@ -2,6 +2,8 @@ import { Request, Response } from "express";
 import { RatePlan, MealPlanType } from "../models/RatePlan";
 import { createAuditLog } from "../services/audit.service";
 import { calculateDynamicBookingTotals } from "../services/pricing.service";
+import { loadGstRules } from "../services/tax.service";
+import { isBusinessDate } from "@shared/dates";
 
 
 /**
@@ -89,6 +91,8 @@ export const evaluateRatePreview = async (req: Request, res: Response) => {
       occupancyPct: Number(occupancyPct),
       requestedDiscountAmount: Number(requestedDiscountAmount),
       userRole,
+      gstRules: await loadGstRules(),
+      checkIn: isBusinessDate(req.body.checkIn) ? req.body.checkIn : undefined,
     });
 
     return res.json({

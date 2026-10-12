@@ -11,6 +11,8 @@ import { CashierShift, CashierShiftStatus } from "../models/CashierShift";
 import { createAuditLog } from "../services/audit.service";
 import { transitionBookingStatus } from "../services/booking-state.service";
 import { releaseInventoryDays } from "../services/booking-safety.service";
+import { computeRoomNightTax, loadGstRules } from "../services/tax.service";
+import { addDays, businessDayRange, toBusinessDate } from "@shared/dates";
 
 /**
  * GET /api/night-audit/status
@@ -28,11 +30,10 @@ export const getNightAuditStatus = async (_req: Request, res: Response) => {
       });
     }
 
-    const today = new Date(bizDate.date);
-    const startOfDay = new Date(today);
-    startOfDay.setHours(0, 0, 0, 0);
-    const endOfDay = new Date(today);
-    endOfDay.setHours(23, 59, 59, 999);
+    // The business date's day at the property (Asia/Kolkata).
+    const bizRange = businessDayRange(toBusinessDate(bizDate.date));
+    const startOfDay = bizRange.start;
+    const endOfDay = new Date(bizRange.end.getTime() - 1);
 
     // Checklist stats
     const [
@@ -106,10 +107,10 @@ export const getNightAuditPreview = async (_req: Request, res: Response) => {
     }
 
     const auditDate = new Date(bizDate.date);
-    const startOfDay = new Date(auditDate);
-    startOfDay.setHours(0, 0, 0, 0);
-    const endOfDay = new Date(auditDate);
-    endOfDay.setHours(23, 59, 59, 999);
+    // The audited business date's day at the property (Asia/Kolkata).
+    const auditRange = businessDayRange(toBusinessDate(auditDate));
+    const startOfDay = auditRange.start;
+    const endOfDay = new Date(auditRange.end.getTime() - 1);
 
     // 1. Proposed Room Charges for in-house guests
     const inHouseBookings = await Booking.find({ status: BookingStatus.CHECKED_IN })
@@ -123,11 +124,10 @@ export const getNightAuditPreview = async (_req: Request, res: Response) => {
     let estimatedSGST = 0;
     const proposedPostings: any[] = [];
 
+    const gstRules = await loadGstRules();
     for (const b of inHouseBookings) {
       const nightlyRate = Number((b.roomCategory as any)?.basePrice) || 0;
-      const taxRate = nightlyRate > 7500 ? 0.09 : 0.06;
-      const cgst = Math.round(nightlyRate * taxRate * 100) / 100;
-      const sgst = Math.round(nightlyRate * taxRate * 100) / 100;
+      const { cgst, sgst } = computeRoomNightTax(gstRules, toBusinessDate(startOfDay), nightlyRate);
 
       estimatedRoomCharges += nightlyRate;
       estimatedCGST += cgst;
@@ -283,8 +283,8 @@ export const runNightAudit = async (req: Request, res: Response) => {
       bizDate.isCurrentDate = false;
       await bizDate.save({ session });
 
-      const nextDate = new Date(auditDate);
-      nextDate.setDate(nextDate.getDate() + 1);
+      // Next business date = the following calendar day at the property (stored as its IST midnight instant).
+      const nextDate = businessDayRange(addDays(toBusinessDate(auditDate), 1)).start;
 
       const [newBizDate] = await BusinessDate.create(
         [
@@ -327,10 +327,10 @@ export const runNightAudit = async (req: Request, res: Response) => {
               { req, session }
             );
 
-            // Post GST breakdown
-            const taxRate = nightlyRate > 7500 ? 0.09 : 0.06;
-            const cgst = Math.round(nightlyRate * taxRate * 100) / 100;
-            const sgst = Math.round(nightlyRate * taxRate * 100) / 100;
+            // Post GST breakdown (taxService: slab by nightly value, rule in force on the audit date)
+            const nightTax = computeRoomNightTax(await loadGstRules(), toBusinessDate(auditDate), nightlyRate);
+            const { cgst, sgst } = nightTax;
+            const halfRate = nightTax.lines[0].rate / 2;
 
             if (cgst > 0) {
               await postCharge(
@@ -338,7 +338,7 @@ export const runNightAudit = async (req: Request, res: Response) => {
                   folioId: folio._id.toString(),
                   bookingId: b._id.toString(),
                   lineType: FolioLineType.TAX_CGST,
-                  description: `CGST (${taxRate * 100}%) on Room Tariff — ${auditDate.toLocaleDateString()}`,
+                  description: `CGST (${halfRate}%) on Room Tariff — ${auditDate.toLocaleDateString()}`,
                   amount: cgst,
                   date: auditDate,
                   postedBy: actorId?.toString() || "SYSTEM_NIGHT_AUDIT",
@@ -354,7 +354,7 @@ export const runNightAudit = async (req: Request, res: Response) => {
                   folioId: folio._id.toString(),
                   bookingId: b._id.toString(),
                   lineType: FolioLineType.TAX_SGST,
-                  description: `SGST (${taxRate * 100}%) on Room Tariff — ${auditDate.toLocaleDateString()}`,
+                  description: `SGST (${halfRate}%) on Room Tariff — ${auditDate.toLocaleDateString()}`,
                   amount: sgst,
                   date: auditDate,
                   postedBy: actorId?.toString() || "SYSTEM_NIGHT_AUDIT",
@@ -371,8 +371,7 @@ export const runNightAudit = async (req: Request, res: Response) => {
       }
 
       // 2. Mark pending confirmed arrivals for today as NO_SHOW with inventory release
-      const endOfDay = new Date(auditDate);
-      endOfDay.setHours(23, 59, 59, 999);
+      const endOfDay = new Date(businessDayRange(toBusinessDate(auditDate)).end.getTime() - 1);
       const noShowBookings = await Booking.find({
         status: BookingStatus.CONFIRMED,
         checkInDate: { $lte: endOfDay },

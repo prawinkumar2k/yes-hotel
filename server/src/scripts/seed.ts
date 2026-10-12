@@ -34,6 +34,7 @@ import { Complaint } from "../models/Complaint";
 import { Payment, PaymentMethod, PaymentTxStatus } from "../models/Payment";
 import { AdvancePayment, AdvancePaymentStatus, AdvancePaymentMethod } from "../models/AdvancePayment";
 import { Refund, RefundStatus } from "../models/Refund";
+import { computeRoomTax, computeSupplyTax, DEFAULT_GST_RULES } from "../services/tax.service";
 
 const MONGODB_URI = process.env.MONGODB_URI || "mongodb://127.0.0.1:27017/yes_hotels";
 
@@ -610,7 +611,7 @@ async function seed() {
     const checkOut = daysAgo(Math.round(startOffset));
     const basePrice = CATEGORIES.find((c) => c.slug === roomSlug)!.basePrice;
     const total = basePrice * nights;
-    const tax = Math.round(total * 0.09);
+    const tax = computeRoomTax(DEFAULT_GST_RULES, { checkIn, checkOut, nightlyValue: basePrice }).tax;
     const source = pick(SOURCES, i);
     const isOta = source === BookingSource.OTA;
 
@@ -790,7 +791,7 @@ async function seed() {
     const exists = await RestaurantOrder.findOne({ kotNumber: k.num });
     if (exists) continue;
     const subtotal = k.items.reduce((s, it) => s + it.totalPrice, 0);
-    const tax = Math.round(subtotal * 0.05);
+    const tax = computeSupplyTax(DEFAULT_GST_RULES, "FOOD", new Date(), subtotal).tax;
     await RestaurantOrder.create({
       propertyId: property._id,
       kotNumber: k.num,
@@ -1080,7 +1081,7 @@ async function seed() {
     const exists = await AncillaryService.findOne({ serviceNumber: svcNumber });
     if (exists) continue;
     const hb = historicalBookings.length ? pick(historicalBookings, i) : { guestName: "Walk-in Guest", roomNumber: "101" };
-    const tax = Math.round(ANCILLARY[i].amount * 0.05);
+    const tax = computeSupplyTax(DEFAULT_GST_RULES, "SERVICE", new Date(), ANCILLARY[i].amount).tax;
     await AncillaryService.create({
       serviceNumber: svcNumber,
       category: ANCILLARY[i].category,

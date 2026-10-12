@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { getStoredAuthToken } from "../../lib/authStorage";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
+import { nights as countNights, addDays, toBusinessDate } from "@shared/dates";
 
 interface FrontDeskSummary {
   todaysArrivals: any[];
@@ -273,9 +274,7 @@ export default function AdminFrontDesk() {
   const openExtendStay = (booking: any) => {
     let nextDateStr = "";
     if (booking.checkOutDate) {
-      const d = new Date(booking.checkOutDate);
-      d.setDate(d.getDate() + 1);
-      nextDateStr = d.toISOString().split("T")[0];
+      nextDateStr = addDays(toBusinessDate(booking.checkOutDate), 1);
     }
     setNewCheckOutDate(nextDateStr);
     setExtensionConflict(null);
@@ -363,7 +362,7 @@ export default function AdminFrontDesk() {
         });
 
         // Initialize edit bill form with current particulars
-        const nights = Math.max(1, Math.ceil((new Date(booking.checkOutDate).getTime() - new Date(booking.checkInDate).getTime()) / (1000 * 60 * 60 * 24)));
+        const nights = Math.max(1, countNights(new Date(booking.checkInDate), new Date(booking.checkOutDate)));
         const currentRate = booking.ratePerNight || Math.round((booking.totalAmount - (booking.taxAmount || 0)) / nights) || 2000;
         setEditBillForm({
           ratePerNight: currentRate,
@@ -481,8 +480,8 @@ export default function AdminFrontDesk() {
       if (!b) continue;
       let groupKey: string;
       const phone = (b.guestDetails?.phone || b.guestDetails?.phoneNumber || "").trim();
-      const cin = b.checkInDate ? new Date(b.checkInDate).toISOString().slice(0, 10) : "";
-      const cout = b.checkOutDate ? new Date(b.checkOutDate).toISOString().slice(0, 10) : "";
+      const cin = b.checkInDate ? toBusinessDate(b.checkInDate) : "";
+      const cout = b.checkOutDate ? toBusinessDate(b.checkOutDate) : "";
       const gId = b.groupId ? String(b.groupId) : "";
 
       if (gId) {
@@ -968,7 +967,7 @@ export default function AdminFrontDesk() {
                               <Calendar size={13} className="text-[#c9a227]" />
                               {new Date(b.checkInDate).toLocaleDateString()} → {new Date(b.checkOutDate).toLocaleDateString()}
                             </div>
-                            <div className="text-[11px] text-gray-500 mt-0.5">{b.numberOfNights || 1} Night(s)</div>
+                            <div className="text-[11px] text-gray-500 mt-0.5">{Math.max(1, countNights(b.checkInDate, b.checkOutDate))} Night(s)</div>
                           </td>
 
                           {/* Financial Status */}
@@ -1363,7 +1362,7 @@ export default function AdminFrontDesk() {
                   </div>
                 </div>
                 <div className="text-[11px] text-blue-800 font-medium">
-                  Stay Duration: {Math.max(1, Math.ceil((new Date(checkOutModal.booking.checkOutDate).getTime() - new Date(checkOutModal.booking.checkInDate).getTime()) / (1000 * 60 * 60 * 24)))} night(s) booked
+                  Stay Duration: {Math.max(1, countNights(new Date(checkOutModal.booking.checkInDate), new Date(checkOutModal.booking.checkOutDate)))} night(s) booked
                 </div>
               </div>
             )}
@@ -1741,7 +1740,7 @@ export default function AdminFrontDesk() {
                 <div className="border-l border-gray-200 pl-4">
                   <span className="text-[10px] uppercase text-gray-400 block font-sans">Duration</span>
                   <span className="font-bold text-gray-800">
-                    {Math.max(1, Math.ceil((new Date(folioDrawer.booking.checkOutDate).getTime() - new Date(folioDrawer.booking.checkInDate).getTime()) / (1000 * 60 * 60 * 24)))} Night(s)
+                    {Math.max(1, countNights(new Date(folioDrawer.booking.checkInDate), new Date(folioDrawer.booking.checkOutDate)))} Night(s)
                   </span>
                 </div>
               </div>

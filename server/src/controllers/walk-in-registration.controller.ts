@@ -31,12 +31,37 @@ import { PaymentChannel } from "../models/PaymentChannel";
 import { HotelSettings } from "../models/HotelSettings";
 import { Property } from "../models/Property";
 import { User, UserRole } from "../models/User";
-import { createFolio, postCharge, calculateTaxBreakdown } from "../services/folio.service";
+import { createFolio, postCharge } from "../services/folio.service";
+import { computeRoomTax, loadGstRules } from "../services/tax.service";
+
+/**
+ * Room GST for a walk-in: each room is taxed on its own per-night value (which
+ * selects the slab), per night of the stay, and the results are summed.
+ */
+async function walkInStayTax(perRoomTaxable: number[], checkIn: Date, checkOut: Date, chargedNights: number) {
+  const rules = await loadGstRules();
+  const parts = perRoomTaxable.map((v) =>
+    computeRoomTax(rules, { checkIn, checkOut, nightlyValue: Math.max(0, v) / Math.max(1, chargedNights) }),
+  );
+  const r2 = (n: number) => Math.round(n * 100) / 100;
+  const cgst = r2(parts.reduce((s, p) => s + p.cgst, 0));
+  const sgst = r2(parts.reduce((s, p) => s + p.sgst, 0));
+  // Per night (all rooms together), for day-by-day schedules on the GRC / invoice.
+  const byDate = new Map<string, { date: string; taxable: number; cgst: number; sgst: number; rates: Set<number> }>();
+  for (const l of parts.flatMap((p) => p.lines)) {
+    const d = byDate.get(l.date) ?? { date: l.date, taxable: 0, cgst: 0, sgst: 0, rates: new Set<number>() };
+    d.taxable += l.taxable; d.cgst += l.cgst; d.sgst += l.sgst; d.rates.add(l.rate);
+    byDate.set(l.date, d);
+  }
+  const daily = [...byDate.values()].map((d) => ({ date: d.date, taxable: r2(d.taxable), cgst: r2(d.cgst), sgst: r2(d.sgst), rates: [...d.rates] }));
+  return { cgst, sgst, totalTax: r2(cgst + sgst), daily };
+}
 import { receiveAdvance } from "../services/advance.service";
 import { createAuditLog } from "../services/audit.service";
 import { generateBillNumber } from "../utils/bill-number";
 import { generateBookingReference } from "../utils/booking-reference";
 import crypto from "crypto";
+import { nights as countNights, todayBusinessDate } from "@shared/dates";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // STEP 1 — GUEST SEARCH
@@ -158,7 +183,7 @@ export const getAvailableRoomsForRegistration = async (req: Request, res: Respon
       .lean();
 
     // Annotate with rate info
-    const nights = Math.max(1, Math.ceil((checkOutDate.getTime() - checkInDate.getTime()) / (1000 * 60 * 60 * 24)));
+    const nights = Math.max(1, countNights(checkInDate, checkOutDate));
     const annotated = rooms.map((room) => {
       const cat = room.category as any;
       return {
@@ -222,7 +247,7 @@ export const calculateRegistrationRate = async (req: Request, res: Response) => 
 
     const checkInDate = new Date(checkIn);
     const checkOutDate = bookingType === "HOURLY" ? new Date(checkInDate.getTime() + Number(hours) * 3600000) : new Date(checkOut);
-    const nights = bookingType === "HOURLY" ? 1 : Math.max(1, Math.ceil((checkOutDate.getTime() - checkInDate.getTime()) / (1000 * 60 * 60 * 24)));
+    const nights = bookingType === "HOURLY" ? 1 : Math.max(1, countNights(checkInDate, checkOutDate));
 
     const rooms = await Room.find({ _id: { $in: allRoomIds } }).populate("category", "name basePrice hourlyPrice").lean();
     if (rooms.length === 0) return res.status(404).json({ success: false, message: "No matching rooms found" });
@@ -268,7 +293,16 @@ export const calculateRegistrationRate = async (req: Request, res: Response) => 
     const subtotal = roomCharges + extraPersonTotal + extraBedTotal + childNoBedTotal + childWithBedTotal + mealPlanTotal + Number(otherCharges) - Number(discountAmount);
     const taxableAmount = Math.max(0, subtotal);
 
-    const taxBreakdown = await calculateTaxBreakdown(taxableAmount);
+    // Extras, meal plan, other charges and the discount sit on the primary room (as on create).
+    const primaryAdjustment = taxableAmount - roomCharges;
+    const taxBreakdown = await walkInStayTax(
+      roomBreakdowns.length
+        ? roomBreakdowns.map((rb: any, i: number) => rb.cost + (i === 0 ? primaryAdjustment : 0))
+        : [taxableAmount],
+      checkInDate,
+      checkOutDate,
+      nights,
+    );
 
     return res.json({
       success: true,
@@ -296,6 +330,7 @@ export const calculateRegistrationRate = async (req: Request, res: Response) => 
         discountAmount: Number(discountAmount),
         subtotal,
         tax: taxBreakdown,
+        dailyTax: taxBreakdown.daily,
         totalAmount: taxableAmount + taxBreakdown.totalTax,
         breakdown: {
           roomCharges: bookingType === "HOURLY" ? `₹${averageRatePerNight.toLocaleString("en-IN")} × ${hours} hours` : `₹${averageRatePerNight.toLocaleString("en-IN")} × ${nights} nights (${rooms.length} rooms)`,
@@ -481,7 +516,7 @@ export const walkInArrivalRegistration = async (req: Request, res: Response) => 
         guestId = guestDoc._id.toString();
       }
 
-      const nights = bookingType === "HOURLY" ? 1 : Math.max(1, Math.ceil((checkOutDate.getTime() - checkInDate.getTime()) / (1000 * 60 * 60 * 24)));
+      const nights = bookingType === "HOURLY" ? 1 : Math.max(1, countNights(checkInDate, checkOutDate));
       const settings = await HotelSettings.findOne().session(session).lean();
       const extraPersonRate = settings?.extraPersonRate || 800;
       const extraBedRate = settings?.extraBedRate || 1200;
@@ -519,14 +554,14 @@ export const walkInArrivalRegistration = async (req: Request, res: Response) => 
 
         const rmSubtotal = rmRoomCharges + rmExtraPersonTotal + rmExtraBedTotal + rmChildNoBedTotal + rmChildWithBedTotal + rmMealPlanTotal + rmOtherCharges;
         const rmTaxableAmount = Math.max(0, rmSubtotal);
-        const rmTaxBreakdown = await calculateTaxBreakdown(rmTaxableAmount);
+        const rmTaxBreakdown = await walkInStayTax([rmTaxableAmount], checkInDate, checkOutDate, nights);
         const rmTotalAmount = rmTaxableAmount + rmTaxBreakdown.totalTax;
 
         let billNumber: string | undefined;
         try {
           billNumber = await generateBillNumber(session);
         } catch {
-          billNumber = `BILL-${new Date().getFullYear()}-${Date.now().toString().slice(-6)}`;
+          billNumber = `BILL-${todayBusinessDate().slice(0, 4)}-${Date.now().toString().slice(-6)}`;
         }
 
         const bookingReference = await generateBookingReference("WALKIN", session);
@@ -613,7 +648,7 @@ export const walkInArrivalRegistration = async (req: Request, res: Response) => 
 
         const settings = await HotelSettings.findOne().sort({ updatedAt: -1 }).lean();
         const advPrefix = settings?.advancePrefix ?? "ADV";
-        const dateStr = new Date().toISOString().slice(0, 7).replace("-", "");
+        const dateStr = todayBusinessDate().slice(0, 7).replace("-", ""); // YYYYMM at the property
         const advCount = await AdvancePayment.countDocuments().session(session);
         const advanceNumber = `${advPrefix}-${dateStr}-${String(advCount + 1).padStart(4, "0")}`;
 
@@ -832,7 +867,7 @@ export const walkInCheckIn = async (req: Request, res: Response) => {
 
         const nights = Math.max(
           1,
-          Math.ceil((new Date(booking.checkOutDate).getTime() - new Date(booking.checkInDate).getTime()) / (1000 * 60 * 60 * 24))
+          countNights(new Date(booking.checkInDate), new Date(booking.checkOutDate))
         );
 
         // 4. Post room tariff charge
@@ -1002,7 +1037,7 @@ export const printRegistrationCard = async (req: Request, res: Response) => {
 
     const nights = Math.max(
       1,
-      Math.ceil((new Date(booking.checkOutDate).getTime() - new Date(booking.checkInDate).getTime()) / (1000 * 60 * 60 * 24))
+      countNights(new Date(booking.checkInDate), new Date(booking.checkOutDate))
     );
 
     const idType = (guest.idType || "").toUpperCase();

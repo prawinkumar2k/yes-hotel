@@ -42,11 +42,24 @@ export interface IHotelSettings extends Document {
   currencySymbol: string;   // e.g. "₹"
 
   // Tax Configuration
-  /** @deprecated Use cgstPercentage + sgstPercentage instead */
-  gstPercentage: number;    // kept for backward compat — equals cgstPercentage + sgstPercentage
-  cgstPercentage: number;   // CGST rate (default 2.5)
-  sgstPercentage: number;   // SGST rate (default 2.5)
-  igstPercentage: number;   // IGST rate — applies for interstate guests (default 5)
+  /**
+   * Effective-dated GST rules (services/tax.service.ts). Empty = the built-in defaults
+   * (accommodation ≤ ₹7,500/night 5%, above 18% from 22 Sep 2025; food 5%; services 18%).
+   */
+  gstRules?: Array<{
+    category: "ROOM" | "FOOD" | "SERVICE";
+    effectiveFrom: string;
+    effectiveTo?: string | null;
+    bands: Array<{ upTo: number | null; rate: number }>;
+  }>;
+  /** @deprecated Not used for tax. GST comes from gstRules / taxService. */
+  gstPercentage: number;
+  /** @deprecated Not used for tax. */
+  cgstPercentage: number;
+  /** @deprecated Not used for tax. */
+  sgstPercentage: number;
+  /** @deprecated Not used for tax (hotel supplies are intra-state: CGST + SGST). */
+  igstPercentage: number;
   taxInclusiveRates: boolean; // if true, room rates are tax-inclusive
 
   // Invoice settings
@@ -120,8 +133,17 @@ const HotelSettingsSchema = new Schema<IHotelSettings>(
     currency: { type: String, required: true, default: "INR" },
     currencySymbol: { type: String, required: true, default: "₹" },
 
-    // ── TAX ──
-    gstPercentage: { type: Number, required: true, default: 5 },  // backward compat
+    // ── TAX ── (gstRules drive taxService; the percentage fields are deprecated)
+    gstRules: [
+      {
+        _id: false,
+        category: { type: String, enum: ["ROOM", "FOOD", "SERVICE"], required: true },
+        effectiveFrom: { type: String, required: true, match: /^\d{4}-\d{2}-\d{2}$/ },
+        effectiveTo: { type: String, default: null },
+        bands: [{ _id: false, upTo: { type: Number, default: null }, rate: { type: Number, required: true, min: 0, max: 40 } }],
+      },
+    ],
+    gstPercentage: { type: Number, required: true, default: 5 },  // deprecated
     cgstPercentage: { type: Number, required: true, default: 2.5 },
     sgstPercentage: { type: Number, required: true, default: 2.5 },
     igstPercentage: { type: Number, required: true, default: 5 },

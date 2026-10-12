@@ -9,9 +9,10 @@ import {
   finalizeFolio,
   settleFolio,
   recomputeFolioBalance,
-  calculateTaxBreakdown,
   findFolioForBooking,
 } from "../services/folio.service";
+import { computeChargeTax, computeRoomTax, loadGstRules, taxCategoryForLine } from "../services/tax.service";
+import { nights as countNights } from "@shared/dates";
 
 /**
  * GET /api/folios/booking/:bookingId
@@ -232,8 +233,9 @@ export const postFolioCharge = async (req: Request, res: Response) => {
     );
 
     // 2. Optional automatic CGST / SGST split calculation for taxable charges
-    if (applyTax && (lineType === FolioLineType.ROOM_CHARGE || lineType === FolioLineType.RESTAURANT || lineType === FolioLineType.ADDON || lineType === FolioLineType.LAUNDRY || lineType === FolioLineType.MINIBAR)) {
-      const tax = await calculateTaxBreakdown(numAmount);
+    // GST by supply category of the line (taxService): room, food or service.
+    if (applyTax && taxCategoryForLine(lineType)) {
+      const tax = computeChargeTax(await loadGstRules(), lineType, numAmount, new Date())!;
       if (tax.cgst > 0) {
         await postCharge(
           {
@@ -394,7 +396,7 @@ export const updateBookingBill = async (req: Request, res: Response) => {
     const actorId = (req as any).user?.id || (req as any).user?._id || "SYSTEM";
     const checkIn = new Date(booking.checkInDate);
     const checkOut = new Date(booking.checkOutDate);
-    const nights = Math.max(1, Math.ceil((checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24)));
+    const nights = Math.max(1, countNights(checkIn, checkOut));
 
     const newRatePerNight = Number(ratePerNight !== undefined ? ratePerNight : (booking.ratePerNight || 0));
     const newRoomTotal = newRatePerNight * nights;
@@ -410,10 +412,11 @@ export const updateBookingBill = async (req: Request, res: Response) => {
     let sgst = 0;
 
     if (applyTax) {
-      const taxCalc = await calculateTaxBreakdown(taxableSubtotal);
+      // Room GST per night; the slab is chosen by the per-night value of the edited bill.
+      const taxCalc = computeRoomTax(await loadGstRules(), { checkIn, checkOut, nightlyValue: taxableSubtotal / nights });
       cgst = taxCalc.cgst;
       sgst = taxCalc.sgst;
-      totalTax = taxCalc.totalTax;
+      totalTax = taxCalc.tax;
     }
 
     const totalBillAmount = taxableSubtotal + totalTax;

@@ -4,14 +4,14 @@ import { Room, RoomStatus } from "../models/Room";
 import { RoomCategory } from "../models/RoomCategory";
 import { createAuditLog } from "../services/audit.service";
 import { transitionBookingStatus, IllegalBookingTransitionError } from "../services/booking-state.service";
+import { businessDayRange, businessMonthRange, todayBusinessDate } from "@shared/dates";
 
 export const getAdminStats = async (req: Request, res: Response) => {
   try {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+    // [today, tomorrow) and the month start at the property (Asia/Kolkata).
+    const todayYmd = todayBusinessDate();
+    const { start: today, end: tomorrow } = businessDayRange(todayYmd);
+    const monthStart = businessMonthRange(todayYmd).start;
 
     const [
       totalBookings,

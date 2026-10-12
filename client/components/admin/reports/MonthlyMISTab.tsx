@@ -3,9 +3,10 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { Loader2, Download } from "lucide-react";
 import { exportToCSV } from "@/lib/utils";
+import { todayBusinessDate } from "@shared/dates";
 
 export default function MonthlyMISTab() {
-  const [month, setMonth] = useState(() => new Date().toISOString().substring(0, 7));
+  const [month, setMonth] = useState(() => todayBusinessDate().slice(0, 7));
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["reports-monthly-mis", month],
