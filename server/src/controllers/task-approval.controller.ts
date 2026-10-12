@@ -37,7 +37,11 @@ function seesSuperAdminOnly(actor: any): boolean {
   return isFullAccessRole(actor?.role);
 }
 
-async function canApprove(actor: any, confidentialLevel: ConfidentialLevel): Promise<boolean> {
+async function canApprove(actor: any, confidentialLevel: ConfidentialLevel, priority?: ApprovalPriority): Promise<boolean> {
+  // Priority floor: CRITICAL needs MANAGER or higher, HIGH needs SUPERVISOR or higher.
+  if (priority === ApprovalPriority.CRITICAL && !(await PermissionService.can(actor, "CAP.APPROVE_CRITICAL"))) return false;
+  if (priority === ApprovalPriority.HIGH && !(await PermissionService.can(actor, "CAP.APPROVE_HIGH"))) return false;
+  // Confidentiality tier.
   if (confidentialLevel === ConfidentialLevel.SUPER_ADMIN_ONLY) return seesSuperAdminOnly(actor);
   if (confidentialLevel === ConfidentialLevel.EXECUTIVE) return PermissionService.can(actor, "CAP.APPROVAL_TIER_EXECUTIVE");
   return PermissionService.can(actor, "CAP.APPROVAL_TIER_MANAGER");
@@ -123,7 +127,7 @@ export const approveTaskApproval = async (req: Request, res: Response) => {
     if (approval.status !== ApprovalStatus.PENDING) {
       return res.status(400).json({ success: false, message: `Approval is already ${approval.status}` });
     }
-    if (!(await canApprove(actor, approval.confidentialLevel as ConfidentialLevel))) {
+    if (!(await canApprove(actor, approval.confidentialLevel as ConfidentialLevel, approval.priority as ApprovalPriority))) {
       return res.status(403).json({ success: false, message: "You do not have authority to approve this request" });
     }
 
@@ -162,7 +166,7 @@ export const rejectTaskApproval = async (req: Request, res: Response) => {
     if (approval.status !== ApprovalStatus.PENDING) {
       return res.status(400).json({ success: false, message: `Approval is already ${approval.status}` });
     }
-    if (!(await canApprove(actor, approval.confidentialLevel as ConfidentialLevel))) {
+    if (!(await canApprove(actor, approval.confidentialLevel as ConfidentialLevel, approval.priority as ApprovalPriority))) {
       return res.status(403).json({ success: false, message: "You do not have authority to reject this request" });
     }
 

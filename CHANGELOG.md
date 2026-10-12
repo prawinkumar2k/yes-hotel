@@ -4,6 +4,27 @@ All changes, fixes, hardened services, and architectural migrations are document
 
 ---
 
+## [Phase 1 · Step 1b — Folio hotfix, property assignment, access rules N1–N5] - 2026-10-12
+
+### Fixed
+- Opening a folio never writes. Folio creation is the explicit, idempotent `openFolioForBooking`; credits come only from real Payment records.
+- Non-admin staff can use the app: staff are assigned to the property (migration applied after backup and dry run), and property-scoped documents can no longer be saved without a property.
+- `GET /api/reports/day-summary` 500 for property-scoped users.
+- POS and the report pages used client page keys that blocked the roles meant to use them.
+
+### Security
+- Only SUPER_ADMIN can manage SUPER_ADMIN/ADMIN accounts, and nobody can grant a role above their own.
+- HOUSEKEEPING can no longer create, edit or delete rooms. Property listing is admin-only.
+
+### Changed
+- Role grants for night audit, POS (restaurant / cashier settle / manager void with reason), approvals by priority, coupons, banquets, rate plans, corporate accounts, reports and task approvals. See `docs/rbac/n1-n5-access-diff.txt`.
+- `pos` and `menu` routers mounted.
+
+### Added
+- `scripts/migrations/2026-10-12-assign-property.mjs`, `scripts/repair/folio-unbacked-credits-report.mjs` (read-only), `scripts/audit/role-sweep.ts`.
+
+---
+
 ## [Phase 1 · Step 1 — Security] - 2026-10-12
 
 ### Security

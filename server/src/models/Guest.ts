@@ -1,4 +1,5 @@
 import mongoose, { Document, Schema } from "mongoose";
+import { propertyScoped } from "./plugins/propertyScoped";
 
 export interface IGuest extends Document {
   propertyId: mongoose.Types.ObjectId;
@@ -57,5 +58,8 @@ const GuestSchema = new Schema<IGuest>(
 
 // Indexes for searching
 GuestSchema.index({ fullName: "text", email: "text", phone: "text" });
+
+// Staff views filter on propertyId; see plugins/propertyScoped.ts.
+GuestSchema.plugin(propertyScoped);
 
 export const Guest = (mongoose.models.Guest as mongoose.Model<IGuest>) || mongoose.model<IGuest>("Guest", GuestSchema);

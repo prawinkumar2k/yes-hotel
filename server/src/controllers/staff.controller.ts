@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { User, UserRole } from "../models/User";
-import { isFullAccessRole } from "../config/permissions";
+import { accountChangeDenial } from "../config/permissions";
+import { Property } from "../models/Property";
 import { StaffProfile, Department, EmploymentStatus } from "../models/StaffProfile";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
@@ -17,6 +18,8 @@ const createStaffSchema = z.object({
   employmentStatus: z.nativeEnum(EmploymentStatus),
   emergencyContactName: z.string().optional(),
   emergencyContactPhone: z.string().optional(),
+  // Defaults to the creating user's property; required either way.
+  propertyId: z.string().regex(/^[a-f0-9]{24}$/i, "Invalid propertyId").optional(),
 });
 
 const updateStaffSchema = z.object({
@@ -95,9 +98,17 @@ export const createStaff = async (req: Request, res: Response) => {
     const data = createStaffSchema.parse(req.body);
     const reqUser = (req as any).user;
     
-    // Only admin can create admin
-    if (data.role === UserRole.ADMIN && !isFullAccessRole(reqUser.role)) {
-      return res.status(403).json({ success: false, message: "Only an ADMIN can create another ADMIN" });
+    const denial = accountChangeDenial(reqUser.role, { newRole: data.role });
+    if (denial) return res.status(403).json({ success: false, message: denial });
+
+    // Every staff account belongs to a property (staff views are property-scoped):
+    // the explicit propertyId, else the creator's, else (global creators such as
+    // SUPER_ADMIN) the User model's propertyScoped rule picks the only property or
+    // rejects the save when several exist.
+    const creator = await User.findById(reqUser.id).select("propertyId").lean();
+    const propertyId = data.propertyId ?? creator?.propertyId?.toString();
+    if (propertyId && !(await Property.exists({ _id: propertyId }))) {
+      return res.status(400).json({ success: false, message: "Unknown propertyId" });
     }
     
     const exists = await User.findOne({ email: data.email });
@@ -112,10 +123,15 @@ export const createStaff = async (req: Request, res: Response) => {
       phone: data.phone,
       passwordHash,
       role: data.role,
+      ...(propertyId ? { propertyId, propertyIds: [propertyId] } : {}),
       isEmailVerified: true,
       isActive: true
     });
     await user.save();
+    if (!user.propertyIds?.length && user.propertyId) {
+      user.propertyIds = [user.propertyId];
+      await user.save();
+    }
     
     const profile = new StaffProfile({
       user: user._id,
@@ -140,6 +156,7 @@ export const createStaff = async (req: Request, res: Response) => {
     return res.status(201).json({ success: true, data: { ...userObj, profile } });
   } catch (error: any) {
     if (error instanceof z.ZodError) return res.status(400).json({ success: false, message: (error as any).issues[0].message });
+    if (error?.name === "ValidationError") return res.status(400).json({ success: false, message: error.message });
     return res.status(500).json({ success: false, message: error.message });
   }
 };
@@ -152,13 +169,9 @@ export const updateStaff = async (req: Request, res: Response) => {
     const user = await User.findById(req.params.id);
     if (!user) return res.status(404).json({ success: false, message: "Staff not found" });
     
-    // Prevent privilege escalation
-    if (data.role === UserRole.ADMIN && !isFullAccessRole(reqUser.role)) {
-      return res.status(403).json({ success: false, message: "Only an ADMIN can grant ADMIN role" });
-    }
-    if (user.role === UserRole.ADMIN && !isFullAccessRole(reqUser.role)) {
-      return res.status(403).json({ success: false, message: "Only an ADMIN can edit another ADMIN" });
-    }
+    // Covers edits, disabling (isActive) and role changes.
+    const denial = accountChangeDenial(reqUser.role, { targetRole: user.role, newRole: data.role });
+    if (denial) return res.status(403).json({ success: false, message: denial });
     
     if (data.firstName) user.firstName = data.firstName;
     if (data.lastName) user.lastName = data.lastName;
@@ -206,9 +219,8 @@ export const resetStaffPassword = async (req: Request, res: Response) => {
     const user = await User.findById(req.params.id);
     if (!user) return res.status(404).json({ success: false, message: "Staff not found" });
     
-    if (user.role === UserRole.ADMIN && !isFullAccessRole(reqUser.role)) {
-      return res.status(403).json({ success: false, message: "Only an ADMIN can reset an ADMIN's password" });
-    }
+    const denial = accountChangeDenial(reqUser.role, { targetRole: user.role });
+    if (denial) return res.status(403).json({ success: false, message: denial });
     
     user.passwordHash = await bcrypt.hash(newPassword, 10);
     await user.save();

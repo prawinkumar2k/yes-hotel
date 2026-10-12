@@ -11,9 +11,9 @@ import {
 
 const router = Router();
 
-router.get("/status", protect, requirePropertyAccess, requirePermission("NIGHT_AUDIT", "VIEW"), getNightAuditStatus);
+router.get("/status", protect, requirePropertyAccess, requirePermission("NIGHT_AUDIT", "VIEW_STATUS"), getNightAuditStatus);
 router.get("/preview", protect, requirePropertyAccess, requirePermission("NIGHT_AUDIT", "VIEW"), getNightAuditPreview);
 router.get("/history", protect, requirePropertyAccess, requirePermission("NIGHT_AUDIT", "VIEW"), getNightAuditHistory);
-router.post("/run", protect, requirePropertyAccess, requirePermission("NIGHT_AUDIT", "CREATE"), runNightAudit);
+router.post("/run", protect, requirePropertyAccess, requirePermission("NIGHT_AUDIT", "EXECUTE"), runNightAudit);
 
 export default router;

@@ -146,7 +146,7 @@ export default function AdminLayout({ children, title, hidePadding }: { children
       items: [
         { label: "Reports & Analytics", to: "/admin/reports", icon: BarChart3, pageKey: "REPORTS_LAYOUT" },
         { label: "Promotions & Offers", to: "/admin/coupons", icon: Tag, pageKey: "COUPONS" },
-        { label: "Restaurant & POS", to: "/admin/pos", icon: UtensilsCrossed, pageKey: "FRONT_DESK" },
+        { label: "Restaurant & POS", to: "/admin/pos", icon: UtensilsCrossed, pageKey: "RESTAURANT_POS" },
       ],
     },
     {

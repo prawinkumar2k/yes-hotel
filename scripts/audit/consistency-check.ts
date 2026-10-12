@@ -139,7 +139,7 @@ async function main() {
   ];
   for (const m of metrics) {
     const values = Object.values(m.cells).map((v) => String(v));
-    const truthNums = String(m.truth).match(/-?\d+(\.\d+)?/g) ?? [];
+    const truthNums: string[] = String(m.truth).match(/-?\d+(\.\d+)?/g) ?? [];
     const allEqual = new Set(values).size === 1;
     const matchesTruth = values.every((v) => truthNums.includes(v));
     // Several distinct truth values means the DB itself has no single source for the fact.

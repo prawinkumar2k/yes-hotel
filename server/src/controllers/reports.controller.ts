@@ -639,10 +639,9 @@ export const getDaySummary = async (req: Request, res: Response) => {
     dayStart.setHours(0, 0, 0, 0);
     const dayEnd = new Date(targetDate);
     dayEnd.setHours(23, 59, 59, 999);
+    // A date-range condition only; property scoping is propertyMatch below (putting
+    // propertyId inside this operator object made Mongo reject the query).
     const dayQuery: any = { $gte: dayStart, $lte: dayEnd };
-    if ((req as any).propertyId) {
-      dayQuery.propertyId = (req as any).propertyId;
-    }
 
     // 1. Fetch relevant bookings for the day
     // We add propertyId to the queries.

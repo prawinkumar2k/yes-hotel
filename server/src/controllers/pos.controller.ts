@@ -208,10 +208,20 @@ const LEGAL_ORDER_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
 export const updateOrderStatus = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { status } = req.body;
+    const { status, reason } = req.body;
 
     if (!Object.values(OrderStatus).includes(status)) {
       return res.status(400).json({ success: false, message: `Invalid order status: ${status}` });
+    }
+
+    // RESTAURANT runs the kitchen flow, CASHIER settles (BILLED), MANAGER voids (CANCELLED).
+    const action = status === OrderStatus.BILLED ? "SETTLE" : status === OrderStatus.CANCELLED ? "VOID" : "EDIT";
+    const { PermissionService } = await import("../services/PermissionService");
+    if (!(await PermissionService.can((req as any).user, "RESTAURANT_POS", action, String((req as any).propertyId || "default")))) {
+      return res.status(403).json({ success: false, message: `Forbidden: You lack ${action} permission for RESTAURANT_POS` });
+    }
+    if (action === "VOID" && (typeof reason !== "string" || reason.trim().length < 3)) {
+      return res.status(400).json({ success: false, message: "A reason (at least 3 characters) is required to void an order" });
     }
 
     const existing = await RestaurantOrder.findById(id);
@@ -229,10 +239,15 @@ export const updateOrderStatus = async (req: Request, res: Response) => {
 
     await createAuditLog({
       req,
-      action: "pos.order_status_updated",
+      action: action === "VOID" ? "pos.order_voided" : "pos.order_status_updated",
       resourceType: "RestaurantOrder",
       resourceId: order._id.toString(),
-      metadata: { kotNumber: order.kotNumber, newStatus: status },
+      metadata: {
+        kotNumber: order.kotNumber,
+        previousStatus: existing.status,
+        newStatus: status,
+        ...(action === "VOID" ? { voidReason: reason.trim(), voidedAmount: (existing as any).totalAmount } : {}),
+      },
     });
 
     return res.json({

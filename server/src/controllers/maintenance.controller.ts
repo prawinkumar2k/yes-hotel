@@ -95,20 +95,23 @@ export const updateMaintenanceTicket = async (req: Request, res: Response) => {
     const userRole = (req as any).user?.role || "";
     const userId = (req as any).user?._id;
     const { PermissionService } = await import("../services/PermissionService");
-    const isAdminOrManager = await PermissionService.can((req as any).user, "CAP.MAINTENANCE_APPROVE");
     const isCompleting = data.status === MaintenanceStatus.RESOLVED || data.status === MaintenanceStatus.CLOSED;
     const isCriticalOrHigh = existing.priority === MaintenancePriority.CRITICAL || existing.priority === MaintenancePriority.HIGH;
+    // CRITICAL needs MANAGER or higher; HIGH can be approved by SUPERVISOR or higher.
+    const approveCap = existing.priority === MaintenancePriority.CRITICAL ? "CAP.APPROVE_CRITICAL" : "CAP.APPROVE_HIGH";
+    const canApproveCompletion = await PermissionService.can((req as any).user, approveCap);
 
-    // Critical or High priority tasks MANDATE Admin/Manager approval to be completed
-    if (isCompleting && isCriticalOrHigh && !isAdminOrManager) {
+    if (isCompleting && isCriticalOrHigh && !canApproveCompletion) {
       return res.status(403).json({
         success: false,
-        message: "Critical & High-priority tasks require Admin or Manager approval to be marked completed.",
+        message: existing.priority === MaintenancePriority.CRITICAL
+          ? "Completing a CRITICAL ticket requires MANAGER (or higher) approval."
+          : "Completing a HIGH-priority ticket requires SUPERVISOR (or higher) approval.",
       });
     }
 
     const approvalData: any = {};
-    if (isCompleting && isAdminOrManager) {
+    if (isCompleting && isCriticalOrHigh && canApproveCompletion) {
       approvalData.approvedBy = userId;
       approvalData.approvedAt = new Date();
     }

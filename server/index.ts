@@ -58,6 +58,8 @@ import paymentChannelRoutes from "./src/routes/payment-channel.routes";
 import taskApprovalRoutes from "./src/routes/task-approval.routes";
 import walkInRegistrationRoutes from "./src/routes/walk-in-registration.routes";
 import permissionRoutes from "./src/routes/permission.routes";
+import posRoutes from "./src/routes/pos.routes";
+import menuRoutes from "./src/routes/menu.routes";
 import { getJwtSecret } from "./src/config/jwt";
 
 
@@ -310,6 +312,8 @@ export function createServer() {
   app.use("/api/payment-channels", paymentChannelRoutes);
   app.use("/api/task-approvals", taskApprovalRoutes);
   app.use("/api/permissions", permissionRoutes);
+  app.use("/api/pos", posRoutes);
+  app.use("/api/menu", menuRoutes);
 
 
   // Example API routes

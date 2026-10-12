@@ -52,7 +52,7 @@ router.patch("/housekeeping/:id", protect, requirePropertyAccess, requirePermiss
 // which already includes HOUSEKEEPING.
 router.get("/maintenance", protect, requirePropertyAccess, requirePermission("MAINTENANCE", "VIEW"), getMaintenanceTickets);
 router.post("/maintenance", protect, requirePropertyAccess, requirePermission("MAINTENANCE", "CREATE"), createMaintenanceTicket);
-router.patch("/maintenance/:id", protect, requirePropertyAccess, requirePermission("MAINTENANCE", "UPDATE"), updateMaintenanceTicket);
+router.patch("/maintenance/:id", protect, requirePropertyAccess, requirePermission("MAINTENANCE", "EDIT"), updateMaintenanceTicket);
 
 // Contact Messages
 router.get("/contact-messages", protect, requirePropertyAccess, requirePermission("COMPLAINTS", "VIEW"), getContactMessages);

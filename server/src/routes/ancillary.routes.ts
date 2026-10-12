@@ -7,6 +7,6 @@ import { getAncillaryServices, createAncillaryService } from "../controllers/anc
 const router = Router();
 
 router.get("/", protect, requirePropertyAccess, requirePermission("FRONT_DESK", "VIEW"), getAncillaryServices);
-router.post("/", protect, requirePropertyAccess, requirePermission("FRONT_DESK", "CREATE"), createAncillaryService);
+router.post("/", protect, requirePropertyAccess, requirePermission("FRONT_DESK", "EDIT"), createAncillaryService);
 
 export default router;

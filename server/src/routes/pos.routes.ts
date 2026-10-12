@@ -8,6 +8,7 @@ const router = Router();
 
 router.get("/orders", protect, requirePropertyAccess, requirePermission("RESTAURANT_POS", "VIEW"), getPosOrders);
 router.post("/orders", protect, requirePropertyAccess, requirePermission("RESTAURANT_POS", "CREATE"), createPosOrder);
-router.patch("/orders/:id/status", protect, requirePropertyAccess, requirePermission("RESTAURANT_POS", "EDIT"), updateOrderStatus);
+// Per-transition action is checked in the controller: kitchen steps EDIT, BILLED = SETTLE, CANCELLED = VOID.
+router.patch("/orders/:id/status", protect, requirePropertyAccess, requirePermission("RESTAURANT_POS", "VIEW"), updateOrderStatus);
 
 export default router;

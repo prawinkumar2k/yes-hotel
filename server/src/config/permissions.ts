@@ -31,7 +31,7 @@ export const ALL_ACTIONS = [
   "VIEW", "CREATE", "EDIT", "UPDATE", "DELETE", "APPROVE", "REJECT", "EXPORT", "PRINT",
   "CANCEL", "CHECK_IN", "CHECK_OUT", "ASSIGN", "INSPECT", "RESOLVE", "CLOSE", "EXECUTE",
   "ADJUST", "REFUND", "DISABLE", "OPEN_SHIFT", "CLOSE_SHIFT", "RECONCILE",
-  "POST_CHARGE", "VOID_LINE", "SETTLE", "ALLOW",
+  "POST_CHARGE", "VOID_LINE", "SETTLE", "VOID", "VIEW_STATUS", "ALLOW",
 ] as const;
 
 // Every authenticated staff role (everything except CUSTOMER and the full-access roles).
@@ -133,7 +133,7 @@ const base: Record<RoleKey, PermissionMap> = {
   HOUSEKEEPING: {
     "DASHBOARD.HOUSEKEEPING": ["VIEW"],
     "HOUSEKEEPING": ["VIEW", "ASSIGN", "UPDATE", "INSPECT"],
-    "ROOMS": ["VIEW", "CREATE", "EDIT", "DELETE"],
+    "ROOMS": ["VIEW"], // N4: housekeepers view rooms; they cannot create, edit or delete them
     "GUEST_COMPLAINTS": ["VIEW", "CREATE", "EDIT"],
   },
   MAINTENANCE: {
@@ -178,7 +178,6 @@ grant(base, ALL_STAFF.filter((r) => r !== UserRole.SUPERVISOR), "DASHBOARD.COMMA
 // Capabilities used inside controllers (formerly hardcoded role arrays).
 grant(base, [UserRole.MANAGER, UserRole.RECEPTIONIST], "CAP.BOOKING_CANCEL_ANY", ["ALLOW"]);
 grant(base, [UserRole.MANAGER, UserRole.SUPERVISOR], "CAP.SHIFT_SUPERVISOR_OVERRIDE", ["ALLOW"]);
-grant(base, [UserRole.MANAGER], "CAP.MAINTENANCE_APPROVE", ["ALLOW"]);
 grant(base, [UserRole.MANAGER], "CAP.PAYMENT_CONFIRM_DEMO_ANY", ["ALLOW"]);
 grant(base, [UserRole.MANAGER, UserRole.FINANCE, UserRole.CASHIER], "CAP.CC_FINANCE", ["ALLOW"]);
 grant(base, [UserRole.MANAGER, UserRole.RECEPTIONIST, UserRole.CASHIER, UserRole.FINANCE], "CAP.CC_FRONT_OFFICE", ["ALLOW"]);
@@ -188,7 +187,32 @@ grant(base, [UserRole.MANAGER, UserRole.FINANCE, UserRole.RECEPTIONIST], "CAP.CC
 grant(base, [UserRole.MANAGER, UserRole.FINANCE], "CAP.CC_FORECAST", ["ALLOW"]);
 grant(base, [UserRole.MANAGER], "CAP.CC_APPROVALS", ["ALLOW"]);
 grant(base, [UserRole.MANAGER, UserRole.FINANCE], "CAP.APPROVAL_TIER_EXECUTIVE", ["ALLOW"]);
-grant(base, [UserRole.MANAGER, UserRole.FINANCE, UserRole.RECEPTIONIST], "CAP.APPROVAL_TIER_MANAGER", ["ALLOW"]);
+grant(base, [UserRole.MANAGER, UserRole.FINANCE, UserRole.RECEPTIONIST, UserRole.SUPERVISOR], "CAP.APPROVAL_TIER_MANAGER", ["ALLOW"]);
+// Approval floor by priority (task approvals and maintenance completion):
+// CRITICAL needs MANAGER or higher; HIGH can be approved by SUPERVISOR or higher.
+grant(base, [UserRole.MANAGER], "CAP.APPROVE_CRITICAL", ["ALLOW"]);
+grant(base, [UserRole.MANAGER, UserRole.SUPERVISOR], "CAP.APPROVE_HIGH", ["ALLOW"]);
+
+// ── N2: pages that had no grants, and the night-audit view ──────────────────
+// Night audit: MANAGER and FINANCE run it (EXECUTE above); SUPERVISOR and RECEPTIONIST view status.
+grant(base, [UserRole.SUPERVISOR, UserRole.RECEPTIONIST, UserRole.MANAGER, UserRole.FINANCE], "NIGHT_AUDIT", ["VIEW_STATUS"]);
+// POS: RESTAURANT takes orders and runs the KOT/kitchen flow, CASHIER settles bills,
+// MANAGER can also void (reason required, audit-logged).
+grant(base, [UserRole.RESTAURANT], "RESTAURANT_POS", ["VIEW", "CREATE", "EDIT"]);
+grant(base, [UserRole.CASHIER], "RESTAURANT_POS", ["VIEW", "SETTLE"]);
+grant(base, [UserRole.MANAGER], "RESTAURANT_POS", ["VIEW", "CREATE", "EDIT", "SETTLE", "VOID"]);
+// Menu: MANAGER maintains it; the POS roles read it (the POS screen lists menu items).
+grant(base, [UserRole.MANAGER], "MENU_MANAGEMENT", ["VIEW", "CREATE", "EDIT", "DELETE"]);
+grant(base, [UserRole.RESTAURANT, UserRole.CASHIER], "MENU_MANAGEMENT", ["VIEW"]);
+grant(base, [UserRole.MANAGER], "COUPONS", ["VIEW", "CREATE", "EDIT", "DELETE"]);
+grant(base, [UserRole.RECEPTIONIST], "COUPONS", ["VIEW"]);
+grant(base, [UserRole.MANAGER], "BANQUETS", ["VIEW", "CREATE", "EDIT"]);
+grant(base, [UserRole.RECEPTIONIST], "BANQUETS", ["VIEW"]);
+grant(base, [UserRole.MANAGER], "RATE_PLANS", ["CREATE", "EDIT"]);
+grant(base, [UserRole.MANAGER, UserRole.FINANCE], "CORPORATE_ACCOUNTS", ["VIEW", "CREATE", "EDIT"]);
+grant(base, [UserRole.MANAGER, UserRole.FINANCE], "REPORTS_LAYOUT", ["VIEW"]);
+grant(base, [UserRole.MANAGER, UserRole.SUPERVISOR, UserRole.RECEPTIONIST, UserRole.FINANCE], "TASK_APPROVALS", ["VIEW", "CREATE", "APPROVE", "REJECT"]);
+// Audit logs, permissions/roles and multi-property (incl. GET /api/properties) stay full-access only.
 
 export const DEFAULT_ROLE_PERMISSIONS: Record<RoleKey, PermissionMap> = base;
 
@@ -199,4 +223,51 @@ export const ALL_PAGE_KEYS: string[] = [
 
 export function isFullAccessRole(role: string | undefined): boolean {
   return !!role && (FULL_ACCESS_ROLES as string[]).includes(role);
+}
+
+/** Role hierarchy for account management. Higher number = more senior. */
+export const ROLE_RANK: Record<RoleKey, number> = {
+  SUPER_ADMIN: 100,
+  ADMIN: 90,
+  MANAGER: 70,
+  SUPERVISOR: 60,
+  FINANCE: 50,
+  RECEPTIONIST: 40,
+  CASHIER: 40,
+  RESTAURANT: 40,
+  EVENTS: 40,
+  INVENTORY: 40,
+  PROCUREMENT: 40,
+  HOUSEKEEPING: 30,
+  MAINTENANCE: 30,
+  CUSTOMER: 0,
+};
+
+const PROTECTED_ACCOUNT_ROLES = ["SUPER_ADMIN", "ADMIN"];
+
+/**
+ * Account-management guard. Returns a denial message, or null when allowed.
+ * - Only SUPER_ADMIN may create, edit, disable, reset or re-role a SUPER_ADMIN or ADMIN account.
+ * - Nobody may grant a role ranked above their own, or manage an account ranked above their own.
+ */
+export function accountChangeDenial(
+  actorRole: string | undefined,
+  change: { targetRole?: string; newRole?: string },
+): string | null {
+  const actorRank = ROLE_RANK[actorRole as RoleKey] ?? -1;
+  const isSuper = actorRole === "SUPER_ADMIN";
+  const { targetRole, newRole } = change;
+  if (targetRole && PROTECTED_ACCOUNT_ROLES.includes(targetRole) && !isSuper) {
+    return `Only a SUPER_ADMIN can manage ${targetRole} accounts`;
+  }
+  if (newRole && PROTECTED_ACCOUNT_ROLES.includes(newRole) && !isSuper) {
+    return `Only a SUPER_ADMIN can assign the ${newRole} role`;
+  }
+  if (newRole && (ROLE_RANK[newRole as RoleKey] ?? Infinity) > actorRank) {
+    return `You cannot assign a role higher than your own (${newRole})`;
+  }
+  if (targetRole && (ROLE_RANK[targetRole as RoleKey] ?? Infinity) > actorRank) {
+    return `You cannot manage an account with a higher role (${targetRole})`;
+  }
+  return null;
 }

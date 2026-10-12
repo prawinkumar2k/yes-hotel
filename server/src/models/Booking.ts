@@ -1,4 +1,5 @@
 import mongoose, { Document, Schema } from "mongoose";
+import { propertyScoped } from "./plugins/propertyScoped";
 
 export enum BookingStatus {
   PENDING = "PENDING",
@@ -395,5 +396,8 @@ BookingSchema.index({ "guestDetails.phone": 1 });
 BookingSchema.index({ property: 1, checkInDate: 1 }, { sparse: true });
 // Registration status reporting
 BookingSchema.index({ registrationStatus: 1, checkInDate: -1 }, { sparse: true });
+
+// Staff views filter on propertyId; see plugins/propertyScoped.ts.
+BookingSchema.plugin(propertyScoped);
 
 export const Booking = (mongoose.models.Booking as mongoose.Model<IBooking>) || mongoose.model<IBooking>("Booking", BookingSchema);

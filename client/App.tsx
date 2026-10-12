@@ -226,8 +226,8 @@ function App() {
                 <Route path="/admin/complaints" element={<PermissionRoute pageKey="COMPLAINTS"><AdminLayout title="Complaints & Service Recovery"><AdminComplaints /></AdminLayout></PermissionRoute>} />
                 <Route path="/admin/reports/*" element={<PermissionRoute pageKey="REPORTS_LAYOUT"><AdminLayout title="Reports" hidePadding><AdminReportsLayout /></AdminLayout></PermissionRoute>} />
                 <Route path="/admin/in-house-list" element={<PermissionRoute pageKey="IN_HOUSE_GUESTS"><AdminLayout title="In-House Guest List"><AdminInHouseList /></AdminLayout></PermissionRoute>} />
-                <Route path="/admin/day-sales-summary" element={<PermissionRoute pageKey="DAY_SALES_SUMMARY"><AdminLayout title="Day Sales Summary"><AdminDaySalesSummary /></AdminLayout></PermissionRoute>} />
-                <Route path="/admin/monthly-mis" element={<PermissionRoute pageKey="MONTHLY_MIS"><AdminLayout title="Monthly MIS Report"><AdminMonthlyMIS /></AdminLayout></PermissionRoute>} />
+                <Route path="/admin/day-sales-summary" element={<PermissionRoute pageKey="REPORTS_LAYOUT"><AdminLayout title="Day Sales Summary"><AdminDaySalesSummary /></AdminLayout></PermissionRoute>} />
+                <Route path="/admin/monthly-mis" element={<PermissionRoute pageKey="REPORTS_LAYOUT"><AdminLayout title="Monthly MIS Report"><AdminMonthlyMIS /></AdminLayout></PermissionRoute>} />
                 <Route path="/admin/enquiries" element={<PermissionRoute pageKey="ENQUIRIES"><AdminLayout title="Booking Enquiries"><AdminEnquiries /></AdminLayout></PermissionRoute>} />
                 <Route path="/admin/enquiries/:id" element={<PermissionRoute pageKey="ENQUIRIES"><AdminLayout title="Enquiry Details"><AdminEnquiryDetails /></AdminLayout></PermissionRoute>} />
                 <Route path="/admin/executive" element={<PermissionRoute pageKey="DASHBOARD.EXECUTIVE"><AdminLayout title="Executive Command Center"><AdminExecutiveDashboard /></AdminLayout></PermissionRoute>} />
@@ -240,7 +240,7 @@ function App() {
                 <Route path="/admin/audit-logs" element={<PermissionRoute pageKey="AUDIT_LOGS"><AdminLayout title="Audit Logs"><AdminAuditLogs /></AdminLayout></PermissionRoute>} />
                 <Route path="/admin/corporate-accounts" element={<PermissionRoute pageKey="CORPORATE_ACCOUNTS"><AdminLayout title="Corporate Accounts & B2B Billing"><AdminCorporateAccounts /></AdminLayout></PermissionRoute>} />
                 <Route path="/admin/banquets" element={<PermissionRoute pageKey="BANQUETS"><AdminLayout title="Banquets & Events"><AdminBanquets /></AdminLayout></PermissionRoute>} />
-                <Route path="/admin/pos" element={<PermissionRoute pageKey="FRONT_DESK"><AdminLayout title="Restaurant & POS"><AdminPOS /></AdminLayout></PermissionRoute>} />
+                <Route path="/admin/pos" element={<PermissionRoute pageKey="RESTAURANT_POS"><AdminLayout title="Restaurant & POS"><AdminPOS /></AdminLayout></PermissionRoute>} />
                 <Route path="/admin/ancillary" element={<PermissionRoute pageKey="FRONT_DESK"><AdminLayout title="Ancillary Services"><AdminAncillary /></AdminLayout></PermissionRoute>} />
                 <Route path="/admin/group-bookings" element={<PermissionRoute pageKey="GROUP_BOOKINGS"><AdminLayout title="Group Bookings — MICE & Events"><AdminGroupBookings /></AdminLayout></PermissionRoute>} />
 

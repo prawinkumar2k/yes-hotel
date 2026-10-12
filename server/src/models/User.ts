@@ -1,4 +1,5 @@
 import mongoose, { Document, Schema } from "mongoose";
+import { propertyScoped } from "./plugins/propertyScoped";
 
 export enum UserRole {
   CUSTOMER = "CUSTOMER",
@@ -51,5 +52,8 @@ const UserSchema = new Schema<IUser>(
   },
   { timestamps: true }
 );
+
+// Staff views filter on propertyId; see plugins/propertyScoped.ts.
+UserSchema.plugin(propertyScoped, { appliesTo: (u: any) => u.role !== "CUSTOMER" && u.role !== "SUPER_ADMIN" });
 
 export const User = (mongoose.models.User as mongoose.Model<IUser>) || mongoose.model<IUser>("User", UserSchema);

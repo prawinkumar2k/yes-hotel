@@ -329,6 +329,97 @@ Capability checks inside controllers (`CAP.*` keys) keep their previous role set
 | N8 | The in-house **report** returns 4 rows; every other module says 2. HK task list doesn't populate the room category (source of "Standard Luxury Suite"). | Inconsistent counts | Step 3 (room status service). |
 | N9 | Staff create/edit only allows 5 roles (no CASHIER, SUPERVISOR, FINANCE…). | Can't onboard cashiers from the UI | Step 3 or Phase 2. |
 
+Decisions (12 Oct): N1–N5 approved; N6/N7 via the hotfix below.
+
+### Folio hotfix — reads never write
+
+| Issue | Root cause | Fix | Test |
+|---|---|---|---|
+| N6: opening a folio fabricated credit lines | `ensureAndSeedFolioForBooking` ran on every read (staff folio GET, checkout preview) and posted "Advance Payment Received" from `booking.paidAmount` | Helper removed. Reads use read-only `findFolioForBooking`; a booking without a folio returns 404. `openFolioForBooking` is an explicit, transactional, idempotent action that posts stay charges once and credits only real `Payment` records, once each by `paymentId`, net of refunds | `folio-read.integration.spec.ts`: 5 reads each of staff / preview / customer leave folio, line and payment counts unchanged; 5 concurrent opens produce 1 folio, 1 room charge, 1 payment credit |
+| Check-in posted a "Prepayment received online" credit from `paidAmount` | Same pattern on a write path | Credits come from `Payment` records only | same spec |
+| Checkout seeded a folio before checking the booking was CHECKED_IN | Order of operations | Explicit open runs after the status check | — |
+
+Dry-run report, **nothing changed**: `docs/repair/folio-unbacked-credits.md`
+- **A:** 52 unbacked "Advance Payment Received" lines on 52 bookings, totalling ₹10,16,825. One is on a settled folio (YES-BKG-2020).
+- **B:** 2 PAYMENT lines with no `Payment` document: WALKIN-1011-001 ₹1,050 and YES-BKG-2010 ₹5,000.
+- Reversing set A must be paired with posting the bookings' real Payment records (net ₹3,73,825). Otherwise those folios show the full stay as outstanding.
+
+Still open for the folio step: `PUT /folios/booking/:id/bill-edit` posts a credit from a typed amount with no Payment record.
+
+### N1 — property assignment (applied)
+
+- Backup `backups/2026-10-12T17-10-53-671` taken first.
+- Migration `scripts/migrations/2026-10-12-assign-property.mjs`: dry run shown, then applied in one transaction:
+  - 12 staff users → YES-BLR. SUPER_ADMIN stays global.
+  - Backfill, needed so property-filtered views don't lose records (approved separately): 54 bookings, 2 guests and 4 restaurant orders had no `propertyId`.
+- Verified: consistency output as admin is **identical before and after**.
+- Can't recur:
+  - The `propertyScoped` schema plugin on User (staff roles), Booking, Guest and RestaurantOrder fills the only active property, or rejects the save when there are zero or several.
+  - `RestaurantOrder` had `propertyId` in its TypeScript interface but not its schema, so it was silently dropped; the plugin adds the path.
+  - `POST /api/staff` sets the property explicitly: the given one, else the creator's, else the plugin default.
+- Tests: `propertyScoped.spec.ts`; the vitest setup provides a single test property, mirroring production.
+
+### N2–N5 — access rules (applied)
+
+Generated diff: `docs/rbac/n1-n5-access-diff.txt` (and in the commit message).
+
+- **Route vocabulary fixes**, pointing routes at grants roles already hold:
+  - HK room status → `HOUSEKEEPING:UPDATE`
+  - inspections → `INSPECT`
+  - maintenance update → `MAINTENANCE:EDIT`
+  - night-audit run → `EXECUTE`
+  - ancillary charge → `FRONT_DESK:EDIT`
+  - task approve/reject → `APPROVE`/`REJECT`
+- **Night audit:** MANAGER and FINANCE run it. SUPERVISOR and RECEPTIONIST see `/status` only (new `VIEW_STATUS` action).
+- **POS:**
+  - RESTAURANT creates orders and runs the KOT/kitchen flow.
+  - CASHIER settles (→ BILLED) and nothing else.
+  - MANAGER can also void (→ CANCELLED). A reason is mandatory and it's audit-logged as `pos.order_voided` with the previous status, reason and amount.
+  - The menu is readable by POS roles and editable by MANAGER.
+  - The `pos` and `menu` routers are now mounted. `ota` waits for its security review.
+- **Approvals:** for both task approvals and maintenance completion, CRITICAL needs MANAGER or higher and HIGH needs SUPERVISOR or higher (`CAP.APPROVE_CRITICAL` / `CAP.APPROVE_HIGH`). Confidentiality tiers still apply; SUPERVISOR joined the manager tier.
+- **New page grants:**
+  - Coupons: MANAGER; RECEPTIONIST read-only.
+  - Banquets: MANAGER; RECEPTIONIST read-only.
+  - Rate-plan edits: MANAGER.
+  - Corporate accounts and Reports: MANAGER, FINANCE.
+  - Task approvals: MANAGER, SUPERVISOR, RECEPTIONIST, FINANCE.
+  - Audit logs, permissions and multi-property stay full-access only.
+- **N3 account guard** (`accountChangeDenial`):
+  - Only SUPER_ADMIN may create, edit, disable, reset or re-role a SUPER_ADMIN or ADMIN account.
+  - Nobody may grant a role ranked above their own, or manage an account ranked above their own.
+- **N4:** HOUSEKEEPING `ROOMS` is now `VIEW` only.
+- **N5:** `GET /api/properties` and `/properties/channels` require `MULTI_PROPERTY:VIEW`.
+- **Client page keys:** `/admin/pos` (and its sidebar entry) used `FRONT_DESK`, so RESTAURANT and CASHIER couldn't open POS. It's now `RESTAURANT_POS`. Day Sales Summary and Monthly MIS used keys nobody holds; they're now `REPORTS_LAYOUT`.
+- **Regression found by the per-role sweep and fixed:** `GET /reports/day-summary` returned 500 for property-scoped users. `propertyId` was injected into the date-range operator object; this was latent until users had a property.
+- **Tests:**
+  - `rbac-rules.integration.spec.ts`: 22 cases over HTTP, covering each N3 rule, N1 property inheritance, N4, N5, POS settle/void split with audit-log assertion, approval floors and night-audit view.
+  - `accountChangeDenial` unit cases.
+
+### Per-role verification
+
+`docs/verification/role-sweep-n1-n5.md` (`scripts/audit/role-sweep.ts`):
+- **API sweep:** every GET route as each of RECEPTIONIST, CASHIER, HOUSEKEEPING, MAINTENANCE, SUPERVISOR, MANAGER, FINANCE and RESTAURANT. A 403 counts as expected only when the permission map denies the route to that role.
+- **Page sweep:** all 64 permission-guarded pages loaded in Chromium as each role.
+- The sweep ran on a second dev server (:8095) with `RATE_LIMIT_API_MAX` raised, so the limiter stayed on without causing false 429s. Port 8090 is held by the stale `.claude/worktrees/hardening` dev server, which was left untouched.
+
+**Result** (8 roles × 64 pages = 512 page loads): 390 🔒 · 118 ✅ · 4 ❌; every other page either loaded (✅) or was denied exactly where the map denies it (🔒). The 4 ❌ are all known or fixed:
+- `/admin/night-audit` (MANAGER, FINANCE): H8 night-audit 500. This is the known defect, scheduled for the night-audit step.
+- `/admin/monthly-mis` (MANAGER, FINANCE): AG Grid error #239. The page imports the legacy CSS themes without `theme="legacy"`. It was hidden until now because nobody could open the page. **Fixed** and re-verified: no console errors.
+
+API errors per role: only `night-audit/status` → 500 (H8).
+- `guests/my/profile` returns 401 for staff. It's a customer-only endpoint answering staff with 401 instead of 403; low priority.
+- `permissions/users/:id/effective` returns 403 because the sweep passed a non-user id. That's correct behaviour.
+
+**Sweep tooling lesson:** an earlier re-run reported every page OK. A client edit had made Vite answer 504 "Outdated Optimize Dep", so every page rendered blank, and the sweep only checked `/api/` calls. The sweep now fails a page on any 5xx asset, a blank body, a stuck permission check, or a bounce to `/login`.
+
+**Pages that load with a denied sub-call** (not errors, but they need a decision; proposals, not applied):
+- RECEPTIONIST/SUPERVISOR at Check-Out, and CASHIER at Advances: `GET /payment-channels` → 403, so the payment-method picker is empty. Proposal: `PAYMENT_CHANNELS:VIEW` for the money desk + SUPERVISOR.
+- RECEPTIONIST/SUPERVISOR at In-House List: the page key is `IN_HOUSE_GUESTS`, but the API requires `REPORTS_LAYOUT`. Proposal: the API checks `IN_HOUSE_GUESTS:VIEW`.
+- RECEPTIONIST/SUPERVISOR at Folio/GRC print: `GET /advances` → 403, so held advances don't show on the print. Proposal: `ADVANCES:VIEW` for RECEPTIONIST (it already has advance mutations) and SUPERVISOR.
+- HOUSEKEEPING at Housekeeping: `GET /staff` and `/room-rack` → 403, so the staff picker and rack are missing.
+- SUPERVISOR at Executive: report sub-calls → 403.
+
 ---
 
 ## Appendix A — All mounted endpoints (243)

@@ -1,4 +1,5 @@
 import mongoose, { Document, Schema } from "mongoose";
+import { propertyScoped } from "./plugins/propertyScoped";
 
 export enum OrderStatus {
   KITCHEN_PENDING = "KITCHEN_PENDING",
@@ -65,5 +66,8 @@ const RestaurantOrderSchema = new Schema<IRestaurantOrder>(
   },
   { timestamps: true }
 );
+
+// Staff views filter on propertyId; see plugins/propertyScoped.ts.
+RestaurantOrderSchema.plugin(propertyScoped);
 
 export const RestaurantOrder = (mongoose.models.RestaurantOrder as mongoose.Model<IRestaurantOrder>) || mongoose.model<IRestaurantOrder>("RestaurantOrder", RestaurantOrderSchema);

@@ -27,10 +27,10 @@ router.get("/stats", requirePropertyAccess, requirePermission("TASK_APPROVALS", 
 );
 
 // Approve / Reject — also RBAC-enforced at controller level
-router.post("/:id/approve", requirePropertyAccess, requirePermission("TASK_APPROVALS", "CREATE"), approveTaskApproval
+router.post("/:id/approve", requirePropertyAccess, requirePermission("TASK_APPROVALS", "APPROVE"), approveTaskApproval
 );
 
-router.post("/:id/reject", requirePropertyAccess, requirePermission("TASK_APPROVALS", "CREATE"), rejectTaskApproval
+router.post("/:id/reject", requirePropertyAccess, requirePermission("TASK_APPROVALS", "REJECT"), rejectTaskApproval
 );
 
 export default router;

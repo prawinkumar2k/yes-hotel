@@ -10,7 +10,7 @@ const router = Router();
 // how this relates to the task-centric /api/admin/housekeeping endpoints.
 router.get("/dashboard", protect, requirePropertyAccess, requirePermission("HOUSEKEEPING", "VIEW"), getHousekeepingDashboard
 );
-router.patch("/rooms/:id/status", protect, requirePropertyAccess, requirePermission("HOUSEKEEPING", "EDIT"), updateRoomHousekeepingStatus
+router.patch("/rooms/:id/status", protect, requirePropertyAccess, requirePermission("HOUSEKEEPING", "UPDATE"), updateRoomHousekeepingStatus
 );
 
 export default router;

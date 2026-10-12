@@ -14,8 +14,8 @@ const INSPECTOR_ROLES = ["ADMIN", "MANAGER", "HOUSEKEEPING", "RECEPTIONIST"];
 const RELEASE_ROLES = ["ADMIN", "MANAGER", "RECEPTIONIST"];
 
 router.get("/templates", protect, requirePropertyAccess, requirePermission("HOUSEKEEPING", "VIEW"), getInspectionTemplates);
-router.post("/submit", protect, requirePropertyAccess, requirePermission("HOUSEKEEPING", "CREATE"), submitInspectionResult);
-router.post("/release", protect, requirePropertyAccess, requirePermission("HOUSEKEEPING", "CREATE"), releaseRoom);
+router.post("/submit", protect, requirePropertyAccess, requirePermission("HOUSEKEEPING", "INSPECT"), submitInspectionResult);
+router.post("/release", protect, requirePropertyAccess, requirePermission("HOUSEKEEPING", "INSPECT"), releaseRoom);
 router.get("/room/:roomId", protect, requirePropertyAccess, requirePermission("HOUSEKEEPING", "VIEW"), getRoomInspectionHistory);
 
 export default router;

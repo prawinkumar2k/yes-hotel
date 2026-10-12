@@ -131,7 +131,8 @@ export default function AdminMonthlyMIS() {
         </div>
       ) : (
         <div className="ag-theme-alpine flex-1 w-full print:hidden">
-          <AgGridReact 
+          <AgGridReact
+            theme="legacy" // the page styles the grid with the ag-theme-alpine CSS file
             modules={[AllCommunityModule]}
             rowData={reportData} 
             columnDefs={columnDefs as any} 
