@@ -1,3 +1,4 @@
+import { getStoredAuthToken } from "@/lib/authStorage";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
@@ -11,13 +12,36 @@ export default function AdminAuditLogs() {
   const [page, setPage] = useState(1);
   const [action, setAction] = useState("");
   const [resourceType, setResourceType] = useState("");
+  const [actorRole, setActorRole] = useState("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+  const filterParams = () => {
+    const params = new URLSearchParams();
+    if (action) params.set("action", action);
+    if (resourceType) params.set("resourceType", resourceType);
+    if (actorRole) params.set("actorRole", actorRole);
+    if (dateFrom) params.set("dateFrom", dateFrom);
+    if (dateTo) params.set("dateTo", dateTo);
+    return params;
+  };
+  const exportCsv = async () => {
+    const token = getStoredAuthToken();
+    const res = await fetch(`/api/audit-logs/export?${filterParams().toString()}`, { headers: token ? { Authorization: `Bearer ${token}` } : {}, credentials: "include" });
+    if (!res.ok) return;
+    const url = URL.createObjectURL(await res.blob());
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `audit-log-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   const { data, isLoading } = useQuery({
-    queryKey: ["audit-logs", page, action, resourceType],
+    queryKey: ["audit-logs", page, action, resourceType, actorRole, dateFrom, dateTo],
     queryFn: async () => {
-      const params = new URLSearchParams({ page: String(page), limit: "20" });
-      if (action) params.set("action", action);
-      if (resourceType) params.set("resourceType", resourceType);
+      const params = filterParams();
+      params.set("page", String(page));
+      params.set("limit", "20");
       const res = await api.get(`/audit-logs?${params.toString()}`);
       return res.data.data;
     },
@@ -32,7 +56,7 @@ export default function AdminAuditLogs() {
 
       <div className="flex gap-4 mb-6">
         <Input
-          placeholder="Search by action (e.g. coupon.created)"
+          placeholder="Action, or prefix with a dot (e.g. folio.)"
           value={action}
           onChange={(e) => { setAction(e.target.value); setPage(1); }}
           className="max-w-xs"
@@ -43,6 +67,10 @@ export default function AdminAuditLogs() {
           onChange={(e) => { setResourceType(e.target.value); setPage(1); }}
           className="max-w-xs"
         />
+        <Input placeholder="Role (e.g. CASHIER)" value={actorRole} onChange={(e) => { setActorRole(e.target.value.toUpperCase()); setPage(1); }} className="max-w-[160px]" />
+        <Input type="date" value={dateFrom} onChange={(e) => { setDateFrom(e.target.value); setPage(1); }} className="max-w-[160px]" aria-label="From date" />
+        <Input type="date" value={dateTo} onChange={(e) => { setDateTo(e.target.value); setPage(1); }} className="max-w-[160px]" aria-label="To date" />
+        <Button variant="outline" onClick={exportCsv}>Export CSV</Button>
       </div>
 
       <div className="bg-white rounded-lg shadow-sm border overflow-hidden">

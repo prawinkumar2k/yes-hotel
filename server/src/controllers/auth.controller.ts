@@ -1,3 +1,5 @@
+import { createAuditLog } from "../services/audit.service";
+import { AuditActorType } from "../models/AuditLog";
 import { Request, Response } from "express";
 import { User, UserRole } from "../models/User";
 import { hashPassword, comparePassword, generateToken } from "../utils/auth";
@@ -97,21 +99,30 @@ export const login = async (req: Request, res: Response) => {
     const { email, password } = parsedData.data;
 
     const user = await User.findOne({ email });
+    const failed = async (reason: string) => {
+      await createAuditLog({ req, action: "auth.login_failed", resourceType: "User", resourceId: user?._id?.toString(), actorType: AuditActorType.GUEST, actorRole: "ANONYMOUS", metadata: { email, reason } });
+    };
     if (!user) {
+      await failed("unknown_email");
       return res.status(401).json({ success: false, message: "Invalid email or password" });
     }
 
     const isMatch = await comparePassword(password, user.passwordHash);
     if (!isMatch) {
+      await failed("bad_password");
       return res.status(401).json({ success: false, message: "Invalid email or password" });
     }
 
     if (!user.isActive) {
+      await failed("disabled");
       return res.status(401).json({ success: false, message: "Account is disabled" });
     }
 
-    user.lastLogin = new Date();
-    await user.save();
+    // Targeted update: a login must not re-validate (and possibly fail on) the whole user document.
+    const now = new Date();
+    await User.updateOne({ _id: user._id }, { $set: { lastLogin: now, lastActiveAt: now } });
+    user.lastLogin = now;
+    await createAuditLog({ req, action: "auth.login", resourceType: "User", resourceId: user._id.toString(), actorId: user._id.toString(), actorRole: user.role, actorType: AuditActorType.USER });
 
     const token = generateToken(user._id.toString(), user.role);
     const refreshToken = await issueRefreshToken(user._id.toString());

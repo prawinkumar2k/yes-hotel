@@ -205,6 +205,9 @@ export default function AdminStaff() {
                   </td>
                   <td className="px-4 py-3 text-xs text-gray-800 font-semibold">
                     {s.lastLogin ? format(new Date(s.lastLogin), 'MMM d, yyyy HH:mm') : 'Never'}
+                    {s.lastActiveAt && (
+                      <div className="text-[11px] text-gray-500 font-medium">Active {format(new Date(s.lastActiveAt), 'MMM d, HH:mm')}</div>
+                    )}
                   </td>
                   <td className="px-4 py-3 text-right">
                     <div className="flex justify-end gap-2">

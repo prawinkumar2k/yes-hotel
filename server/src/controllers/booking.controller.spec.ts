@@ -131,7 +131,7 @@ describe("booking concurrency and idempotency", () => {
     await Booking.deleteMany({ roomCategory: category._id });
     await BookingInventoryDay.deleteMany({ roomCategory: category._id });
     await BookingIdempotency.deleteMany({ key });
-    await AuditLog.deleteMany({ "metadata.idempotencyKey": key });
+    await AuditLog.collection.deleteMany({ "metadata.idempotencyKey": key });
   });
 
   it("returns the original booking for the same idempotency key", async () => {
@@ -166,7 +166,7 @@ describe("booking concurrency and idempotency", () => {
     await Booking.deleteMany({ roomCategory: category._id });
     await BookingInventoryDay.deleteMany({ roomCategory: category._id });
     await BookingIdempotency.deleteMany({ key });
-    await AuditLog.deleteMany({ "metadata.idempotencyKey": key });
+    await AuditLog.collection.deleteMany({ "metadata.idempotencyKey": key });
   });
 
   it("conflicts when two genuine booking attempts target the same exhausted inventory", async () => {
@@ -208,7 +208,7 @@ describe("booking concurrency and idempotency", () => {
     await Booking.deleteMany({ roomCategory: category._id });
     await BookingInventoryDay.deleteMany({ roomCategory: category._id });
     await BookingIdempotency.deleteMany({ key: { $in: [firstKey, secondKey] } });
-    await AuditLog.deleteMany({ "metadata.idempotencyKey": { $in: [firstKey, secondKey] } });
+    await AuditLog.collection.deleteMany({ "metadata.idempotencyKey": { $in: [firstKey, secondKey] } });
   });
 
   it("rejects stale availability at final booking creation time", async () => {
@@ -253,7 +253,7 @@ describe("booking concurrency and idempotency", () => {
     await Booking.deleteMany({ roomCategory: category._id });
     await BookingInventoryDay.deleteMany({ roomCategory: category._id });
     await BookingIdempotency.deleteMany({ key: /stale-/ });
-    await AuditLog.deleteMany({ "metadata.idempotencyKey": /stale-/ });
+    await AuditLog.collection.deleteMany({ "metadata.idempotencyKey": /stale-/ });
   });
 
   it("releases inventory on cancellation", async () => {
@@ -286,7 +286,7 @@ describe("booking concurrency and idempotency", () => {
     await Booking.deleteMany({ roomCategory: category._id });
     await BookingInventoryDay.deleteMany({ roomCategory: category._id });
     await BookingIdempotency.deleteMany({ key });
-    await AuditLog.deleteMany({ "metadata.idempotencyKey": key });
+    await AuditLog.collection.deleteMany({ "metadata.idempotencyKey": key });
   });
 
   it("rejects malformed booking input without creating partial records", async () => {
@@ -343,7 +343,7 @@ describe("booking concurrency and idempotency", () => {
     await Booking.deleteMany({ roomCategory: category._id });
     await BookingInventoryDay.deleteMany({ roomCategory: category._id });
     await BookingIdempotency.deleteMany({ key: { $regex: "^concurrent-" } });
-    await AuditLog.deleteMany({ "metadata.idempotencyKey": { $regex: "^concurrent-" } });
+    await AuditLog.collection.deleteMany({ "metadata.idempotencyKey": { $regex: "^concurrent-" } });
   });
 
   it("leaves no leaked inventory or orphaned booking when booking creation fails after the inventory claim", async () => {
@@ -385,7 +385,7 @@ describe("booking concurrency and idempotency", () => {
     await Booking.deleteMany({ roomCategory: category._id });
     await BookingInventoryDay.deleteMany({ roomCategory: category._id });
     await BookingIdempotency.deleteMany({ key });
-    await AuditLog.deleteMany({ "metadata.idempotencyKey": key });
+    await AuditLog.collection.deleteMany({ "metadata.idempotencyKey": key });
   });
 
   it("rolls back an earlier night's claim atomically when a later night in the same multi-night booking conflicts", async () => {
@@ -432,7 +432,7 @@ describe("booking concurrency and idempotency", () => {
     await Booking.deleteMany({ roomCategory: category._id });
     await BookingInventoryDay.deleteMany({ roomCategory: category._id });
     await BookingIdempotency.deleteMany({ key });
-    await AuditLog.deleteMany({ "metadata.idempotencyKey": key });
+    await AuditLog.collection.deleteMany({ "metadata.idempotencyKey": key });
   });
 
   it("audits guest checkout bookings as actorType GUEST, not silently", async () => {
@@ -469,7 +469,7 @@ describe("booking concurrency and idempotency", () => {
     await Booking.deleteMany({ roomCategory: category._id });
     await BookingInventoryDay.deleteMany({ roomCategory: category._id });
     await BookingIdempotency.deleteMany({ key });
-    await AuditLog.deleteMany({ "metadata.idempotencyKey": key });
+    await AuditLog.collection.deleteMany({ "metadata.idempotencyKey": key });
   });
 
   it("rejects a booking attempt from a blocked guest and creates one guest record per email on success", async () => {
@@ -513,7 +513,7 @@ describe("booking concurrency and idempotency", () => {
     await Booking.deleteMany({ roomCategory: category._id });
     await BookingInventoryDay.deleteMany({ roomCategory: category._id });
     await BookingIdempotency.deleteMany({ key: { $in: [blockedKey, okKey] } });
-    await AuditLog.deleteMany({ "metadata.idempotencyKey": { $in: [blockedKey, okKey] } });
+    await AuditLog.collection.deleteMany({ "metadata.idempotencyKey": { $in: [blockedKey, okKey] } });
     await Guest.deleteMany({ email: { $in: [blockedEmail, okEmail] } });
   });
 

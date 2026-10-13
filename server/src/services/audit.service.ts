@@ -53,6 +53,8 @@ export async function createAuditLog(params: {
       resourceType,
       resourceId: Array.isArray(resourceId) ? resourceId[0] : resourceId,
       metadata,
+      before: metadata?.before,
+      after: metadata?.after,
       ipAddress: req?.ip,
       // NOTE: `req?.headers["user-agent"]` (without the second `?.`) looks
       // safe but isn't — optional chaining only guards the immediately

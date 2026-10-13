@@ -76,7 +76,7 @@ beforeEach(async () => {
     Payment.deleteMany({ razorpayOrderId: /^order_test_/ }),
     Refund.deleteMany({ razorpayRefundId: /^rfnd_test_/ }),
     WebhookEvent.deleteMany({ provider: "RAZORPAY", eventId: /^payment\.|^refund\./ }),
-    AuditLog.deleteMany({ action: { $in: ["payment.completed", "payment.failed", "payment.amount_mismatch", "refund.confirmed_by_webhook", "refund.failed_confirmed_by_webhook"] } }),
+    AuditLog.collection.deleteMany({ action: { $in: ["payment.completed", "payment.failed", "payment.amount_mismatch", "refund.confirmed_by_webhook", "refund.failed_confirmed_by_webhook"] } }),
   ]);
 });
 

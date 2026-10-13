@@ -31,6 +31,7 @@ export interface IUser extends Document {
   isActive: boolean;
   isEmailVerified: boolean;
   lastLogin?: Date;
+  lastActiveAt?: Date; // last authenticated request (session activity, incl. refreshed sessions)
   createdAt: Date;
   updatedAt: Date;
 }
@@ -49,6 +50,7 @@ const UserSchema = new Schema<IUser>(
     isActive: { type: Boolean, default: true },
     isEmailVerified: { type: Boolean, default: false },
     lastLogin: { type: Date },
+    lastActiveAt: { type: Date },
   },
   { timestamps: true }
 );

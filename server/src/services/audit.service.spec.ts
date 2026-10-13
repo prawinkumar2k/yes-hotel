@@ -16,7 +16,7 @@ afterAll(async () => {
 });
 
 beforeEach(async () => {
-  await AuditLog.deleteMany({ action: { $regex: /^audit-spec\./ } });
+  await AuditLog.collection.deleteMany({ action: { $regex: /^audit-spec\./ } });
 });
 
 describe("createAuditLog without a req (webhook / system-originated events)", () => {

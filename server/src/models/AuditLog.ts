@@ -15,6 +15,8 @@ export interface IAuditLog extends Document {
   resourceType: string;
   resourceId?: string;
   metadata?: Record<string, any>;
+  before?: Record<string, any>;
+  after?: Record<string, any>;
   ipAddress?: string;
   userAgent?: string;
   createdAt: Date;
@@ -38,11 +40,25 @@ const AuditLogSchema = new Schema<IAuditLog>(
     resourceType: { type: String, required: true, trim: true },
     resourceId: { type: String },
     metadata: { type: Schema.Types.Mixed },
+    before: { type: Schema.Types.Mixed },
+    after: { type: Schema.Types.Mixed },
     ipAddress: { type: String },
     userAgent: { type: String },
   },
   { timestamps: { createdAt: true, updatedAt: false } }
 );
+
+// Append-only: entries are written once and never changed or removed through the app.
+// (In production also grant the app's database user insert/find only on this collection.)
+function appendOnly(): never {
+  throw new Error("Audit log entries are append-only");
+}
+for (const op of ["updateOne", "updateMany", "findOneAndUpdate", "replaceOne", "findOneAndReplace", "deleteOne", "deleteMany", "findOneAndDelete"] as const) {
+  AuditLogSchema.pre(op as any, appendOnly);
+}
+AuditLogSchema.pre("save", function () {
+  if (!this.isNew) appendOnly();
+});
 
 AuditLogSchema.index({ actorId: 1 });
 AuditLogSchema.index({ action: 1 });
