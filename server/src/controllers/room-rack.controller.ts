@@ -25,18 +25,23 @@ export const getRoomRack = async (req: Request, res: Response) => {
 
     const filter: Record<string, any> = {};
     if (floor) filter.floor = floor as string;
-    if (housekeepingStatus) filter.housekeepingStatus = housekeepingStatus as string;
-    if (sellStatus) filter.sellStatus = sellStatus as string;
-    if (occupancyStatus) filter.occupancyStatus = occupancyStatus as string;
+    // Status filters apply to the derived state below, not to the stored fields.
     if (category) filter.category = category as string;
 
-    const rooms = await Room.find(filter)
+    const roomDocs = await Room.find(filter)
       .populate("category", "name slug basePrice")
       .populate("currentBooking", "bookingReference guestDetails checkInDate checkOutDate status isVipGuest")
       .populate("lastInspectedBy", "name")
       .populate("releasedBy", "name")
       .sort({ floor_number: 1, sortOrder: 1, roomNumber: 1 })
       .lean();
+    const { withDerivedState } = await import("../services/room-status.service");
+    const rooms: any[] = (await withDerivedState(roomDocs as any[])).filter(
+      (r: any) =>
+        (!housekeepingStatus || r.housekeepingStatus === housekeepingStatus) &&
+        (!sellStatus || r.sellStatus === sellStatus) &&
+        (!occupancyStatus || r.occupancyStatus === occupancyStatus),
+    );
 
     // Enrich each room with its active housekeeping task (if any)
     const roomIds = rooms.map((r) => r._id);

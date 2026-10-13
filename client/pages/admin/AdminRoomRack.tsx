@@ -430,7 +430,7 @@ export default function AdminRoomRack() {
                   </div>
                   <div>
                     <h3 className="font-serif text-xl font-bold text-slate-800">Room {drawerRoom.roomNumber} Detail Inspector</h3>
-                    <p className="text-xs text-slate-500 font-mono">{drawerRoom.category?.name || "Standard Luxury Suite"} · Floor {drawerRoom.floor || "1"}</p>
+                    <p className="text-xs text-slate-500 font-mono">{drawerRoom.category?.name || "Uncategorised"} · Floor {drawerRoom.floor || "1"}</p>
                   </div>
                 </div>
                 <button onClick={() => setDrawerRoom(null)} className="text-slate-400 hover:text-slate-700">

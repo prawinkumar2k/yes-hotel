@@ -34,7 +34,9 @@ export const getRooms = async (req: Request, res: Response) => {
       query.propertyId = (req as any).propertyId;
     }
     const rooms = await Room.find(query).populate("category", "name slug").sort({ sortOrder: 1, floor_number: 1, roomNumber: 1 });
-    return res.status(200).json({ success: true, data: rooms });
+    // Status fields come from the room-status snapshot (same truth as every board).
+    const { withDerivedState } = await import("../services/room-status.service");
+    return res.status(200).json({ success: true, data: await withDerivedState(rooms, undefined, { propertyId: (req as any).propertyId }) });
   } catch (error: any) {
     return res.status(500).json({ success: false, message: error.message });
   }

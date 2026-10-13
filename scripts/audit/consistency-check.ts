@@ -41,9 +41,9 @@ async function main() {
   // ── Ground truth from the DB ───────────────────────────────────────────────
   const inHouse = await db.collection("bookings").find({ status: "CHECKED_IN" }).project({ assignedRoom: 1 }).toArray();
   const occupiedRooms = new Set(inHouse.map((b) => String(b.assignedRoom)).filter((x) => x !== "undefined" && x !== "null")).size;
-  const totalRooms = await db.collection("rooms").countDocuments({});
-  const roomsDirtyField = await db.collection("rooms").countDocuments({ housekeepingStatus: "DIRTY" });
-  const tasksDirty = await db.collection("housekeepingtasks").countDocuments({ status: "DIRTY" });
+  // Room-state truth: the state-machine rules (services/room-status.service.ts) applied to raw DB data.
+  const { getSnapshot } = await import("../../server/src/services/room-status.service");
+  const snap = await getSnapshot(ymd);
   const payAgg = await db.collection("payments").aggregate([
     { $match: { createdAt: { $gte: start, $lt: end }, status: { $in: ["COMPLETED", "REFUNDED"] } } },
     { $group: { _id: null, t: { $sum: "$amount" } } },
@@ -90,7 +90,7 @@ async function main() {
     },
     {
       metric: "Occupancy %",
-      truth: totalRooms ? Math.round((occupiedRooms / totalRooms) * 100) : null,
+      truth: snap.summary.sellableRooms ? Math.round((occupiedRooms / snap.summary.sellableRooms) * 100) : null,
       cells: {
         "Dashboard (occupancyPct)": get(cc, "hotelPulse.occupancyPct"),
         "Reports (executive occupancyPct)": get(exec, "occupancyPct"),
@@ -98,12 +98,12 @@ async function main() {
     },
     {
       metric: "Dirty rooms",
-      truth: `${roomsDirtyField} (room field) / ${tasksDirty} (HK tasks)`,
+      truth: snap.summary.dirty,
       cells: {
         "Dashboard (hotelPulse.dirty)": get(cc, "hotelPulse.dirty"),
         "Dashboard (housekeeping.dirty)": get(cc, "housekeeping.dirty"),
         "Front Desk (dirtyRooms)": get(fd, "counts.dirtyRooms"),
-        "Housekeeping (tasks DIRTY)": count(hkTasks, (t: any) => t.status === "DIRTY"),
+        "Housekeeping (room rack DIRTY)": count(rackRooms, (r) => r.housekeepingStatus === "DIRTY"),
         "Rooms (housekeepingStatus DIRTY)": count(rooms, (r: any) => r.housekeepingStatus === "DIRTY"),
       },
     },
@@ -114,7 +114,7 @@ async function main() {
         "Dashboard (inHouse.guests)": (get(cc, "inHouse.guests") ?? []).length,
         "Front Desk (counts.inHouse)": get(fd, "counts.inHouse"),
         "Reports (executive inHouseCount)": get(exec, "inHouseCount"),
-        "Reports (in-house-list rows)": (inHouseList ?? []).length,
+        "Reports (in-house-list, in-house rows)": (inHouseList ?? []).filter((r: any) => r.status === "CHECKED_IN").length,
       },
     },
     {

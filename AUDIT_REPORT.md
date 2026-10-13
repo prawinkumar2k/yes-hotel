@@ -465,6 +465,35 @@ API errors per role: only `night-audit/status` → 500 (H8).
   - None of the 226 folio lines had a `businessDate`.
 - `docs/migrations/money-to-paise-dry-run.md`: 1,413 values in 460 documents across 25 collections; 0 carry float drift.
 
+### Step 3 — Single source of truth for room state
+
+| Issue | Root cause | Fix | Test |
+|---|---|---|---|
+| **A:** Dashboard showed 1 occupied / 5% while Rooms and Reports showed 2 / 11%; dirty showed as 1, 2 or 3 depending on the board; Available counted dirty and cleaning rooms | Each board counted from different stored fields (`status`, `occupancyStatus`, `housekeepingStatus`) that had drifted apart, or counted HK **tasks** as rooms | `server/src/services/room-status.service.ts`: `getSnapshot(businessDate)` derives three independent state machines from their sources (details below). Dashboard, Front Desk, Housekeeping dashboard, Rooms, Room Rack and Reports all read it. Room-document responses get the derived values overlaid (`withDerivedState`), so no client rewrite was needed and **no stored data was changed** | `room-status.service.spec.ts` (12 rules incl. rooms 201, 401, 204, overdue 102); consistency check **5/5** |
+| Room 401 showed "ASSIGNED" as its room status | A task status was copied into the room field | ASSIGNED is now a task attribute (`hkTaskStatus`); the room state is DIRTY | unit test |
+| The Housekeeping board showed "Standard Luxury Suite" on every room | The client read `room.roomCategory`, but the Room field is `category`, so it always fell back to a hard-coded label | The client reads `category.name`, and the task list populates the category. The same fake fallback was removed from Front Desk and Room Rack | — |
+| Audit log entries like "CLEANING → CLEANING" | No-op transitions were saved and logged | No-ops are neither saved nor logged. Task updates log before/after for changed fields only | — |
+| "Checked Out 2" vs 1 expected departure | Checkouts were counted by scheduled date | Movements: "expected" uses the scheduled date, "actual" uses the event time (`checkedInAt`/`checkedOutAt`). On 12 Oct both numbers were true: YES-BKG-2020 left at 00:08 IST, ahead of schedule. Departures now include overdue stays | — |
+| The Dashboard dropped an overdue guest from in-house after midnight | In-house was defined by a date window | In-house = every CHECKED_IN stay | consistency check |
+| "Pass inspection" allowed only MANAGER/ADMIN | A hard-coded role check missed in step 1 | `CAP.HK_PASS_INSPECTION` (MANAGER + full access). SUPER_ADMIN is no longer locked out; nobody else gains | — |
+
+**The three state machines in `getSnapshot`:**
+- **Occupancy** comes from bookings. OCCUPIED means a checked-in booking is assigned to the room. RESERVED means a confirmed booking is assigned to the room for the date.
+- **Housekeeping** comes from the room's latest task: DIRTY → CLEANING → CLEANING_COMPLETED → INSPECTION → CLEAN. A failed inspection goes back to DIRTY.
+- **Sell status** (SELLABLE / OOO / OOS, plus a blocked flag) comes from the room's sell status and any open CRITICAL maintenance ticket.
+
+Available = VACANT + CLEAN + SELLABLE + not blocked. Occupancy % = occupied rooms / (total − OOO − OOS).
+
+**Verification:**
+- Tests: 224 pass, 1 pre-existing failure. `tsc` clean.
+- Consistency check (`docs/consistency/step-3-room-status.md`): **5/5**. Occupied 2, occupancy 11%, dirty 7 and in-house 2 agree on every board.
+- Per-role sweep (`docs/verification/role-sweep-step-3.md`, fresh server running steps 2 + 3): 512 loads = 390 🔒 · 120 ✅ · 2 ❌ (both `/admin/night-audit`, H8). API: only `night-audit/status` 500 (H8).
+
+**Dev server fix (separate commit `014b0f2`):**
+- After step 2, a fresh `npm run dev` failed: the `@shared` alias isn't resolved in the config-time bundle.
+- The step 2 sweep had run against a dev server started before that code, so it verified only step 2's client changes.
+- Server code now imports `shared/` by relative path. The step 3 sweep re-verifies both steps.
+
 ---
 
 ## Appendix A — All mounted endpoints (243)

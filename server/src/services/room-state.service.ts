@@ -225,6 +225,8 @@ export async function transitionHousekeepingStatus(
 
   const from = room.housekeepingStatus;
   assertLegalHousekeepingTransition(from, to);
+  // A no-op (e.g. CLEANING → CLEANING) changes nothing and is not audit-logged.
+  if (from === to && (opts.sellStatus === undefined || opts.sellStatus === room.sellStatus)) return room;
 
   const updateFields: Partial<IRoom> = { housekeepingStatus: to };
 

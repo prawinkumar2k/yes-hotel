@@ -24,7 +24,7 @@ export const getHousekeepingTasks = async (req: Request, res: Response) => {
     if (priority) filter.priority = priority;
 
     const tasks = await HousekeepingTask.find(filter)
-      .populate("room", "roomNumber floor")
+      .populate({ path: "room", select: "roomNumber floor category", populate: { path: "category", select: "name" } })
       .populate("assignedTo", "firstName lastName")
       .sort({ createdAt: -1 });
     return res.status(200).json({ success: true, data: tasks });
@@ -106,19 +106,32 @@ export const updateHousekeepingTask = async (req: Request, res: Response) => {
       }
     }
 
+    // Before/after of the fields this request actually changes; a no-op is not logged.
+    const before: Record<string, any> = {};
+    const after: Record<string, any> = {};
+    for (const [k, v] of Object.entries(data)) {
+      const prev = (existingTask as any)[k];
+      if (String(prev ?? "") !== String(v ?? "")) {
+        before[k] = prev ?? null;
+        after[k] = v;
+      }
+    }
+
     const task = await HousekeepingTask.findByIdAndUpdate(
       taskId,
       { ...data, ...(data.status === HousekeepingStatus.INSPECTED && { completedAt: new Date() }) },
       { returnDocument: "after" }
     ).populate("room", "roomNumber floor");
 
-    await createAuditLog({
-      req,
-      action: "housekeeping.task_updated",
-      resourceType: "HousekeepingTask",
-      resourceId: task!._id.toString(),
-      metadata: { status: task!.status, priority: task!.priority, room: (task!.room as any)?.roomNumber },
-    });
+    if (Object.keys(after).length) {
+      await createAuditLog({
+        req,
+        action: "housekeeping.task_updated",
+        resourceType: "HousekeepingTask",
+        resourceId: task!._id.toString(),
+        metadata: { room: (task!.room as any)?.roomNumber, before, after },
+      });
+    }
 
     return res.status(200).json({ success: true, data: task });
   } catch (error: any) {
@@ -150,18 +163,13 @@ const updateRoomStatusSchema = z.object({
 
 export const getHousekeepingDashboard = async (_req: Request, res: Response) => {
   try {
-    const rooms = await Room.find({
-      housekeepingStatus: {
-        $in: [
-          HousekeepingRoomStatus.DIRTY,
-          HousekeepingRoomStatus.CLEANING,
-          HousekeepingRoomStatus.CLEANING_COMPLETED,
-        ],
-      },
-    })
-      .populate("category", "name")
-      .sort({ housekeepingStatus: 1, roomNumber: 1 })
-      .lean();
+    // Rooms needing housekeeping, by the room-status snapshot's derived HK state.
+    const { withDerivedState } = await import("../services/room-status.service");
+    const all = await withDerivedState(await Room.find({}).populate("category", "name").sort({ roomNumber: 1 }).lean());
+    const order = ["DIRTY", "CLEANING", "CLEANING_COMPLETED"];
+    const rooms = all
+      .filter((r: any) => order.includes(r.housekeepingStatus))
+      .sort((a: any, b: any) => order.indexOf(a.housekeepingStatus) - order.indexOf(b.housekeepingStatus) || a.roomNumber.localeCompare(b.roomNumber));
 
     return res.status(200).json({ success: true, data: { rooms } });
   } catch (error: any) {
@@ -177,7 +185,8 @@ export const updateRoomHousekeepingStatus = async (req: Request, res: Response) 
     // Passing inspection is a supervisory action — the frontend already
     // hides this button from non-managers, but that's not enforcement, so
     // the backend must reject it independently.
-    if (ROOM_STATUS_UPDATE_ROLES_REQUIRING_MANAGER.has(status) && actorRole !== "MANAGER" && actorRole !== "ADMIN") {
+    const { PermissionService } = await import("../services/PermissionService");
+    if (ROOM_STATUS_UPDATE_ROLES_REQUIRING_MANAGER.has(status) && !(await PermissionService.can((req as any).user, "CAP.HK_PASS_INSPECTION"))) {
       return res.status(403).json({ success: false, message: "Only a manager can pass inspection" });
     }
 

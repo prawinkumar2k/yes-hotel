@@ -3,6 +3,14 @@
 All changes, fixes, hardened services, and architectural migrations are documented chronologically in this file.
 
 ---
+## [Phase 1 · Step 3 — Room status single source of truth] - 2026-10-13
+
+- `room-status.service.ts`: `getSnapshot(businessDate)` derives occupancy (bookings), housekeeping (latest task) and sell status (sell field + open critical maintenance); Dashboard, Front Desk, Housekeeping, Rooms, Room Rack and Reports read it. Consistency check 5/5.
+- Housekeeping cards show the real room category; no-op transitions are no longer logged; task updates log before/after.
+- Departures include overdue stays; in-house counts every checked-in stay.
+- Fixed: dev server failed to start after step 2 (`@shared` alias in server code).
+
+---
 
 ## [Phase 1 · Step 2 — Foundations: business date, nights, tax] - 2026-10-13
 

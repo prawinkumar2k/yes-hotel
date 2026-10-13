@@ -6,7 +6,8 @@ import { MaintenanceTicket, MaintenanceStatus } from "../models/MaintenanceTicke
 import { AdvancePayment, AdvancePaymentStatus } from "../models/AdvancePayment";
 import { HotelSettings } from "../models/HotelSettings";
 import { BusinessDate, BusinessDateState } from "../models/BusinessDate";
-import { businessDayRange, todayBusinessDate, addDays } from "@shared/dates";
+import { businessDayRange, todayBusinessDate, addDays } from "../../../shared/dates";
+import { getSnapshot } from "../services/room-status.service";
 
 /**
  * GET /api/admin/front-desk/summary
@@ -58,10 +59,10 @@ export const getFrontDeskSummary = async (req: Request, res: Response) => {
         .sort({ checkInDate: 1 })
         .lean(),
 
-      // Today's expected departures (CHECKED_IN, checking out today)
+      // Departures: in-house stays due out today or overdue (an overdue stay is still to depart)
       Booking.find({
         status: BookingStatus.CHECKED_IN,
-        checkOutDate: { $gte: todayStart, $lte: todayEnd },
+        checkOutDate: { $lte: todayEnd },
       })
         .populate("assignedRoom", "roomNumber floor")
         .populate("roomCategory", "name")
@@ -76,34 +77,24 @@ export const getFrontDeskSummary = async (req: Request, res: Response) => {
         .select("bookingReference groupId billNumber guestDetails checkInDate checkOutDate assignedRoom roomCategory paymentStatus paidAmount totalAmount ratePerNight isVipGuest source")
         .lean(),
 
-      // Dirty rooms (need housekeeping)
-      Room.find({
-        housekeepingStatus: {
-          $in: [
-            HousekeepingRoomStatus.DIRTY,
-            HousekeepingRoomStatus.ASSIGNED,
-            HousekeepingRoomStatus.CLEANING,
-            HousekeepingRoomStatus.CLEANING_COMPLETED,
-            HousekeepingRoomStatus.INSPECTION,
-            HousekeepingRoomStatus.INSPECTION_FAILED,
-          ],
-        },
-      })
-        .select("roomNumber floor housekeepingStatus occupancyStatus")
-        .sort({ floor: 1, roomNumber: 1 })
-        .lean(),
+      // Dirty rooms: the room-status snapshot's DIRTY state (same definition as every board)
+      getSnapshot(todayBusinessDate()).then((snap) =>
+        snap.rooms
+          .filter((r) => r.hk === "DIRTY")
+          .map((r) => ({ _id: r.roomId, roomNumber: r.roomNumber, floor: r.floor, housekeepingStatus: r.hk, occupancyStatus: r.occupancy, hkTaskStatus: r.hkTaskStatus })),
+      ),
 
       // Rooms waiting for manual release
       Room.find({ housekeepingStatus: HousekeepingRoomStatus.WAITING_FOR_RELEASE })
         .select("roomNumber floor housekeepingStatus lastInspectedAt")
         .lean(),
 
-      // Blocked / OOO rooms
-      Room.find({
-        sellStatus: { $in: [SellStatus.BLOCKED, SellStatus.OUT_OF_ORDER, SellStatus.OUT_OF_SERVICE] },
-      })
-        .select("roomNumber floor sellStatus housekeepingStatus occupancyStatus")
-        .lean(),
+      // Blocked / OOO / OOS rooms from the snapshot (includes rooms held by critical maintenance)
+      getSnapshot(todayBusinessDate()).then((snap) =>
+        snap.rooms
+          .filter((r) => r.sell !== "SELLABLE" || r.blocked)
+          .map((r) => ({ _id: r.roomId, roomNumber: r.roomNumber, floor: r.floor, sellStatus: r.sell === "OOO" ? "OUT_OF_ORDER" : r.sell === "OOS" ? "OUT_OF_SERVICE" : "BLOCKED", sellReason: r.sellReason, housekeepingStatus: r.hk, occupancyStatus: r.occupancy })),
+      ),
 
       // Bookings with payment pending or partial
       Booking.find({

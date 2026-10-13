@@ -945,7 +945,7 @@ export default function AdminFrontDesk() {
                               </div>
                             ) : (
                               <div>
-                                <div className="text-xs font-medium text-gray-600">{b.roomCategory?.name || "Standard Luxury Suite"}</div>
+                                <div className="text-xs font-medium text-gray-600">{b.roomCategory?.name || "Uncategorised"}</div>
                                 <div className="mt-1">
                                   {roomNum ? (
                                     <span className="font-serif font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/30 text-xs">

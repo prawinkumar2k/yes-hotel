@@ -433,7 +433,7 @@ export default function AdminHousekeeping() {
                 </div>
 
                 <div className="text-xs text-slate-500 font-medium truncate">
-                  {room.roomCategory?.name || "Standard Luxury Suite"}
+                  {room.category?.name || room.roomCategory?.name || "Uncategorised"}
                 </div>
 
                 {/* Status Chip */}

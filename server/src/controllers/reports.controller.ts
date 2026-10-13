@@ -27,7 +27,7 @@ import {
   stayNights,
   toBusinessDate,
   todayBusinessDate,
-} from "@shared/dates";
+} from "../../../shared/dates";
 
 /** [start, endInclusive] of a business date at the property, for $gte/$lte queries. */
 function dayBounds(ymd: string) {
@@ -462,7 +462,9 @@ export const getExecutiveSummary = async (_req: Request, res: Response) => {
     ]);
 
     const monthlyRevenue = monthlyRevRows[0]?.total || 0;
-    const occupancyPct = totalRooms > 0 ? Math.round((inHouseCount / totalRooms) * 100) : 0;
+    // Occupancy from the room-status snapshot: occupied rooms / sellable rooms (same as every board).
+    const { getSnapshot } = await import("../services/room-status.service");
+    const occupancyPct = (await getSnapshot(todayYmd)).summary.occupancyPct;
 
     // Checked-in bookings for ADR calc
     const inHouseBookings = await Booking.find({ status: BookingStatus.CHECKED_IN }).lean();
@@ -675,6 +677,15 @@ export const getDaySummary = async (req: Request, res: Response) => {
     ]);
 
     const totalPax = activeBookings.reduce((sum, b) => sum + (b.adults || 1) + (b.children || 0), 0);
+    const occupiedOnTarget =
+      targetYmd === todayBusinessDate()
+        ? (await (await import("../services/room-status.service")).getSnapshot(targetYmd)).summary.occupied
+        : await Booking.countDocuments({
+            ...propertyMatch,
+            status: { $in: [BookingStatus.CHECKED_IN, BookingStatus.CHECKED_OUT] },
+            checkInDate: { $lte: dayEnd },
+            checkOutDate: { $gt: dayEnd },
+          });
 
     // Through channels
     const walkins = checkIns.filter(b => b.source === "WALK_IN").length;
@@ -733,7 +744,9 @@ export const getDaySummary = async (req: Request, res: Response) => {
         checkIns: checkIns.length,
         checkOuts: checkOuts.length,
         dayUses: dayUses.length,
-        occupiedRooms: activeBookings.length,
+        // Rooms occupied on the target date: the room-status snapshot for today; for a past date,
+        // stays (in-house or departed) that covered that night.
+        occupiedRooms: occupiedOnTarget,
         totalPax,
         cancelled: cancelledCount,
         noShows: noShowCount,
@@ -753,7 +766,7 @@ export const getDaySummary = async (req: Request, res: Response) => {
         checkIn: checkIns.length,
         checkOut: checkOuts.length,
         dayUse: dayUses.length,
-        occupancy: activeBookings.length,
+        occupancy: occupiedOnTarget,
         pax: totalPax,
         noShow: noShowCount,
         walkin: walkins,
@@ -770,7 +783,7 @@ export const getDaySummary = async (req: Request, res: Response) => {
         // -- Nested structure (kept for CashSheetReport backward compat) --
         page1: {
           rooms: { checkIn: checkIns.length, checkOut: checkOuts.length, dayUse: dayUses.length },
-          occupancy: { room: activeBookings.length, pax: totalPax },
+          occupancy: { room: occupiedOnTarget, pax: totalPax },
           status: { cancelled: cancelledCount, noShow: noShowCount, noOfInquiry: 0 },
           through: { walkin: walkins, ota: otas, agency: agencies, auto: 0 },
           receipts: { resrvAdv, roomAdv, partial, final, advAdjd },

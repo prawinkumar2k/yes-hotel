@@ -14,10 +14,11 @@ import { Complaint } from "../models/Complaint";
 import { Guest } from "../models/Guest";
 import { User } from "../models/User";
 void User.modelName;
-import { addDays as addBizDays, businessDayRange, businessMonthRange, todayBusinessDate, PROPERTY_TIMEZONE } from "@shared/dates";
+import { addDays as addBizDays, businessDayRange, businessMonthRange, todayBusinessDate, PROPERTY_TIMEZONE } from "../../../shared/dates";
 
 // Data scoping per section uses CAP.CC_* capabilities from config/permissions.ts.
 import { PermissionService } from "../services/PermissionService";
+import { getSnapshot } from "../services/room-status.service";
 
 const CC_CAPS = ["CC_FINANCE", "CC_FRONT_OFFICE", "CC_OPERATIONS", "CC_RESTAURANT", "CC_CORPORATE", "CC_FORECAST", "CC_APPROVALS"] as const;
 
@@ -39,30 +40,29 @@ export const getCommandCenterData = async (req: Request, res: Response) => {
     const propertyFilter = propertyId ? { propertyId } : {};
 
     // ── 1. HOTEL PULSE (all operational roles) ──────────────────────
-    const rooms = await Room.find({ ...propertyFilter }).lean();
-    const totalRooms = rooms.length;
-    const sellableRooms = rooms.filter(r => r.sellStatus === "SELLABLE").length;
-    const occupied = rooms.filter(r => r.occupancyStatus === "OCCUPIED").length;
-    const available = rooms.filter(r => r.occupancyStatus === "VACANT" && r.sellStatus === "SELLABLE").length;
-    const dirty = rooms.filter(r => r.housekeepingStatus === "DIRTY").length;
-    const cleaning = rooms.filter(r => r.housekeepingStatus === "CLEANING").length;
-    const cleaningCompleted = rooms.filter(r => r.housekeepingStatus === "CLEANING_COMPLETED").length;
-    const inspectionRooms = rooms.filter(r => r.housekeepingStatus === "INSPECTION").length;
-    const waitingRelease = rooms.filter(r => r.housekeepingStatus === "WAITING_FOR_RELEASE").length;
-    const ooo = rooms.filter(r => r.sellStatus === SellStatus.OUT_OF_ORDER).length;
-    const oos = rooms.filter(r => r.sellStatus === SellStatus.OUT_OF_SERVICE).length;
-    const clean = rooms.filter(r => r.housekeepingStatus === "CLEAN" && r.occupancyStatus === "VACANT").length;
-    
-    // Additional requested KPIs
-    const reserved = rooms.filter(r => r.occupancyStatus === "RESERVED").length;
-    const blocked = rooms.filter(r => r.sellStatus === "BLOCKED").length;
-    const unavailable = rooms.filter(r => r.sellStatus !== "SELLABLE").length;
-
+    // Room counts come from the single room-status snapshot (services/room-status.service.ts),
+    // the same source as Front Desk, Housekeeping, Rooms, Room Rack and Reports.
+    const snapshot = await getSnapshot(todayYmd, { propertyId });
+    const pulse = snapshot.summary;
+    const totalRooms = pulse.total;
+    const dirty = pulse.dirty;
     const hotelPulse = {
-      totalRooms, sellableRooms, occupied, available, dirty, cleaning,
-      cleaningCompleted, inspection: inspectionRooms, waitingRelease, ooo, oos, clean,
-      reserved, blocked, unavailable,
-      occupancyPct: totalRooms ? Math.round((occupied / totalRooms) * 100) : 0
+      totalRooms,
+      sellableRooms: pulse.sellableRooms,
+      occupied: pulse.occupied,
+      available: pulse.available,
+      dirty: pulse.dirty,
+      cleaning: pulse.cleaning,
+      cleaningCompleted: pulse.cleaningCompleted,
+      inspection: pulse.inspection,
+      waitingRelease: 0, // folded into INSPECTION (not yet released) in the room state machine
+      ooo: pulse.ooo,
+      oos: pulse.oos,
+      clean: pulse.clean,
+      reserved: pulse.reserved,
+      blocked: pulse.blocked,
+      unavailable: pulse.ooo + pulse.oos + pulse.blocked,
+      occupancyPct: pulse.occupancyPct,
     };
 
     // ── 2. FRONT OFFICE (arrivals/departures/in-house) ───────────────
@@ -71,39 +71,32 @@ export const getCommandCenterData = async (req: Request, res: Response) => {
     let inHouseData: any[] = [];
 
     if (caps.CC_OPERATIONS) {
-      const todayBookings = await Booking.find({
-        ...propertyFilter,
-        $or: [
-          { checkInDate: { $gte: startToday, $lte: endToday } },
-          { checkOutDate: { $gte: startToday, $lte: endToday } },
-          { checkInDate: { $lte: startToday }, checkOutDate: { $gte: endToday } }
-        ]
-      }).populate("assignedRoom", "roomNumber floor category").lean();
+      // In-house = every CHECKED_IN stay (an overdue checkout is still in-house);
+      // arrivals = CONFIRMED due in today; departures = in-house due out today or overdue.
+      const [inHouseStays, arrivingToday] = await Promise.all([
+        Booking.find({ ...propertyFilter, status: BookingStatus.CHECKED_IN })
+          .populate("assignedRoom", "roomNumber floor category").lean(),
+        Booking.find({ ...propertyFilter, status: BookingStatus.CONFIRMED, checkInDate: { $gte: startToday, $lte: endToday } })
+          .populate("assignedRoom", "roomNumber floor category").lean(),
+      ]);
+      arrivalsData = arrivingToday.slice(0, 15);
+      departuresData = inHouseStays.filter((b) => new Date(b.checkOutDate) <= endToday).slice(0, 15);
+      inHouseData = inHouseStays.slice(0, 20);
 
-      arrivalsData = todayBookings.filter(b =>
-        b.status === BookingStatus.CONFIRMED &&
-        new Date(b.checkInDate) >= startToday &&
-        new Date(b.checkInDate) <= endToday
-      ).slice(0, 15);
-
-      departuresData = todayBookings.filter(b =>
-        b.status === BookingStatus.CHECKED_IN &&
-        new Date(b.checkOutDate) >= startToday &&
-        new Date(b.checkOutDate) <= endToday
-      ).slice(0, 15);
-
-      inHouseData = todayBookings.filter(b => b.status === BookingStatus.CHECKED_IN).slice(0, 20);
-
-      // Phase 3 Front Desk KPIs
+      // Day movements from the snapshot: "expected" by scheduled date, "actual" by the event time.
+      const mv = snapshot.movements;
       const frontDeskStats = {
-        expectedArrivals: todayBookings.filter(b => b.status === BookingStatus.CONFIRMED && new Date(b.checkInDate) >= startToday && new Date(b.checkInDate) <= endToday).length,
-        actualArrivals: todayBookings.filter(b => b.status === BookingStatus.CHECKED_IN && new Date(b.checkInDate) >= startToday && new Date(b.checkInDate) <= endToday).length,
-        expectedDepartures: todayBookings.filter(b => b.status === BookingStatus.CHECKED_IN && new Date(b.checkOutDate) >= startToday && new Date(b.checkOutDate) <= endToday).length,
-        actualCheckouts: todayBookings.filter(b => b.status === BookingStatus.CHECKED_OUT && new Date(b.checkOutDate) >= startToday && new Date(b.checkOutDate) <= endToday).length,
-        noShows: todayBookings.filter(b => b.status === BookingStatus.NO_SHOW && new Date(b.checkInDate) >= startToday && new Date(b.checkInDate) <= endToday).length,
-        cancellations: todayBookings.filter(b => b.status === BookingStatus.CANCELLED && new Date(b.checkInDate) >= startToday && new Date(b.checkInDate) <= endToday).length,
+        expectedArrivals: mv.expectedArrivals,
+        actualArrivals: mv.arrived,
+        expectedDepartures: mv.expectedDepartures,
+        overdueDepartures: mv.overdueDepartures,
+        actualCheckouts: mv.departed,
+        noShows: mv.noShows,
+        cancellations: mv.cancellations,
+        inHouseStays: mv.inHouseStays,
+        inHouseGuests: mv.inHouseGuests,
       };
-      
+
       inHouseData = { guests: inHouseData, stats: frontDeskStats } as any;
     }
 
@@ -140,8 +133,8 @@ export const getCommandCenterData = async (req: Request, res: Response) => {
         pendingFolios,
         openCashierShifts,
         roomRevenue: todayRevenue,
-        adr: occupied > 0 ? Math.round(todayRevenue / occupied) : 0,
-        revPar: sellableRooms > 0 ? Math.round(todayRevenue / sellableRooms) : 0,
+        adr: pulse.occupied > 0 ? Math.round(todayRevenue / pulse.occupied) : 0, // TODO(K): room revenue, not collections
+        revPar: pulse.sellableRooms > 0 ? Math.round(todayRevenue / pulse.sellableRooms) : 0,
       };
     }
 
@@ -151,13 +144,14 @@ export const getCommandCenterData = async (req: Request, res: Response) => {
       status: { $nin: [HousekeepingStatus.CLEAN] }
     }).populate("room", "roomNumber floor category").populate("assignedTo", "firstName lastName").lean();
 
+    // Room counts by HK state come from the snapshot; "assigned" and "pending" describe the task workload.
     const hkByStatus = {
-      dirty: housekeepingTasks.filter(t => t.status === "DIRTY").length,
+      dirty: pulse.dirty,
       assigned: housekeepingTasks.filter(t => t.status === "ASSIGNED").length,
-      cleaning: housekeepingTasks.filter(t => t.status === "CLEANING").length,
-      completed: housekeepingTasks.filter(t => t.status === "CLEANING_COMPLETED").length,
-      inspection: housekeepingTasks.filter(t => t.status === "INSPECTION").length,
-      waitingRelease: housekeepingTasks.filter(t => t.status === "WAITING_FOR_RELEASE").length,
+      cleaning: pulse.cleaning,
+      completed: pulse.cleaningCompleted,
+      inspection: pulse.inspection,
+      waitingRelease: 0,
     };
 
     const housekeeping = {
