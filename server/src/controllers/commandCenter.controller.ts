@@ -1,3 +1,4 @@
+import { roomMetrics } from "../services/metrics.service";
 import { Request, Response } from "express";
 import { HousekeepingTask, HousekeepingStatus } from "../models/HousekeepingTask";
 import { MaintenanceTicket, MaintenanceStatus } from "../models/MaintenanceTicket";
@@ -116,6 +117,7 @@ export const getCommandCenterData = async (req: Request, res: Response) => {
         CashierShift.countDocuments({ ...propertyFilter, status: CashierShiftStatus.OPEN })
       ]);
 
+      const mToday = await roomMetrics(todayYmd, todayYmd, { propertyId: (propertyFilter as any).propertyId });
       const todayByMethod: Record<string, number> = {};
       let todayRevenue = 0;
       todayAgg.forEach((r: any) => {
@@ -132,9 +134,12 @@ export const getCommandCenterData = async (req: Request, res: Response) => {
         todayGateway: todayByMethod["GATEWAY"] || 0,
         pendingFolios,
         openCashierShifts,
-        roomRevenue: todayRevenue,
-        adr: pulse.occupied > 0 ? Math.round(todayRevenue / pulse.occupied) : 0, // TODO(K): room revenue, not collections
-        revPar: pulse.sellableRooms > 0 ? Math.round(todayRevenue / pulse.sellableRooms) : 0,
+        // todayRevenue/monthlyRevenue are COLLECTIONS (money received); room revenue and the
+        // ratios come from the metrics service.
+        todayCollections: todayRevenue,
+        roomRevenue: mToday.roomRevenue,
+        adr: mToday.adr,
+        revPar: mToday.revpar,
       };
     }
 

@@ -1,3 +1,4 @@
+import { roomMetrics, collections, chargeRevenue } from "../services/metrics.service";
 import { Request, Response } from "express";
 import { FolioLine, FolioLineType, FolioLineDirection } from "../models/FolioLine";
 import { Booking, BookingStatus, PaymentStatus } from "../models/Booking";
@@ -104,17 +105,22 @@ export const getReportsOverview = async (req: Request, res: Response) => {
     ]);
 
     const summary = summaryAgg[0] || { bookingsInRange: 0, cancelledCount: 0, paidBookingsCount: 0, revenue: 0, roomNights: 0 };
-    const revenue = Math.round(summary.revenue * 100) / 100;
-    const roomNights = Math.round(summary.roomNights * 100) / 100;
-    const occupancyRate = totalRooms > 0 ? Math.round((roomNights / (totalRooms * daysInRange)) * 10000) / 100 : 0;
-    const adr = roomNights > 0 ? Math.round((revenue / roomNights) * 100) / 100 : 0;
-    const revPAR = totalRooms > 0 ? Math.round((revenue / (totalRooms * daysInRange)) * 100) / 100 : 0;
+    // Room KPIs and collections come from the metrics service (one definition for every screen).
+    const [m, coll] = await Promise.all([roomMetrics(fromYmd, toYmd), collections(fromYmd, toYmd)]);
+    const revenue = m.roomRevenue;
+    const roomNights = m.roomNights;
+    const occupancyRate = m.occupancyPct;
+    const adr = m.adr;
+    const revPAR = m.revpar;
+    void daysInRange;
     const cancellationRate = summary.bookingsInRange > 0 ? Math.round((summary.cancelledCount / summary.bookingsInRange) * 10000) / 100 : 0;
 
     return res.json({
       success: true,
       data: {
-        revenue,
+        revenue, // pre-tax room revenue earned on nights in the range
+        roomNights,
+        collections: coll.total,
         paidBookingsCount: summary.paidBookingsCount,
         bookingsInRange: summary.bookingsInRange,
         cancellationRate,
@@ -198,16 +204,16 @@ export const getSalesReport = async (req: Request, res: Response) => {
  */
 export const getRoomStayReport = async (_req: Request, res: Response) => {
   try {
-    const totalRooms = await Room.countDocuments();
+    const todayYmd = todayBusinessDate();
+    const m = await roomMetrics(todayYmd, todayYmd);
+    const totalRooms = m.availableRooms;
     const inHouseCount = await Booking.countDocuments({ status: BookingStatus.CHECKED_IN });
     const confirmedCount = await Booking.countDocuments({ status: BookingStatus.CONFIRMED });
-
-    const checkedInBookings = await Booking.find({ status: BookingStatus.CHECKED_IN });
-    const totalRevenueInHouse = checkedInBookings.reduce((sum, b) => sum + (b.totalAmount || 0), 0);
-
-    const occupancyPercentage = totalRooms > 0 ? Math.round((inHouseCount / totalRooms) * 100) : 0;
-    const adr = inHouseCount > 0 ? Math.round(totalRevenueInHouse / inHouseCount) : 0;
-    const revPar = totalRooms > 0 ? Math.round(totalRevenueInHouse / totalRooms) : 0;
+    // Tonight's figures from the metrics service (room revenue is pre-tax, per night).
+    const totalRevenueInHouse = m.roomRevenue;
+    const occupancyPercentage = m.occupancyPct;
+    const adr = m.adr;
+    const revPar = m.revpar;
 
     return res.json({
       success: true,
@@ -443,34 +449,26 @@ export const getExecutiveSummary = async (_req: Request, res: Response) => {
       totalRooms,
       inHouseCount,
       totalBookingsToday,
-      monthlyRevRows,
       openComplaints,
-      paymentsToday,
     ] = await Promise.all([
       Room.countDocuments(),
       Booking.countDocuments({ status: BookingStatus.CHECKED_IN }),
       Booking.countDocuments({ createdAt: { $gte: today } }),
-      FolioLine.aggregate([
-        { $match: { direction: FolioLineDirection.DEBIT, createdAt: { $gte: monthStart } } },
-        { $group: { _id: null, total: { $sum: "$amount" } } },
-      ]),
       Complaint.countDocuments({ status: { $in: ["OPEN", "IN_PROGRESS"] } }),
-      Payment.aggregate([
-        { $match: { createdAt: { $gte: today } } },
-        { $group: { _id: null, total: { $sum: "$amount" }, count: { $sum: 1 } } },
-      ]),
     ]);
 
-    const monthlyRevenue = monthlyRevRows[0]?.total || 0;
+    const [mToday, monthRev, collToday] = await Promise.all([
+      roomMetrics(todayYmd, todayYmd),
+      chargeRevenue(toBusinessDate(monthStart), todayYmd),
+      collections(todayYmd, todayYmd),
+    ]);
+    const monthlyRevenue = monthRev.revenue; // pre-tax charges posted this month, net of discounts/reversals
     // Occupancy from the room-status snapshot: occupied rooms / sellable rooms (same as every board).
     const { getSnapshot } = await import("../services/room-status.service");
     const occupancyPct = (await getSnapshot(todayYmd)).summary.occupancyPct;
 
-    // Checked-in bookings for ADR calc
-    const inHouseBookings = await Booking.find({ status: BookingStatus.CHECKED_IN }).lean();
-    const inHouseRevenue = inHouseBookings.reduce((s, b) => s + (b.totalAmount || 0), 0);
-    const adr = inHouseCount > 0 ? Math.round(inHouseRevenue / inHouseCount) : 0;
-    const revpar = totalRooms > 0 ? Math.round(inHouseRevenue / totalRooms) : 0;
+    const adr = mToday.adr;
+    const revpar = mToday.revpar;
 
     return res.json({
       success: true,
@@ -483,8 +481,10 @@ export const getExecutiveSummary = async (_req: Request, res: Response) => {
         monthlyRevenue: Math.round(monthlyRevenue),
         totalBookingsToday,
         openComplaints,
-        paymentsToday: paymentsToday[0]?.total ? Math.round(paymentsToday[0].total) : 0,
-        paymentsTodayCount: paymentsToday[0]?.count || 0,
+        paymentsToday: collToday.payments,
+        paymentsTodayCount: collToday.paymentsCount,
+        collectionsToday: collToday.total,
+        roomRevenueToday: mToday.roomRevenue,
       },
     });
   } catch (error: any) {
@@ -888,7 +888,7 @@ export const getMonthlyMIS = async (req: Request, res: Response) => {
       const anyF = f as any;
       const day = bizDayOfMonth(anyF.createdAt);
       if (anyF.lineType === "ROOM_CHARGE") dailyData[day].salesRoom += f.amount;
-      else if (anyF.lineType === "POS_CHARGE") dailyData[day].salesFb += f.amount;
+      else if (anyF.lineType === "RESTAURANT") dailyData[day].salesFb += f.amount;
     });
 
     // Compute totals per row
@@ -959,7 +959,7 @@ export const getDynamicReport = async (req: Request, res: Response) => {
         let roomRevenue = 0, restaurantRevenue = 0;
         for (const line of salesLines as any[]) {
            if (line.lineType === "ROOM_CHARGE") roomRevenue += line.amount;
-           else if (line.lineType === "POS_CHARGE") restaurantRevenue += line.amount;
+           else if (line.lineType === "RESTAURANT") restaurantRevenue += line.amount;
         }
 
         kpis = {
@@ -1013,7 +1013,7 @@ export const getDynamicReport = async (req: Request, res: Response) => {
         let roomRevenue = 0, restaurantRevenue = 0, taxes = 0;
         for (const line of salesLines as any[]) {
            if (line.lineType === "ROOM_CHARGE") roomRevenue += line.amount;
-           else if (line.lineType === "POS_CHARGE") restaurantRevenue += line.amount;
+           else if (line.lineType === "RESTAURANT") restaurantRevenue += line.amount;
            else if (line.lineType.startsWith("TAX_")) taxes += line.amount;
         }
 
