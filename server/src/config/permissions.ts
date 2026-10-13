@@ -193,6 +193,8 @@ grant(base, [UserRole.MANAGER, UserRole.FINANCE, UserRole.RECEPTIONIST, UserRole
 grant(base, [UserRole.MANAGER], "CAP.APPROVE_CRITICAL", ["ALLOW"]);
 // Passing a housekeeping inspection (formerly a hardcoded MANAGER/ADMIN check).
 grant(base, [UserRole.MANAGER], "CAP.HK_PASS_INSPECTION", ["ALLOW"]);
+// Checking a guest into a room that is not CLEAN (reason required, audit-logged).
+grant(base, [UserRole.MANAGER], "CAP.CHECKIN_UNCLEAN_OVERRIDE", ["ALLOW"]);
 grant(base, [UserRole.MANAGER, UserRole.SUPERVISOR], "CAP.APPROVE_HIGH", ["ALLOW"]);
 
 // ── N2: pages that had no grants, and the night-audit view ──────────────────

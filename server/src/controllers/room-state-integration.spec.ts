@@ -122,7 +122,7 @@ describe("check-in respects room status (previously unchecked entirely)", () => 
       res
     );
 
-    expect(res.statusCode).toBe(400);
+    expect(res.statusCode).toBe(409); // conflict: the room is held
   });
 
   it("allows check-in into an AVAILABLE room and marks it OCCUPIED", async () => {

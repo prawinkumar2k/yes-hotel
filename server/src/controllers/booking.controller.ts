@@ -16,6 +16,7 @@ import { generateBookingReference } from "../utils/booking-reference";
 import crypto from "crypto";
 import { z } from "zod";
 import { BookingIdempotency, BookingIdempotencyStatus } from "../models/BookingIdempotency";
+import { claimRoomNights, RoomUnavailableError } from "../services/room-nights.service";
 import { BookingConflictError, buildBookingRequestHash, reserveInventoryDays, buildStayDates, ensureInventoryDayDocuments } from "../services/booking-safety.service";
 import { assertGuestNotBlocked, GuestBlockedError, syncGuestOnBookingCreated } from "../services/guest.service";
 import { Folio, FolioStatus } from "../models/Folio";
@@ -577,39 +578,51 @@ class IllegalCheckInTransitionError extends Error {}
 // Admin Check-In
 export const checkIn = async (req: Request, res: Response) => {
   try {
-    const { roomId, idType, idNumber, nationality, emergencyPhone } = req.body;
+    const { roomId, idType, idNumber, nationality, emergencyPhone, overrideHousekeeping, overrideReason } = req.body;
     const booking = await Booking.findById(req.params.id);
     if (!booking) return res.status(404).json({ success: false, message: "Booking not found" });
 
     const targetRoom = await Room.findById(roomId);
     if (!targetRoom) return res.status(404).json({ success: false, message: "Room not found" });
 
-    // Validate legacy status
-    if (targetRoom.status !== RoomStatus.AVAILABLE) {
-      return res.status(400).json({
-        success: false,
-        message: `Room ${targetRoom.roomNumber} is currently ${targetRoom.status} and cannot be checked into`,
-      });
-    }
-
-    // Validate Sell Status (must not be OUT_OF_ORDER, BLOCKED, OUT_OF_SERVICE)
-    if (targetRoom.sellStatus && targetRoom.sellStatus !== SellStatus.SELLABLE) {
-      return res.status(400).json({
-        success: false,
-        message: `Room ${targetRoom.roomNumber} is ${targetRoom.sellStatus} and cannot be checked into`,
-      });
-    }
-
-    // Validate Housekeeping Status (must be CLEAN or READY)
-    if (
-      targetRoom.housekeepingStatus &&
-      targetRoom.housekeepingStatus !== HousekeepingRoomStatus.CLEAN &&
-      targetRoom.housekeepingStatus !== HousekeepingRoomStatus.READY
-    ) {
-      return res.status(400).json({
-        success: false,
-        message: `Room ${targetRoom.roomNumber} is ${targetRoom.housekeepingStatus}. It must be CLEAN or READY before guest check-in.`,
-      });
+    // Gate on the derived room state (room-status snapshot), not the stored fields,
+    // which can be stale (e.g. stored CLEAN while the HK task is still ASSIGNED).
+    const { getSnapshot } = await import("../services/room-status.service");
+    const state = (await getSnapshot()).byRoomId.get(String(targetRoom._id));
+    if (state) {
+      const heldByOther = state.occupancy === "OCCUPIED" || (state.occupancy === "RESERVED" && state.bookingId !== String(booking._id));
+      if (heldByOther) {
+        return res.status(409).json({ success: false, message: `Room ${targetRoom.roomNumber} is ${state.occupancy}${state.bookingReference ? ` (${state.bookingReference})` : ""}` });
+      }
+      // Conservative: a room still flagged occupied with no in-house booking is stale data;
+      // never put a guest into it until someone resolves the flag.
+      if (targetRoom.status === RoomStatus.OCCUPIED || targetRoom.occupancyStatus === "OCCUPIED") {
+        return res.status(409).json({ success: false, code: "ROOM_FLAGGED_OCCUPIED", message: `Room ${targetRoom.roomNumber} is marked OCCUPIED but no in-house booking holds it; resolve the room status before check-in` });
+      }
+      if (state.sell !== "SELLABLE" || state.blocked) {
+        return res.status(400).json({
+          success: false,
+          message: `Room ${targetRoom.roomNumber} is ${state.blocked ? "BLOCKED" : state.sell}${state.sellReason ? `: ${state.sellReason}` : ""} and cannot be checked into`,
+        });
+      }
+      if (state.hk !== "CLEAN") {
+        const { PermissionService } = await import("../services/PermissionService");
+        const canOverride = await PermissionService.can((req as any).user, "CAP.CHECKIN_UNCLEAN_OVERRIDE");
+        if (!overrideHousekeeping || !canOverride || typeof overrideReason !== "string" || overrideReason.trim().length < 5) {
+          return res.status(409).json({
+            success: false,
+            code: "ROOM_NOT_CLEAN",
+            message: `Room ${targetRoom.roomNumber} is ${state.hk}${state.hkTaskStatus ? ` (task ${state.hkTaskStatus})` : ""}. It must be CLEAN before check-in${canOverride ? "; a manager override needs a reason (min 5 characters)." : "; ask a manager to override."}`,
+          });
+        }
+        await createAuditLog({
+          req,
+          action: "booking.checkin_unclean_override",
+          resourceType: "Booking",
+          resourceId: booking._id.toString(),
+          metadata: { roomNumber: targetRoom.roomNumber, housekeeping: state.hk, task: state.hkTaskStatus, reason: overrideReason.trim() },
+        });
+      }
     }
 
     // Everything below (room -> OCCUPIED, booking -> CHECKED_IN, folio
@@ -638,6 +651,8 @@ export const checkIn = async (req: Request, res: Response) => {
         }
 
         booking.assignedRoom = roomId;
+        // Hold the room-nights (unique per room + night): fails if another booking holds any of them.
+        await claimRoomNights({ bookingId: booking._id as any, roomId, checkIn: booking.checkInDate, checkOut: booking.checkOutDate, propertyId: booking.propertyId as any, session });
         booking.checkedInAt = new Date();
         booking.checkedInBy = (req as any).user?.id ? new mongoose.Types.ObjectId((req as any).user.id) : undefined;
 
@@ -738,6 +753,9 @@ export const checkIn = async (req: Request, res: Response) => {
         await booking.save({ session });
       });
     } catch (error: any) {
+      if (error instanceof RoomUnavailableError) {
+        return res.status(409).json({ success: false, code: "ROOM_UNAVAILABLE", message: error.message });
+      }
       if (error instanceof IllegalCheckInTransitionError) {
         return res.status(400).json({ success: false, message: "Booking must be CONFIRMED before check-in" });
       }
@@ -1012,6 +1030,7 @@ export const checkOut = async (req: Request, res: Response) => {
         req,
         action: "booking.checked_out",
         metadata: { invoiceNumber: folio?.invoiceNumber },
+        session,
       });
 
       booking.checkedOutAt = new Date();
@@ -1233,6 +1252,15 @@ export const extendStay = async (req: Request, res: Response) => {
       }
     }
 
+    // Hold the added room-nights on the assigned room (rejected if another booking holds them).
+    if (booking.assignedRoom) {
+      try {
+        await claimRoomNights({ bookingId: booking._id as any, roomId: (booking.assignedRoom as any)._id ?? booking.assignedRoom, checkIn: booking.checkInDate, checkOut: targetCheckOut, propertyId: booking.propertyId as any });
+      } catch (e: any) {
+        if (e instanceof RoomUnavailableError) return res.status(409).json({ success: false, code: "ROOM_UNAVAILABLE", message: e.message });
+        throw e;
+      }
+    }
     booking.checkOutDate = targetCheckOut;
     booking.totalAmount += additionalTotal;
     booking.taxAmount += additionalTax;

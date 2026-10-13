@@ -382,6 +382,7 @@ export const runNightAudit = async (req: Request, res: Response) => {
           req,
           action: "night_audit.no_show",
           metadata: { date: auditDate },
+          session,
         });
         await b.save({ session });
 

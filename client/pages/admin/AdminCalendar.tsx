@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Link } from "react-router-dom";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import { addDays as addBizDays, toBusinessDate, todayBusinessDate } from "@shared/dates";
 
 export default function AdminCalendar() {
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -124,13 +125,13 @@ export default function AdminCalendar() {
                     // Find booking for this room on this day
                     const booking = data?.data?.bookings?.find((b: any) => {
                       if (!b.assignedRoom || b.assignedRoom._id !== room._id) return false;
-                      const cIn = new Date(b.checkInDate);
-                      const cOut = new Date(b.checkOutDate);
-                      cIn.setHours(0,0,0,0);
-                      cOut.setHours(0,0,0,0);
-                      const current = new Date(day);
-                      current.setHours(0,0,0,0);
-                      return current >= cIn && current < cOut; // Don't show booking on checkout day morning for next booking
+                      // Nights are business dates (IST) [check-in, check-out); an in-house stay past its
+                      // check-out date stays on the grid through today until the guest actually checks out.
+                      const cell = format(day, "yyyy-MM-dd");
+                      const start = toBusinessDate(b.checkInDate);
+                      let end = toBusinessDate(b.checkOutDate);
+                      if (b.status === "CHECKED_IN" && end <= todayBusinessDate()) end = addBizDays(todayBusinessDate(), 1);
+                      return cell >= start && cell < end;
                     });
 
                     return (

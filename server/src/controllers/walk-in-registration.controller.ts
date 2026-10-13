@@ -32,6 +32,7 @@ import { HotelSettings } from "../models/HotelSettings";
 import { Property } from "../models/Property";
 import { User, UserRole } from "../models/User";
 import { createFolio, postCharge } from "../services/folio.service";
+import { claimRoomNights, RoomUnavailableError } from "../services/room-nights.service";
 import { computeRoomTax, loadGstRules } from "../services/tax.service";
 
 /**
@@ -630,6 +631,9 @@ export const walkInArrivalRegistration = async (req: Request, res: Response) => 
           ],
           { session }
         );
+        // Hold the room-nights (unique room + night): the overlap query above is a fast check;
+        // this insert is what makes a concurrent double booking impossible.
+        await claimRoomNights({ bookingId: created[0]._id as any, roomId: rm._id as any, checkIn: checkInDate, checkOut: checkOutDate, propertyId: propertyId as any, session });
         createdBookings.push(created[0]);
 
         // Mark assigned room OCCUPIED immediately for walk-in arrivals

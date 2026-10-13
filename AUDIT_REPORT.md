@@ -494,6 +494,23 @@ Available = VACANT + CLEAN + SELLABLE + not blocked. Occupancy % = occupied room
 - The step 2 sweep had run against a dev server started before that code, so it verified only step 2's client changes.
 - Server code now imports `shared/` by relative path. The step 3 sweep re-verifies both steps.
 
+### Step F — Reservations and front desk
+
+| Issue | Root cause | Fix | Test |
+|---|---|---|---|
+| Double booking possible | `bookinginventorydays` holds **category** counters, used only by online booking creation and extensions (0 docs). Walk-in, room-rack assignment and check-in checked overlaps with a read query (race-prone) or not at all | New `roomnights` collection: one document per room per night, with a **unique index on (room, date)** (`models/RoomNight.ts`, `services/room-nights.service.ts`). Check-in, room-rack assignment, walk-in create and stay extension claim nights inside their transaction. Cancel and no-show release them (in `transitionBookingStatus`). Checkout marks nights stayed as CONSUMED and frees later nights (early checkout). The category counters stay as the online sell limit | `room-nights.service.spec.ts`: two concurrent claims → exactly one succeeds; overlap rejected; back-to-back OK; room move; cancel; early checkout |
+| Backfill | — | Approved (data-strategy item 5). Dry run `docs/migrations/room-nights-dry-run.md`: 53 bookings → 130 room-nights, **0 conflicts**. Applied after backup `backups/2026-10-13T05-14-16-290`, insert-only; unique index created | DB: 130 docs, `room_1_date_1 (unique)` |
+| Check-in into a non-CLEAN room (room 301 for Ananya) | The gate read the stored `housekeepingStatus` (CLEAN) while the HK task was ASSIGNED | The gate uses the derived room state: occupancy, sell (incl. critical maintenance) and HK. Non-CLEAN returns 409 `ROOM_NOT_CLEAN` unless a manager overrides with a reason (`CAP.CHECKIN_UNCLEAN_OVERRIDE`, audit-logged). A room still flagged OCCUPIED with no in-house booking is also refused (stale data must be resolved first) | `room-state-integration.spec.ts` updated (409 for a held room) |
+| Allocation warning | — | Room-rack assignment returns `warning` when the room is not CLEAN | — |
+| Calendar ≠ All Reservations (YES-BKG-4003; room 102's walk-in) | YES-BKG-4003 was on page 4 of the list, which is sorted by creation time. The calendar matched on scheduled dates only, so an overdue in-house stay fell off; its cells were computed with browser-local `setHours` | `services/reservations.service.ts`: one query (overlap by business date, **in-house stays included until actual checkout**) used by both endpoints. The list sorts by stay date and accepts `from`/`to`. Calendar cells use IST business dates and keep overdue stays through today | consistency check 5/5 |
+| Nights miscount | (step 2) | `nights()` everywhere | step 2 |
+| Booking status machine | Already centralised (`booking-state.service`): PENDING → CONFIRMED → CHECKED_IN → CHECKED_OUT, plus CANCELLED / NO_SHOW; illegal jumps rejected. Enquiries are a separate collection, converted to PENDING / CONFIRMED | Unchanged; now also drives the room-night release | existing tests |
+
+**Verification:**
+- Tests: 228 pass, 1 pre-existing failure (H8). `tsc` clean.
+- Consistency check: 5/5.
+- Per-role sweep (`docs/verification/role-sweep-step-f.md`): 390 🔒 · 120 ✅ · 2 ❌ (night audit, H8).
+
 ---
 
 ## Appendix A — All mounted endpoints (243)

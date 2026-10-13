@@ -55,11 +55,20 @@ export function assertLegalBookingTransition(from: BookingStatus, to: BookingSta
 export async function transitionBookingStatus(
   booking: IBooking,
   to: BookingStatus,
-  opts: { req?: Request; action: string; metadata?: Record<string, any> }
+  opts: { req?: Request; action: string; metadata?: Record<string, any>; session?: import("mongoose").ClientSession }
 ): Promise<void> {
   const from = booking.status;
   assertLegalBookingTransition(from, to);
   booking.status = to;
+
+  // Room-night inventory follows the booking: cancelled / no-show stays free their
+  // nights; a checkout consumes nights stayed and frees any nights after departure.
+  const { releaseRoomNights, settleRoomNightsOnCheckout } = await import("./room-nights.service");
+  if (to === BookingStatus.CANCELLED || to === BookingStatus.NO_SHOW) {
+    await releaseRoomNights(booking._id as any, opts.session);
+  } else if (to === BookingStatus.CHECKED_OUT) {
+    await settleRoomNightsOnCheckout(booking._id as any, undefined, opts.session);
+  }
   await createAuditLog({
     req: opts.req,
     action: opts.action,

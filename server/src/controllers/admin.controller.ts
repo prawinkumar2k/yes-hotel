@@ -59,32 +59,25 @@ export const getAdminStats = async (req: Request, res: Response) => {
 
 export const getAdminBookings = async (req: Request, res: Response) => {
   try {
-    const { page = "1", limit = "15", status, search, source } = req.query;
-    const p = parseInt(page as string);
-    const l = parseInt(limit as string);
+    const { page = "1", limit = "15", status, search, source, from, to } = req.query;
+    const p = Math.max(1, parseInt(page as string) || 1);
+    const l = Math.min(100, Math.max(1, parseInt(limit as string) || 15));
 
-    const query: Record<string, any> = {};
-    if (status && status !== "ALL") query.status = status;
-    if (source && source !== "ALL") query.source = source;
-    if (search) {
-      // Escape regex metacharacters and force to a string — an admin-only
-      // route, but an uncontrolled $regex is still a self-inflicted ReDoS
-      // risk from a crafted search term (or a query object slipping past a
-      // string-typed field), same fix already applied in getPayments.
-      const escaped = String(search).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-      query.$or = [
-        { bookingReference: { $regex: escaped, $options: "i" } },
-        { "guestDetails.firstName": { $regex: escaped, $options: "i" } },
-        { "guestDetails.lastName": { $regex: escaped, $options: "i" } },
-        { "guestDetails.email": { $regex: escaped, $options: "i" } },
-      ];
-    }
+    // Same query as the Calendar (services/reservations.service.ts); search is regex-escaped there.
+    const { buildReservationQuery, RESERVATION_SORT } = await import("../services/reservations.service");
+    const query = buildReservationQuery({
+      status: status as string,
+      source: source as string,
+      search: search as string,
+      from: from as string,
+      to: to as string,
+    });
 
     const [bookings, total] = await Promise.all([
       Booking.find(query)
         .populate("roomCategory", "name slug")
         .populate("assignedRoom", "roomNumber floor")
-        .sort({ createdAt: -1 })
+        .sort(RESERVATION_SORT as any)
         .skip((p - 1) * l)
         .limit(l),
       Booking.countDocuments(query),
@@ -194,8 +187,6 @@ export const getAdminCalendar = async (req: Request, res: Response) => {
       return res.status(400).json({ success: false, message: "Start and end dates are required" });
     }
 
-    const startDate = new Date(start as string);
-    const endDate = new Date(end as string);
 
     // Fetch physical rooms and categories
     const [rooms, categories] = await Promise.all([
@@ -203,13 +194,11 @@ export const getAdminCalendar = async (req: Request, res: Response) => {
       RoomCategory.find().sort({ displayOrder: 1 })
     ]);
 
-    // Fetch bookings that overlap with the date range
-    const bookings = await Booking.find({
-      $or: [
-        { checkInDate: { $lte: endDate }, checkOutDate: { $gte: startDate } }
-      ],
-      status: { $nin: [BookingStatus.CANCELLED] }
-    }).populate("roomCategory", "name slug").populate("assignedRoom", "roomNumber");
+    // Same query as All Reservations: stays overlapping the window, plus in-house overdue stays.
+    const { buildReservationQuery, RESERVATION_SORT } = await import("../services/reservations.service");
+    const bookings = await Booking.find(buildReservationQuery({ from: start as string, to: end as string, status: "ACTIVE" }))
+      .sort(RESERVATION_SORT as any)
+      .populate("roomCategory", "name slug").populate("assignedRoom", "roomNumber");
 
     return res.status(200).json({
       success: true,

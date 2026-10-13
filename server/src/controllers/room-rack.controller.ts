@@ -229,8 +229,39 @@ export const assignRoomToBooking = async (req: Request, res: Response) => {
 
     const prevRoom = booking.assignedRoom?.toString();
     const strRoomId = Array.isArray(roomId) ? roomId[0] : roomId;
-    booking.assignedRoom = new mongoose.Types.ObjectId(strRoomId as string);
-    await booking.save();
+
+    // Hold the room-nights and save the assignment together; a room already held for
+    // any of these nights by another booking is rejected (unique room + night).
+    const { claimRoomNights, RoomUnavailableError } = await import("../services/room-nights.service");
+    const session = await mongoose.startSession();
+    try {
+      await session.withTransaction(async () => {
+        await claimRoomNights({
+          bookingId: booking._id as any,
+          roomId: strRoomId as string,
+          checkIn: booking.checkInDate,
+          checkOut: booking.checkOutDate,
+          propertyId: booking.propertyId as any,
+          session,
+        });
+        booking.assignedRoom = new mongoose.Types.ObjectId(strRoomId as string);
+        await booking.save({ session });
+      });
+    } catch (e: any) {
+      if (e instanceof RoomUnavailableError) {
+        return res.status(409).json({ success: false, code: "ROOM_UNAVAILABLE", message: `Room ${room.roomNumber}: ${e.message}` });
+      }
+      throw e;
+    } finally {
+      await session.endSession();
+    }
+
+    // Allocation-time warning: the room can be assigned, but check-in will be blocked until it is CLEAN.
+    const { getSnapshot } = await import("../services/room-status.service");
+    const state = (await getSnapshot()).byRoomId.get(String(room._id));
+    const warning = state && state.hk !== "CLEAN"
+      ? `Room ${room.roomNumber} is ${state.hk}${state.hkTaskStatus ? ` (task ${state.hkTaskStatus})` : ""}: check-in will be blocked until housekeeping marks it CLEAN.`
+      : undefined;
 
     // Record booking event
     await BookingEvent.create({
@@ -263,7 +294,8 @@ export const assignRoomToBooking = async (req: Request, res: Response) => {
     return res.json({
       success: true,
       message: `Room ${room.roomNumber} assigned to booking ${booking.bookingReference}`,
-      data: { roomId, bookingId, roomNumber: room.roomNumber },
+      data: { roomId, bookingId, roomNumber: room.roomNumber, warning },
+      ...(warning ? { warning } : {}),
     });
   } catch (error: any) {
     return res.status(500).json({ success: false, message: error.message });
