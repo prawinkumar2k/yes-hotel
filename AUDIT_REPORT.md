@@ -564,6 +564,86 @@ Available = VACANT + CLEAN + SELLABLE + not blocked. Occupancy % = occupied room
 
 ---
 
+### Step E — Cashier shifts
+
+| Issue | Root cause | Fix | Test |
+|---|---|---|---|
+| Two shifts could open on one drawer (or one cashier) | Check-then-create | Unique partial indexes `one_active_shift_per_drawer` and `one_active_shift_per_cashier` (status OPEN or HANDOVER_PENDING); a duplicate returns 409 | `cashier-shift-rules.spec.ts` (concurrent opens: one 201, one 409) |
+| Drawer kept moving after a handover count | The ledger window ran to "now" until confirmation | The ledger stops at `handoverInitiatedAt`, and the snapshot is stored at initiation. Confirmation closes the old shift and opens the new one (float = counted cash) in one transaction | same |
+| Expected cash computed with guesswork | Payment mode came from the description first; gateway refunds counted as drawer cash; desk and advance refunds ignored | `services/cashier-shift.service.ts` `computeShiftLedger` (the one function). Mode comes from the Payment's method, then the channel, then (legacy only) the description. Cash refunds include folio REFUND lines and advance refunds; payment refunds use the original payment's mode | unit + integration |
+| Denominations silently overrode the count | A non-zero breakdown replaced the entered amount | A mismatch is a 400 ("recount") | unit |
+| Variance handling | Any variance needed only free text; the supervisor flag was unused | Any variance needs a reason. Above `HotelSettings.cashVarianceThreshold` (default ₹100), the shift stays CLOSED with `varianceAcceptanceRequired` until a manager or supervisor (`CAP.SHIFT_SUPERVISOR_OVERRIDE`) accepts it via `POST /cashier-shifts/:id/accept`; the cashier cannot accept their own shift. A handover with a variance needs a reason too | same |
+| Anyone with CLOSE_SHIFT could close or drain any drawer | No owner check | Close and paid-out: the shift's cashier, or a supervisor. Handover: the cashier only. A paid-out can't exceed the drawer's expected cash | same |
+| Shift numbers duplicated under load; a fake property id was used | `countDocuments()+1`; hard-coded ObjectId fallback | Atomic counter; a missing property returns 400 | — |
+
+**Access:** tightened, not widened. Within CASHIER_SHIFTS, closing or drawing on **another** cashier's shift now also requires `CAP.SHIFT_SUPERVISOR_OVERRIDE` (MANAGER, SUPERVISOR, full-access roles). The new accept endpoint uses the existing CASHIER_SHIFTS:RECONCILE plus that capability.
+
+**Verification:** see the combined E–M verification below.
+
+---
+
+### Step G — Enquiries
+
+| Issue | Root cause | Fix | Test |
+|---|---|---|---|
+| Converted bookings priced at ₹0 with no tax, in an arbitrary category | Conversion used `quotationAmount` or 0 and fell back to the first category in the database | Conversion requires a room category (chosen in the dialog). It prices with `priceStay`, the same rate and GST service as booking creation; a quotation, when present, is the agreed pre-tax charge, and GST is computed from it | `enquiry-convert.spec.ts` |
+| Conversion was not atomic and could oversell | Guest and booking were created outside the transaction; "availability" counted rooms vacant today | One transaction. Category inventory for every requested room is claimed first (`reserveInventoryDays` with `count`); if sold out → 409 and nothing is written. Multi-room enquiries become one booking per room under a `groupId` | same |
+| Enquiry could be marked CONVERTED with no booking; LOST without a reason; follow-ups reopened closed enquiries | No transition rules | CONVERTED only through Convert; LOST needs a reason; status changes are audit-logged; a follow-up on a closed enquiry is recorded without reopening it | same |
+| Hard-coded room types (BookingBar, admin enquiry form) | Literal lists that no longer matched the categories; BookingBar's choice was never sent | `useRoomCategories()` reads the active categories (`/api/rooms/categories`). The enquiry form stores `roomCategoryId`. BookingBar passes `category` to search, which lists that type first | — |
+
+### Step H — OTA bookings
+
+| Issue | Root cause | Fix | Test |
+|---|---|---|---|
+| No OTA commission, net payable or payment model per booking | Only `otaName` was stored | Booking stores `otaCommissionPercent` and `otaPaymentModel` (OTA_PREPAID / PAY_AT_HOTEL). `services/ota.service.ts` `computeOtaSettlement` computes commission on pre-tax room revenue, plus what the OTA owes the hotel (prepaid) or the hotel owes the OTA (pay at hotel). It runs on every booking save | `ota.service.spec.ts` |
+| Seed bookings made after checkout (49 of 56) | `Booking.create` stamps "now" on historical stays | The seed back-dates each seeded booking's creation before its check-in (walk-ins: the arrival day), and gives OTA bookings commission terms | — |
+
+**Data (dry run):** `docs/consistency/data-integrity.md` (`scripts/audit/data-integrity.ts`): 51 bookings made after check-in, 49 of them after check-out, and 9/9 OTA bookings without terms. These are seed artefacts, fixed by reseeding (**needs approval**).
+
+### Step J — Maintenance
+
+| Issue | Root cause | Fix | Test |
+|---|---|---|---|
+| Critical ticket, room still sellable (room 204) | Read side fixed in step 3; the write side forced `status = MAINTENANCE` for every ticket (silently failing for occupied rooms) and never touched the sell status | `services/maintenance.service.ts`: an open CRITICAL ticket sets `sellStatus = OUT_OF_ORDER` (the previous value is kept in `maintenanceHold`). Resolving the last one restores it, and escalating or downgrading priority re-syncs it. Lower priorities no longer take a room off sale or change its status | `maintenance-rules.spec.ts`, `room-state-integration.spec.ts` (rewritten) |
+| Tickets could jump states | No transition rules | OPEN → ASSIGNED / IN_PROGRESS / CLOSED (closing needs a reason); ASSIGNED → IN_PROGRESS / OPEN; IN_PROGRESS → RESOLVED / ASSIGNED; RESOLVED → CLOSED / IN_PROGRESS. ASSIGNED needs an assignee. Before/after go in the audit log | same |
+| Out-of-order rooms counted as sellable capacity | Three capacity queries each excluded only `status` MAINTENANCE / OUT_OF_SERVICE | One `SELLABLE_ROOM_FILTER` (status and sell status) in availability, the category sell limit and stay extension | same |
+
+**Data (dry run):** room 204 still has an open CRITICAL ticket and is on sale. The proposed one-off fix runs `syncRoomSellStatusWithTickets` for open CRITICAL tickets (**needs approval**).
+
+### Step K — Metrics
+
+| Issue | Root cause | Fix | Test |
+|---|---|---|---|
+| Four different ADR/RevPAR formulas; "revenue" was sometimes money collected | Each screen computed its own: today's collections ÷ occupied, whole-stay totals ÷ in-house count, check-in totals including tax | `services/metrics.service.ts` defines them once. Room revenue = pre-tax revenue per night of stays occupying the night (an early checkout ends the stay). ADR = revenue ÷ rooms sold; RevPAR = revenue ÷ sellable rooms; occupancy = sold ÷ sellable. Collections = payments + advances received, reported separately. `chargeRevenue` = pre-tax charges posted, net of discounts and reversals. The Dashboard, `/reports/overview`, `/reports/room-stay` and `/reports/executive-summary` all use it | `metrics.service.spec.ts` |
+| F&B revenue always ₹0 in reports | Reports looked for line type `POS_CHARGE`, which doesn't exist; POS posts `RESTAURANT` | Reports read `RESTAURANT` | — |
+
+### Step L — Broken pages
+
+| Issue | Root cause | Fix | Test |
+|---|---|---|---|
+| POS: charge posted at order time; voids left folio lines; stale in-house check; cash bills missing from the drawer | Room charges were posted on create, `room.currentBooking` was trusted, and there was no settlement record | Order → KOT → kitchen → SERVED → **settle** (`POST /pos/orders/:id/settle`, CASHIER/MANAGER). ROOM posts the charge and GST to the in-house guest's folio (checked against CHECKED_IN bookings); CASH / CARD / UPI record the settlement (card/UPI need a reference). Everything runs in one transaction. Cash bills count in the cashier's drawer. Billing through the status endpoint is refused. KOT numbers are `KOT-YYYYMMDD-NNNN` | `pos-flow.spec.ts`, `rbac-rules` (N2 updated to the settle endpoint) |
+| Property Settings "loads empty" and can't be saved | Radix tabs unmount inactive panels, so a save sent only the open tab (other fields missing or `NaN`, rejected by the server). `\|\| 800`-style defaults hid real zeros | All tabs stay mounted. The form rehydrates when settings load; `??` defaults. Server validation covers times (HH:MM), URLs or site paths, phone digits, currency code and non-negative amounts, and adds `cashVarianceThreshold` | — |
+| Guest Directory wrote on every GET; spend included cancelled and future stays; walk-in placeholder emails duplicated guests | Read-time "auto-sync" created guests and rewrote stats; spend summed booking totals | `services/guest-stats.service.ts` (read-only): spend = settled/closed folios (charges + tax − discounts). Stays are matched by customer id, real email or phone; placeholder emails never match, and a placeholder profile is hidden when a real one has the same phone. Search is escaped | `guest-stats.service.spec.ts` |
+| Groups: blocks held nothing; no pickup, rooming list or release; advances typed in as numbers | — | `services/group-block.service.ts`. Confirm claims category inventory for every block (all-or-nothing); pickup turns a held room into a named, taxed booking (`groupId`); release gives unpicked rooms back (cancel releases all); `GET /:id/rooming-list`. Status machine. A group advance is a real `AdvancePayment` against the organiser's profile | `group-blocks.spec.ts` |
+| Inventory claims could deadlock or fail when not first in a transaction | `reserveInventoryDays` mixed non-transactional preparation with the claim | Split into `prepareInventoryDays` (outside) and `claimInventoryDays` (inside, with `count`); `releaseInventoryDays` takes `count` | enquiry, group tests |
+| Coupons | — | Already atomic: redeemed at payment and released on cancel (`coupon.service.spec.ts`). Gap: pay-at-hotel bookings never redeem, so the usage limit isn't applied to them (needs a decision on when a pay-at-hotel coupon counts) | existing |
+
+### Step M — Staff, RBAC & audit
+
+| Issue | Root cause | Fix | Test |
+|---|---|---|---|
+| "Last login" older than the account's last action | `lastLogin` changed only on password login; refreshed sessions kept acting | `lastActiveAt` is updated by authenticated requests (at most every 5 minutes). Login uses a targeted update, and successful and failed logins are audit-logged (IP, user agent, reason) | `audit-session.integration.spec.ts` |
+| Audit log editable; no before/after; weak filters; no export | — | Append-only: model hooks reject update, replace and delete (the production DB user should also be insert/find only on `auditlogs`). Top-level `before` / `after`. Filters: actor, role, action prefix (`folio.`), resource, IP, business-date range. `GET /api/audit-logs/export` returns CSV (formula-safe, max 50k rows; AUDIT_LOGS:EXPORT) | same |
+| `/guests/my/profile` 401 for everyone | Looked for `email` in the JWT, which carries only id and role | Resolves the account by id; staff get 403 | same |
+
+**Verification (E–M, combined):**
+- Tests: 283 pass (41 files); `tsc` clean.
+- Sweeps ran against a **production build** (`dist/sweep`, port 8096), because the dev server restarts whenever server code is edited, which corrupted mid-run sweeps (504 on `.vite/deps`).
+- Consistency check: 5/5 (`docs/consistency/phase1-final.md`).
+- Per-role sweep (`docs/verification/role-sweep-phase1-final.md`): 122 ✅ · 390 🔒 · 0 ❌.
+
+---
+
 ## Appendix A — All mounted endpoints (243)
 
 | Method | Path | Handler | Auth | RBAC | Live GET (SUPER_ADMIN) | Used by FE |

@@ -3,6 +3,52 @@
 All changes, fixes, hardened services, and architectural migrations are documented chronologically in this file.
 
 ---
+## [Phase 1 · Step M — Staff, RBAC & audit] - 2026-10-13
+
+- Session tracking: `lastActiveAt` (authenticated activity) alongside `lastLogin`. Successful and failed logins are audit-logged.
+- Audit log is append-only, with before/after, filters (action prefix, role, IP, dates) and CSV export.
+- Guest loyalty profile works for guests (it was 401 for everyone); staff get 403.
+
+## [Phase 1 · Step L — Broken pages] - 2026-10-13
+
+- POS: order → KOT → kitchen → served → settle to the room folio (in-house guests only) or by cash/card/UPI, in one transaction. Cash bills count in the cashier's drawer.
+- Property Settings: every tab saves, values reload after saving, and fields are validated.
+- Guest Directory: read-only. Spend = settled folios, and walk-in placeholder duplicates are hidden.
+- Groups: confirming holds room blocks; pickup builds the rooming list; unpicked rooms can be released (cancel releases all). Advances are real payments.
+
+## [Phase 1 · Step K — Metrics] - 2026-10-13
+
+- One metrics service: room revenue (pre-tax, per night), occupancy, ADR, RevPAR, with collections reported separately. The Dashboard and every report use it.
+- F&B revenue now appears in reports (they looked for a line type that never existed).
+
+## [Phase 1 · Step J — Maintenance] - 2026-10-13
+
+- A CRITICAL ticket takes the room out of order until resolved; lower priorities don't take a room off sale.
+- Ticket status machine (closing an untouched ticket needs a reason); out-of-order rooms are excluded from capacity everywhere.
+
+## [Phase 1 · Step H — OTA bookings] - 2026-10-13
+
+- OTA bookings store commission %, payment model, commission, and amount receivable from or payable to the OTA (one rule).
+- Seed data is chronologically valid. Dry-run integrity report in `docs/consistency/data-integrity.md`.
+
+---
+## [Phase 1 · Step G — Enquiries] - 2026-10-13
+
+- Converting an enquiry requires a room category. It prices with the booking rate and GST service (a quotation is used as the agreed pre-tax charge), claims category inventory for every room, and creates one booking per room — all in one transaction (409 when sold out).
+- Enquiry status rules: CONVERTED only through Convert, LOST needs a reason, and a follow-up does not reopen a closed enquiry.
+- Room-type pickers (home-page booking bar, admin enquiry form, convert dialog) load the live room categories.
+
+---
+## [Phase 1 · Step E — Cashier shifts] - 2026-10-13
+
+- One active shift per drawer and per cashier, enforced by unique indexes (409 on a duplicate).
+- A handover freezes the drawer at the count. On confirmation, the old shift closes and the new one opens with the counted float, in one transaction.
+- Expected drawer cash comes from one function, `computeShiftLedger`. Payment mode is taken from the Payment record. Desk and advance refunds are counted; gateway refunds are not counted as cash.
+- A denomination breakdown must match the entered count.
+- Any variance needs a reason. A variance above `cashVarianceThreshold` (default ₹100) waits for a manager to accept it (`POST /api/cashier-shifts/:id/accept`); the cashier cannot accept their own.
+- Closing or paying out from another cashier's drawer needs supervisor rights, and a paid-out can't exceed the drawer.
+
+---
 ## [Phase 1 · Step D — Advances] - 2026-10-13
 
 - Advance numbers come from an atomic monthly counter, so they no longer duplicate under load.
