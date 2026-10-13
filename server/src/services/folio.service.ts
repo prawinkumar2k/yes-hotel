@@ -5,6 +5,16 @@ import { FolioLine, FolioLineType, FolioLineDirection, LINE_TYPE_DIRECTION } fro
 import { HotelSettings } from "../models/HotelSettings";
 import { createAuditLog } from "./audit.service";
 import { computeRoomTax, loadGstRules } from "./tax.service";
+import { computeFolioTotals, financialYear, formatInvoiceNumber } from "./folio-ledger";
+import { nextSequence } from "./counter.service";
+
+/** Thrown when settling/finalizing a folio whose balance is not exactly zero. */
+export class FolioNotBalancedError extends Error {
+  constructor(public readonly balance: number) {
+    super(`Folio balance must be exactly ₹0 to settle or finalize (current balance ₹${balance.toFixed(2)}). Collect the outstanding amount, or post a refund / deposit for the excess.`);
+    this.name = "FolioNotBalancedError";
+  }
+}
 import type { Request } from "express";
 import { nights as countNights } from "../../../shared/dates";
 
@@ -95,6 +105,10 @@ export interface PostChargeParams {
   date: Date;
   postedBy: string;
   businessDate?: Date;
+  /** Room charges: the business dates this line charges for (prevents charging a night twice). */
+  coversNights?: string[];
+  /** Night audit only: it posts to the date it has just closed. */
+  allowClosedDate?: boolean;
   notes?: string;
   /** For PAYMENT lines: the Payment document ID */
   paymentId?: string;
@@ -122,7 +136,8 @@ export async function postCharge(
     : await Folio.findById(params.folioId);
   if (!folio) throw new Error(`Folio ${params.folioId} not found`);
 
-  if (folio.status === FolioStatus.CLOSED || folio.status === FolioStatus.VOIDED) {
+  // Settled/closed/voided folios are immutable; a finalized folio accepts only reversals.
+  if (folio.status === FolioStatus.CLOSED || folio.status === FolioStatus.VOIDED || folio.status === FolioStatus.SETTLED) {
     throw new Error(`Cannot post to a ${folio.status} folio`);
   }
   if (folio.status === FolioStatus.FINALIZED && params.lineType !== FolioLineType.REVERSAL) {
@@ -131,6 +146,15 @@ export async function postCharge(
 
   const direction = LINE_TYPE_DIRECTION[params.lineType];
   if (!direction) throw new Error(`Unknown line type: ${params.lineType}`);
+
+  // A business date closed by the night audit is locked: nothing may be posted to it.
+  if (params.businessDate && !params.allowClosedDate) {
+    const { isBusinessDateClosed } = await import("./business-date.service");
+    const { toBusinessDate } = await import("../../../shared/dates");
+    if (await isBusinessDateClosed(toBusinessDate(params.businessDate), opts.session)) {
+      throw new Error(`Business date ${toBusinessDate(params.businessDate)} is closed by the night audit; post corrections to the current date`);
+    }
+  }
 
   const [line] = await FolioLine.create(
     [
@@ -147,6 +171,7 @@ export async function postCharge(
         postedAt: new Date(),
         postedBy: params.postedBy,
         businessDate: params.businessDate,
+        coversNights: params.coversNights,
         notes: params.notes,
         paymentId: params.paymentId,
         paymentChannelId: params.paymentChannelId,
@@ -157,44 +182,8 @@ export async function postCharge(
     { session: opts.session }
   );
 
-  // ── UPDATE FOLIO RUNNING TOTALS ──
-  const amt = line.amount;
-  if (direction === FolioLineDirection.DEBIT) {
-    switch (params.lineType) {
-      case FolioLineType.TAX_CGST:
-        folio.cgst += amt;
-        folio.totalTax += amt;
-        break;
-      case FolioLineType.TAX_SGST:
-        folio.sgst += amt;
-        folio.totalTax += amt;
-        break;
-      case FolioLineType.TAX_IGST:
-        folio.igst += amt;
-        folio.totalTax += amt;
-        break;
-      default:
-        folio.totalCharges += amt;
-    }
-  } else {
-    switch (params.lineType) {
-      case FolioLineType.DISCOUNT:
-        folio.totalDiscounts += amt;
-        break;
-      case FolioLineType.PAYMENT:
-        folio.totalPaid += amt;
-        break;
-      case FolioLineType.ADVANCE_ADJUSTMENT:
-        folio.totalAdvanceAdjusted += amt;
-        break;
-      default:
-        // REFUND, COMPLIMENTARY, REVERSAL — reduce charges
-        folio.totalCharges = Math.max(0, folio.totalCharges - amt);
-    }
-  }
-
-  // Recompute balance
-  folio.balance = folio.totalCharges + folio.totalTax - folio.totalDiscounts - folio.totalPaid - folio.totalAdvanceAdjusted;
+  // ── FOLIO TOTALS: recomputed from every line by the one ledger rule (folio-ledger.ts) ──
+  Object.assign(folio, await recomputeFolioBalance(params.folioId, { session: opts.session }));
   folio.balance = Math.round(folio.balance * 100) / 100;
 
   await ensurePropertyId(folio, params.bookingId, opts.req, opts.session);
@@ -211,7 +200,7 @@ export async function postCharge(
       bookingId: params.bookingId,
       lineType: params.lineType,
       direction,
-      amount: amt,
+      amount: line.amount,
       newBalance: folio.balance,
     },
   });
@@ -239,7 +228,9 @@ export async function finalizeFolio(
   if (folio.status !== FolioStatus.OPEN) {
     throw new Error(`Folio is ${folio.status} — cannot finalize`);
   }
-
+  const totals = await recomputeFolioBalance(folioId, { session: opts.session });
+  Object.assign(folio, totals);
+  if (totals.balance !== 0) throw new FolioNotBalancedError(totals.balance);
   folio.status = FolioStatus.FINALIZED;
   await ensurePropertyId(folio, folio.booking.toString(), opts.req, opts.session);
   await folio.save({ session: opts.session });
@@ -266,11 +257,21 @@ export async function settleFolio(
     ? await Folio.findById(folioId).session(opts.session)
     : await Folio.findById(folioId);
   if (!folio) throw new Error(`Folio ${folioId} not found`);
+  if (folio.status === FolioStatus.SETTLED || folio.status === FolioStatus.CLOSED || folio.status === FolioStatus.VOIDED) {
+    throw new Error(`Folio is already ${folio.status}`);
+  }
+  const totals = await recomputeFolioBalance(folioId, { session: opts.session });
+  Object.assign(folio, totals);
+  if (totals.balance !== 0) throw new FolioNotBalancedError(totals.balance);
 
+  // GST invoice series: PREFIX/FY/NNNNNN, sequential per financial year and gapless
+  // (the counter increment rolls back with the transaction if settlement fails).
   const settingsQuery = HotelSettings.findOne().sort({ updatedAt: -1 });
   const settings = await (opts.session ? settingsQuery.session(opts.session) : settingsQuery).lean();
   const prefix = settings?.invoicePrefix ?? "INV";
-  const invoiceNumber = `${prefix}-${Date.now()}`;
+  const { todayBusinessDate } = await import("../../../shared/dates");
+  const fy = financialYear(todayBusinessDate());
+  const invoiceNumber = formatInvoiceNumber(prefix, fy, await nextSequence(`invoice:${fy}`, opts.session));
 
   folio.status = FolioStatus.SETTLED;
   folio.invoiceNumber = invoiceNumber;
@@ -312,43 +313,7 @@ export async function recomputeFolioBalance(
 }> {
   const linesQuery = FolioLine.find({ folio: folioId });
   const lines = await (opts.session ? linesQuery.session(opts.session) : linesQuery).lean();
-
-  let totalCharges = 0;
-  let totalTax = 0;
-  let totalDiscounts = 0;
-  let totalPaid = 0;
-  let totalAdvanceAdjusted = 0;
-  let cgst = 0;
-  let sgst = 0;
-  let igst = 0;
-
-  for (const line of lines) {
-    const amt = line.amount;
-    if (line.direction === FolioLineDirection.DEBIT) {
-      if (line.lineType === FolioLineType.TAX_CGST) { cgst += amt; totalTax += amt; }
-      else if (line.lineType === FolioLineType.TAX_SGST) { sgst += amt; totalTax += amt; }
-      else if (line.lineType === FolioLineType.TAX_IGST) { igst += amt; totalTax += amt; }
-      else totalCharges += amt;
-    } else {
-      if (line.lineType === FolioLineType.DISCOUNT) totalDiscounts += amt;
-      else if (line.lineType === FolioLineType.PAYMENT) totalPaid += amt;
-      else if (line.lineType === FolioLineType.ADVANCE_ADJUSTMENT) totalAdvanceAdjusted += amt;
-      else totalCharges = Math.max(0, totalCharges - amt); // REVERSAL, COMPLIMENTARY, REFUND
-    }
-  }
-
-  const balance = Math.round((totalCharges + totalTax - totalDiscounts - totalPaid - totalAdvanceAdjusted) * 100) / 100;
-  return {
-    totalCharges: Math.round(totalCharges * 100) / 100,
-    totalTax: Math.round(totalTax * 100) / 100,
-    totalDiscounts: Math.round(totalDiscounts * 100) / 100,
-    totalPaid: Math.round(totalPaid * 100) / 100,
-    totalAdvanceAdjusted: Math.round(totalAdvanceAdjusted * 100) / 100,
-    balance,
-    cgst: Math.round(cgst * 100) / 100,
-    sgst: Math.round(sgst * 100) / 100,
-    igst: Math.round(igst * 100) / 100,
-  };
+  return computeFolioTotals(lines as any);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -498,4 +463,91 @@ export async function openFolioForBooking(
   } finally {
     await session.endSession();
   }
+}
+
+/**
+ * Voids a folio line by posting a REVERSAL that points to it (the original stays for the
+ * audit trail). A line can be reversed once; reversals themselves cannot be reversed.
+ */
+export async function reverseFolioLine(
+  folioId: string,
+  lineId: string,
+  reason: string,
+  opts: { req?: Request; session?: mongoose.ClientSession; postedBy: string },
+) {
+  const original = await FolioLine.findOne({ _id: lineId, folio: folioId }).session(opts.session ?? null);
+  if (!original) throw new Error("Folio line not found");
+  if (original.lineType === FolioLineType.REVERSAL) throw new Error("A reversal cannot itself be reversed");
+  const already = await FolioLine.exists({ folio: folioId, reversedLineId: original._id }).session(opts.session ?? null);
+  if (already) throw new Error("This line has already been reversed");
+  const result = await postCharge(
+    {
+      folioId,
+      bookingId: original.booking.toString(),
+      lineType: FolioLineType.REVERSAL,
+      description: `Reversal of: ${original.description}`,
+      amount: original.amount,
+      date: new Date(),
+      postedBy: opts.postedBy,
+      notes: reason,
+      reversedLineId: original._id.toString(),
+    },
+    { req: opts.req, session: opts.session },
+  );
+  await createAuditLog({
+    req: opts.req,
+    action: "folio.line_reversed",
+    resourceType: "FolioLine",
+    resourceId: original._id.toString(),
+    metadata: { folioId, reversalLineId: result.line._id.toString(), reason, before: { lineType: original.lineType, amount: original.amount } },
+  });
+  return result;
+}
+
+/** Standard transaction id: TXN-YYYYMMDD-NNNNNN (business date, gapless per day). Gateway ids are stored separately. */
+export async function nextTransactionId(session?: mongoose.ClientSession): Promise<string> {
+  const { todayBusinessDate } = await import("../../../shared/dates");
+  const ymd = todayBusinessDate();
+  const seq = await nextSequence(`txn:${ymd}`, session);
+  return `TXN-${ymd.replace(/-/g, "")}-${String(seq).padStart(6, "0")}`;
+}
+
+/**
+ * Records money received against a folio: a Payment document and the folio PAYMENT line
+ * that points to it, in the same transaction. No payment line exists without a Payment.
+ */
+export async function recordFolioPayment(
+  params: { folioId: string; bookingId: string; amount: number; method: string; description: string; postedBy: string; paymentChannelId?: string; notes?: string; propertyId?: any },
+  opts: { req?: Request; session?: mongoose.ClientSession },
+) {
+  const { Payment, PaymentTxStatus } = await import("../models/Payment");
+  const method = ["CASH", "CARD", "UPI", "RAZORPAY"].includes(params.method) ? params.method : "CASH";
+  const [payment] = await (Payment as any).create(
+    [{
+      propertyId: params.propertyId,
+      booking: params.bookingId,
+      amount: params.amount,
+      currency: "INR",
+      method,
+      status: PaymentTxStatus?.COMPLETED ?? "COMPLETED",
+      transactionId: await nextTransactionId(opts.session),
+    }],
+    { session: opts.session },
+  );
+  const posted = await postCharge(
+    {
+      folioId: params.folioId,
+      bookingId: params.bookingId,
+      lineType: FolioLineType.PAYMENT,
+      description: params.description,
+      amount: params.amount,
+      date: new Date(),
+      postedBy: params.postedBy,
+      paymentId: payment._id.toString(),
+      paymentChannelId: params.paymentChannelId,
+      notes: params.notes,
+    },
+    opts,
+  );
+  return { payment, ...posted };
 }

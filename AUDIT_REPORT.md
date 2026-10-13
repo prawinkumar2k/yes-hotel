@@ -513,6 +513,39 @@ Available = VACANT + CLEAN + SELLABLE + not blocked. Occupancy % = occupied room
 
 ---
 
+### Step B — Night audit
+
+| Issue | Root cause | Fix | Test |
+|---|---|---|---|
+| Status/preview created business-date rows | `GET /night-audit/status` called the "get or create current date" helper | `services/business-date.service.ts`: `getCurrentBusinessDate` (read-only) vs `ensureCurrentBusinessDate` (run only). Status/preview are pure reads | `night-audit-rules.spec.ts` (row count unchanged) |
+| Room nights double-charged | The audit posted a night's room charge even when the stay was charged in full at check-in | Each room charge records the nights it covers (`FolioLine.coversNights`). The audit posts only nights not already covered (legacy stay lines are treated as covering the booked nights), at the booking's own rate | `night-audit-rules.spec.ts` |
+| Overstays not charged or charged at rack rate | — | An in-house stay past its departure is charged one night at the booking rate, and the night is claimed in `roomnights` | same |
+| No-shows held rooms | — | Due arrivals not checked in become NO_SHOW and their room-nights are released | same |
+| Double rollover under retry | A write-conflict retry ran the rollover twice | The run pins the expected date; a mismatch returns 409 `AuditAlreadyCompletedError` | `night-audit-concurrency.spec.ts` (the long-standing H8 failure was a stale non-partial `isCurrentDate_1` index in the test DB; the test now syncs indexes) |
+| Back-dated postings to an audited day | — | Postings dated on a CLOSED business day are refused (`allowClosedDate` only for the audit itself) | same |
+| Audit summary | Hand-entered counters | Computed from the day's bookings and folio lines, with an exceptions list | same |
+
+### Step C — Folio ledger and settlement
+
+| Issue | Root cause | Fix | Test |
+|---|---|---|---|
+| Balance computed in several places with different rules; REFUND reduced the balance | Running totals were accumulated per posting; REFUND was a CREDIT | `services/folio-ledger.ts`: one rule, recomputed from all lines on every posting. REFUND is a debit; a REVERSAL undoes its target line in that line's bucket. `balance = charges + tax + refunds − discounts − paid − advances` | `folio-ledger.spec.ts` |
+| Folios settled with a balance (WALKIN-1011-001 −₹2,000, YES-BKG-2020 −₹3,050) | Checkout auto-refunded silently and `forceBypassBalance` (sent by Front Desk on every checkout) skipped the balance check | `forceBypassBalance` removed (server and client). Settle/finalize require **balance = ₹0** (`FolioNotBalancedError`, 400). A guest credit at checkout returns 409 `GUEST_CREDIT_UNREFUNDED` until staff confirm a refund. A payment above the amount due returns 400 `OVERPAYMENT` unless the excess is returned as a refund with a reason | `folio-settlement.spec.ts` |
+| Folio payment lines without a Payment record | Checkout posted the PAYMENT line only | `recordFolioPayment` creates the Payment (INR, `TXN-YYYYMMDD-NNNNNN`) and the line pointing to it in the same transaction | same |
+| Line delete erased history | `DELETE /folios/:id/lines/:lineId` hard-deleted | Now posts a REVERSAL (reason required; once per line); the original line stays. Front Desk asks for the reason | same |
+| Settled folios editable | Only CLOSED/VOIDED were locked | SETTLED is immutable too | same |
+| Invoice numbers `INV-<timestamp>` | — | GST series `PREFIX/FY/NNNNNN`, gapless per financial year (counter increments inside the settlement transaction) | same |
+| Payment currency default USD | — | INR | — |
+
+**Data (dry run, nothing changed):** `docs/repair/folio-ledger-report.md` (`scripts/repair/folio-ledger-report.ts`). 56 folios: 2 stored balances differ from the ledger, both the SETTLED folios above, whose stored negatives came from legacy CREDIT refunds. Under the ledger both are **₹0**, so the only repair needed is rewriting stored totals. 0 settled folios are unbalanced. WALKIN-1011-002 is OPEN with ₹1,050 due (correct). The 52 fabricated advance lines and any re-posting of real Payments are still awaiting your approval (`docs/repair/folio-unbacked-credits.md`).
+
+**Verification (B + C):**
+- Tests: 243 pass, including `night-audit-rules`, `folio-ledger` and `folio-settlement`; the earlier H8 failure is fixed. `tsc` clean.
+- Consistency check: 5/5 (`docs/consistency/step-c-folio-ledger.md`).
+- Per-role sweep (`docs/verification/role-sweep-step-c.md`): 512 page loads, 0 errors. The step-B sweep's 9 errors came from Vite re-optimising dependencies during the run (504 on `.vite/deps`); after a restart every page loads.
+
+---
+
 ## Appendix A — All mounted endpoints (243)
 
 | Method | Path | Handler | Auth | RBAC | Live GET (SUPER_ADMIN) | Used by FE |

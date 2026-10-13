@@ -3,6 +3,23 @@
 All changes, fixes, hardened services, and architectural migrations are documented chronologically in this file.
 
 ---
+## [Phase 1 · Steps B and C — Night audit, folio ledger] - 2026-10-13
+
+- Night audit: status and preview are read-only. The audit charges only nights not already covered, at the booking rate, and charges overstays once. No-shows release their room-nights. Each run is pinned to one date (409 on a repeat). Audited days are locked to postings, and the summary is computed from the day's data.
+- Folio ledger (`folio-ledger.ts`): one balance rule, recomputed from all lines. REFUND is a debit, and a reversal undoes its target line.
+- Settlement needs a balance of exactly ₹0. Checkout no longer bypasses the balance check or refunds silently. A guest credit must be refunded explicitly, and an overpayment is refused unless the excess is refunded with a reason.
+- Each folio payment creates its Payment record in the same transaction (INR, TXN-YYYYMMDD-NNNNNN).
+- Folio lines are voided by a reversal with a reason, never deleted. Settled folios are immutable.
+- GST invoice numbers: PREFIX/FY/NNNNNN, gapless per financial year.
+- Dry-run report: `docs/repair/folio-ledger-report.md`.
+
+---
+## [Phase 1 · Step F — Reservations and front desk] - 2026-10-13
+
+- Room-night inventory (`roomnights`, unique on room + date). Nights are claimed inside the check-in, assignment, walk-in and extension transactions and released on cancel or no-show. Backfilled: 130 nights, 0 conflicts.
+- Check-in requires a CLEAN room; a manager can override with a reason. The calendar and the reservation list share one query.
+
+---
 ## [Phase 1 · Step 3 — Room status single source of truth] - 2026-10-13
 
 - `room-status.service.ts`: `getSnapshot(businessDate)` derives occupancy (bookings), housekeeping (latest task) and sell status (sell field + open critical maintenance); Dashboard, Front Desk, Housekeeping, Rooms, Room Rack and Reports read it. Consistency check 5/5.

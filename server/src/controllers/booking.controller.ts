@@ -21,7 +21,7 @@ import { BookingConflictError, buildBookingRequestHash, reserveInventoryDays, bu
 import { assertGuestNotBlocked, GuestBlockedError, syncGuestOnBookingCreated } from "../services/guest.service";
 import { Folio, FolioStatus } from "../models/Folio";
 import { FolioLine, FolioLineType } from "../models/FolioLine";
-import { createFolio, postCharge, finalizeFolio, settleFolio, recomputeFolioBalance, findFolioForBooking, openFolioForBooking, postRecordedPaymentsToFolio } from "../services/folio.service";
+import { createFolio, postCharge, finalizeFolio, settleFolio, recomputeFolioBalance, findFolioForBooking, openFolioForBooking, postRecordedPaymentsToFolio, recordFolioPayment, FolioNotBalancedError } from "../services/folio.service";
 import { AdvancePayment, AdvancePaymentStatus } from "../models/AdvancePayment";
 import { adjustAdvance } from "../services/advance.service";
 import { BookingEvent, BookingEventType } from "../models/BookingEvent";
@@ -862,7 +862,16 @@ export const getCheckoutPreview = async (req: Request, res: Response) => {
 // the outer catch tell the two apart and return 400 instead of 500.
 class CheckoutBalanceError extends Error {
   constructor(public readonly balance: number) {
-    super(`Cannot checkout: Outstanding folio balance of ₹${balance.toFixed(2)}. Settle balance with payment, advance adjustment, or refund.`);
+    super(
+      balance > 0
+        ? `Cannot checkout: ₹${balance.toFixed(2)} is still due. Collect a payment or adjust an advance.`
+        : `Cannot checkout: the guest has a credit of ₹${Math.abs(balance).toFixed(2)}. Confirm a refund (refundAmount) before checkout.`,
+    );
+  }
+}
+class CheckoutOverpaymentError extends Error {
+  constructor(public readonly outstanding: number, public readonly offered: number) {
+    super(`Payment of ₹${offered.toFixed(2)} exceeds the ₹${outstanding.toFixed(2)} due. Enter the amount due, or return the excess as a refund with a reason.`);
   }
 }
 
@@ -891,7 +900,8 @@ export const checkOut = async (req: Request, res: Response) => {
     paymentMethod = "CASH",
     paymentChannelId,
     refundAmount,
-    forceBypassBalance = false,
+    excessAs,
+    excessReason,
     notes,
   } = req.body || {};
 
@@ -953,22 +963,44 @@ export const checkOut = async (req: Request, res: Response) => {
         folio = await Folio.findById(folio._id).session(session);
       }
 
-      // 2. Process final Payment if specified
+      // 2. Process final Payment if specified. Overpayment is refused unless the excess is
+      //    explicitly returned to the guest (excessAs: "REFUND" with a reason).
       if (paymentAmount && Number(paymentAmount) > 0 && folio) {
-        await postCharge(
+        const outstanding = (await recomputeFolioBalance(folio._id.toString(), { session })).balance;
+        const excess = Math.round((Number(paymentAmount) - Math.max(0, outstanding)) * 100) / 100;
+        if (excess > 0 && !(excessAs === "REFUND" && typeof excessReason === "string" && excessReason.trim().length >= 3)) {
+          throw new CheckoutOverpaymentError(Math.max(0, outstanding), Number(paymentAmount));
+        }
+        // Payment document + folio PAYMENT line, together (the line points to the Payment).
+        await recordFolioPayment(
           {
             folioId: folio._id.toString(),
             bookingId: booking._id.toString(),
-            lineType: FolioLineType.PAYMENT,
-            description: `Checkout Payment (${paymentMethod})`,
             amount: Number(paymentAmount),
-            date: new Date(),
+            method: String(paymentMethod).toUpperCase(),
+            description: `Checkout Payment (${paymentMethod})`,
             postedBy: actorId?.toString() || "CHECKOUT",
             paymentChannelId: resolvedChannelId?.toString(),
             notes: notes || `Settled via ${paymentMethod} at checkout`,
+            propertyId: booking.propertyId,
           },
           { req, session }
         );
+        if (excess > 0) {
+          await postCharge(
+            {
+              folioId: folio._id.toString(),
+              bookingId: booking._id.toString(),
+              lineType: FolioLineType.REFUND,
+              description: `Excess payment returned (${paymentMethod})`,
+              amount: excess,
+              date: new Date(),
+              postedBy: actorId?.toString() || "CHECKOUT",
+              notes: excessReason.trim(),
+            },
+            { req, session }
+          );
+        }
         booking.paidAmount = (booking.paidAmount || 0) + Number(paymentAmount);
         folio = await Folio.findById(folio._id).session(session);
       }
@@ -995,26 +1027,9 @@ export const checkOut = async (req: Request, res: Response) => {
       if (folio) {
         let balanceCheck = await recomputeFolioBalance(folio._id.toString(), { session });
         
-        // Auto-settle excess advance / surplus credit if balance is negative
-        if (balanceCheck.balance < -1 && !refundAmount) {
-          const excessRefund = Math.abs(balanceCheck.balance);
-          await postCharge(
-            {
-              folioId: folio._id.toString(),
-              bookingId: booking._id.toString(),
-              lineType: FolioLineType.REFUND,
-              description: "Checkout Settlement (Excess Advance Refund)",
-              amount: excessRefund,
-              date: new Date(),
-              postedBy: actorId?.toString() || "CHECKOUT",
-              notes: notes || "Surplus advance balance settled at checkout",
-            },
-            { req, session }
-          );
-          balanceCheck = await recomputeFolioBalance(folio._id.toString(), { session });
-        }
-
-        if (Math.abs(balanceCheck.balance) > 1 && !forceBypassBalance) {
+        // The folio must balance exactly. A guest credit (negative balance) is never refunded
+        // silently: staff confirm it with refundAmount (or excessAs/excessReason on the payment).
+        if (balanceCheck.balance !== 0) {
           throw new CheckoutBalanceError(balanceCheck.balance);
         }
 
@@ -1072,7 +1087,13 @@ export const checkOut = async (req: Request, res: Response) => {
     });
   } catch (error: any) {
     if (error instanceof CheckoutBalanceError) {
-      return res.status(400).json({ success: false, message: error.message, balance: error.balance });
+      return res.status(error.balance < 0 ? 409 : 400).json({ success: false, code: error.balance < 0 ? "GUEST_CREDIT_UNREFUNDED" : "BALANCE_DUE", message: error.message, balance: error.balance });
+    }
+    if (error instanceof CheckoutOverpaymentError) {
+      return res.status(400).json({ success: false, code: "OVERPAYMENT", message: error.message, outstanding: error.outstanding });
+    }
+    if (error instanceof FolioNotBalancedError) {
+      return res.status(400).json({ success: false, code: "FOLIO_NOT_BALANCED", message: error.message, balance: error.balance });
     }
     console.error("Check-out Error:", error);
     return res.status(500).json({ success: false, message: error.message });

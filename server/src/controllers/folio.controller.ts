@@ -10,6 +10,7 @@ import {
   settleFolio,
   recomputeFolioBalance,
   findFolioForBooking,
+  reverseFolioLine,
 } from "../services/folio.service";
 import { computeChargeTax, computeRoomTax, loadGstRules, taxCategoryForLine } from "../services/tax.service";
 import { nights as countNights } from "../../../shared/dates";
@@ -581,29 +582,23 @@ export const updateBookingBill = async (req: Request, res: Response) => {
 
 /**
  * DELETE /api/folios/:folioId/lines/:lineId
+ * Lines are never deleted: this posts a REVERSAL that voids the line (reason required),
+ * keeping the original for the audit trail.
  */
 export const deleteFolioLine = async (req: Request, res: Response) => {
   try {
-    const { folioId, lineId } = req.params;
-    await FolioLine.findOneAndDelete({ _id: lineId, folio: folioId });
-    const totals = await recomputeFolioBalance(folioId as string);
-    const folio = await Folio.findByIdAndUpdate(
-      folioId,
-      {
-        totalCharges: totals.totalCharges,
-        totalTax: totals.totalTax,
-        cgst: totals.cgst,
-        sgst: totals.sgst,
-        totalDiscounts: totals.totalDiscounts,
-        totalPaid: totals.totalPaid,
-        totalAdvanceAdjusted: totals.totalAdvanceAdjusted,
-        balance: totals.balance,
-      },
-      { new: true }
-    );
+    const { folioId, lineId } = req.params as { folioId: string; lineId: string };
+    const reason = String((req.body as any)?.reason ?? (req.query as any)?.reason ?? "").trim();
+    if (reason.length < 3) {
+      return res.status(400).json({ success: false, message: "A reason is required to void a folio line" });
+    }
+    const actor = (req as any).user?.id ?? (req as any).user?._id;
+    await reverseFolioLine(folioId, lineId, reason, { req, postedBy: actor ? String(actor) : "STAFF" });
+    const folio = await Folio.findById(folioId).lean();
     const lines = await FolioLine.find({ folio: folioId }).sort({ date: 1, postedAt: 1 }).lean();
-    return res.json({ success: true, message: "Line deleted successfully", data: { folio, lines } });
+    return res.json({ success: true, message: "Line voided by reversal", data: { folio, lines } });
   } catch (error: any) {
-    return res.status(500).json({ success: false, message: error.message });
+    const known = /not found|already been reversed|cannot itself be reversed|Cannot post to/.test(error.message);
+    return res.status(known ? 400 : 500).json({ success: false, message: error.message });
   }
 };

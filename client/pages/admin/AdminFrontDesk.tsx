@@ -207,13 +207,13 @@ export default function AdminFrontDesk() {
         },
         body: JSON.stringify({
           paymentMode,
+          paymentMethod: paymentMode,
           paymentAmount: finalPayAmount,
           refundAmount: checkOutModal.preview?.summary?.refundDue || 0,
           advanceAdjustmentAmount: Math.min(
             checkOutModal.preview?.totalAdvanceAvailable || 0, 
             Math.max(0, checkOutModal.preview?.summary?.currentBalance || 0)
           ),
-          forceBypassBalance: true,
           notes: checkoutNotes || "Front Desk Express Checkout",
         }),
       });
@@ -414,16 +414,19 @@ export default function AdminFrontDesk() {
 
   const handleDeleteLine = async (lineId: string) => {
     if (!folioDrawer.folio) return;
+    const reason = window.prompt("Reason for voiding this line (a reversal entry will be posted):")?.trim();
+    if (!reason || reason.length < 3) return;
     setSubmittingAction(true);
     try {
       const token = getStoredAuthToken();
       const res = await fetch(`/api/folios/${folioDrawer.folio._id}/lines/${lineId}`, {
         method: "DELETE",
-        headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify({ reason }),
       });
       const json = await res.json();
       if (json.success) {
-        toast({ title: "Line Item Removed", description: "Recalculated folio balance." });
+        toast({ title: "Line Voided", description: "A reversal entry was posted and the balance recalculated." });
         await openFolioDrawer(folioDrawer.booking, folioDrawer.isGroupFolio, folioDrawer.allGroupBookings);
         queryClient.invalidateQueries({ queryKey: ["front-desk-summary"] });
       } else {

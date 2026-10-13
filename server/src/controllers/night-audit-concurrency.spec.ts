@@ -31,6 +31,9 @@ describe("runNightAudit concurrency safety (regression for a live-reproduced dou
     if (mongoose.connection.readyState === 0) {
       await mongoose.connect(TEST_DB_URI);
     }
+    // Run against the real schema: an older test DB may still carry a non-partial
+    // unique isCurrentDate index, which rejects closing a second business date.
+    await BusinessDate.syncIndexes();
   });
 
   afterAll(async () => {

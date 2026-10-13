@@ -37,6 +37,7 @@ export interface IFolio extends Document {
   totalTax: number;          // sum of TAX lines
   totalPaid: number;         // sum of PAYMENT lines
   totalAdvanceAdjusted: number; // sum of ADVANCE_ADJUSTMENT lines
+  totalRefunded?: number;       // sum of REFUND lines (money returned to the guest)
   balance: number;           // totalCharges + totalTax - totalDiscounts - totalPaid - totalAdvanceAdjusted
 
   // Tax breakdown
@@ -70,6 +71,7 @@ const FolioSchema = new Schema<IFolio>(
     totalTax: { type: Number, default: 0, min: 0 },
     totalPaid: { type: Number, default: 0, min: 0 },
     totalAdvanceAdjusted: { type: Number, default: 0, min: 0 },
+    totalRefunded: { type: Number, default: 0 },
     balance: { type: Number, default: 0 },
     cgst: { type: Number, default: 0, min: 0 },
     sgst: { type: Number, default: 0, min: 0 },

@@ -36,7 +36,7 @@ const PaymentSchema = new Schema<IPayment>(
     propertyId: { type: Schema.Types.ObjectId, ref: "Property", required: true },
     booking: { type: Schema.Types.ObjectId, ref: "Booking", required: true },
     amount: { type: Number, required: true },
-    currency: { type: String, required: true, default: "USD" },
+    currency: { type: String, required: true, default: "INR" },
     paymentChannel: { type: Schema.Types.ObjectId, ref: "PaymentChannel" },
     /** @deprecated */
     method: { type: String, enum: Object.values(PaymentMethod), required: true },

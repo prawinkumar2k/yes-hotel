@@ -66,7 +66,7 @@ export const LINE_TYPE_DIRECTION: Record<FolioLineType, FolioLineDirection> = {
   [FolioLineType.DISCOUNT]: FolioLineDirection.CREDIT,
   [FolioLineType.PAYMENT]: FolioLineDirection.CREDIT,
   [FolioLineType.ADVANCE_ADJUSTMENT]: FolioLineDirection.CREDIT,
-  [FolioLineType.REFUND]: FolioLineDirection.CREDIT,
+  [FolioLineType.REFUND]: FolioLineDirection.DEBIT, // money returned to the guest reduces their credit
   [FolioLineType.COMPLIMENTARY]: FolioLineDirection.CREDIT,
   [FolioLineType.REVERSAL]: FolioLineDirection.CREDIT,
 };
@@ -98,6 +98,7 @@ export interface IFolioLine extends Document {
 
   // Night audit
   businessDate?: Date;    // hotel business date when posted
+  coversNights?: string[]; // room charges: the business dates (YYYY-MM-DD) this line charges for
 
   notes?: string;
 }
@@ -121,6 +122,7 @@ const FolioLineSchema = new Schema<IFolioLine>(
     refundId: { type: Schema.Types.ObjectId, ref: "Refund" },
     reversedLineId: { type: Schema.Types.ObjectId, ref: "FolioLine" },
     businessDate: { type: Date },
+    coversNights: [{ type: String }],
     notes: { type: String },
   },
   {
