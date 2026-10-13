@@ -5,6 +5,7 @@ import { MaintenanceTicket, MaintenanceStatus, MaintenancePriority } from "../mo
 import { Room, RoomStatus } from "../models/Room";
 import { createAuditLog } from "../services/audit.service";
 import { transitionRoomStatus } from "../services/room-state.service";
+import { assertTicketTransition, syncRoomSellStatusWithTickets, MaintenanceRuleError } from "../services/maintenance.service";
 
 const createTicketSchema = z.object({
   roomId: z.string().min(1),
@@ -18,6 +19,7 @@ const updateTicketSchema = z.object({
   priority: z.nativeEnum(MaintenancePriority).optional(),
   assignedTo: z.string().optional(),
   description: z.string().optional(),
+  closeReason: z.string().trim().optional(),
 });
 
 export const getMaintenanceTickets = async (req: Request, res: Response) => {
@@ -61,14 +63,11 @@ export const createMaintenanceTicket = async (req: Request, res: Response) => {
       description: data.description,
       priority: data.priority,
       status: MaintenanceStatus.OPEN,
-      roomStatusBeforeTicket: roomBefore.status,
     });
 
-    await transitionRoomStatus(data.roomId, RoomStatus.MAINTENANCE, {
-      req,
-      action: "room.maintenance_opened",
-      metadata: { maintenanceTicketId: ticket._id.toString() },
-    }).catch(() => undefined); // e.g. room already MAINTENANCE/OUT_OF_SERVICE — ticket is still recorded
+    // A CRITICAL ticket takes the room out of order (not sellable) until resolved;
+    // lower priorities are logged without taking the room off sale.
+    await syncRoomSellStatusWithTickets(data.roomId, { req });
 
     await createAuditLog({
       req,
@@ -81,6 +80,7 @@ export const createMaintenanceTicket = async (req: Request, res: Response) => {
     return res.status(201).json({ success: true, data: ticket });
   } catch (error: any) {
     if (error instanceof z.ZodError) return res.status(400).json({ success: false, message: error.issues[0].message });
+    if (error instanceof MaintenanceRuleError) return res.status(error.status).json({ success: false, message: error.message });
     return res.status(500).json({ success: false, message: error.message });
   }
 };
@@ -91,6 +91,14 @@ export const updateMaintenanceTicket = async (req: Request, res: Response) => {
 
     const existing = await MaintenanceTicket.findById(req.params.id);
     if (!existing) return res.status(404).json({ success: false, message: "Ticket not found" });
+    if (data.status) assertTicketTransition(existing.status, data.status);
+    if (data.status === MaintenanceStatus.ASSIGNED && !(data.assignedTo || existing.assignedTo)) {
+      throw new MaintenanceRuleError("Choose who the ticket is assigned to");
+    }
+    if (data.assignedTo && !mongoose.Types.ObjectId.isValid(data.assignedTo)) throw new MaintenanceRuleError("Invalid assignee");
+    if (data.status === MaintenanceStatus.CLOSED && existing.status === MaintenanceStatus.OPEN && !(data.closeReason && data.closeReason.length >= 3)) {
+      throw new MaintenanceRuleError("A reason is required to close a ticket that was never worked on");
+    }
 
     const userRole = (req as any).user?.role || "";
     const userId = (req as any).user?._id;
@@ -116,10 +124,12 @@ export const updateMaintenanceTicket = async (req: Request, res: Response) => {
       approvalData.approvedAt = new Date();
     }
 
+    const { closeReason, ...fields } = data;
     const ticket = await MaintenanceTicket.findByIdAndUpdate(
       req.params.id,
       {
-        ...data,
+        ...fields,
+        ...(closeReason ? { description: [existing.description, `Closed: ${closeReason}`].filter(Boolean).join("\n") } : {}),
         ...approvalData,
         ...(data.status === MaintenanceStatus.RESOLVED && { resolvedAt: new Date() }),
       },
@@ -128,28 +138,33 @@ export const updateMaintenanceTicket = async (req: Request, res: Response) => {
 
     if (!ticket) return res.status(404).json({ success: false, message: "Ticket not found" });
 
-    // If resolved, restore the room to whatever it actually was before this
-    // ticket forced it into MAINTENANCE — NOT unconditionally AVAILABLE.
-    if (data.status === MaintenanceStatus.RESOLVED && ticket.room) {
-      const restoreTo = ticket.roomStatusBeforeTicket ?? RoomStatus.AVAILABLE;
-      await transitionRoomStatus((ticket.room as any)._id.toString(), restoreTo, {
-        req,
-        action: "room.maintenance_resolved",
-        metadata: { maintenanceTicketId: ticket._id.toString() },
-      }).catch(() => undefined);
+    const roomId = ticket.room ? String((ticket.room as any)._id ?? ticket.room) : undefined;
+    // Legacy tickets (before this rule) forced the room into MAINTENANCE; resolving restores it.
+    if (roomId && ticket.roomStatusBeforeTicket && (data.status === MaintenanceStatus.RESOLVED || data.status === MaintenanceStatus.CLOSED)) {
+      const room = await Room.findById(roomId).select("status").lean();
+      if (room?.status === RoomStatus.MAINTENANCE) {
+        await transitionRoomStatus(roomId, ticket.roomStatusBeforeTicket, {
+          req,
+          action: "room.maintenance_resolved",
+          metadata: { maintenanceTicketId: ticket._id.toString() },
+        }).catch(() => undefined);
+      }
     }
+    // Status or priority changes can open or release the out-of-order hold.
+    if (roomId && (data.status || data.priority)) await syncRoomSellStatusWithTickets(roomId, { req });
 
     await createAuditLog({
       req,
       action: "maintenance.ticket_updated",
       resourceType: "MaintenanceTicket",
       resourceId: ticket._id.toString(),
-      metadata: { status: ticket.status, priority: ticket.priority, room: (ticket.room as any)?.roomNumber, approvedBy: userId },
+      metadata: { before: { status: existing.status, priority: existing.priority }, status: ticket.status, priority: ticket.priority, room: (ticket.room as any)?.roomNumber, approvedBy: userId, closeReason },
     });
 
     return res.status(200).json({ success: true, data: ticket });
   } catch (error: any) {
     if (error instanceof z.ZodError) return res.status(400).json({ success: false, message: error.issues[0].message });
+    if (error instanceof MaintenanceRuleError) return res.status(error.status).json({ success: false, message: error.message });
     return res.status(500).json({ success: false, message: error.message });
   }
 };

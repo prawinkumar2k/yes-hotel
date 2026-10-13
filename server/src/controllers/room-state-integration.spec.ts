@@ -143,54 +143,48 @@ describe("check-in respects room status (previously unchecked entirely)", () => 
   });
 });
 
-describe("maintenance ticket resolution restores the room's actual prior state (previously always forced AVAILABLE)", () => {
-  it("restores OCCUPIED, not AVAILABLE, when the ticket was filed against an occupied room", async () => {
-    const room = await createRoom(RoomStatus.OCCUPIED);
+describe("maintenance tickets never overwrite a room's occupancy (previously resolution forced AVAILABLE)", () => {
+  // Rule (maintenance.service): tickets do not change room.status; a CRITICAL ticket only
+  // takes the room off sale (sellStatus OUT_OF_ORDER) until resolved.
+  async function workTicket(ticketId: string, status: MaintenanceStatus) {
+    const r = mockRes();
+    await updateMaintenanceTicket({ params: { id: ticketId }, body: { status }, user: { id: STAFF_USER_ID, role: "ADMIN" } } as any, r);
+    return r;
+  }
 
+  it("an occupied room stays OCCUPIED through a ticket's whole life", async () => {
+    const room = await createRoom(RoomStatus.OCCUPIED);
     const createRes = mockRes();
     await createMaintenanceTicket(
-      {
-        body: { roomId: room._id.toString(), issueTitle: "room-state-test AC broken" },
-        user: { id: STAFF_USER_ID, role: "MAINTENANCE" },
-      } as any,
+      { body: { roomId: room._id.toString(), issueTitle: "room-state-test AC broken" }, user: { id: STAFF_USER_ID, role: "MAINTENANCE" } } as any,
       createRes
     );
     expect(createRes.statusCode).toBe(201);
-
-    const roomAfterTicket = await Room.findById(room._id);
-    expect(roomAfterTicket?.status).toBe(RoomStatus.MAINTENANCE);
+    expect((await Room.findById(room._id))?.status).toBe(RoomStatus.OCCUPIED);
 
     const ticketId = createRes.body.data._id.toString();
-    const resolveRes = mockRes();
-    await updateMaintenanceTicket(
-      { params: { id: ticketId }, body: { status: MaintenanceStatus.RESOLVED }, user: { id: STAFF_USER_ID, role: "MAINTENANCE" } } as any,
-      resolveRes
-    );
-    expect(resolveRes.statusCode).toBe(200);
-
-    // The real bug: this used to unconditionally become AVAILABLE here,
-    // even though a guest was still occupying the room the whole time.
-    const roomAfterResolution = await Room.findById(room._id);
-    expect(roomAfterResolution?.status).toBe(RoomStatus.OCCUPIED);
+    expect((await workTicket(ticketId, MaintenanceStatus.RESOLVED)).statusCode).toBe(400); // must be worked first
+    expect((await workTicket(ticketId, MaintenanceStatus.IN_PROGRESS)).statusCode).toBe(200);
+    expect((await workTicket(ticketId, MaintenanceStatus.RESOLVED)).statusCode).toBe(200);
+    expect((await Room.findById(room._id))?.status).toBe(RoomStatus.OCCUPIED);
   });
 
-  it("restores AVAILABLE when the ticket was filed against a room that was AVAILABLE", async () => {
+  it("a CRITICAL ticket on an available room takes it off sale and resolution puts it back, without touching status", async () => {
     const room = await createRoom(RoomStatus.AVAILABLE);
-
     const createRes = mockRes();
     await createMaintenanceTicket(
-      { body: { roomId: room._id.toString(), issueTitle: "room-state-test leaky faucet" }, user: { id: STAFF_USER_ID, role: "MAINTENANCE" } } as any,
+      { body: { roomId: room._id.toString(), issueTitle: "room-state-test sparking socket", priority: "CRITICAL" }, user: { id: STAFF_USER_ID, role: "MAINTENANCE" } } as any,
       createRes
     );
+    let after = await Room.findById(room._id);
+    expect(after?.status).toBe(RoomStatus.AVAILABLE);
+    expect(after?.sellStatus).toBe("OUT_OF_ORDER");
+
     const ticketId = createRes.body.data._id.toString();
-
-    const resolveRes = mockRes();
-    await updateMaintenanceTicket(
-      { params: { id: ticketId }, body: { status: MaintenanceStatus.RESOLVED }, user: { id: STAFF_USER_ID, role: "MAINTENANCE" } } as any,
-      resolveRes
-    );
-
-    const roomAfterResolution = await Room.findById(room._id);
-    expect(roomAfterResolution?.status).toBe(RoomStatus.AVAILABLE);
+    await workTicket(ticketId, MaintenanceStatus.IN_PROGRESS);
+    expect((await workTicket(ticketId, MaintenanceStatus.RESOLVED)).statusCode).toBe(200);
+    after = await Room.findById(room._id);
+    expect(after?.status).toBe(RoomStatus.AVAILABLE);
+    expect(after?.sellStatus).toBe("SELLABLE");
   });
 });

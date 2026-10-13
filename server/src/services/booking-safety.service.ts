@@ -1,3 +1,4 @@
+import { SELLABLE_ROOM_FILTER } from "./maintenance.service";
 import crypto from "crypto";
 import mongoose from "mongoose";
 import { BookingInventoryDay } from "../models/BookingInventoryDay";
@@ -112,52 +113,47 @@ export async function ensureInventoryDayDocuments(roomCategoryId: string, dates:
   }
 }
 
+/**
+ * Step 1 (OUTSIDE any transaction): makes sure the inventory-day documents exist and returns
+ * the category capacity. A transaction snapshot taken earlier would not see documents created
+ * here, so call this before the transaction starts (or before its first operation).
+ */
+export async function prepareInventoryDays(roomCategoryId: string, checkInDate: Date, checkOutDate: Date): Promise<number> {
+  const capacity = await Room.countDocuments({ category: roomCategoryId, ...SELLABLE_ROOM_FILTER });
+  if (capacity <= 0) throw new BookingConflictError("No rooms available for the selected category");
+  await ensureInventoryDayDocuments(roomCategoryId, buildStayDates(checkInDate, checkOutDate), capacity);
+  return capacity;
+}
+
+/** Step 2 (INSIDE the transaction): claims `count` rooms per night, or throws when sold out. */
+export async function claimInventoryDays(params: { roomCategoryId: string; checkInDate: Date; checkOutDate: Date; capacity: number; count?: number; session: mongoose.ClientSession }) {
+  const { roomCategoryId, checkInDate, checkOutDate, capacity, session } = params;
+  const count = Math.max(1, params.count ?? 1);
+  for (const stayDate of buildStayDates(checkInDate, checkOutDate)) {
+    const reservation = await BookingInventoryDay.findOneAndUpdate(
+      { roomCategory: roomCategoryId, stayDate, reservedCount: { $lte: capacity - count } },
+      { $set: { capacity }, $inc: { reservedCount: count } },
+      { returnDocument: "after", session }
+    );
+    if (!reservation) throw new BookingConflictError("Requested inventory is no longer available");
+  }
+}
+
+/**
+ * prepare + claim in one call. Only safe as the FIRST operation of a transaction (the prepare
+ * step writes outside the session); otherwise call prepareInventoryDays before the transaction
+ * and claimInventoryDays inside it.
+ */
 export async function reserveInventoryDays(params: {
   roomCategoryId: string;
   checkInDate: Date;
   checkOutDate: Date;
   session: mongoose.ClientSession;
+  /** Rooms to claim per night (default 1). */
+  count?: number;
 }) {
-  const { roomCategoryId, checkInDate, checkOutDate, session } = params;
-  const dates = buildStayDates(checkInDate, checkOutDate);
-
-  // Capacity must be read WITHOUT the transaction's session, and before any
-  // session-scoped operation runs. A MongoDB transaction's read snapshot is
-  // established at its first session-scoped operation — if that happened
-  // here, ensureInventoryDayDocuments's non-transactional writes (below)
-  // would already be "in the past" relative to the snapshot, making the
-  // documents it just created invisible to the later transactional claim.
-  const capacity = await Room.countDocuments({
-    category: roomCategoryId,
-    status: { $nin: [RoomStatus.MAINTENANCE, RoomStatus.OUT_OF_SERVICE] },
-  });
-
-  if (capacity <= 0) {
-    throw new BookingConflictError("No rooms available for the selected category");
-  }
-
-  await ensureInventoryDayDocuments(roomCategoryId, dates, capacity);
-
-  // This is the first session-scoped operation — the transaction's snapshot
-  // is established here, after the ensure-step above has already committed.
-  for (const stayDate of dates) {
-    const reservation = await BookingInventoryDay.findOneAndUpdate(
-      {
-        roomCategory: roomCategoryId,
-        stayDate,
-        reservedCount: { $lt: capacity },
-      },
-      {
-        $set: { capacity },
-        $inc: { reservedCount: 1 },
-      },
-      { returnDocument: "after", session }
-    );
-
-    if (!reservation) {
-      throw new BookingConflictError("Requested inventory is no longer available");
-    }
-  }
+  const capacity = await prepareInventoryDays(params.roomCategoryId, params.checkInDate, params.checkOutDate);
+  await claimInventoryDays({ ...params, capacity });
 }
 
 export async function releaseInventoryDays(params: {
@@ -165,8 +161,11 @@ export async function releaseInventoryDays(params: {
   checkInDate: Date;
   checkOutDate: Date;
   session?: mongoose.ClientSession;
+  /** Rooms to release per night (default 1). */
+  count?: number;
 }) {
   const { roomCategoryId, checkInDate, checkOutDate, session } = params;
+  const count = Math.max(1, params.count ?? 1);
   const dates = buildStayDates(checkInDate, checkOutDate);
 
   for (const stayDate of dates) {
@@ -174,10 +173,10 @@ export async function releaseInventoryDays(params: {
       {
         roomCategory: roomCategoryId,
         stayDate,
-        reservedCount: { $gt: 0 },
+        reservedCount: { $gte: count },
       },
       {
-        $inc: { reservedCount: -1 },
+        $inc: { reservedCount: -count },
       },
       session ? { session } : {}
     );

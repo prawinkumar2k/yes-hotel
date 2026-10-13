@@ -76,6 +76,8 @@ export interface IRoom extends Document {
   occupancyStatus: OccupancyStatus;
   housekeepingStatus: HousekeepingRoomStatus;
   sellStatus: SellStatus;
+  /** Set while an open CRITICAL maintenance ticket holds the room out of order. */
+  maintenanceHold?: { previousSellStatus: SellStatus; ticket: mongoose.Types.ObjectId; since: Date };
 
   // ── OPERATIONAL FIELDS ──
   currentBooking?: mongoose.Types.ObjectId;  // active booking if OCCUPIED
@@ -138,6 +140,10 @@ const RoomSchema = new Schema<IRoom>(
     currentBooking: { type: Schema.Types.ObjectId, ref: "Booking" },
     lastInspectedAt: { type: Date },
     lastInspectedBy: { type: Schema.Types.ObjectId, ref: "User" },
+    maintenanceHold: {
+      type: new Schema({ previousSellStatus: { type: String, enum: Object.values(SellStatus) }, ticket: { type: Schema.Types.ObjectId, ref: "MaintenanceTicket" }, since: Date }, { _id: false }),
+      default: undefined,
+    },
     lastCleanedAt: { type: Date },
     lastCleanedBy: { type: Schema.Types.ObjectId, ref: "User" },
     releasedAt: { type: Date },

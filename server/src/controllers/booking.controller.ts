@@ -1,3 +1,4 @@
+import { SELLABLE_ROOM_FILTER } from "../services/maintenance.service";
 import { Request, Response } from "express";
 import mongoose from "mongoose";
 import { Booking, BookingStatus, PaymentStatus } from "../models/Booking";
@@ -106,7 +107,7 @@ export const checkAvailability = async (req: Request, res: Response) => {
       // Total physical rooms in this category minus those under maintenance
       const totalRooms = await Room.countDocuments({
         category: cat._id,
-        status: { $nin: [RoomStatus.MAINTENANCE, RoomStatus.OUT_OF_SERVICE] },
+        ...SELLABLE_ROOM_FILTER,
       });
       const bookedCount = bookedCountByCategory[catId] || 0;
       const availableCount = totalRooms - bookedCount;
@@ -1230,7 +1231,7 @@ export const extendStay = async (req: Request, res: Response) => {
     const extStayDates = buildStayDates(currentCheckOut, targetCheckOut);
     const capacity = await Room.countDocuments({
       category: categoryId,
-      status: { $nin: [RoomStatus.MAINTENANCE, RoomStatus.OUT_OF_SERVICE] },
+      ...SELLABLE_ROOM_FILTER,
     });
 
     // A stay date that has never had a booking before has no
