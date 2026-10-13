@@ -112,7 +112,7 @@ export default function AdminCashierShifts() {
   const [showPaidOutModal, setShowPaidOutModal] = useState(false);
   const [paidOutAmount, setPaidOutAmount] = useState("");
   const [paidOutReason, setPaidOutReason] = useState("");
-  const [paidOutCategory, setPaidOutCategory] = useState<"CASH_DROP" | "PETTY_CASH" | "REFUND" | "OTHER">("PETTY_CASH");
+  const [paidOutCategory, setPaidOutCategory] = useState<string>("PETTY_CASH");
   const [submittingPaidOut, setSubmittingPaidOut] = useState(false);
 
   // Shift Details Drilldown Modal
@@ -995,7 +995,12 @@ export default function AdminCashierShifts() {
                 <option value="CASH_DROP">Cash Drop to Hotel Safe / Finance</option>
                 <option value="PETTY_CASH">Front Desk Petty Cash Expense</option>
                 <option value="REFUND">Counter Cash Refund</option>
-                <option value="OTHER">Other Authorized Cash Outflow</option>
+                <option value="EARLY_CHECK_IN">Early Check-in</option>
+                <option value="WATER_BOTTLE">Water Bottle</option>
+                <option value="DENTAL_KIT">Dental Kit</option>
+                <option value="TEA_COFFEE_SHOP">Tea / Coffee Shop</option>
+                <option value="KOVAI_KONGU_MESS">Kovai Kongu Mess</option>
+                <option value="OTHER">Others</option>
               </select>
             </div>
 
@@ -1014,13 +1019,16 @@ export default function AdminCashierShifts() {
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1">Reason & Recipient *</label>
+              <label className="block text-xs font-semibold text-gray-600 mb-1">
+                {paidOutCategory === "OTHER" ? "Reason *" : "Note (optional)"}
+              </label>
               <input
                 type="text"
-                required
+                required={paidOutCategory === "OTHER"}
+                minLength={paidOutCategory === "OTHER" ? 3 : undefined}
                 value={paidOutReason}
                 onChange={(e) => setPaidOutReason(e.target.value)}
-                placeholder="Handed ₹2,000 cash to Finance Manager for safe deposit"
+                placeholder={paidOutCategory === "OTHER" ? "What was this cash paid for?" : "e.g. recipient or bill number"}
                 className="w-full bg-gray-50 border border-gray-200 text-xs text-gray-800 rounded-lg p-2.5 outline-none"
               />
             </div>

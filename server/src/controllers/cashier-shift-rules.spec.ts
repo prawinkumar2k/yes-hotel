@@ -85,10 +85,14 @@ describe("cashier shift rules", () => {
     const shift = (await CashierShift.findOne({ cashier: users.c._id, status: CashierShiftStatus.OPEN }))!;
     const tooMuch = await call(recordPaidOut, users.c, { amount: 5000, reason: "bank drop" }, { id: String(shift._id) });
     expect(tooMuch.statusCode).toBe(400);
+    // Named categories need no reason; "Others" does.
+    expect((await call(recordPaidOut, users.c, { amount: 20, category: "WATER_BOTTLE" }, { id: String(shift._id) })).statusCode).toBe(200);
+    expect((await call(recordPaidOut, users.c, { amount: 20, category: "OTHER" }, { id: String(shift._id) })).statusCode).toBe(400);
+    expect((await call(recordPaidOut, users.c, { amount: 30, category: "OTHER", reason: "auto fare for guest" }, { id: String(shift._id) })).statusCode).toBe(200);
 
-    const noReason = await call(closeShift, users.c, { actualCashCounted: 1000 }, { id: String(shift._id) });
+    const noReason = await call(closeShift, users.c, { actualCashCounted: 950 }, { id: String(shift._id) });
     expect(noReason.statusCode).toBe(400);
-    const closed = await call(closeShift, users.c, { actualCashCounted: 1000, varianceReason: "₹500 note missing" }, { id: String(shift._id) });
+    const closed = await call(closeShift, users.c, { actualCashCounted: 950, varianceReason: "₹500 note missing" }, { id: String(shift._id) });
     expect(closed.statusCode).toBe(200);
     expect(closed.body.data).toMatchObject({ status: "CLOSED", varianceAcceptanceRequired: true, cashVariance: -500 });
 

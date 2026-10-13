@@ -9,11 +9,16 @@ import CashSheetReport from "./reports/CashSheetReport";
 import AdminAnalytics from "./reports/AdminAnalytics";
 import AdminInHouseList from "./AdminInHouseList";
 import AdminBulkDocViewer from "./AdminBulkDocViewer";
+import { CheckInReport, CheckOutReport, DayUseSalesReport, AdvanceReport } from "./reports/OperationsReports";
 
 const CATEGORIES = [
   { id: "analytics", name: "Advanced Analytics", path: "/admin/reports/analytics" },
   { id: "daily-summary", name: "Daily Hotel Summary", path: "/admin/reports/daily-summary" },
   { id: "in-house-list", name: "Guest In-House List", path: "/admin/reports/in-house-list" },
+  { id: "check-in-report", name: "Check-in Report", path: "/admin/reports/check-in-report" },
+  { id: "check-out-report", name: "Check-out Report", path: "/admin/reports/check-out-report" },
+  { id: "day-use-sales", name: "Day / Hourly Sales", path: "/admin/reports/day-use-sales" },
+  { id: "advance-report", name: "Advance Report", path: "/admin/reports/advance-report" },
   { id: "bulk-docs", name: "GRC & GST Invoices (Bulk)", path: "/admin/reports/bulk-docs" },
   { id: "monthly-mis", name: "Monthly MIS Report", path: "/admin/reports/monthly-mis" },
 ];
@@ -22,9 +27,9 @@ export default function AdminReportsLayout() {
   const location = useLocation();
 
   return (
-    <div className="flex flex-col md:flex-row h-[calc(100vh-64px)] overflow-hidden">
+    <div className="flex flex-col md:flex-row h-[calc(100vh-64px)] overflow-hidden print:h-auto print:overflow-visible print:block">
       {/* Sidebar Navigation */}
-      <div className="w-full md:w-64 border-b md:border-b-0 md:border-r bg-white flex-shrink-0 flex flex-col shadow-sm z-10 h-48 md:h-auto overflow-y-auto">
+      <div className="w-full md:w-64 border-b md:border-b-0 md:border-r bg-white flex-shrink-0 flex flex-col shadow-sm z-10 h-48 md:h-auto overflow-y-auto print:hidden">
         <div className="p-4 border-b bg-gray-50/50 sticky top-0 z-20">
           <h2 className="font-semibold text-gray-800 text-sm tracking-wider">HOTEL REPORTS</h2>
         </div>
@@ -50,7 +55,7 @@ export default function AdminReportsLayout() {
       </div>
 
       {/* Main Content Area */}
-      <div className="flex-1 overflow-y-auto bg-gray-50 p-4 md:p-6 w-full">
+      <div className="flex-1 overflow-y-auto bg-gray-50 p-4 md:p-6 w-full print:overflow-visible print:bg-white print:p-0">
         <Routes>
           <Route path="/" element={<AdminAnalytics />} />
           <Route path="analytics" element={<AdminAnalytics />} />
@@ -59,6 +64,10 @@ export default function AdminReportsLayout() {
           <Route path="monthly-mis" element={<AdminMonthlyMIS />} />
           <Route path="daily-summary" element={<DaySummaryReport />} />
           <Route path="cash-sheet" element={<CashSheetReport />} />
+          <Route path="check-in-report" element={<CheckInReport />} />
+          <Route path="check-out-report" element={<CheckOutReport />} />
+          <Route path="day-use-sales" element={<DayUseSalesReport />} />
+          <Route path="advance-report" element={<AdvanceReport />} />
           <Route path="*" element={<div className="p-4 text-gray-500">Select a report category from the sidebar.</div>} />
         </Routes>
       </div>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   CreditCard, Plus, RefreshCw, Filter, X, DollarSign, ArrowUpRight,
   Receipt, FileText, CheckCircle2, ShieldCheck, Printer, Search, ArrowDownLeft
@@ -44,6 +44,7 @@ export default function AdminAdvances() {
 
   // Printable Receipt View Modal
   const [printReceipt, setPrintReceipt] = useState<AdvanceItem | null>(null);
+  const receiptFrameRef = useRef<HTMLIFrameElement>(null);
 
   const fetchAdvances = async () => {
     setLoading(true);
@@ -225,7 +226,7 @@ export default function AdminAdvances() {
           </div>
           <div>
             <h1 className="text-2xl font-serif font-bold text-gray-800 flex items-center gap-2">
-              Advance Payments & Escrow Ledger
+              Advance Payments Ledger
               <span className="text-xs bg-[#c9a227]/20 text-[#e5c76b] px-2.5 py-0.5 rounded-full font-mono border border-[#c9a227]/30">FINANCE ENGINE</span>
             </h1>
             <p className="text-xs text-gray-500 mt-0.5">
@@ -255,7 +256,7 @@ export default function AdminAdvances() {
         <div className="bg-white p-5 rounded-2xl border border-emerald-500/30 bg-emerald-500/5">
           <div className="flex items-center justify-between text-emerald-600 mb-2">
             <DollarSign size={20} />
-            <span className="text-[10px] font-bold uppercase tracking-wider whitespace-nowrap flex-shrink-0 bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded border border-emerald-500/30">Total Escrow Held</span>
+            <span className="text-[10px] font-bold uppercase tracking-wider whitespace-nowrap flex-shrink-0 bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded border border-emerald-500/30">Total Advance Held</span>
           </div>
           <p className="text-3xl font-serif font-bold text-gray-800">₹{totalHeld.toLocaleString()}</p>
           <p className="text-xs text-gray-500 mt-1">Available for Folio Adjustment</p>
@@ -360,9 +361,9 @@ export default function AdminAdvances() {
                 <th className="p-3.5">Guest & Contact</th>
                 <th className="p-3.5">Booking / Stay</th>
                 <th className="p-3.5">Initial Amount</th>
-                <th className="p-3.5">Remaining Escrow</th>
+                <th className="p-3.5">Remaining Balance</th>
                 <th className="p-3.5">Payment Method</th>
-                <th className="p-3.5">Escrow Status</th>
+                <th className="p-3.5">Status</th>
                 <th className="p-3.5">Receiving Staff</th>
                 <th className="p-3.5 text-right rounded-r-xl">Receipt Actions</th>
               </tr>
@@ -545,63 +546,18 @@ export default function AdminAdvances() {
         </div>
       )}
 
-      {/* MODAL 2: PRINT RECEIPT */}
+      {/* MODAL 2: ADVANCE RECEIPT (same layout as the invoice / GRC; printed from the frame) */}
       {printReceipt && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white border border-[#c9a227]/40 rounded-2xl max-w-md w-full p-6 space-y-5 shadow-2xl text-gray-800">
-            <div className="flex justify-between items-center border-b border-gray-200 pb-4">
-              <h3 className="font-serif font-bold text-lg flex items-center gap-2 text-[#c9a227]">
-                <Receipt size={20} /> YES HOTELS Advance Receipt
-              </h3>
-              <button onClick={() => setPrintReceipt(null)} className="text-gray-500 hover:text-gray-800">
-                <X size={20} />
-              </button>
-            </div>
-
-            <div className="bg-gray-100 p-5 rounded-xl border border-gray-200 space-y-3 font-mono text-xs">
-              <div className="text-center font-serif text-base font-bold text-[#c9a227]">YES HOTELS LUXURY SUITES</div>
-              <div className="text-center text-[10px] text-gray-500">Official Financial Escrow Deposit Receipt</div>
-              <div className="text-center text-[10px] text-gray-600 font-bold mb-2">GSTIN: 36AAGCY4264M1Z8</div>
-              <div className="border-b border-gray-200 my-2" />
-              <div className="flex justify-between text-gray-500">
-                <span>Receipt Number:</span>
-                <span className="text-gray-800 font-bold">{printReceipt.advanceNumber}</span>
-              </div>
-              <div className="flex justify-between text-gray-500">
-                <span>Issued Date:</span>
-                <span className="text-gray-800">{new Date(printReceipt.createdAt).toLocaleString()}</span>
-              </div>
-              <div className="flex justify-between text-gray-500">
-                <span>Guest Name:</span>
-                <span className="text-gray-800 font-bold">{printReceipt.guest?.fullName}</span>
-              </div>
-              <div className="flex justify-between text-gray-500">
-                <span>Payment Mode:</span>
-                <span className="text-gray-800">{printReceipt.method}</span>
-              </div>
-              <div className="border-t border-gray-200 pt-2 mt-2 flex justify-between font-bold text-sm text-gray-800">
-                <span>Amount Received:</span>
-                <div className="text-right">
-                  <div className="text-[#c9a227]">₹{printReceipt.amount.toLocaleString()}</div>
-                  <div className="text-[9px] text-gray-400 font-normal mt-0.5">(Inclusive of applicable GST)</div>
-                </div>
+        <div role="dialog" aria-modal="true" aria-label="Advance receipt" className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4" onClick={() => setPrintReceipt(null)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl h-[90vh] flex flex-col overflow-hidden" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
+              <span className="font-bold text-sm text-gray-800 flex items-center gap-2"><Receipt size={16} /> Advance Receipt {printReceipt.advanceNumber}</span>
+              <div className="flex items-center gap-2">
+                <button type="button" onClick={() => receiptFrameRef.current?.contentWindow?.print()} className="px-3.5 py-2 bg-black text-[#e5c76b] rounded-xl font-bold text-xs flex items-center gap-1.5"><Printer size={14} /> Print</button>
+                <button type="button" onClick={() => setPrintReceipt(null)} className="px-3.5 py-2 bg-white border border-gray-300 rounded-xl font-bold text-xs">Close</button>
               </div>
             </div>
-
-            <div className="flex gap-3 pt-2">
-              <button
-                onClick={() => setPrintReceipt(null)}
-                className="flex-1 py-2 bg-gray-100 text-gray-600 rounded-xl text-xs font-semibold"
-              >
-                Close
-              </button>
-              <button
-                onClick={() => window.print()}
-                className="flex-1 py-2 bg-[#c9a227] text-black hover:bg-[#e5c76b] rounded-xl text-xs font-bold flex items-center justify-center gap-1.5"
-              >
-                <Printer size={14} /> Print Receipt
-              </button>
-            </div>
+            <iframe ref={receiptFrameRef} title="Advance receipt" src={`/admin/advances/${printReceipt._id}/receipt`} className="flex-1 w-full border-0" />
           </div>
         </div>
       )}

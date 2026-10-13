@@ -92,6 +92,38 @@ router.get("/reconciliation", requirePropertyAccess, requirePermission("ADVANCES
   }
 );
 
+// GET /api/advances/:id/receipt — everything the printed advance receipt shows: the advance,
+// its reservation (room, category, stay dates) and, for a multi-room booking, the other rooms.
+router.get("/:id/receipt", requirePropertyAccess, requirePermission("ADVANCES", "VIEW"), async (req: Request, res: Response) => {
+    try {
+      const advance: any = await AdvancePayment.findById(req.params.id)
+        .populate("guest", "fullName email phone address")
+        .populate("receivedBy", "firstName lastName")
+        .lean();
+      if (!advance) return res.status(404).json({ success: false, message: "Advance not found" });
+
+      const { Booking } = await import("../models/Booking");
+      const booking: any = advance.booking
+        ? await Booking.findById(advance.booking)
+            .select("bookingReference billNumber checkInDate checkOutDate assignedRoom roomCategory groupId adults children stayType status")
+            .populate("assignedRoom", "roomNumber")
+            .populate("roomCategory", "name")
+            .lean()
+        : null;
+      const groupRooms = booking?.groupId
+        ? (await Booking.find({ groupId: booking.groupId }).select("bookingReference assignedRoom").populate("assignedRoom", "roomNumber").lean()).map((b: any) => ({
+            bookingReference: b.bookingReference,
+            roomNumber: b.assignedRoom?.roomNumber,
+          }))
+        : [];
+
+      return res.json({ success: true, data: { advance, booking, groupRooms } });
+    } catch (error: any) {
+      return res.status(500).json({ success: false, message: error.message });
+    }
+  }
+);
+
 // GET /api/advances/summary/:bookingId
 router.get("/summary/:bookingId", requirePropertyAccess, requirePermission("ADVANCES", "VIEW"), async (req: Request, res: Response) => {
     try {

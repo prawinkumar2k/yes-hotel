@@ -154,6 +154,8 @@ export interface IBooking extends Document {
   arrivalTime?: string;         // e.g. "14:30"
   departureTime?: string;       // e.g. "11:00"
   mealPlan?: MealPlan;          // EP / CP / MAP / AP
+  /** ₹ per person per night agreed at registration for each extra type (defaults from settings). */
+  extraRates?: { extraPersonRate: number; extraBedRate: number; childRateNoBed: number; childRateWithBed: number };
   extraPersonsNoBed: number;    // number of extra persons without bed
   extraPersonsWithBed: number;  // number of extra persons with bed
   extraChildrenNoBed: number;   // number of extra children (3-12) without bed
@@ -296,6 +298,13 @@ const BookingSchema = new Schema<IBooking>(
     arrivalTime: { type: String },
     departureTime: { type: String },
     mealPlan: { type: String, enum: Object.values(MealPlan) },
+    extraRates: {
+      type: new Schema(
+        { extraPersonRate: { type: Number, min: 0 }, extraBedRate: { type: Number, min: 0 }, childRateNoBed: { type: Number, min: 0 }, childRateWithBed: { type: Number, min: 0 } },
+        { _id: false },
+      ),
+      default: undefined,
+    },
     extraPersonsNoBed: { type: Number, default: 0 },
     extraPersonsWithBed: { type: Number, default: 0 },
     extraChildrenNoBed: { type: Number, default: 0 },

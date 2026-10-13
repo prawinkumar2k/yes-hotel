@@ -39,6 +39,28 @@ import { computeRoomTax, loadGstRules } from "../services/tax.service";
  * Room GST for a walk-in: each room is taxed on its own per-night value (which
  * selects the slab), per night of the stay, and the results are summed.
  */
+/**
+ * Per-person extra rates (₹ per person per night) for a walk-in: the amounts typed at the
+ * desk, or the property defaults from settings for any left blank.
+ */
+function walkInExtraRates(settings: any, overrides: any) {
+  const pick = (v: unknown, fallback: number) => (v !== undefined && v !== null && v !== "" && Number(v) >= 0 ? Number(v) : fallback);
+  return {
+    extraPersonRate: pick(overrides?.extraPersonRate, settings?.extraPersonRate ?? 800),
+    extraBedRate: pick(overrides?.extraBedRate, settings?.extraBedRate ?? 1200),
+    childRateNoBed: pick(overrides?.childRateNoBed, settings?.childRateNoBed ?? 400),
+    childRateWithBed: pick(overrides?.childRateWithBed, settings?.childRateWithBed ?? 600),
+  };
+}
+
+/** Tariff per night for one room: its own typed rate, else the single override, else the category rate. */
+function walkInRoomRate(roomId: unknown, baseRatePerNight: number, roomRates: any, rateOverrideAmount: unknown) {
+  const own = roomRates?.[String(roomId)];
+  if (own !== undefined && own !== null && own !== "" && Number(own) > 0) return Number(own);
+  if (rateOverrideAmount !== undefined && rateOverrideAmount !== null && Number(rateOverrideAmount) > 0) return Number(rateOverrideAmount);
+  return baseRatePerNight;
+}
+
 async function walkInStayTax(perRoomTaxable: number[], checkIn: Date, checkOut: Date, chargedNights: number) {
   const rules = await loadGstRules();
   const parts = perRoomTaxable.map((v) =>
@@ -236,6 +258,8 @@ export const calculateRegistrationRate = async (req: Request, res: Response) => 
       adults = 1,
       children = 0,
       rateOverrideAmount,
+      roomRates,
+      extraRates: extraRateOverrides,
     } = req.body;
 
     const allRoomIds: string[] = (Array.isArray(roomIds) && roomIds.length > 0)
@@ -255,10 +279,7 @@ export const calculateRegistrationRate = async (req: Request, res: Response) => 
 
     const settings = await HotelSettings.findOne().lean();
     const mealPlanRates = settings?.mealPlanRates || { EP: 0, CP: 500, MAP: 1000, AP: 1500, RO: 0, BB: 500 };
-    const extraPersonRate = settings?.extraPersonRate || 800;
-    const extraBedRate = settings?.extraBedRate || 1200;
-    const childRateNoBed = settings?.childRateNoBed || 400;
-    const childRateWithBed = settings?.childRateWithBed || 600;
+    const { extraPersonRate, extraBedRate, childRateNoBed, childRateWithBed } = walkInExtraRates(settings, extraRateOverrides);
 
     const mealPlanRatePP = mealPlanRates[mealPlan as keyof typeof mealPlanRates] || 0;
     const totalGuestsForMealPlan = Number(adults) + Number(children) + Number(extraPersonsNoBed) + Number(extraPersonsWithBed) + Number(extraChildrenNoBed) + Number(extraChildrenWithBed);
@@ -269,9 +290,7 @@ export const calculateRegistrationRate = async (req: Request, res: Response) => 
     const roomBreakdowns = rooms.map(rm => {
       const cat = rm.category as any;
       const baseRatePerNight = bookingType === "HOURLY" ? (cat?.hourlyPrice ?? 0) * Number(hours) : (cat?.basePrice ?? 0);
-      const rmRatePerNight = rateOverrideAmount !== undefined && rateOverrideAmount !== null && Number(rateOverrideAmount) > 0 
-        ? Number(rateOverrideAmount) 
-        : baseRatePerNight;
+      const rmRatePerNight = walkInRoomRate(rm._id, baseRatePerNight, roomRates, rateOverrideAmount);
       const cost = rmRatePerNight * (bookingType === "HOURLY" ? 1 : nights);
       totalRoomCharges += cost;
       return {
@@ -423,11 +442,21 @@ export const walkInArrivalRegistration = async (req: Request, res: Response) => 
         advanceReference,
         advanceReceivedBy,
         rateOverrideAmount,
+        roomRates,
+        extraRates: extraRateOverrides,
 
         // Source
         isExistingGuest = false,
         existingGuestId,
       } = req.body;
+
+      // Email and an ID type are required for every registration (no generated placeholder emails).
+      if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email).trim())) {
+        throw new Error("A valid guest email is required");
+      }
+      if (!idType || !String(idType).trim()) {
+        throw new Error("Select the ID proof type (or enter it under Other)");
+      }
 
       const allRoomIds: string[] = (Array.isArray(roomIds) && roomIds.length > 0)
         ? roomIds.map(String)
@@ -493,7 +522,7 @@ export const walkInArrivalRegistration = async (req: Request, res: Response) => 
       } else {
         const firstName = guestFirstName || (guestName ? guestName.split(" ")[0] : "Guest");
         const lastName = guestLastName || (guestName ? guestName.split(" ").slice(1).join(" ") || "." : ".");
-        const guestEmail = email || `walkin+${mobile}@yes-hotels.local`;
+        const guestEmail = String(email).trim().toLowerCase();
 
         const guestDoc = await Guest.findOneAndUpdate(
           { $or: [{ phone: mobile }, ...(email ? [{ email: guestEmail }] : [])] },
@@ -519,10 +548,8 @@ export const walkInArrivalRegistration = async (req: Request, res: Response) => 
 
       const nights = bookingType === "HOURLY" ? 1 : Math.max(1, countNights(checkInDate, checkOutDate));
       const settings = await HotelSettings.findOne().session(session).lean();
-      const extraPersonRate = settings?.extraPersonRate || 800;
-      const extraBedRate = settings?.extraBedRate || 1200;
-      const childRateNoBed = settings?.childRateNoBed || 400;
-      const childRateWithBed = settings?.childRateWithBed || 600;
+      const agreedExtraRates = walkInExtraRates(settings, extraRateOverrides);
+      const { extraPersonRate, extraBedRate, childRateNoBed, childRateWithBed } = agreedExtraRates;
 
       const extraPersonTotal = Number(extraPersonsNoBed) * extraPersonRate * nights;
       const extraBedTotal = Number(extraPersonsWithBed) * extraBedRate * nights;
@@ -542,7 +569,7 @@ export const walkInArrivalRegistration = async (req: Request, res: Response) => 
         const rm = rooms[i];
         const category = rm.category as any;
         const baseRatePerNight = bookingType === "HOURLY" ? (category?.hourlyPrice ?? 0) * Number(hours) : (category?.basePrice ?? 0);
-        const rmRatePerNight = rateOverrideAmount !== undefined && rateOverrideAmount !== null && Number(rateOverrideAmount) > 0 ? Number(rateOverrideAmount) : baseRatePerNight;
+        const rmRatePerNight = walkInRoomRate(rm._id, baseRatePerNight, roomRates, rateOverrideAmount);
         const rmRoomCharges = rmRatePerNight * (bookingType === "HOURLY" ? 1 : nights);
 
         // Put extra guest charges on the primary room (first room)
@@ -578,7 +605,7 @@ export const walkInArrivalRegistration = async (req: Request, res: Response) => 
               guestDetails: {
                 firstName: guestFirstName || (guestName ? guestName.split(" ")[0] : "Guest"),
                 lastName: guestLastName || (guestName ? guestName.split(" ").slice(1).join(" ") || "." : "."),
-                email: email || `walkin+${mobile}@yes-hotels.local`,
+                email: String(email).trim().toLowerCase(),
                 phone: mobile,
                 idType: idType || undefined,
                 idNumber: idNumber || undefined,
@@ -609,6 +636,7 @@ export const walkInArrivalRegistration = async (req: Request, res: Response) => 
               extraChildrenNoBed: i === 0 ? Number(extraChildrenNoBed) : 0,
               extraChildrenWithBed: i === 0 ? Number(extraChildrenWithBed) : 0,
               kidsUnder3: i === 0 ? Number(kidsUnder3) : 0,
+              extraRates: i === 0 ? agreedExtraRates : undefined,
               ratePerNight: rmRatePerNight,
               billingInstruction: billingInstruction || undefined,
               adults: i === 0 ? Number(adults) : 1,
@@ -847,6 +875,8 @@ export const walkInCheckIn = async (req: Request, res: Response) => {
       targetRoom.currentBooking = booking._id as mongoose.Types.ObjectId;
       await targetRoom.save({ session });
 
+      // Taxable charges posted below (room + extra persons); GST is posted on this.
+      let postedTaxable = 0;
       // 3. Find or create folio
       folio = await Folio.findOne({ booking: booking._id, status: FolioStatus.OPEN }).session(session);
       if (!folio) {
@@ -877,6 +907,7 @@ export const walkInCheckIn = async (req: Request, res: Response) => {
         // 4. Post room tariff charge
         const ratePerNight = booking.ratePerNight ?? (booking.totalAmount - booking.taxAmount) / nights;
         const roomCharges = ratePerNight * nights;
+        postedTaxable = roomCharges > 0 ? roomCharges : 0;
 
         if (roomCharges > 0) {
           const roomDesc = booking.stayType === "HOURLY" 
@@ -899,12 +930,11 @@ export const walkInCheckIn = async (req: Request, res: Response) => {
 
         // 5. Post extra person / bed charges if applicable
         const settings = await HotelSettings.findOne().session(session).lean();
-        const extraPersonRate = settings?.extraPersonRate || 800;
-        const extraBedRate = settings?.extraBedRate || 1200;
-        const childRateNoBed = settings?.childRateNoBed || 400;
-        const childRateWithBed = settings?.childRateWithBed || 600;
+        // The rates agreed at registration (stored on the booking), else the property defaults.
+        const { extraPersonRate, extraBedRate, childRateNoBed, childRateWithBed } = walkInExtraRates(settings, (booking as any).extraRates);
 
         const extraPersonTotal = (booking.extraPersonsNoBed ?? 0) * extraPersonRate * nights;
+        postedTaxable += Math.max(0, extraPersonTotal);
         if (extraPersonTotal > 0) {
           await postCharge(
             {
@@ -921,6 +951,7 @@ export const walkInCheckIn = async (req: Request, res: Response) => {
         }
         
         const extraBedTotal = (booking.extraPersonsWithBed ?? 0) * extraBedRate * nights;
+        postedTaxable += Math.max(0, extraBedTotal);
         if (extraBedTotal > 0) {
           await postCharge(
             {
@@ -937,6 +968,7 @@ export const walkInCheckIn = async (req: Request, res: Response) => {
         }
 
         const childNoBedTotal = (booking.extraChildrenNoBed ?? 0) * childRateNoBed * nights;
+        postedTaxable += Math.max(0, childNoBedTotal);
         if (childNoBedTotal > 0) {
           await postCharge(
             {
@@ -953,6 +985,7 @@ export const walkInCheckIn = async (req: Request, res: Response) => {
         }
 
         const childWithBedTotal = (booking.extraChildrenWithBed ?? 0) * childRateWithBed * nights;
+        postedTaxable += Math.max(0, childWithBedTotal);
         if (childWithBedTotal > 0) {
           await postCharge(
             {
@@ -966,6 +999,31 @@ export const walkInCheckIn = async (req: Request, res: Response) => {
             },
             { req, session }
           );
+        }
+      }
+
+      // GST on the room and extra-person charges just posted: the one tax rule (slab by
+      // per-night value), as a CGST and an SGST line, so the folio and invoice carry the tax.
+      if (folio) {
+        const nightsForTax = Math.max(1, countNights(new Date(booking.checkInDate), new Date(booking.checkOutDate)));
+        const alreadyTaxed = await FolioLine.exists({ folio: folio._id, lineType: { $in: [FolioLineType.TAX_CGST, FolioLineType.TAX_SGST] } }).session(session);
+        if (!alreadyTaxed && postedTaxable > 0) {
+          const tax = computeRoomTax(await loadGstRules(), {
+            checkIn: new Date(booking.checkInDate),
+            checkOut: new Date(booking.checkOutDate),
+            nightlyValue: postedTaxable / nightsForTax,
+          });
+          for (const [lineType, amount, label] of [
+            [FolioLineType.TAX_CGST, tax.cgst, "CGST"],
+            [FolioLineType.TAX_SGST, tax.sgst, "SGST"],
+          ] as const) {
+            if (amount > 0) {
+              await postCharge(
+                { folioId: folio._id.toString(), bookingId: booking._id.toString(), lineType, description: `${label} on Room Tariff`, amount, date: new Date(), postedBy: (req as any).user?.id || "FRONT_DESK" },
+                { req, session }
+              );
+            }
+          }
         }
       }
 
@@ -1241,7 +1299,7 @@ export const printRegistrationCard = async (req: Request, res: Response) => {
 
       <div class="rg-row grid-2" style="border:none">
         <div><div class="rg-label">Purpose of Visit</div><div class="rg-val" style="font-size:11px">${esc(guest.purposeOfVisit || "Personal / Business")}</div></div>
-        <div><div class="rg-label">Proceeding To</div><div class="rg-val" style="font-size:11px">${esc(guest.proceedingTo || "Local / Airport")}</div></div>
+        <div><div class="rg-label">Proceeding To</div><div class="rg-val" style="font-size:11px">${esc(guest.proceedingTo || "—")}</div></div>
       </div>
 
       ${guest.gstin ? `<div style="margin-top:3px;font-size:9px;border-top:1px dotted #ccc;padding-top:2px"><strong>Company GSTIN:</strong> <span style="font-family:monospace;font-weight:bold">${esc(guest.gstin)}</span></div>` : ""}

@@ -288,7 +288,7 @@ export default function AdminDashboard() {
                     { label: "Arrivals Pending", value: Math.max(0, (inHouse?.stats?.expectedArrivals || 0) - (inHouse?.stats?.actualArrivals || 0)), icon: Clock, color: "amber" as const, link: "/admin/check-in" },
                     { label: "Exp. Departures", value: inHouse?.stats?.expectedDepartures || 0, icon: LogOut, color: "blue" as const, link: "/admin/check-out" },
                     { label: "Checked Out", value: inHouse?.stats?.actualCheckouts || 0, icon: CheckCircle2, color: "blue" as const, link: "/admin/check-out" },
-                    { label: "In-House", value: inHouse?.guests?.length || 0, icon: Users, color: "purple" as const, link: "/admin/in-house-list" },
+                    { label: "In-House", value: inHouse?.stats?.inHouseStays ?? inHouse?.guests?.length ?? 0, icon: Users, color: "purple" as const, link: "/admin/in-house-list" },
                   ].map(({ label, value, icon: Icon, color, link }) => (
                     <Link key={label} to={link} className="bg-white border border-slate-200 rounded-xl p-4 hover:border-amber-200 hover:shadow-sm transition-all flex flex-col gap-2">
                       <div className="flex items-center justify-between">
@@ -298,6 +298,52 @@ export default function AdminDashboard() {
                       <span className="text-2xl font-bold font-serif tabular-nums text-slate-900">{value}</span>
                     </Link>
                   ))}
+                </div>
+              )}
+
+              {tab === "overview" && inHouse?.stats && (
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 mt-3">
+                  {/* Day use / hourly stays */}
+                  <div className="bg-white border border-slate-200 rounded-xl p-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="text-[10px] uppercase tracking-widest font-bold text-slate-400">Day Use (Hourly)</span>
+                      <Clock size={14} className="text-amber-500" />
+                    </div>
+                    <div className="grid grid-cols-4 gap-2 text-center">
+                      {[
+                        ["In-House", inHouse.stats.dayUse?.inHouse ?? 0],
+                        ["Arriving", inHouse.stats.dayUse?.arrivalsToday ?? 0],
+                        ["Checked Out", inHouse.stats.dayUse?.checkedOutToday ?? 0],
+                        ["Booked Today", inHouse.stats.dayUse?.bookedToday ?? 0],
+                      ].map(([k, v]) => (
+                        <div key={k as string}>
+                          <div className="text-xl font-bold font-serif tabular-nums text-slate-900">{v as number}</div>
+                          <div className="text-[10px] font-semibold text-slate-500">{k as string}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  {/* Today's bookings by kind */}
+                  <div className="bg-white border border-slate-200 rounded-xl p-4 lg:col-span-2">
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="text-[10px] uppercase tracking-widest font-bold text-slate-400">Bookings Made Today</span>
+                      <span className="text-xl font-bold font-serif tabular-nums text-slate-900">{inHouse.stats.bookingsTodayTotal ?? 0}</span>
+                    </div>
+                    {Object.keys(inHouse.stats.bookingsToday ?? {}).length === 0 ? (
+                      <p className="text-xs text-slate-400">No bookings made today yet.</p>
+                    ) : (
+                      <div className="flex flex-wrap gap-2">
+                        {Object.entries(inHouse.stats.bookingsToday as Record<string, number>)
+                          .sort((a, b) => b[1] - a[1])
+                          .map(([source, count]) => (
+                            <span key={source} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-50 border border-slate-200 text-xs font-semibold text-slate-700">
+                              {source.split("_").map((w) => w.charAt(0) + w.slice(1).toLowerCase()).join(" ")}
+                              <span className="font-bold text-slate-900 tabular-nums">{count}</span>
+                            </span>
+                          ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
 

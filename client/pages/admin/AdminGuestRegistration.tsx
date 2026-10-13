@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   ArrowLeft, Search, UserCheck, ShieldCheck, CreditCard,
@@ -66,6 +66,9 @@ function numberToWords(num: number): string {
   return str.trim() + " RUPEES ONLY";
 }
 
+const STANDARD_ID_TYPES = ["AADHAAR", "PASSPORT", "DRIVING_LICENSE", "VOTER_ID"];
+const isValidEmail = (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test((v || "").trim());
+
 export default function AdminGuestRegistration() {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -75,7 +78,6 @@ export default function AdminGuestRegistration() {
   const [submitting, setSubmitting] = useState(false);
 
   // STEP 5 IN-PAGE DOCUMENT VIEWER (BOTH, GRC, INVOICE)
-  const [documentView, setDocumentView] = useState<"BOTH" | "GRC" | "INVOICE">("BOTH");
 
   // LIGHTBOX PREVIEW STATE
   const [previewImage, setPreviewImage] = useState<string | null>(null);
@@ -146,6 +148,34 @@ export default function AdminGuestRegistration() {
     otherCharges: 0,
     otherChargesDesc: "",
     rateOverrideAmount: "",
+  });
+
+  // Tariff per room (₹/night), keyed by room id; blank = the room's default rate.
+  const [roomRates, setRoomRates] = useState<Record<string, string>>({});
+  // ₹ per person per night for each extra type; prefilled from Property Settings, editable per booking.
+  const [extraRates, setExtraRates] = useState({ extraPersonRate: "", extraBedRate: "", childRateNoBed: "", childRateWithBed: "" });
+  useEffect(() => {
+    fetch("/api/settings/public")
+      .then((r) => r.json())
+      .then((j) => {
+        const st = j?.data ?? {};
+        setExtraRates((prev) => ({
+          extraPersonRate: prev.extraPersonRate || String(st.extraPersonRate ?? 800),
+          extraBedRate: prev.extraBedRate || String(st.extraBedRate ?? 1200),
+          childRateNoBed: prev.childRateNoBed || String(st.childRateNoBed ?? 400),
+          childRateWithBed: prev.childRateWithBed || String(st.childRateWithBed ?? 600),
+        }));
+      })
+      .catch(() => undefined);
+  }, []);
+  const defaultRoomRate = (r: any) => r?.ratePerNight || r?.category?.basePrice || 0;
+  const roomRatesPayload = (rooms: any[]) =>
+    Object.fromEntries(rooms.map((r) => [r._id, roomRates[r._id] !== undefined && roomRates[r._id] !== "" ? Number(roomRates[r._id]) : defaultRoomRate(r)]));
+  const extraRatesPayload = () => ({
+    extraPersonRate: Number(extraRates.extraPersonRate || 0),
+    extraBedRate: Number(extraRates.extraBedRate || 0),
+    childRateNoBed: Number(extraRates.childRateNoBed || 0),
+    childRateWithBed: Number(extraRates.childRateWithBed || 0),
   });
 
   const [billingDetails, setBillingDetails] = useState({
@@ -348,7 +378,8 @@ export default function AdminGuestRegistration() {
           kidsUnder3: stayDetails.kidsUnder3,
           otherCharges: stayDetails.otherCharges,
           discountAmount: 0,
-          rateOverrideAmount: stayDetails.rateOverrideAmount !== "" ? Number(stayDetails.rateOverrideAmount) : (roomsToBook[0]?.ratePerNight || roomsToBook[0]?.category?.basePrice || undefined),
+          roomRates: roomRatesPayload(roomsToBook),
+          extraRates: extraRatesPayload(),
         }),
       });
       const json = await res.json();
@@ -387,7 +418,9 @@ export default function AdminGuestRegistration() {
         bookingType: roomSearch.bookingType,
         hours: Number(roomSearch.hours),
         ...stayDetails,
-        rateOverrideAmount: stayDetails.rateOverrideAmount ? Number(stayDetails.rateOverrideAmount) : undefined,
+        rateOverrideAmount: undefined,
+        roomRates: roomRatesPayload(roomsToBook),
+        extraRates: extraRatesPayload(),
         roomId: roomsToBook[0]._id,
         roomIds: roomsToBook.map(r => r._id),
         ...billingDetails,
@@ -443,15 +476,12 @@ export default function AdminGuestRegistration() {
     }
   };
 
-  const handlePrint = () => {
-    if (!registeredBooking) return;
-    window.open(`/admin/bookings/${registeredBooking._id}/grc-print`, "_blank");
-  };
-
-  const handlePrintInvoice = () => {
-    if (!registeredBooking) return;
-    window.open(`/admin/bookings/${registeredBooking._id}/folio-print`, "_blank");
-  };
+  // GRC / invoice open in a pop-up on this page (an embedded print page), not a new tab.
+  const [docModal, setDocModal] = useState<"grc" | "invoice" | null>(null);
+  const docFrameRef = useRef<HTMLIFrameElement>(null);
+  const handlePrint = () => { if (registeredBooking) setDocModal("grc"); };
+  const handlePrintInvoice = () => { if (registeredBooking) setDocModal("invoice"); };
+  const printDocModal = () => docFrameRef.current?.contentWindow?.print();
 
   // ─────────────────────────────────────────────────────────────────────────────
   // RENDER HELPERS
@@ -755,7 +785,7 @@ export default function AdminGuestRegistration() {
                 <div><label className="block text-xs font-bold text-gray-500 mb-1">First Name *</label><input type="text" className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm" value={guestDetails.guestFirstName} onChange={e => setGuestDetails({...guestDetails, guestFirstName: e.target.value})} /></div>
                 <div><label className="block text-xs font-bold text-gray-500 mb-1">Last Name</label><input type="text" className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm" value={guestDetails.guestLastName} onChange={e => setGuestDetails({...guestDetails, guestLastName: e.target.value})} /></div>
                 <div><label className="block text-xs font-bold text-gray-500 mb-1">Mobile *</label><input type="tel" className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm" value={guestDetails.mobile} onChange={e => setGuestDetails({...guestDetails, mobile: e.target.value})} /></div>
-                <div><label className="block text-xs font-bold text-gray-500 mb-1">Email</label><input type="email" className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm" value={guestDetails.email} onChange={e => setGuestDetails({...guestDetails, email: e.target.value})} /></div>
+                <div><label className="block text-xs font-bold text-gray-500 mb-1">Email *</label><input type="email" required className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm" value={guestDetails.email} onChange={e => setGuestDetails({...guestDetails, email: e.target.value})} /></div>
                 <div><label className="block text-xs font-bold text-gray-500 mb-1">Gender</label><select className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm" value={guestDetails.gender} onChange={e => setGuestDetails({...guestDetails, gender: e.target.value})}><option value="MALE">Male</option><option value="FEMALE">Female</option><option value="OTHER">Other</option></select></div>
                 <div><label className="block text-xs font-bold text-gray-500 mb-1">Date of Birth</label><input type="date" className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm" value={guestDetails.dateOfBirth} onChange={e => setGuestDetails({...guestDetails, dateOfBirth: e.target.value})} /></div>
                 <div className="md:col-span-2"><label className="block text-xs font-bold text-gray-500 mb-1">Full Address</label><input type="text" className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm" value={guestDetails.address} onChange={e => setGuestDetails({...guestDetails, address: e.target.value})} /></div>
@@ -775,7 +805,10 @@ export default function AdminGuestRegistration() {
               <div className="p-6">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-6">
                   <div><label className="block text-xs font-bold text-gray-500 mb-1">Nationality</label><input type="text" className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm" value={guestDetails.nationality} onChange={e => setGuestDetails({...guestDetails, nationality: e.target.value})} /></div>
-                  <div><label className="block text-xs font-bold text-gray-500 mb-1">ID Type *</label><select className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm" value={guestDetails.idType} onChange={e => setGuestDetails({...guestDetails, idType: e.target.value})}><option value="AADHAAR">Aadhaar</option><option value="PASSPORT">Passport</option><option value="DRIVING_LICENSE">Driving License</option><option value="VOTER_ID">Voter ID</option></select></div>
+                  <div><label className="block text-xs font-bold text-gray-500 mb-1">ID Type *</label><select className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm" value={STANDARD_ID_TYPES.includes(guestDetails.idType) ? guestDetails.idType : "OTHER"} onChange={e => setGuestDetails({...guestDetails, idType: e.target.value === "OTHER" ? "" : e.target.value})}><option value="AADHAAR">Aadhaar</option><option value="PASSPORT">Passport</option><option value="DRIVING_LICENSE">Driving License</option><option value="VOTER_ID">Voter ID</option><option value="OTHER">Other</option></select>
+                    {!STANDARD_ID_TYPES.includes(guestDetails.idType) && (
+                      <input type="text" required placeholder="Which ID? (e.g. PAN Card)" className="mt-2 w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm" value={guestDetails.idType} onChange={e => setGuestDetails({...guestDetails, idType: e.target.value.toUpperCase()})} />
+                    )}</div>
                   <div><label className="block text-xs font-bold text-gray-500 mb-1">ID Number *</label><input type="text" className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm font-mono uppercase" value={guestDetails.idNumber} onChange={e => setGuestDetails({...guestDetails, idNumber: e.target.value})} /></div>
                 </div>
 
@@ -824,30 +857,30 @@ export default function AdminGuestRegistration() {
                 <div><label className="block text-xs font-bold text-gray-500 mb-1">Arrival Time</label><input type="time" className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm" value={stayDetails.arrivalTime} onChange={e => setStayDetails({...stayDetails, arrivalTime: e.target.value})} /></div>
                 <div><label className="block text-xs font-bold text-gray-500 mb-1">Departure Time</label><input type="time" className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm" value={stayDetails.departureTime} onChange={e => setStayDetails({...stayDetails, departureTime: e.target.value})} /></div>
                 <div><label className="block text-xs font-bold text-gray-500 mb-1">Meal Plan</label><select className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm" value={stayDetails.mealPlan} onChange={e => setStayDetails({...stayDetails, mealPlan: e.target.value})}><option value="EP">EP (Room Only)</option><option value="CP">CP (Breakfast)</option><option value="MAP">MAP (Half Board)</option><option value="AP">AP (Full Board)</option></select></div>
-                <div>
-                  <div className="flex justify-between items-center mb-1">
-                    <label className="block text-xs font-bold text-[#c9a227]">Room Tariff (₹/Night)</label>
-                    {(selectedRoom?.ratePerNight || selectedRoom?.category?.basePrice) ? (
-                      <span className="text-[10px] font-bold text-amber-800 bg-amber-100 px-1.5 py-0.5 rounded border border-amber-300">
-                        Default: ₹{selectedRoom?.ratePerNight || selectedRoom?.category?.basePrice}
-                      </span>
-                    ) : null}
+                <div className="md:col-span-1">
+                  <label className="block text-xs font-bold text-[#c9a227] mb-1">Room Tariff (₹/Night)</label>
+                  <div className="space-y-2">
+                    {(selectedRooms.length > 0 ? selectedRooms : selectedRoom ? [selectedRoom] : []).map((r: any) => (
+                      <div key={r._id} className="flex items-center gap-2">
+                        <span className="text-[11px] font-mono font-bold bg-black text-[#e5c76b] px-1.5 py-0.5 rounded shrink-0">{r.roomNumber}</span>
+                        <input
+                          type="number"
+                          min="0"
+                          aria-label={`Tariff for room ${r.roomNumber}`}
+                          className="w-full px-3 py-2 bg-[#fdfaf2] border border-[#e5c76b] rounded-lg text-sm font-semibold text-slate-800 focus:ring-2 focus:ring-[#c9a227] outline-none"
+                          value={roomRates[r._id] ?? String(defaultRoomRate(r) || "")}
+                          onChange={(e) => setRoomRates({ ...roomRates, [r._id]: e.target.value })}
+                        />
+                      </div>
+                    ))}
                   </div>
-                  <input
-                    type="number"
-                    min="0"
-                    placeholder={(selectedRoom?.ratePerNight || selectedRoom?.category?.basePrice) ? `Default ₹${selectedRoom?.ratePerNight || selectedRoom?.category?.basePrice}` : "Enter custom tariff"}
-                    className="w-full px-3 py-2 bg-[#fdfaf2] border border-[#e5c76b] rounded-lg text-sm font-semibold text-slate-800 focus:ring-2 focus:ring-[#c9a227] outline-none"
-                    value={stayDetails.rateOverrideAmount}
-                    onChange={e => setStayDetails({...stayDetails, rateOverrideAmount: e.target.value})}
-                  />
-                  <p className="text-[10px] text-gray-500 mt-0.5">Pre-filled with category default tariff. Type any amount to override.</p>
+                  <p className="text-[10px] text-gray-500 mt-0.5">Each room starts at its category tariff. Type any amount to change it.</p>
                 </div>
                 <div><label className="block text-xs font-bold text-gray-500 mb-1">Kids &lt; 3 (Free)</label><input type="number" min="0" className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm" value={stayDetails.kidsUnder3} onChange={e => setStayDetails({...stayDetails, kidsUnder3: parseInt(e.target.value)||0})} /></div>
-                <div><label className="block text-xs font-bold text-gray-500 mb-1">Adult Extra Pax (No Bed)</label><input type="number" min="0" className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm" value={stayDetails.extraPersonsNoBed} onChange={e => setStayDetails({...stayDetails, extraPersonsNoBed: parseInt(e.target.value)||0})} /></div>
-                <div><label className="block text-xs font-bold text-gray-500 mb-1">Adult Extra Pax (With Bed)</label><input type="number" min="0" className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm" value={stayDetails.extraPersonsWithBed} onChange={e => setStayDetails({...stayDetails, extraPersonsWithBed: parseInt(e.target.value)||0})} /></div>
-                <div><label className="block text-xs font-bold text-gray-500 mb-1">Child 3-12 (No Bed)</label><input type="number" min="0" className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm" value={stayDetails.extraChildrenNoBed} onChange={e => setStayDetails({...stayDetails, extraChildrenNoBed: parseInt(e.target.value)||0})} /></div>
-                <div><label className="block text-xs font-bold text-gray-500 mb-1">Child 3-12 (With Bed)</label><input type="number" min="0" className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm" value={stayDetails.extraChildrenWithBed} onChange={e => setStayDetails({...stayDetails, extraChildrenWithBed: parseInt(e.target.value)||0})} /></div>
+                <div><label className="block text-xs font-bold text-gray-500 mb-1">Adult Extra Pax (No Bed)</label><div className="flex gap-2"><input type="number" min="0" aria-label="Adult Extra Pax (No Bed) count" title="Persons" className="w-20 px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm" value={stayDetails.extraPersonsNoBed} onChange={e => setStayDetails({...stayDetails, extraPersonsNoBed: parseInt(e.target.value)||0})} /><div className="relative flex-1"><span className="absolute left-2 top-2 text-xs text-gray-400">₹</span><input type="number" min="0" aria-label="Adult Extra Pax (No Bed) rate per person per night" className="w-full pl-5 pr-2 py-2 bg-[#fdfaf2] border border-[#e5c76b] rounded-lg text-sm" value={extraRates.extraPersonRate} onChange={e => setExtraRates({...extraRates, extraPersonRate: e.target.value})} /></div></div><p className="text-[10px] text-gray-500 mt-0.5">persons · ₹ per person / night</p></div>
+                <div><label className="block text-xs font-bold text-gray-500 mb-1">Adult Extra Pax (With Bed)</label><div className="flex gap-2"><input type="number" min="0" aria-label="Adult Extra Pax (With Bed) count" title="Persons" className="w-20 px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm" value={stayDetails.extraPersonsWithBed} onChange={e => setStayDetails({...stayDetails, extraPersonsWithBed: parseInt(e.target.value)||0})} /><div className="relative flex-1"><span className="absolute left-2 top-2 text-xs text-gray-400">₹</span><input type="number" min="0" aria-label="Adult Extra Pax (With Bed) rate per person per night" className="w-full pl-5 pr-2 py-2 bg-[#fdfaf2] border border-[#e5c76b] rounded-lg text-sm" value={extraRates.extraBedRate} onChange={e => setExtraRates({...extraRates, extraBedRate: e.target.value})} /></div></div><p className="text-[10px] text-gray-500 mt-0.5">persons · ₹ per person / night</p></div>
+                <div><label className="block text-xs font-bold text-gray-500 mb-1">Child 3-12 (No Bed)</label><div className="flex gap-2"><input type="number" min="0" aria-label="Child 3-12 (No Bed) count" title="Persons" className="w-20 px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm" value={stayDetails.extraChildrenNoBed} onChange={e => setStayDetails({...stayDetails, extraChildrenNoBed: parseInt(e.target.value)||0})} /><div className="relative flex-1"><span className="absolute left-2 top-2 text-xs text-gray-400">₹</span><input type="number" min="0" aria-label="Child 3-12 (No Bed) rate per person per night" className="w-full pl-5 pr-2 py-2 bg-[#fdfaf2] border border-[#e5c76b] rounded-lg text-sm" value={extraRates.childRateNoBed} onChange={e => setExtraRates({...extraRates, childRateNoBed: e.target.value})} /></div></div><p className="text-[10px] text-gray-500 mt-0.5">persons · ₹ per person / night</p></div>
+                <div><label className="block text-xs font-bold text-gray-500 mb-1">Child 3-12 (With Bed)</label><div className="flex gap-2"><input type="number" min="0" aria-label="Child 3-12 (With Bed) count" title="Persons" className="w-20 px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm" value={stayDetails.extraChildrenWithBed} onChange={e => setStayDetails({...stayDetails, extraChildrenWithBed: parseInt(e.target.value)||0})} /><div className="relative flex-1"><span className="absolute left-2 top-2 text-xs text-gray-400">₹</span><input type="number" min="0" aria-label="Child 3-12 (With Bed) rate per person per night" className="w-full pl-5 pr-2 py-2 bg-[#fdfaf2] border border-[#e5c76b] rounded-lg text-sm" value={extraRates.childRateWithBed} onChange={e => setExtraRates({...extraRates, childRateWithBed: e.target.value})} /></div></div><p className="text-[10px] text-gray-500 mt-0.5">persons · ₹ per person / night</p></div>
                 <div><label className="block text-xs font-bold text-gray-500 mb-1">Other Charges (₹)</label><input type="number" min="0" className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm" value={stayDetails.otherCharges} onChange={e => setStayDetails({...stayDetails, otherCharges: parseInt(e.target.value)||0})} /></div>
                 <div><label className="block text-xs font-bold text-gray-500 mb-1">Other Charges Desc</label><input type="text" placeholder="e.g. Early Check-in" className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm" value={stayDetails.otherChargesDesc} onChange={e => setStayDetails({...stayDetails, otherChargesDesc: e.target.value})} /></div>
               </div>
@@ -871,7 +904,7 @@ export default function AdminGuestRegistration() {
 
             <div className="flex justify-end gap-3 mt-8">
               <button onClick={() => setStep("ROOM")} className="px-6 py-2.5 bg-white border border-gray-200 rounded-xl font-bold">Back</button>
-              <button onClick={calculateRates} disabled={submitting || !guestDetails.guestFirstName || !guestDetails.mobile || !guestDetails.idNumber} className="bg-[#c9a227] text-white px-8 py-2.5 rounded-xl font-bold hover:bg-black transition flex items-center gap-2">
+              <button onClick={calculateRates} disabled={submitting || !guestDetails.guestFirstName || !guestDetails.mobile || !isValidEmail(guestDetails.email) || !guestDetails.idType.trim() || !guestDetails.idNumber} className="bg-[#c9a227] text-white px-8 py-2.5 rounded-xl font-bold hover:bg-black transition flex items-center gap-2">
                 {submitting ? <RefreshCw size={16} className="animate-spin" /> : "Calculate Rates & Proceed"}
               </button>
             </div>
@@ -1007,7 +1040,7 @@ export default function AdminGuestRegistration() {
                         </div>
                         <div className="bg-white p-2.5 rounded-lg border border-gray-200">
                           <span className="text-[10px] font-bold text-gray-400 uppercase block">Proceeding To</span>
-                          <span className="font-semibold text-gray-800">{guestDetails.proceedingTo || "Local / Airport"}</span>
+                          <span className="font-semibold text-gray-800">{guestDetails.proceedingTo || "—"}</span>
                         </div>
 
                         {guestDetails.organization && (
@@ -1368,50 +1401,16 @@ export default function AdminGuestRegistration() {
             STEP 5: DONE — BOTH GRC (CONSENT FORM) & GST INVOICE RENDERED VISIBLE ON PAGE
             ========================================================================= */}
         {step === "DONE" && registeredBooking && (() => {
-          const checkInDate = new Date(roomSearch.checkIn);
-          const checkOutDate = new Date(roomSearch.checkOut);
-          const nights = Math.max(1, rateBreakdown?.nights || 1);
-          const dailyTariff = Math.round((rateBreakdown?.roomCharges || 0) / nights);
-          const dailyExtraBed = Math.round(((rateBreakdown?.extraBedTotal || 0)) / nights);
-          const dailyTaxable = dailyTariff + dailyExtraBed;
-          // Per-night GST comes from the server quote (taxService), never a client-side rate.
-          const nightTax = (i: number) => rateBreakdown?.dailyTax?.[i] ?? { cgst: 0, sgst: 0 };
-
-          const advanceAmountNum = Number(billingDetails.advanceAmount) || 0;
-          const totalInvoiceValue = rateBreakdown?.totalAmount || 0;
-          const netPayable = Math.max(0, totalInvoiceValue - advanceAmountNum);
-
-          const daysSchedule = [];
-          for (let i = 0; i < nights; i++) {
-            const d = new Date(checkInDate);
-            d.setDate(d.getDate() + i);
-            daysSchedule.push({
-              night: i + 1,
-              dateStr: d.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }),
-              tariff: dailyTariff,
-              extraBed: dailyExtraBed,
-              taxable: dailyTaxable,
-              cgst: nightTax(i).cgst,
-              sgst: nightTax(i).sgst,
-              total: dailyTaxable + nightTax(i).cgst + nightTax(i).sgst,
-            });
-          }
-
           const billNo = registeredBooking.billNumber || registeredBooking.bookingReference || "—";
           const allRoomNumbers = selectedRooms.length > 0
             ? selectedRooms.map(r => r.roomNumber).join(", ")
             : (selectedRoom?.roomNumber || "—");
 
-          const isAadhaar = guestDetails.idType.toUpperCase().includes("AAD");
-          const isDL = guestDetails.idType.toUpperCase().includes("DRIV");
-          const isVoter = guestDetails.idType.toUpperCase().includes("VOT");
-          const isGovt = !isAadhaar && !isDL && !isVoter;
-
           return (
             <div className="animate-in fade-in duration-300 space-y-6 max-w-5xl mx-auto">
               
               {/* TOP STICKY COMMAND BAR */}
-              <div className="sticky top-20 z-20 bg-white/95 backdrop-blur-md border-2 border-gray-200 rounded-2xl p-4 shadow-md flex flex-col md:flex-row items-center justify-between gap-4">
+              <div className="bg-white border-2 border-gray-200 rounded-2xl p-4 shadow-md flex flex-col md:flex-row items-center justify-between gap-4">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-xl bg-green-100 text-green-700 flex items-center justify-center flex-shrink-0 shadow-sm">
                     <CheckCircle2 size={24} />
@@ -1429,50 +1428,19 @@ export default function AdminGuestRegistration() {
                   </div>
                 </div>
 
-                {/* VIEW SELECTOR SEGMENTED BUTTONS */}
-                <div className="flex items-center bg-gray-100 p-1 rounded-xl border border-gray-200 text-xs font-bold">
-                  <button
-                    onClick={() => setDocumentView("BOTH")}
-                    className={cn(
-                      "px-3 py-1.5 rounded-lg transition flex items-center gap-1.5",
-                      documentView === "BOTH" ? "bg-white text-gray-900 shadow-sm font-black" : "text-gray-600 hover:text-black"
-                    )}
-                  >
-                    <FileText size={14} /> View Both Documents
-                  </button>
-                  <button
-                    onClick={() => setDocumentView("GRC")}
-                    className={cn(
-                      "px-3 py-1.5 rounded-lg transition flex items-center gap-1.5",
-                      documentView === "GRC" ? "bg-white text-gray-900 shadow-sm font-black" : "text-gray-600 hover:text-black"
-                    )}
-                  >
-                    <FileCheck2 size={14} /> 1. GRC (Consent)
-                  </button>
-                  <button
-                    onClick={() => setDocumentView("INVOICE")}
-                    className={cn(
-                      "px-3 py-1.5 rounded-lg transition flex items-center gap-1.5",
-                      documentView === "INVOICE" ? "bg-white text-gray-900 shadow-sm font-black" : "text-gray-600 hover:text-black"
-                    )}
-                  >
-                    <Receipt size={14} /> 2. GST Invoice
-                  </button>
-                </div>
-
                 {/* ACTION BUTTONS */}
                 <div className="flex items-center gap-2 flex-wrap">
                   <button
                     onClick={handlePrint}
                     className="px-3.5 py-2 bg-white border border-gray-300 hover:bg-gray-50 rounded-xl font-bold text-xs text-gray-800 transition flex items-center gap-1.5 shadow-sm"
                   >
-                    <FileCheck2 size={15} className="text-[#c9a227]" /> Print GRC
+                    <FileCheck2 size={15} className="text-[#c9a227]" /> View / Print GRC
                   </button>
                   <button
                     onClick={handlePrintInvoice}
                     className="px-3.5 py-2 bg-white border border-gray-300 hover:bg-gray-50 rounded-xl font-bold text-xs text-gray-800 transition flex items-center gap-1.5 shadow-sm"
                   >
-                    <Printer size={15} className="text-[#c9a227]" /> Print Invoice
+                    <Printer size={15} className="text-[#c9a227]" /> View / Print Invoice
                   </button>
                   <button
                     onClick={() => navigate("/admin/front-desk")}
@@ -1483,562 +1451,26 @@ export default function AdminGuestRegistration() {
                 </div>
               </div>
 
-              {/* =====================================================================
-                  DOCUMENT 1: GUEST REGISTRATION CARD (GRC & CONSENT FORM) — PHOTO 2
-                  ===================================================================== */}
-              {(documentView === "BOTH" || documentView === "GRC") && (
-                <div className="bg-white rounded-xl border-2 border-black p-4 sm:p-6 shadow-xl space-y-4">
-                  {/* Document Ribbon */}
-                  <div className="flex items-center justify-between pb-2 border-b border-gray-300 print:hidden text-xs">
-                    <span className="font-bold text-gray-700 uppercase tracking-widest flex items-center gap-1.5">
-                      <FileCheck2 size={16} className="text-[#c9a227]" />
-                      Document 1: Guest Registration Card &amp; Consent Form (Photo 2 Standard)
-                    </span>
-                    <button
-                      onClick={handlePrint}
-                      className="px-3 py-1 bg-black text-white rounded text-[11px] font-bold hover:bg-gray-800 flex items-center gap-1 shadow-sm"
-                    >
-                      <Printer size={13} /> Print This GRC
-                    </button>
-                  </div>
-
-                  {/* Physical Card Border Container */}
-                  <div className="border-2 border-black p-3 text-[11px] leading-tight font-sans bg-white">
-                    {/* HEADER SECTION */}
-                    <div className="border-b-2 border-black pb-2 text-center relative">
-                      <div className="flex items-center justify-between">
-                        <div className="text-left w-2/3">
-                          <h1 className="text-3xl font-black tracking-widest font-serif uppercase text-black">
-                            YES HOTELS
-                          </h1>
-                          <p className="text-[10px] text-gray-800 font-medium mt-0.5 leading-snug">
-                            No. 51, Khata No. 749, Singasandra, Hosa Road Junction, Parappana Agrahara,<br />
-                            Electronic City Ph-2, Bengaluru-560100.
-                          </p>
-                        </div>
-                        <div className="text-right w-1/3 border-l border-black pl-3 py-1">
-                          <div className="text-[11px] font-bold text-gray-800">
-                            Bill No. <span className="text-red-700 text-lg font-black font-mono ml-1">{billNo}</span>
-                          </div>
-                          <div className="text-[9px] font-mono text-gray-600 mt-0.5">
-                            Ref: {registeredBooking.bookingReference}
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="mt-2 border-t border-black pt-1">
-                        <h2 className="text-base font-black uppercase tracking-wider">
-                          GUEST REGISTRATION CARD
-                        </h2>
-                        <p className="text-[9px] font-bold text-gray-700 uppercase tracking-tight">
-                          THE REGISTRATION OF FOREIGNERS RULES - 1939 FORM - C HOTEL ARRIVAL REPORT, RULE 14, ID PROOF IS REQUIRED FOR CHECK - IN
-                        </p>
+              {docModal && (
+                <div role="dialog" aria-modal="true" aria-label={docModal === "grc" ? "Guest Registration Card" : "GST Invoice"} className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4" onClick={() => setDocModal(null)}>
+                  <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl h-[90vh] flex flex-col overflow-hidden" onClick={(e) => e.stopPropagation()}>
+                    <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
+                      <span className="font-bold text-sm text-gray-800">{docModal === "grc" ? "Guest Registration Card (GRC)" : "GST Invoice"}</span>
+                      <div className="flex items-center gap-2">
+                        <button type="button" onClick={printDocModal} className="px-3.5 py-2 bg-black text-[#e5c76b] rounded-xl font-bold text-xs flex items-center gap-1.5"><Printer size={14} /> Print</button>
+                        <button type="button" onClick={() => setDocModal(null)} className="px-3.5 py-2 bg-white border border-gray-300 rounded-xl font-bold text-xs">Close</button>
                       </div>
                     </div>
-
-                    {/* ID PROOF BANNER */}
-                    <div className="flex border-b border-black py-1.5 px-2 bg-gray-50 text-[11px] font-bold items-center justify-between">
-                      <div className="flex items-center gap-4">
-                        <span>ID :</span>
-                        <label className="flex items-center gap-1 cursor-pointer">
-                          <input type="checkbox" checked={isAadhaar} readOnly className="accent-black w-3.5 h-3.5" />
-                          <span>AAD</span>
-                        </label>
-                        <label className="flex items-center gap-1 cursor-pointer">
-                          <input type="checkbox" checked={isDL} readOnly className="accent-black w-3.5 h-3.5" />
-                          <span>DL</span>
-                        </label>
-                        <label className="flex items-center gap-1 cursor-pointer">
-                          <input type="checkbox" checked={isVoter} readOnly className="accent-black w-3.5 h-3.5" />
-                          <span>E.C.I</span>
-                        </label>
-                        <label className="flex items-center gap-1 cursor-pointer">
-                          <input type="checkbox" checked={isGovt} readOnly className="accent-black w-3.5 h-3.5" />
-                          <span>Govt. ID</span>
-                        </label>
-                      </div>
-                      <div className="font-mono text-xs font-black">
-                        ID No. : <span className="tracking-wider bg-white px-2 py-0.5 border border-black">{guestDetails.idNumber || "—"}</span>
-                      </div>
-                    </div>
-
-                    {/* MAIN 2-COLUMN SECTION */}
-                    <div className="grid grid-cols-12 border-b border-black">
-                      {/* LEFT COLUMN: OFFICE USE & FOREIGNERS BOX (5 COLS) */}
-                      <div className="col-span-5 border-r border-black p-2 space-y-3 bg-gray-50/50">
-                        {/* BOX 1: FOR OFFICE USE ONLY */}
-                        <div className="border border-black p-2 bg-white">
-                          <div className="text-[10px] font-black uppercase text-center border-b border-black pb-1 mb-2 tracking-wide">
-                            For Office Use Only
-                          </div>
-                          <div className="space-y-1.5 text-[10.5px]">
-                            <div className="flex justify-between border-b border-dotted border-gray-400 pb-0.5">
-                              <span className="font-bold">Room No.</span>
-                              <span className="font-black text-sm font-mono">{allRoomNumbers}</span>
-                              <span className="font-bold ml-2">Tariff</span>
-                              <span className="font-black font-mono">₹{dailyTariff}/-</span>
-                            </div>
-                            <div className="flex justify-between border-b border-dotted border-gray-400 pb-0.5">
-                              <span className="font-bold">Extra Bed</span>
-                              <span className="font-mono">{stayDetails.extraPersonsWithBed || "—"}</span>
-                              <span className="font-bold ml-2">Bill No.</span>
-                              <span className="font-mono">{billNo}</span>
-                            </div>
-                            <div className="flex justify-between border-b border-dotted border-gray-400 pb-0.5">
-                              <span className="font-bold">Advance</span>
-                              <span className="font-black font-mono text-green-800">₹{advanceAmountNum}/-</span>
-                              <span className="font-bold ml-2">Receipt No.</span>
-                              <span className="font-mono">{billingDetails.advanceReference || "—"}</span>
-                            </div>
-
-                            <div className="pt-1">
-                              <div className="font-bold text-[9px] uppercase text-gray-700">Billing Instruction / Settlement :</div>
-                              <div className="grid grid-cols-2 gap-1 mt-1 text-[10px]">
-                                <span className="flex items-center gap-1">
-                                  <input type="checkbox" checked={billingDetails.advanceMethod === "CASH"} readOnly className="accent-black w-3 h-3" /> Cash
-                                </span>
-                                <span className="flex items-center gap-1">
-                                  <input type="checkbox" checked={billingDetails.advanceMethod === "CARD"} readOnly className="accent-black w-3 h-3" /> Card / DD
-                                </span>
-                                <span className="flex items-center gap-1">
-                                  <input type="checkbox" checked={billingDetails.advanceMethod === "UPI"} readOnly className="accent-black w-3 h-3" /> UPI
-                                </span>
-                                <span className="flex items-center gap-1">
-                                  <input type="checkbox" checked={advanceAmountNum >= totalInvoiceValue} readOnly className="accent-black w-3 h-3" /> Net Pay
-                                </span>
-                              </div>
-                            </div>
-
-                            <div className="pt-1 border-t border-dotted border-gray-400">
-                              <div className="font-bold text-[9px] uppercase text-gray-700">Type of Plan :</div>
-                              <div className="flex justify-between mt-1 text-[10px]">
-                                <span className="flex items-center gap-1">
-                                  <input type="checkbox" checked={stayDetails.mealPlan === "EP" || !stayDetails.mealPlan} readOnly className="accent-black w-3 h-3" /> EP
-                                </span>
-                                <span className="flex items-center gap-1">
-                                  <input type="checkbox" checked={stayDetails.mealPlan === "CP"} readOnly className="accent-black w-3 h-3" /> CP
-                                </span>
-                                <span className="flex items-center gap-1">
-                                  <input type="checkbox" checked={stayDetails.mealPlan === "MAP"} readOnly className="accent-black w-3 h-3" /> MAP
-                                </span>
-                                <span className="flex items-center gap-1">
-                                  <input type="checkbox" checked={stayDetails.mealPlan === "AP"} readOnly className="accent-black w-3 h-3" /> AP
-                                </span>
-                              </div>
-                            </div>
-
-                            <div className="pt-1 flex justify-between font-bold text-[10px]">
-                              <span>B/ID No.</span>
-                              <span className="font-mono">Walk-In</span>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* BOX 2: FOR FOREIGNERS ONLY */}
-                        <div className="border border-black p-2 bg-white">
-                          <div className="text-[10px] font-black uppercase text-center border-b border-black pb-1 mb-1.5 tracking-wide">
-                            For Foreigners Only
-                          </div>
-                          <div className="space-y-1 text-[10px]">
-                            <div className="flex justify-between border-b border-gray-200 pb-0.5">
-                              <span className="font-semibold text-gray-700">Passport No.</span>
-                              <span className="font-mono font-bold">{foreignDetails.passportNumber || "—"}</span>
-                            </div>
-                            <div className="flex justify-between border-b border-gray-200 pb-0.5">
-                              <span className="font-semibold text-gray-700">Place of Issue</span>
-                              <span>{foreignDetails.passportIssuePlace || "—"}</span>
-                            </div>
-                            <div className="flex justify-between border-b border-gray-200 pb-0.5">
-                              <span className="font-semibold text-gray-700">Date of Issue</span>
-                              <span>{foreignDetails.passportIssueDate ? new Date(foreignDetails.passportIssueDate).toLocaleDateString("en-IN") : "—"}</span>
-                            </div>
-                            <div className="flex justify-between border-b border-gray-200 pb-0.5">
-                              <span className="font-semibold text-gray-700">Date of Expiry</span>
-                              <span>{foreignDetails.passportExpiryDate ? new Date(foreignDetails.passportExpiryDate).toLocaleDateString("en-IN") : "—"}</span>
-                            </div>
-                            <div className="flex justify-between border-b border-gray-200 pb-0.5">
-                              <span className="font-semibold text-gray-700">Visa No.</span>
-                              <span className="font-mono font-bold">{foreignDetails.visaNumber || "—"}</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="font-semibold text-gray-700">Visa Date / Place</span>
-                              <span>{foreignDetails.visaDate ? new Date(foreignDetails.visaDate).toLocaleDateString("en-IN") : "—"}</span>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* RIGHT COLUMN: GUEST DETAILS (7 COLS) */}
-                      <div className="col-span-7 p-3 space-y-2">
-                        <div className="border-b border-gray-300 pb-1">
-                          <span className="text-[9px] uppercase font-bold text-gray-600 block">Name (in capital Letters)</span>
-                          <span className="text-base font-black tracking-wider uppercase">
-                            {guestDetails.guestFirstName} {guestDetails.guestLastName}
-                          </span>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-2 border-b border-gray-300 pb-1">
-                          <div>
-                            <span className="text-[9px] uppercase font-bold text-gray-600 block">Designation</span>
-                            <span className="font-semibold">{guestDetails.designation || "—"}</span>
-                          </div>
-                          <div>
-                            <span className="text-[9px] uppercase font-bold text-gray-600 block">Name of Organization</span>
-                            <span className="font-semibold">{guestDetails.organization || "—"}</span>
-                          </div>
-                        </div>
-
-                        <div className="border-b border-gray-300 pb-1">
-                          <span className="text-[9px] uppercase font-bold text-gray-600 block">Address</span>
-                          <span className="font-medium">{guestDetails.address || "—"}</span>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-2 border-b border-gray-300 pb-1">
-                          <div>
-                            <span className="text-[9px] uppercase font-bold text-gray-600 block">Mobile No.</span>
-                            <span className="font-mono font-bold">{guestDetails.mobile || "—"}</span>
-                          </div>
-                          <div>
-                            <span className="text-[9px] uppercase font-bold text-gray-600 block">Email</span>
-                            <span className="font-mono text-[10px] truncate block">{guestDetails.email || "—"}</span>
-                          </div>
-                        </div>
-
-                        <div className="grid grid-cols-3 gap-2 border-b border-gray-300 pb-1">
-                          <div>
-                            <span className="text-[9px] uppercase font-bold text-gray-600 block">Nationality</span>
-                            <span className="font-semibold">{guestDetails.nationality.toUpperCase()}</span>
-                          </div>
-                          <div>
-                            <span className="text-[9px] uppercase font-bold text-gray-600 block">DOB / Age</span>
-                            <span>{guestDetails.dateOfBirth ? new Date(guestDetails.dateOfBirth).toLocaleDateString("en-IN") : "—"}</span>
-                          </div>
-                          <div>
-                            <span className="text-[9px] uppercase font-bold text-gray-600 block">Vehicle Reg. No.</span>
-                            <span className="font-mono font-bold uppercase">{guestDetails.vehicleNumber || "—"}</span>
-                          </div>
-                        </div>
-
-                        <div className="grid grid-cols-3 gap-2 border-b border-gray-300 pb-1">
-                          <div>
-                            <span className="text-[9px] uppercase font-bold text-gray-600 block">No. of Persons</span>
-                            <span className="font-bold">Adult: {roomSearch.adults || 1}</span>
-                          </div>
-                          <div>
-                            <span className="text-[9px] uppercase font-bold text-gray-600 block">Child</span>
-                            <span>{roomSearch.children || 0}</span>
-                          </div>
-                          <div>
-                            <span className="text-[9px] uppercase font-bold text-gray-600 block">Stay Days</span>
-                            <span className="font-bold">{nights} Day(s)</span>
-                          </div>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-2 border-b border-gray-300 pb-1">
-                          <div>
-                            <span className="text-[9px] uppercase font-bold text-gray-600 block">Date of Arr &amp; Time</span>
-                            <span className="font-bold">{checkInDate.toLocaleDateString("en-IN")} &bull; {stayDetails.arrivalTime || "12:00 PM"}</span>
-                          </div>
-                          <div>
-                            <span className="text-[9px] uppercase font-bold text-gray-600 block">Date of Dep &amp; Time</span>
-                            <span className="font-bold">{checkOutDate.toLocaleDateString("en-IN")} &bull; {stayDetails.departureTime || "11:00 AM"}</span>
-                          </div>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-2">
-                          <div>
-                            <span className="text-[9px] uppercase font-bold text-gray-600 block">Purpose of Visit</span>
-                            <span className="font-semibold">{guestDetails.purposeOfVisit || "Personal / Business"}</span>
-                          </div>
-                          <div>
-                            <span className="text-[9px] uppercase font-bold text-gray-600 block">Proceeding To</span>
-                            <span className="font-semibold">{guestDetails.proceedingTo || "Local / Airport"}</span>
-                          </div>
-                        </div>
-
-                        {guestDetails.gstin && (
-                          <div className="pt-1 border-t border-gray-200">
-                            <span className="text-[9px] uppercase font-bold text-gray-600">Company GSTIN: </span>
-                            <span className="font-mono font-bold">{guestDetails.gstin}</span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* CUSTOMER PHOTO & ID PROOF ATTACHMENTS */}
-                    {guestDetails.idProofImages && guestDetails.idProofImages.length > 0 && (
-                      <div className="border-b border-black p-2 bg-gray-50">
-                        <div className="text-[10px] font-bold uppercase tracking-wider text-gray-700 flex items-center gap-1.5 mb-1.5">
-                          <FileCheck2 size={13} className="text-black" />
-                          Verified Customer KYC Documents &amp; Identity Records:
-                        </div>
-                        <div className="flex gap-4 overflow-x-auto py-1">
-                          {guestDetails.idProofImages.map((img: string, idx: number) => (
-                            <div
-                              key={idx}
-                              onClick={() => setPreviewImage(img)}
-                              className="border border-black bg-white p-1 rounded shadow-sm text-center cursor-pointer hover:border-[#c9a227] transition"
-                            >
-                              {img.startsWith("data:image") || img.startsWith("http") ? (
-                                <img
-                                  src={img}
-                                  alt={`Customer Document ${idx + 1}`}
-                                  className="h-28 w-44 object-contain rounded border border-gray-200"
-                                />
-                              ) : (
-                                <div className="h-24 w-36 bg-gray-100 flex items-center justify-center text-[9px] text-gray-500">
-                                  ID Document #{idx + 1}
-                                </div>
-                              )}
-                              <span className="text-[9px] font-bold text-gray-600 mt-1 block uppercase">
-                                Document #{idx + 1} (Click to zoom)
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* HOTEL RULES & REGULATIONS */}
-                    <div className="border-b border-black p-2.5 text-[9.5px] leading-tight space-y-1.5 bg-gray-50/30">
-                      <div className="font-black uppercase tracking-wider text-black flex items-center gap-1">
-                        <ShieldCheck size={13} />
-                        Hotel Rules, Regulations &amp; Guest Consent Terms:
-                      </div>
-                      <ol className="list-decimal list-inside space-y-0.5 text-gray-800 font-normal">
-                        <li>Management reserves the right of admission and right to request any guest to vacate premises if necessary.</li>
-                        <li>Government issued photo identity proof (Aadhaar, Passport, DL, Voter ID) is mandatory for all adult occupants.</li>
-                        <li>Check-in is standard after 12:00 PM and Check-out time is strictly 11:00 AM. Late checkout is subject to availability and extra charge.</li>
-                        <li>Guests are solely responsible for their valuable items, cash, and belongings. Hotel is not responsible for any theft, damage or loss.</li>
-                        <li>Carrying contraband, hazardous goods, narcotics, ammunition, weapons or any banned substances is strictly prohibited on hotel property.</li>
-                        <li>Any damage caused to hotel property, linens, electrical appliances, or fixtures will be charged directly to the guest’s folio bill.</li>
-                        <li>Bills must be settled in full upon presentation, or prior to departure, in Indian Rupees (Cash, UPI or Approved Credit/Debit Cards).</li>
-                        <li>All disputes and legal jurisdiction arising from this contract are strictly subject to Bengaluru City Jurisdiction only.</li>
-                      </ol>
-                    </div>
-
-                    {/* SIGNATURES SECTION */}
-                    <div className="pt-6 pb-2 px-4 flex justify-between items-end text-center">
-                      <div>
-                        <div className="border-b border-black border-dashed w-56 mb-1"></div>
-                        <div className="text-[10.5px] font-bold uppercase tracking-wider">
-                          Signature of Guest
-                        </div>
-                      </div>
-                      <div>
-                        <div className="border-b border-black border-dashed w-56 mb-1"></div>
-                        <div className="text-[10.5px] font-bold uppercase tracking-wider">
-                          Signature of Receptionist / Duty Manager
-                        </div>
-                      </div>
-                    </div>
+                    <iframe
+                      ref={docFrameRef}
+                      title={docModal === "grc" ? "Guest Registration Card" : "GST Invoice"}
+                      src={`/admin/bookings/${registeredBooking._id}/${docModal === "grc" ? "grc-print" : "folio-print"}`}
+                      className="flex-1 w-full border-0"
+                    />
                   </div>
                 </div>
               )}
 
-              {/* =====================================================================
-                  DOCUMENT 2: GST TAX INVOICE — PHOTO 1
-                  ===================================================================== */}
-              {(documentView === "BOTH" || documentView === "INVOICE") && (
-                <div className="bg-white rounded-xl border-2 border-black p-4 sm:p-6 shadow-xl space-y-4">
-                  {/* Document Ribbon */}
-                  <div className="flex items-center justify-between pb-2 border-b border-gray-300 print:hidden text-xs">
-                    <span className="font-bold text-gray-700 uppercase tracking-widest flex items-center gap-1.5">
-                      <Receipt size={16} className="text-[#c9a227]" />
-                      Document 2: GST Tax Invoice (Photo 1 Standard)
-                    </span>
-                    <button
-                      onClick={handlePrintInvoice}
-                      className="px-3 py-1 bg-black text-white rounded text-[11px] font-bold hover:bg-gray-800 flex items-center gap-1 shadow-sm"
-                    >
-                      <Printer size={13} /> Print This Invoice
-                    </button>
-                  </div>
-
-                  {/* Physical Invoice Paper Container */}
-                  <div className="border-2 border-black p-5 text-[11px] leading-tight font-sans bg-white">
-                    {/* INVOICE HEADER */}
-                    <div className="border-b-2 border-black pb-3">
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <h1 className="text-3xl font-black tracking-widest font-serif uppercase text-black">
-                            YES HOTELS
-                          </h1>
-                          <p className="text-[10px] text-gray-800 font-medium mt-1 leading-snug">
-                            No. 51, Khata No. 749, Singasandra, Hosa Road Junction, Parappana Agrahara,<br />
-                            Electronic City Ph-2, Bengaluru-560100.<br />
-                            <strong>GSTIN:</strong> 29AAAFY1234A1Z5 &bull; <strong>State:</strong> Karnataka (Code: 29)
-                          </p>
-                        </div>
-                        <div className="text-right border-l-2 border-black pl-4">
-                          <h2 className="text-xl font-black uppercase text-black font-serif">TAX INVOICE</h2>
-                          <div className="text-xs font-bold text-gray-800 mt-1">
-                            Invoice No: <span className="font-mono text-red-700 font-black text-sm ml-1">{billNo}</span>
-                          </div>
-                          <div className="text-[10px] font-mono text-gray-600 mt-0.5">
-                            Date: {new Date().toLocaleDateString("en-IN")}
-                          </div>
-                          <div className="text-[10px] font-mono text-gray-600">
-                            Ref: {registeredBooking.bookingReference}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* BILLED TO & STAY META GRID */}
-                    <div className="grid grid-cols-2 border-b-2 border-black py-2.5 gap-4">
-                      <div>
-                        <span className="text-[9px] uppercase font-bold text-gray-500 block">Billed To (Guest Details):</span>
-                        <div className="text-sm font-black text-black uppercase mt-0.5">
-                          {guestDetails.guestFirstName} {guestDetails.guestLastName}
-                        </div>
-                        <div className="text-[10.5px] text-gray-700 mt-0.5">
-                          <strong>Phone:</strong> {guestDetails.mobile} &bull; <strong>Email:</strong> {guestDetails.email || "—"}
-                        </div>
-                        <div className="text-[10px] text-gray-600 mt-0.5">
-                          <strong>Address:</strong> {guestDetails.address || "Bengaluru"}
-                        </div>
-                        {guestDetails.gstin && (
-                          <div className="text-[10px] font-mono font-bold text-black mt-0.5">
-                            <strong>Guest GSTIN:</strong> {guestDetails.gstin}
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="border-l border-black pl-4 space-y-1">
-                        <div className="flex justify-between">
-                          <span className="text-gray-600 font-bold">Assigned Room(s):</span>
-                          <span className="font-black text-black font-mono">{allRoomNumbers}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-gray-600 font-bold">Check-In:</span>
-                          <span className="font-mono font-semibold">{checkInDate.toLocaleDateString("en-IN")} at {stayDetails.arrivalTime || "12:00 PM"}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-gray-600 font-bold">Check-Out:</span>
-                          <span className="font-mono font-semibold">{checkOutDate.toLocaleDateString("en-IN")} at {stayDetails.departureTime || "11:00 AM"}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-gray-600 font-bold">Duration:</span>
-                          <span className="font-bold">{nights} Night(s)</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-gray-600 font-bold">SAC Service Code:</span>
-                          <span className="font-mono font-bold">996311 (Hospitality Services)</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* DAY-BY-DAY ITEMIZED CHARGES SCHEDULE */}
-                    <div className="py-3">
-                      <div className="border border-black overflow-hidden">
-                        <table className="w-full text-left text-[10.5px]">
-                          <thead className="bg-gray-100 border-b border-black text-black font-bold uppercase text-[9.5px]">
-                            <tr>
-                              <th className="p-2 border-r border-black">Date / Night Description</th>
-                              <th className="p-2 border-r border-black text-center">SAC</th>
-                              <th className="p-2 border-r border-black text-right">Tariff</th>
-                              <th className="p-2 border-r border-black text-right">Extra Bed</th>
-                              <th className="p-2 border-r border-black text-right">Taxable</th>
-                              <th className="p-2 border-r border-black text-right">CGST (6%)</th>
-                              <th className="p-2 border-r border-black text-right">SGST (6%)</th>
-                              <th className="p-2 text-right">Day Total</th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-gray-300 font-mono">
-                            {daysSchedule.map((day) => (
-                              <tr key={day.night} className="hover:bg-gray-50/50">
-                                <td className="p-2 border-r border-black font-sans font-semibold text-black">
-                                  Night #{day.night} &bull; {day.dateStr}
-                                </td>
-                                <td className="p-2 border-r border-black text-center font-mono">996311</td>
-                                <td className="p-2 border-r border-black text-right">₹{day.tariff.toLocaleString("en-IN")}</td>
-                                <td className="p-2 border-r border-black text-right">{day.extraBed > 0 ? `₹${day.extraBed.toLocaleString("en-IN")}` : "—"}</td>
-                                <td className="p-2 border-r border-black text-right font-semibold">₹{day.taxable.toLocaleString("en-IN")}</td>
-                                <td className="p-2 border-r border-black text-right">₹{day.cgst.toLocaleString("en-IN")}</td>
-                                <td className="p-2 border-r border-black text-right">₹{day.sgst.toLocaleString("en-IN")}</td>
-                                <td className="p-2 text-right font-bold text-black">₹{day.total.toLocaleString("en-IN")}</td>
-                              </tr>
-                            ))}
-
-                            {/* Additional Service charges if any */}
-                            {rateBreakdown?.mealPlanTotal > 0 && (
-                              <tr className="bg-amber-50/40">
-                                <td colSpan={2} className="p-2 border-r border-black font-sans font-semibold">
-                                  Meal Plan ({stayDetails.mealPlan})
-                                </td>
-                                <td colSpan={5} className="p-2 border-r border-black text-right">Food Package</td>
-                                <td className="p-2 text-right font-bold">₹{rateBreakdown.mealPlanTotal.toLocaleString("en-IN")}</td>
-                              </tr>
-                            )}
-                          </tbody>
-                          <tfoot className="border-t-2 border-black bg-gray-50 font-bold font-mono text-[10.5px]">
-                            <tr>
-                              <td colSpan={2} className="p-2 border-r border-black uppercase font-sans">Sub Total</td>
-                              <td className="p-2 border-r border-black text-right">₹{(rateBreakdown?.roomCharges || 0).toLocaleString("en-IN")}</td>
-                              <td className="p-2 border-r border-black text-right">{rateBreakdown?.extraBedTotal > 0 ? `₹${rateBreakdown.extraBedTotal.toLocaleString("en-IN")}` : "—"}</td>
-                              <td className="p-2 border-r border-black text-right">₹{((rateBreakdown?.roomCharges || 0) + (rateBreakdown?.extraBedTotal || 0)).toLocaleString("en-IN")}</td>
-                              <td className="p-2 border-r border-black text-right">₹{(rateBreakdown?.tax?.cgst || 0).toLocaleString("en-IN")}</td>
-                              <td className="p-2 border-r border-black text-right">₹{(rateBreakdown?.tax?.sgst || 0).toLocaleString("en-IN")}</td>
-                              <td className="p-2 text-right font-black text-sm text-black">₹{totalInvoiceValue.toLocaleString("en-IN")}</td>
-                            </tr>
-                          </tfoot>
-                        </table>
-                      </div>
-                    </div>
-
-                    {/* SETTLEMENT & NET VALUE SECTION (MATCHING PHOTO 1) */}
-                    <div className="grid grid-cols-12 border-2 border-black mt-2">
-                      <div className="col-span-7 p-3 border-r-2 border-black space-y-2">
-                        <div className="text-[10px] uppercase font-bold text-gray-600">Net Amount Due in Words:</div>
-                        <div className="font-serif font-black text-xs text-black tracking-wide border-b border-gray-300 pb-2">
-                          {numberToWords(netPayable)}
-                        </div>
-
-                        <div className="pt-2 text-[9.5px] text-gray-700 leading-snug">
-                          <strong>Bank Payment Details:</strong><br />
-                          <strong>Bank:</strong> HDFC Bank Ltd &bull; <strong>Account:</strong> YES HOTELS<br />
-                          <strong>A/C No:</strong> 50200012345678 &bull; <strong>IFSC:</strong> HDFC0001234<br />
-                          <strong>Branch:</strong> Electronic City Branch, Bengaluru
-                        </div>
-                      </div>
-
-                      <div className="col-span-5 p-3 space-y-1.5 font-mono text-[11px] bg-gray-50/50">
-                        <div className="flex justify-between">
-                          <span className="font-sans font-bold text-gray-700">Total Invoice Value:</span>
-                          <span className="font-bold">₹{totalInvoiceValue.toLocaleString("en-IN")}</span>
-                        </div>
-                        <div className="flex justify-between text-green-800">
-                          <span className="font-sans font-bold">Advance Received ({billingDetails.advanceMethod}):</span>
-                          <span className="font-black">- ₹{advanceAmountNum.toLocaleString("en-IN")}</span>
-                        </div>
-                        <div className="border-t-2 border-black pt-2 flex justify-between items-center bg-[#c9a227]/10 -mx-3 -mb-3 p-3 mt-2">
-                          <span className="font-sans font-black text-xs uppercase text-gray-900">
-                            Net Balance Due:
-                          </span>
-                          <span className="font-sans font-black text-base text-[#c9a227]">
-                            ₹{netPayable.toLocaleString("en-IN")}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* STATUTORY JURISDICTION & SIGNATURES */}
-                    <div className="pt-6 pb-2 flex justify-between items-end text-center mt-4">
-                      <div className="text-left text-[9px] text-gray-500 max-w-sm">
-                        *Disputes subject to Bengaluru jurisdiction.<br />
-                        This is a computer generated invoice authenticated by YES HOTELS front desk reception.
-                      </div>
-                      <div>
-                        <div className="border-b border-black border-dashed w-52 mb-1"></div>
-                        <div className="text-[10px] font-bold uppercase tracking-wider">
-                          For YES HOTELS (Authorized Signatory)
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
 
             </div>
           );

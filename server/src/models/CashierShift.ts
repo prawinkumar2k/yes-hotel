@@ -23,7 +23,7 @@ export interface IPaidOut {
   _id?: mongoose.Types.ObjectId;
   amount: number;
   reason: string;
-  category: "CASH_DROP" | "PETTY_CASH" | "REFUND" | "OTHER";
+  category: "CASH_DROP" | "PETTY_CASH" | "REFUND" | "EARLY_CHECK_IN" | "WATER_BOTTLE" | "DENTAL_KIT" | "TEA_COFFEE_SHOP" | "KOVAI_KONGU_MESS" | "OTHER";
   recipient?: string;
   authorizedBy?: mongoose.Types.ObjectId;
   createdAt: Date;
@@ -102,7 +102,7 @@ const PaidOutSchema = new Schema<IPaidOut>(
     reason: { type: String, required: true, trim: true },
     category: {
       type: String,
-      enum: ["CASH_DROP", "PETTY_CASH", "REFUND", "OTHER"],
+      enum: ["CASH_DROP", "PETTY_CASH", "REFUND", "EARLY_CHECK_IN", "WATER_BOTTLE", "DENTAL_KIT", "TEA_COFFEE_SHOP", "KOVAI_KONGU_MESS", "OTHER"],
       default: "PETTY_CASH",
     },
     recipient: { type: String, trim: true },

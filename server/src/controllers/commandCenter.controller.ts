@@ -98,6 +98,32 @@ export const getCommandCenterData = async (req: Request, res: Response) => {
         inHouseGuests: mv.inHouseGuests,
       };
 
+      // Day use (hourly stays) and today's bookings by kind, by the hotel's business day.
+      const today = { $gte: startToday, $lte: endToday };
+      const [dayUseInHouse, dayUseArrivals, dayUseCheckedOut, bookingsBySource] = await Promise.all([
+        Booking.countDocuments({ ...propertyFilter, stayType: "HOURLY", status: BookingStatus.CHECKED_IN }),
+        Booking.countDocuments({ ...propertyFilter, stayType: "HOURLY", checkInDate: today, status: { $nin: [BookingStatus.CANCELLED, BookingStatus.NO_SHOW] } }),
+        Booking.countDocuments({ ...propertyFilter, stayType: "HOURLY", status: BookingStatus.CHECKED_OUT, checkedOutAt: today }),
+        Booking.aggregate([
+          { $match: { ...propertyFilter, createdAt: today, status: { $ne: BookingStatus.CANCELLED } } },
+          { $group: { _id: { source: "$source", stayType: "$stayType" }, count: { $sum: 1 } } },
+        ]),
+      ]);
+      const bookingsToday: Record<string, number> = {};
+      let bookingsTodayTotal = 0;
+      let dayUseBookedToday = 0;
+      for (const r of bookingsBySource as any[]) {
+        const key = r._id?.source || "OTHER";
+        bookingsToday[key] = (bookingsToday[key] ?? 0) + r.count;
+        bookingsTodayTotal += r.count;
+        if (r._id?.stayType === "HOURLY") dayUseBookedToday += r.count;
+      }
+      Object.assign(frontDeskStats, {
+        dayUse: { inHouse: dayUseInHouse, arrivalsToday: dayUseArrivals, checkedOutToday: dayUseCheckedOut, bookedToday: dayUseBookedToday },
+        bookingsToday,
+        bookingsTodayTotal,
+      });
+
       inHouseData = { guests: inHouseData, stats: frontDeskStats } as any;
     }
 

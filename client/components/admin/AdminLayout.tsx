@@ -168,6 +168,11 @@ export default function AdminLayout({ children, title, hidePadding }: { children
 
   const totalBadgeCount = (arrivalsCount > 0 ? 1 : 0) + (departuresCount > 0 ? 1 : 0) + (dirtyCount > 0 ? 1 : 0);
 
+  // Embedded in a pop-up (e.g. the GRC / invoice viewer on Guest Registration): content only, no sidebar.
+  if (typeof window !== "undefined" && window.self !== window.top) {
+    return <div className="bg-white">{children}</div>;
+  }
+
   return (
     <div className="admin-panel h-screen overflow-hidden bg-slate-50 text-slate-800 flex selection:bg-hotel-gold selection:text-black print:h-auto print:overflow-visible print:bg-white print:block">
       {/* Command Palette */}

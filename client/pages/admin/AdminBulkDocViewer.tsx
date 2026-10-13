@@ -1,9 +1,9 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { format, differenceInDays } from "date-fns";
 import { Button } from "@/components/ui/button";
-import { Printer, Loader2, FileCheck2, Receipt, ArrowLeft, ArrowRight, Key } from "lucide-react";
+import { Printer, Loader2, FileCheck2, Receipt, ArrowLeft, ArrowRight, Key, ShieldCheck, CheckCircle2, Building2, Search } from "lucide-react";
 
 // Number to words helper for GST Invoice
 function numberToWords(num: number): string {
@@ -23,28 +23,879 @@ function numberToWords(num: number): string {
   return str.trim() + " RUPEES ONLY";
 }
 
+function BookingDocCard({
+  booking,
+  docType,
+}: {
+  booking: any;
+  docType: "BOTH" | "GRC" | "GST";
+}) {
+  const [isGroupFolio, setIsGroupFolio] = useState(true);
+  const [activeBookingId, setActiveBookingId] = useState<string>(booking._id);
+
+  useEffect(() => {
+    setActiveBookingId(booking._id);
+  }, [booking._id]);
+
+  // Fetch individual booking details (including populated groupBookings)
+  const { data: bookingDetailData } = useQuery({
+    queryKey: ["adminBooking", activeBookingId],
+    queryFn: async () => {
+      const res = await api.get(`/admin/bookings/${activeBookingId}`);
+      return res.data;
+    },
+    enabled: !!activeBookingId,
+  });
+
+  // Fetch folio data with group=true / single=true support
+  const { data: folioData } = useQuery({
+    queryKey: ["folio", activeBookingId, isGroupFolio],
+    queryFn: async () => {
+      const res = await api.get(`/folios/booking/${activeBookingId}${isGroupFolio ? "?group=true" : "?single=true"}`);
+      return res.data;
+    },
+    enabled: !!activeBookingId,
+  });
+
+  // Fetch advances
+  const { data: advancesData } = useQuery({
+    queryKey: ["advancesForBooking", activeBookingId],
+    queryFn: async () => {
+      const res = await api.get(`/advances?bookingId=${activeBookingId}`);
+      return res.data;
+    },
+    enabled: !!activeBookingId,
+  });
+
+  const b = bookingDetailData?.data || booking;
+  const guest = b.guestDetails || {};
+  const foreign = b.foreignGuestDetails;
+  const nights = differenceInDays(new Date(b.checkOutDate), new Date(b.checkInDate)) || 1;
+  const checkInDate = new Date(b.checkInDate);
+  const checkOutDate = new Date(b.checkOutDate);
+
+  const folio = folioData?.data?.folio;
+  const lines = folioData?.data?.lines || [];
+  const advancesList: any[] = Array.isArray(advancesData?.data) ? advancesData.data : (advancesData?.data?.advances || []);
+  const groupBookings: any[] = folioData?.data?.groupBookings || b.groupBookings || [];
+  const isMultiRoomGroup = groupBookings.length > 1 || folioData?.data?.isGroup;
+
+  const defaultRoomNum = b.assignedRoom?.roomNumber || "101";
+  const allRoomsStr = groupBookings.length > 0
+    ? groupBookings.map((gb: any) => gb.roomNumber || gb.assignedRoom?.roomNumber).filter(Boolean).join(", ")
+    : folioData?.data?.roomsSummary || defaultRoomNum;
+
+  const displayRoomHeader = isGroupFolio && isMultiRoomGroup
+    ? `${allRoomsStr} (${b.roomCategory?.name?.substring(0, 3).toUpperCase() || "STA"})`
+    : `${defaultRoomNum} (${b.roomCategory?.name?.substring(0, 3).toUpperCase() || "STA"})`;
+
+  // The GST invoice number exists only once the folio is settled at checkout. Before that this
+  // sheet is a provisional bill and shows no invoice number.
+  const issuedFolios: any[] = (isGroupFolio && folioData?.data?.groupFolios?.length ? folioData.data.groupFolios : [folio]).filter(Boolean);
+  const issuedInvoiceNos = issuedFolios.map((f: any) => f.invoiceNumber).filter(Boolean);
+  const isProvisional = issuedInvoiceNos.length === 0;
+  const invoiceNo = isProvisional ? "Issued at checkout" : issuedInvoiceNos.join(" / ");
+  const invoiceDate = !isProvisional && issuedFolios.find((f: any) => f.invoiceNumber)?.closedAt ? new Date(issuedFolios.find((f: any) => f.invoiceNumber).closedAt) : new Date();
+
+  const billNo = b.billNumber || "—";
+  const grcNo = b.billNumber || b.grcNumber || `GI${b.bookingReference?.slice(-7) || "0006178"}`;
+
+  // Process rows day-by-day with room number breakdown
+  const debitLines = lines.filter((l: any) => l.direction !== "CREDIT");
+  const groupedData = useMemo(() => {
+    if (debitLines.length > 0) {
+      const map = new Map();
+      debitLines.forEach((line: any) => {
+        const d = format(new Date(line.date), "dd-MMM");
+        const rNum = line.booking?.assignedRoom?.roomNumber || line.folio?.room?.roomNumber || defaultRoomNum;
+        const groupKey = `${rNum}_${d}`;
+        if (!map.has(groupKey)) {
+          map.set(groupKey, {
+            description: `${rNum} ${d}`,
+            tariff: 0,
+            extBed: 0,
+            disc: 0,
+            cgst: 0,
+            sgst: 0,
+            fnb: 0,
+            others: 0,
+          });
+        }
+        const entry = map.get(groupKey);
+        if (line.lineType === "ROOM_CHARGE") {
+          entry.tariff += line.amount;
+        } else if (line.lineType === "EXTRA_BED") {
+          entry.extBed += line.amount;
+        } else if (line.lineType === "FOOD_AND_BEVERAGE" || line.lineType === "RESTAURANT") {
+          entry.fnb += line.amount;
+        } else if (line.lineType === "TAX_CGST") {
+          entry.cgst += line.amount;
+        } else if (line.lineType === "TAX_SGST") {
+          entry.sgst += line.amount;
+        } else if (line.lineType === "TAX") {
+          entry.cgst += line.amount / 2;
+          entry.sgst += line.amount / 2;
+        } else if (line.lineType === "DISCOUNT") {
+          entry.disc += line.amount;
+        } else {
+          entry.others += line.amount;
+        }
+      });
+      return Array.from(map.values());
+    }
+
+    const rows = [];
+    const checkIn = new Date(b.checkInDate);
+    const dailyTariff = b.ratePerNight ?? Math.round((b.totalAmount - (b.taxAmount || 0)) / nights);
+    const dailyExtBed = b.extraPersonsWithBed ? 1200 : 0;
+    const dailyTaxable = dailyTariff + dailyExtBed;
+    const dailyCgst = Math.round(dailyTaxable * 0.06 * 100) / 100;
+    const dailySgst = Math.round(dailyTaxable * 0.06 * 100) / 100;
+
+    for (let i = 0; i < nights; i++) {
+      const curr = new Date(checkIn);
+      curr.setDate(curr.getDate() + i);
+      const dStr = format(curr, "dd-MMM");
+      rows.push({
+        description: `${defaultRoomNum} ${dStr}`,
+        tariff: dailyTariff,
+        extBed: dailyExtBed,
+        disc: 0,
+        cgst: dailyCgst,
+        sgst: dailySgst,
+        fnb: 0,
+        others: 0,
+      });
+    }
+    return rows;
+  }, [lines, b, nights, defaultRoomNum]);
+
+  const totals = groupedData.reduce((acc: any, row: any) => {
+    acc.tariff += row.tariff;
+    acc.extBed += row.extBed;
+    acc.disc += row.disc;
+    acc.cgst += row.cgst;
+    acc.sgst += row.sgst;
+    acc.fnb += row.fnb;
+    acc.others += row.others;
+    return acc;
+  }, { tariff: 0, extBed: 0, disc: 0, cgst: 0, sgst: 0, fnb: 0, others: 0 });
+
+  const taxableValue = totals.tariff + totals.extBed - totals.disc;
+  const grandTotal = taxableValue + totals.cgst + totals.sgst + totals.fnb + totals.others;
+
+  const advanceLines = lines.filter((l: any) => l.direction === "CREDIT" && (l.lineType === "ADVANCE_ADJUSTMENT" || l.lineType === "ADVANCE" || l.description?.toLowerCase().includes("adv")));
+  const checkoutPaymentLines = lines.filter((l: any) => l.direction === "CREDIT" && (l.lineType === "PAYMENT" || l.description?.toLowerCase().includes("checkout") || l.description?.toLowerCase().includes("settl")));
+
+  const advanceFromAdvanceLines = advanceLines.reduce((s: number, a: any) => s + a.amount, 0);
+  const advanceFromList = advancesList.reduce((s: number, a: any) => s + (a.amount || 0), 0);
+  const advanceTotal = advanceFromAdvanceLines > 0 ? advanceFromAdvanceLines : (advanceFromList > 0 ? advanceFromList : (b.advanceAmount || 0));
+
+  const checkoutSettledTotal = checkoutPaymentLines.reduce((s: number, a: any) => s + a.amount, 0);
+  const totalPaid = advanceTotal + checkoutSettledTotal;
+
+  const net = Math.max(0, grandTotal - totalPaid);
+  const roundedNet = Math.round(net);
+  const roundOff = Number((roundedNet - net).toFixed(2));
+
+  const creditLines = lines.filter((l: any) => l.direction === "CREDIT");
+  const primaryAdvance = creditLines[0] || advancesList[0] || null;
+
+  // ID Type detection matching Photo 2
+  const idType = (guest.idType || "").toUpperCase();
+  const isAadhaar = idType.includes("AAD") || !idType;
+  const isDL = idType.includes("DRIV") || idType.includes("DL");
+  const isVoter = idType.includes("VOTER") || idType.includes("ECI") || idType.includes("E.C.I");
+  const isGovt = !isAadhaar && !isDL && !isVoter;
+  const advanceMethod = primaryAdvance?.method || (b.paymentMethod || "CASH").toUpperCase();
+  const dailyTariff = b.ratePerNight ?? Math.round((b.totalAmount - (b.taxAmount || 0)) / nights);
+
+  return (
+    <div className="space-y-8 print:space-y-0">
+      {/* Multi-Room Group Selector Pills (if multi-room group) */}
+      {isMultiRoomGroup && (
+        <div className="print:hidden bg-white p-3 rounded-xl border border-gray-300 shadow-sm flex flex-wrap items-center gap-2 max-w-[850px] mx-auto">
+          <span className="text-xs font-bold text-gray-700 flex items-center gap-1">
+            <Building2 size={14} className="text-amber-600" />
+            Select Bill View:
+          </span>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => setIsGroupFolio(true)}
+              className={`px-3 py-1 rounded-full text-xs font-bold transition flex items-center gap-1.5 ${
+                isGroupFolio
+                  ? "bg-amber-600 text-white shadow"
+                  : "bg-white text-gray-700 border border-gray-300 hover:bg-gray-50"
+              }`}
+            >
+              <CheckCircle2 size={12} className={isGroupFolio ? "inline" : "hidden"} />
+              Combined Group Bill (Rooms {allRoomsStr})
+            </button>
+            {groupBookings.map((gb: any) => (
+              <button
+                key={gb._id}
+                type="button"
+                onClick={() => {
+                  setIsGroupFolio(false);
+                  setActiveBookingId(gb._id);
+                }}
+                className={`px-3 py-1 rounded-full text-xs font-bold transition ${
+                  !isGroupFolio && activeBookingId === gb._id
+                    ? "bg-stone-900 text-white shadow"
+                    : "bg-white text-gray-700 border border-gray-300 hover:bg-gray-50"
+                }`}
+              >
+                Room {gb.roomNumber || gb.assignedRoom?.roomNumber} Only
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* DOCUMENT 1: GUEST REGISTRATION CARD (GRC) — IDENTICAL TO ADMIN GRC PRINT */}
+      {(docType === "BOTH" || docType === "GRC") && (
+        <div className="bg-white p-4 print:p-0 mx-auto max-w-[850px] print:m-0 print:break-after-page">
+          <div className="print:hidden flex justify-between items-center mb-2 pb-1 border-b border-gray-300 text-xs">
+            <span className="font-bold text-gray-800 uppercase tracking-wider flex items-center gap-1.5">
+              <FileCheck2 size={15} className="text-[#c9a227]" />
+              GRC &bull; Room {allRoomsStr} &bull; {guest.firstName} {guest.lastName}
+            </span>
+            <span className="text-gray-500 font-mono">Bill #{billNo}</span>
+          </div>
+
+          <div className="border-2 border-black p-3 text-[11px] leading-tight font-sans bg-white">
+            {/* HEADER SECTION */}
+            <div className="border-b-2 border-black pb-2 text-center relative">
+              <div className="flex items-center justify-between">
+                <div className="text-left w-2/3">
+                  <h1 className="text-3xl font-black tracking-widest font-serif uppercase text-black">
+                    YES HOTELS
+                  </h1>
+                  <p className="text-[10px] text-gray-800 font-medium mt-0.5 leading-snug">
+                    No. 51, Khata No. 749, Singasandra, Hosa Road Junction, Parappana Agrahara,<br />
+                    Electronic City Ph-2, Bengaluru-560100.
+                  </p>
+                </div>
+                <div className="text-right w-1/3 border-l border-black pl-3 py-1">
+                  <div className="text-[11px] font-bold text-gray-800">
+                    Bill No. <span className="text-red-700 text-lg font-black font-mono ml-1">{billNo}</span>
+                  </div>
+                  <div className="text-[9px] font-mono text-gray-600 mt-0.5">
+                    Ref: {b.bookingReference}
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-2 border-t border-black pt-1">
+                <h2 className="text-base font-black uppercase tracking-wider">
+                  GUEST REGISTRATION CARD
+                </h2>
+                <p className="text-[9px] font-bold text-gray-700 uppercase tracking-tight">
+                  THE REGISTRATION OF FOREIGNERS RULES - 1939 FORM - C HOTEL ARRIVAL REPORT, RULE 14, ID PROOF IS REQUIRED FOR CHECK - IN
+                </p>
+              </div>
+            </div>
+
+            {/* ID PROOF BANNER */}
+            <div className="flex border-b border-black py-1.5 px-2 bg-gray-50 text-[11px] font-bold items-center justify-between">
+              <div className="flex items-center gap-4">
+                <span>ID :</span>
+                <label className="flex items-center gap-1 cursor-pointer">
+                  <input type="checkbox" checked={isAadhaar} readOnly className="accent-black w-3.5 h-3.5" />
+                  <span>AAD</span>
+                </label>
+                <label className="flex items-center gap-1 cursor-pointer">
+                  <input type="checkbox" checked={isDL} readOnly className="accent-black w-3.5 h-3.5" />
+                  <span>DL</span>
+                </label>
+                <label className="flex items-center gap-1 cursor-pointer">
+                  <input type="checkbox" checked={isVoter} readOnly className="accent-black w-3.5 h-3.5" />
+                  <span>E.C.I</span>
+                </label>
+                <label className="flex items-center gap-1 cursor-pointer">
+                  <input type="checkbox" checked={isGovt} readOnly className="accent-black w-3.5 h-3.5" />
+                  <span>Govt. ID</span>
+                </label>
+              </div>
+              <div className="font-mono text-xs font-black">
+                ID No. : <span className="tracking-wider bg-white px-2 py-0.5 border border-black">{guest.idNumber || "—"}</span>
+              </div>
+            </div>
+
+            {/* MAIN 2-COLUMN SECTION */}
+            <div className="grid grid-cols-12 border-b border-black">
+              {/* LEFT COLUMN: OFFICE USE & FOREIGNERS BOX (5 COLS) */}
+              <div className="col-span-5 border-r border-black p-2 space-y-3 bg-gray-50/50">
+                {/* BOX 1: FOR OFFICE USE ONLY */}
+                <div className="border border-black p-2 bg-white">
+                  <div className="text-[10px] font-black uppercase text-center border-b border-black pb-1 mb-2 tracking-wide">
+                    For Office Use Only
+                  </div>
+                  <div className="space-y-1.5 text-[10.5px]">
+                    <div className="flex justify-between border-b border-dotted border-gray-400 pb-0.5">
+                      <span className="font-bold">Room No.</span>
+                      <span className="font-black text-sm font-mono">{allRoomsStr}</span>
+                      <span className="font-bold ml-2">Tariff</span>
+                      <span className="font-black font-mono">₹{dailyTariff}/-</span>
+                    </div>
+                    <div className="flex justify-between border-b border-dotted border-gray-400 pb-0.5">
+                      <span className="font-bold">Extra Bed</span>
+                      <span className="font-mono">{b.extraPersonsWithBed || "—"}</span>
+                      <span className="font-bold ml-2">Bill No.</span>
+                      <span className="font-mono">{billNo}</span>
+                    </div>
+                    <div className="flex justify-between border-b border-dotted border-gray-400 pb-0.5">
+                      <span className="font-bold">Advance</span>
+                      <span className="font-black font-mono text-green-800">₹{advanceTotal}/-</span>
+                      <span className="font-bold ml-2">Receipt No.</span>
+                      <span className="font-mono">{primaryAdvance?.advanceNumber?.slice(-6) || b.advanceReceiptNo || "—"}</span>
+                    </div>
+
+                    <div className="pt-1">
+                      <div className="font-bold text-[9px] uppercase text-gray-700">Billing Instruction / Settlement :</div>
+                      <div className="grid grid-cols-2 gap-1 mt-1 text-[10px]">
+                        <span className="flex items-center gap-1">
+                          <input type="checkbox" checked={advanceMethod === "CASH"} readOnly className="accent-black w-3 h-3" /> Cash
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <input type="checkbox" checked={advanceMethod === "CARD"} readOnly className="accent-black w-3 h-3" /> Card / DD
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <input type="checkbox" checked={advanceMethod === "UPI"} readOnly className="accent-black w-3 h-3" /> UPI
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <input type="checkbox" checked={b.paymentStatus === "PAID"} readOnly className="accent-black w-3 h-3" /> Net Pay
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="pt-1 border-t border-dotted border-gray-400">
+                      <div className="font-bold text-[9px] uppercase text-gray-700">Type of Plan :</div>
+                      <div className="flex justify-between mt-1 text-[10px]">
+                        <span className="flex items-center gap-1">
+                          <input type="checkbox" checked={b.mealPlan === "EP" || b.ratePlan === "EP" || (!b.mealPlan && !b.ratePlan)} readOnly className="accent-black w-3 h-3" /> EP
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <input type="checkbox" checked={b.mealPlan === "CP" || b.ratePlan === "CP"} readOnly className="accent-black w-3 h-3" /> CP
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <input type="checkbox" checked={b.mealPlan === "MAP" || b.ratePlan === "MAP"} readOnly className="accent-black w-3 h-3" /> MAP
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <input type="checkbox" checked={b.mealPlan === "AP" || b.ratePlan === "AP"} readOnly className="accent-black w-3 h-3" /> AP
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="pt-1 flex justify-between font-bold text-[10px]">
+                      <span>B/ID No.</span>
+                      <span className="font-mono">{b.source || "Walk-In"}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* BOX 2: FOR FOREIGNERS ONLY */}
+                <div className="border border-black p-2 bg-white">
+                  <div className="text-[10px] font-black uppercase text-center border-b border-black pb-1 mb-1.5 tracking-wide">
+                    For Foreigners Only
+                  </div>
+                  <div className="space-y-1 text-[10px]">
+                    <div className="flex justify-between border-b border-gray-200 pb-0.5">
+                      <span className="font-semibold text-gray-700">Passport No.</span>
+                      <span className="font-mono font-bold">{foreign?.passportNumber || "—"}</span>
+                    </div>
+                    <div className="flex justify-between border-b border-gray-200 pb-0.5">
+                      <span className="font-semibold text-gray-700">Place of Issue</span>
+                      <span>{foreign?.passportIssuePlace || "—"}</span>
+                    </div>
+                    <div className="flex justify-between border-b border-gray-200 pb-0.5">
+                      <span className="font-semibold text-gray-700">Date of Issue</span>
+                      <span>{foreign?.passportIssueDate ? format(new Date(foreign.passportIssueDate), "dd/MM/yyyy") : "—"}</span>
+                    </div>
+                    <div className="flex justify-between border-b border-gray-200 pb-0.5">
+                      <span className="font-semibold text-gray-700">Date of Expiry</span>
+                      <span>{foreign?.passportExpiryDate ? format(new Date(foreign.passportExpiryDate), "dd/MM/yyyy") : "—"}</span>
+                    </div>
+                    <div className="flex justify-between border-b border-gray-200 pb-0.5">
+                      <span className="font-semibold text-gray-700">Visa No.</span>
+                      <span className="font-mono font-bold">{foreign?.visaNumber || "—"}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="font-semibold text-gray-700">Visa Date / Place</span>
+                      <span>{foreign?.visaDate ? format(new Date(foreign.visaDate), "dd/MM/yyyy") : "—"}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* RIGHT COLUMN: GUEST DETAILS (7 COLS) */}
+              <div className="col-span-7 p-3 space-y-2">
+                <div className="border-b border-gray-300 pb-1">
+                  <span className="text-[9px] uppercase font-bold text-gray-600 block">Name (in capital Letters)</span>
+                  <span className="text-base font-black tracking-wider uppercase">
+                    {guest.firstName} {guest.lastName}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 border-b border-gray-300 pb-1">
+                  <div>
+                    <span className="text-[9px] uppercase font-bold text-gray-600 block">Designation</span>
+                    <span className="font-semibold">{guest.designation || "—"}</span>
+                  </div>
+                  <div>
+                    <span className="text-[9px] uppercase font-bold text-gray-600 block">Name of Organization</span>
+                    <span className="font-semibold">{guest.organization || "—"}</span>
+                  </div>
+                </div>
+
+                <div className="border-b border-gray-300 pb-1">
+                  <span className="text-[9px] uppercase font-bold text-gray-600 block">Address</span>
+                  <span className="font-medium">{guest.address || "—"}</span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 border-b border-gray-300 pb-1">
+                  <div>
+                    <span className="text-[9px] uppercase font-bold text-gray-600 block">Mobile No.</span>
+                    <span className="font-mono font-bold">{guest.phone || "—"}</span>
+                  </div>
+                  <div>
+                    <span className="text-[9px] uppercase font-bold text-gray-600 block">Email</span>
+                    <span className="font-mono text-[10px] truncate block">{guest.email || "—"}</span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-2 border-b border-gray-300 pb-1">
+                  <div>
+                    <span className="text-[9px] uppercase font-bold text-gray-600 block">Nationality</span>
+                    <span className="font-semibold">{guest.nationality || "INDIAN"}</span>
+                  </div>
+                  <div>
+                    <span className="text-[9px] uppercase font-bold text-gray-600 block">DOB / Age</span>
+                    <span>{guest.dateOfBirth ? format(new Date(guest.dateOfBirth), "dd/MM/yyyy") : (guest.age ? `${guest.age} Yrs` : "—")}</span>
+                  </div>
+                  <div>
+                    <span className="text-[9px] uppercase font-bold text-gray-600 block">Vehicle Reg. No.</span>
+                    <span className="font-mono font-bold uppercase">{guest.vehicleNumber || "—"}</span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-2 border-b border-gray-300 pb-1">
+                  <div>
+                    <span className="text-[9px] uppercase font-bold text-gray-600 block">No. of Persons</span>
+                    <span className="font-bold">Adult: {b.adults || 1}</span>
+                  </div>
+                  <div>
+                    <span className="text-[9px] uppercase font-bold text-gray-600 block">Child</span>
+                    <span>{b.children || 0}</span>
+                  </div>
+                  <div>
+                    <span className="text-[9px] uppercase font-bold text-gray-600 block">Stay Days</span>
+                    <span className="font-bold">{nights} Day(s)</span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 border-b border-gray-300 pb-1">
+                  <div>
+                    <span className="text-[9px] uppercase font-bold text-gray-600 block">Date of Arr &amp; Time</span>
+                    <span className="font-bold">{format(checkInDate, "dd/MM/yyyy")} &bull; {b.arrivalTime || "12:00 PM"}</span>
+                  </div>
+                  <div>
+                    <span className="text-[9px] uppercase font-bold text-gray-600 block">Date of Dep &amp; Time</span>
+                    <span className="font-bold">{format(checkOutDate, "dd/MM/yyyy")} &bull; {b.departureTime || "11:00 AM"}</span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <span className="text-[9px] uppercase font-bold text-gray-600 block">Purpose of Visit</span>
+                    <span className="font-semibold">{guest.purposeOfVisit || "Personal / Business"}</span>
+                  </div>
+                  <div>
+                    <span className="text-[9px] uppercase font-bold text-gray-600 block">Proceeding To</span>
+                    <span className="font-semibold">{guest.proceedingTo || "—"}</span>
+                  </div>
+                </div>
+
+                {guest.gstin && (
+                  <div className="pt-1 border-t border-gray-200">
+                    <span className="text-[9px] uppercase font-bold text-gray-600">Company GSTIN: </span>
+                    <span className="font-mono font-bold">{guest.gstin}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* CUSTOMER PHOTO & ID PROOF ATTACHMENTS SECTION */}
+            {guest.idProofImages && guest.idProofImages.length > 0 && (
+              <div className="border-b border-black p-2 bg-gray-50">
+                <div className="text-[10px] font-bold uppercase tracking-wider text-gray-700 flex items-center gap-1.5 mb-1.5">
+                  <FileCheck2 size={13} className="text-black" />
+                  Verified Customer KYC Documents &amp; Identity Records:
+                </div>
+                <div className="flex gap-4 overflow-x-auto py-1">
+                  {guest.idProofImages.map((img: string, idx: number) => (
+                    <div key={idx} className="border border-black bg-white p-1 rounded shadow-sm text-center">
+                      {img.startsWith("data:image") || img.startsWith("http") ? (
+                        <img
+                          src={img}
+                          alt={`Customer Document ${idx + 1}`}
+                          className="h-28 w-44 object-contain rounded border border-gray-200"
+                        />
+                      ) : (
+                        <div className="h-24 w-36 bg-gray-100 flex items-center justify-center text-[9px] text-gray-500">
+                          ID Document #{idx + 1}
+                        </div>
+                      )}
+                      <span className="text-[9px] font-bold text-gray-600 mt-1 block uppercase">
+                        Document #{idx + 1}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* HOTEL RULES AND REGULATIONS & CONSENT FORM */}
+            <div className="border-b border-black p-2.5 text-[9.5px] leading-tight space-y-1.5 bg-gray-50/30">
+              <div className="font-black uppercase tracking-wider text-black flex items-center gap-1">
+                <ShieldCheck size={13} />
+                Hotel Rules, Regulations &amp; Guest Consent Terms:
+              </div>
+              <ol className="list-decimal pl-4 space-y-0.5 text-gray-800">
+                <li><strong>Check-in: 12:00 Noon | Check-out: 11:00 AM.</strong> Extensions or late departures must be approved in advance by front office management.</li>
+                <li><strong>Identity Verification:</strong> Valid original Govt Photo ID (Aadhaar / Voter ID / Passport / Driving License) is mandatory for every staying guest as per police directives.</li>
+                <li><strong>Valuables:</strong> Guests are requested to deposit cash and jewelry in the hotel safe deposit lockers. Management shall not be responsible for loss of unattended valuables.</li>
+                <li><strong>Non-Smoking Policy:</strong> Smoking, consumption of illegal contraband, and hazardous materials are strictly prohibited within rooms and indoor corridors.</li>
+                <li><strong>Visitors Policy:</strong> Visitors are permitted strictly in public lobby lounges. Non-resident visitors are not permitted in guest rooms after 10:00 PM without formal registration.</li>
+                <li><strong>Property Damages:</strong> Any damage, breakages, or staining to hotel fixtures, electronic equipment, or linen will be charged directly to the guest's folio.</li>
+                <li><strong>Payment &amp; Liability:</strong> Regardless of third-party or corporate billing instructions, the undersigned guest agrees to remain personally liable for the full settlement of all bills.</li>
+                <li><strong>Key Deposit:</strong> Room key cards must be returned to the reception counter upon check-out.</li>
+              </ol>
+              <div className="font-bold text-[9px] pt-1 text-black">
+                DECLARATION: I hereby declare that all particulars given above are true and correct. I have read, understood, and agree to abide by the rules and regulations of YES HOTELS.
+              </div>
+            </div>
+
+            {/* SIGNATURES SECTION */}
+            <div className="grid grid-cols-3 pt-8 pb-3 text-center font-bold text-[10px] uppercase">
+              <div className="px-4">
+                <div className="border-t border-black pt-1">Receptionist</div>
+              </div>
+              <div className="px-4">
+                <div className="border-t border-black pt-1">Front Office Manager</div>
+              </div>
+              <div className="px-4">
+                <div className="border-t-2 border-black pt-1 font-black text-[11px]">Guest Signature</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* DOCUMENT 2: GST TAX INVOICE — IDENTICAL TO ADMIN FOLIO PRINT */}
+      {(docType === "BOTH" || docType === "GST") && (
+        <div className="bg-white p-4 print:p-0 mx-auto max-w-[850px] print:m-0 print:break-after-page">
+          <div className="print:hidden flex justify-between items-center mb-2 pb-1 border-b border-gray-300 text-xs">
+            <span className="font-bold text-gray-800 uppercase tracking-wider flex items-center gap-1.5">
+              <Receipt size={15} className="text-[#c9a227]" />
+              GST Invoice &bull; Room {displayRoomHeader} &bull; Bill #{invoiceNo}
+            </span>
+            <span className="text-gray-500 font-mono">Invoice #{invoiceNo}</span>
+          </div>
+
+          <div className="border border-black text-[10px] sm:text-[11px] leading-tight font-medium bg-white">
+            {/* HEADER SECTION */}
+            <div className="flex border-b border-black">
+              <div className="w-1/3 p-2 flex items-center justify-center border-r border-black">
+                <div className="flex flex-col items-center">
+                  <h1 className="font-serif text-3xl font-black italic tracking-widest uppercase">YES HOTELS</h1>
+                </div>
+              </div>
+              <div className="w-2/3 p-2 text-right">
+                <h2 className="font-bold text-sm uppercase">YES HOTELS</h2>
+                <p>No. 51, Khata No. 749, Singasandra, Hosa Road Junction,</p>
+                <p>Parappana Agrahara, Electronic City Ph-2,</p>
+                <p>Bengaluru, Karnataka - 560100</p>
+                <p>Phone : 080-28522333 / 9902391178,</p>
+                <p>Email : SALES@YESHOTELS.COM,</p>
+                <p>Web : WWW.YESHOTELS.COM</p>
+                <p>GST : 29AAAFY1234A1Z5</p>
+              </div>
+            </div>
+
+            {/* INVOICE TITLE */}
+            <div className="text-center border-b border-black py-1 font-bold text-sm bg-gray-100 relative">
+              {isProvisional ? "PROVISIONAL BILL (NOT A TAX INVOICE)" : "GST INVOICE"}
+              <div className="absolute right-2 top-1 text-[9px] font-normal">ACCOUNTS COPY - DUPLICATE</div>
+            </div>
+
+            {/* INFO ROW 1 */}
+            <div className="flex border-b border-black">
+              <div className="w-1/2 p-1 border-r border-black grid grid-cols-[80px_1fr] gap-1">
+                <div>Invoice No.</div><div>: {invoiceNo}</div>
+                <div>Date</div><div>: {format(invoiceDate, "dd-MMM-yy")}</div>
+                <div>State</div><div>: KARNATAKA</div>
+              </div>
+              <div className="w-1/4 p-1 border-r border-black grid grid-cols-[60px_1fr] gap-1">
+                <div>GRC #</div><div>: {b.billNumber || grcNo}</div>
+                <div className="col-span-2">&nbsp;</div>
+                <div>State Code</div><div>: 29</div>
+              </div>
+              <div className="w-1/4 p-1 grid grid-cols-[60px_1fr] gap-1">
+                <div>SAC Code</div><div>: 996311</div>
+                <div>POS</div><div>: KARNATAKA</div>
+              </div>
+            </div>
+
+            {/* INFO ROW 2 */}
+            <div className="flex border-b border-black min-h-[6rem]">
+              <div className="w-1/2 p-1 border-r border-black relative">
+                <div className="grid grid-cols-[60px_1fr] gap-1 h-full">
+                  <div>Guest</div><div className="font-bold uppercase">MR/MS {guest.firstName} {guest.lastName}</div>
+                  <div>Address</div><div className="uppercase">{guest.address || "Bengaluru, Karnataka"}</div>
+                  <div className="absolute bottom-1 w-full grid grid-cols-[80px_1fr] gap-1 pr-2">
+                    <div>GSTIN / UIN</div><div className="truncate">: {guest.gstin || "—"}</div>
+                    <div>State</div><div>: KARNATAKA <span className="float-right mr-4">State Code 29</span></div>
+                  </div>
+                </div>
+              </div>
+              <div className="w-1/2 p-1 grid grid-cols-[80px_1fr_80px_1fr] gap-1 content-start pb-2">
+                <div>Arr Date</div><div>: {format(checkInDate, "dd-MMM-yy")}</div>
+                <div>Room No</div><div className="font-bold">: {displayRoomHeader}</div>
+                <div>Arr Time</div><div>: {b.arrivalTime || "12:00"}</div><div className="col-span-2"></div>
+                <div>Dept Date</div><div>: {format(checkOutDate, "dd-MMM-yy")}</div><div className="col-span-2"></div>
+                <div>Dept Time</div><div>: {b.departureTime || "11:00"}</div><div className="col-span-2"></div>
+                <div>Stay Days</div><div>: {nights}</div><div className="col-span-2"></div>
+                <div className="col-span-4 mt-1 font-bold">M {b.adults || 1} F 0 C {b.children || 0}</div>
+              </div>
+            </div>
+
+            {/* TABLE */}
+            <table className="w-full text-center border-collapse">
+              <thead>
+                <tr className="border-b border-black">
+                  <th className="border-r border-black p-1 font-normal" rowSpan={2}>Description</th>
+                  <th className="border-r border-black p-1 font-normal" rowSpan={2}>Tariff</th>
+                  <th className="border-r border-black p-1 font-normal" rowSpan={2}>Ext Bed</th>
+                  <th className="border-r border-black p-1 font-normal" rowSpan={2}>Disc</th>
+                  <th className="border-r border-black p-1 font-normal" rowSpan={2}>Taxable<br/>Value</th>
+                  <th className="border-r border-black p-1 font-normal" colSpan={2}>CGST</th>
+                  <th className="border-r border-black p-1 font-normal" colSpan={2}>SGST</th>
+                  <th className="border-r border-black p-1 font-normal" rowSpan={2}>F&amp;B</th>
+                  <th className="border-r border-black p-1 font-normal" rowSpan={2}>Others</th>
+                  <th className="p-1 font-normal" rowSpan={2}>Total</th>
+                </tr>
+                <tr className="border-b border-black">
+                  <th className="border-r border-black p-1 border-t border-black font-normal">Rate</th>
+                  <th className="border-r border-black p-1 border-t border-black font-normal">Amount</th>
+                  <th className="border-r border-black p-1 border-t border-black font-normal">Rate</th>
+                  <th className="border-r border-black p-1 border-t border-black font-normal">Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                {groupedData.map((row: any, i: number) => {
+                  const rowTaxable = row.tariff + row.extBed - row.disc;
+                  const rowTotal = rowTaxable + row.cgst + row.sgst + row.fnb + row.others;
+                  const cgstRate = rowTaxable > 0 && row.cgst > 0
+                    ? `${Number(((row.cgst / rowTaxable) * 100).toFixed(1))}%`
+                    : "-%";
+                  const sgstRate = rowTaxable > 0 && row.sgst > 0
+                    ? `${Number(((row.sgst / rowTaxable) * 100).toFixed(1))}%`
+                    : "-%";
+                  return (
+                    <tr key={i} className="align-top h-8">
+                      <td className="border-r border-black p-1 text-left font-mono font-bold">{row.description}</td>
+                      <td className="border-r border-black p-1 text-right">{row.tariff ? row.tariff.toFixed(2) : "-"}</td>
+                      <td className="border-r border-black p-1 text-right">{row.extBed ? row.extBed.toFixed(2) : "-"}</td>
+                      <td className="border-r border-black p-1 text-right">{row.disc ? row.disc.toFixed(2) : "-"}</td>
+                      <td className="border-r border-black p-1 text-right">{rowTaxable ? rowTaxable.toFixed(2) : "-"}</td>
+                      <td className="border-r border-black p-1">{cgstRate}</td>
+                      <td className="border-r border-black p-1 text-right">{row.cgst > 0 ? row.cgst.toFixed(2) : "-"}</td>
+                      <td className="border-r border-black p-1">{sgstRate}</td>
+                      <td className="border-r border-black p-1 text-right">{row.sgst > 0 ? row.sgst.toFixed(2) : "-"}</td>
+                      <td className="border-r border-black p-1 text-right">{row.fnb ? row.fnb.toFixed(2) : "-"}</td>
+                      <td className="border-r border-black p-1 text-right">{row.others ? row.others.toFixed(2) : "-"}</td>
+                      <td className="p-1 text-right font-bold">{rowTotal ? rowTotal.toFixed(2) : "-"}</td>
+                    </tr>
+                  );
+                })}
+                {/* Empty space filler */}
+                <tr className="h-16">
+                  <td className="border-r border-black"></td><td className="border-r border-black"></td><td className="border-r border-black"></td><td className="border-r border-black"></td><td className="border-r border-black"></td><td className="border-r border-black"></td><td className="border-r border-black"></td><td className="border-r border-black"></td><td className="border-r border-black"></td><td className="border-r border-black"></td><td className="border-r border-black"></td><td></td>
+                </tr>
+                {/* SUB TOTAL ROW */}
+                <tr className="border-t border-b border-black font-bold bg-gray-50">
+                  <td className="border-r border-black p-1 text-left font-black">Sub Total</td>
+                  <td className="border-r border-black p-1 text-right font-bold">{totals.tariff.toFixed(2)}</td>
+                  <td className="border-r border-black p-1 text-right">{totals.extBed ? totals.extBed.toFixed(2) : "-"}</td>
+                  <td className="border-r border-black p-1 text-right">{totals.disc ? totals.disc.toFixed(2) : "-"}</td>
+                  <td className="border-r border-black p-1 text-right font-bold">{taxableValue.toFixed(2)}</td>
+                  <td className="border-r border-black p-1 bg-white font-bold" colSpan={2}>{totals.cgst ? totals.cgst.toFixed(2) : "-"}</td>
+                  <td className="border-r border-black p-1 bg-white font-bold" colSpan={2}>{totals.sgst ? totals.sgst.toFixed(2) : "-"}</td>
+                  <td className="border-r border-black p-1 text-right">{totals.fnb ? totals.fnb.toFixed(2) : "-"}</td>
+                  <td className="border-r border-black p-1 text-right">{totals.others ? totals.others.toFixed(2) : "-"}</td>
+                  <td className="p-1 text-right font-black">{grandTotal.toFixed(2)}</td>
+                </tr>
+              </tbody>
+            </table>
+
+            {/* BOTTOM SECTION */}
+            <div className="flex h-32">
+              <div className="w-3/4 border-r border-black p-1 relative flex flex-col justify-between">
+                <div>
+                  <div className="flex font-bold">
+                    <div className="w-20">Advance</div>
+                    <div className="flex-1 font-mono text-[9px]">
+                      {advanceLines.length > 0 ? (
+                        advanceLines.map((a: any, i: number) => (
+                          <span key={i} className="mr-2">| {format(new Date(a.date), "dd.MM")}. Rs.{a.amount} ({a.paymentReference || "ADV"}): {a.paymentMode || "—"} </span>
+                        ))
+                      ) : advanceTotal > 0 ? (
+                        <span>| {format(new Date(b.checkInDate), "dd.MM")}. Rs.{advanceTotal} ({primaryAdvance?.advanceNumber?.slice(-6) || "ADV"}): {primaryAdvance?.method || primaryAdvance?.paymentMode || "—"} </span>
+                      ) : (
+                        <span>-</span>
+                      )}
+                    </div>
+                  </div>
+                  {checkoutPaymentLines.length > 0 && (
+                    <div className="flex font-bold mt-0.5 text-[9px]">
+                      <div className="w-20 text-gray-700">Settlement</div>
+                      <div className="flex-1 font-mono text-green-800">
+                        {checkoutPaymentLines.map((p: any, i: number) => (
+                          <span key={i} className="mr-2">| {format(new Date(p.date), "dd.MM")}. Rs.{p.amount} ({p.paymentReference || "PAID"}): {p.paymentMode || "—"} </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  <div className="mt-1.5 text-[9px]">
+                    <span className="font-bold">Mode of Payment: </span>
+                    <span className="font-mono">
+                      {(() => {
+                        // Sum of money received by mode: advances and payments on this bill (from the linked records).
+                        const byMode = new Map<string, number>();
+                        const add = (mode: string | undefined, amt: number) => byMode.set(mode || "Not recorded", (byMode.get(mode || "Not recorded") || 0) + (Number(amt) || 0));
+                        if (advanceLines.length > 0) advanceLines.forEach((l: any) => add(l.paymentMode, l.amount));
+                        else advancesList.forEach((x: any) => add(x.method, x.amount));
+                        checkoutPaymentLines.forEach((l: any) => add(l.paymentMode, l.amount));
+                        return byMode.size === 0
+                          ? "— No payment received yet"
+                          : [...byMode.entries()].map(([m, v]) => `${m} ₹${v.toLocaleString("en-IN")}`).join("  |  ");
+                      })()}
+                    </span>
+                  </div>
+                </div>
+
+                <div>
+                  <div className="font-bold flex mt-2">
+                    <span className="w-32">Balance Rupees:</span>
+                    <span className="uppercase font-mono text-[9px]">{numberToWords(roundedNet)}</span>
+                  </div>
+                  <div className="mt-0.5">
+                    <span className="font-bold">Service Bills:</span>
+                    <span className="text-[9px] ml-1 font-mono">
+                      {totals.fnb > 0 ? `|${format(new Date(), "dd.MM")}. Rs.${totals.fnb} (#POS) |` : "— None recorded"}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="w-1/4">
+                <div className="flex h-1/3 border-b border-black font-bold items-center">
+                  <div className="w-2/3 p-1 border-r border-black h-full flex items-center">Advance</div>
+                  <div className="w-1/3 p-1 text-right">{advanceTotal.toFixed(2)}</div>
+                </div>
+                <div className="flex h-1/3 border-b border-black font-bold items-center">
+                  <div className="w-2/3 p-1 border-r border-black h-full flex items-center">Round Off</div>
+                  <div className="w-1/3 p-1 text-right">{roundOff.toFixed(2)}</div>
+                </div>
+                <div className="flex h-1/3 font-bold bg-gray-50 items-center">
+                  <div className="w-2/3 p-1 border-r border-black h-full flex items-center font-black">Net</div>
+                  <div className="w-1/3 p-1 text-right font-black text-sm">{roundedNet.toFixed(2)}</div>
+                </div>
+              </div>
+            </div>
+
+            {/* FOOTER */}
+            <div className="border-t border-black p-2 relative h-32">
+              <div className="text-[9px] w-1/2">
+                <p>*Regardless of the billing instruction, I agree to be held personally liable for the payment of the total amount of bill for my stay in the hotel.</p>
+                <p>*All disputes subject to BENGALURU Jurisdiction.</p>
+              </div>
+              <div className="absolute top-2 right-2 text-right">
+                <p>Certified that the particulars given above are true and correct.</p>
+                <p className="mt-2 font-bold">For YES HOTELS</p>
+              </div>
+
+              <div className="absolute top-12 w-full text-center flex justify-center items-center gap-2 text-[10px] font-bold">
+                <Key size={14} className="text-gray-600 rotate-90" />
+                We Request You To Return The Room Key
+              </div>
+
+              <div className="absolute bottom-6 left-2 font-bold uppercase text-[10px]">
+                Guest Signatory
+              </div>
+
+              <div className="absolute bottom-2 right-2 text-right">
+                <p className="font-bold uppercase text-[10px]">USER</p>
+                <p className="font-bold uppercase text-[10px]">Authorised Signatory</p>
+              </div>
+
+              <div className="absolute bottom-0 w-full text-center text-[10px] font-bold">
+                Thank You! Visit Again!
+              </div>
+
+              <div className="absolute -bottom-4 right-0 text-[8px]">E.&amp;O.E.</div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function AdminBulkDocViewer() {
   const [docType, setDocType] = useState<"BOTH" | "GRC" | "GST">("BOTH");
   const [viewMode, setViewMode] = useState<"PAGED" | "ALL">("PAGED");
+  const [statusFilter, setStatusFilter] = useState<string>("ALL");
+  const [searchQuery, setSearchQuery] = useState<string>("");
   const [currentIndex, setCurrentIndex] = useState(0);
   const [selectedIds, setSelectedIds] = useState<Record<string, boolean>>({});
 
-  // 1. Fetch In-House Stays and Active Bookings
+  // 1. Fetch All Bookings / Stays
   const { data: bookingsData, isLoading } = useQuery({
-    queryKey: ["bulk-doc-bookings"],
+    queryKey: ["bulk-doc-bookings", statusFilter],
     queryFn: async () => {
-      const res = await api.get("/admin/bookings?limit=100&status=CHECKED_IN");
-      const list = res.data?.data?.bookings || [];
-      if (list.length === 0) {
-        const allRes = await api.get("/admin/bookings?limit=50");
-        return allRes.data?.data?.bookings || [];
+      const params = new URLSearchParams({ limit: "200" });
+      if (statusFilter !== "ALL") {
+        params.append("status", statusFilter);
       }
-      return list;
+      const res = await api.get(`/admin/bookings?${params.toString()}`);
+      return res.data?.data?.bookings || [];
     },
     refetchInterval: 10000,
   });
 
-  const bookings = bookingsData || [];
+  const rawBookings = bookingsData || [];
+
+  // Filter by search query
+  const bookings = useMemo(() => {
+    if (!searchQuery.trim()) return rawBookings;
+    const q = searchQuery.toLowerCase().trim();
+    return rawBookings.filter((b: any) => {
+      const name = `${b.guestDetails?.firstName || ""} ${b.guestDetails?.lastName || ""}`.toLowerCase();
+      const room = (b.assignedRoom?.roomNumber || "").toLowerCase();
+      const ref = (b.bookingReference || "").toLowerCase();
+      const bill = (b.billNumber || "").toLowerCase();
+      const phone = (b.guestDetails?.phone || "").toLowerCase();
+      return name.includes(q) || room.includes(q) || ref.includes(q) || bill.includes(q) || phone.includes(q);
+    });
+  }, [rawBookings, searchQuery]);
+
+  // Reset index when filter or search changes
+  useEffect(() => {
+    setCurrentIndex(0);
+  }, [statusFilter, searchQuery]);
 
   // Toggle selection for bulk print
   const toggleSelect = (id: string) => {
@@ -95,18 +946,75 @@ export default function AdminBulkDocViewer() {
               GRC &amp; GST Invoices &bull; Bulk &amp; Paged Viewer
             </h1>
             <p className="text-xs text-gray-600 mt-0.5">
-              Review and print physical Guest Registration Cards (Photo 2) and GST Tax Invoices (Photo 1) individually or in bulk.
+              Review and print physical Guest Registration Cards (Photo 2) and GST Tax Invoices (Photo 1) across all guest stays.
             </p>
           </div>
 
           <div className="flex items-center gap-2">
-            <Button
+            <button
               onClick={handlePrint}
-              className="bg-black hover:bg-gray-800 text-white font-bold text-xs uppercase px-5 py-2 flex items-center gap-2 shadow"
+              className="bg-[#1e293b] hover:bg-black font-bold text-xs uppercase px-5 py-2.5 rounded-lg flex items-center gap-2 shadow-sm transition cursor-pointer"
+              style={{ color: "#ffffff", backgroundColor: "#0f172a" }}
             >
-              <Printer size={16} className="text-[#c9a227]" />
-              {viewMode === "ALL" ? `Print All Selected (${activeBookingsToRender.length})` : "Print Current Document"}
-            </Button>
+              <Printer size={16} className="text-amber-400" />
+              <span style={{ color: "#ffffff", fontWeight: "bold" }}>
+                {viewMode === "ALL" ? `Print All Selected (${activeBookingsToRender.length})` : "Print Current Document"}
+              </span>
+            </button>
+          </div>
+        </div>
+
+        {/* FILTERS & SEARCH ROW */}
+        <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-gray-200 text-xs">
+          {/* Status Filter Pills */}
+          <div className="flex items-center gap-2">
+            <span className="font-bold text-gray-700">Filter Status:</span>
+            <div className="inline-flex rounded-lg border border-gray-300 p-0.5 bg-gray-100">
+              <button
+                onClick={() => setStatusFilter("ALL")}
+                className={`px-3 py-1 rounded text-xs font-bold transition ${statusFilter === "ALL" ? "bg-white text-gray-900 shadow-sm border border-gray-200" : "text-gray-600 hover:text-black"}`}
+              >
+                All Bookings ({rawBookings.length})
+              </button>
+              <button
+                onClick={() => setStatusFilter("CHECKED_IN")}
+                className={`px-3 py-1 rounded text-xs font-bold transition ${statusFilter === "CHECKED_IN" ? "bg-emerald-600 text-white shadow-sm" : "text-gray-600 hover:text-black"}`}
+                style={statusFilter === "CHECKED_IN" ? { color: "#ffffff", backgroundColor: "#059669" } : {}}
+              >
+                In-House
+              </button>
+              <button
+                onClick={() => setStatusFilter("CHECKED_OUT")}
+                className={`px-3 py-1 rounded text-xs font-bold transition ${statusFilter === "CHECKED_OUT" ? "bg-blue-600 text-white shadow-sm" : "text-gray-600 hover:text-black"}`}
+                style={statusFilter === "CHECKED_OUT" ? { color: "#ffffff", backgroundColor: "#2563eb" } : {}}
+              >
+                Checked Out
+              </button>
+              <button
+                onClick={() => setStatusFilter("CONFIRMED")}
+                className={`px-3 py-1 rounded text-xs font-bold transition ${statusFilter === "CONFIRMED" ? "bg-amber-600 text-white shadow-sm" : "text-gray-600 hover:text-black"}`}
+                style={statusFilter === "CONFIRMED" ? { color: "#ffffff", backgroundColor: "#d97706" } : {}}
+              >
+                Confirmed
+              </button>
+            </div>
+          </div>
+
+          {/* Quick Search */}
+          <div className="flex items-center border border-gray-300 rounded-lg px-2.5 py-1 bg-gray-50 gap-2 w-64">
+            <Search size={14} className="text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search guest, room, bill #..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="bg-transparent text-xs focus:outline-none w-full"
+            />
+            {searchQuery && (
+              <button onClick={() => setSearchQuery("")} className="text-gray-400 hover:text-black text-xs font-bold">
+                &times;
+              </button>
+            )}
           </div>
         </div>
 
@@ -143,13 +1051,13 @@ export default function AdminBulkDocViewer() {
             <div className="inline-flex rounded-lg border border-gray-300 p-0.5 bg-gray-100">
               <button
                 onClick={() => setViewMode("PAGED")}
-                className={`px-3 py-1 rounded text-xs font-bold transition ${viewMode === "PAGED" ? "bg-[#c9a227] text-white shadow-sm" : "text-gray-600 hover:text-black"}`}
+                className={`px-3 py-1 rounded text-xs font-bold transition ${viewMode === "PAGED" ? "bg-white text-gray-900 shadow-sm border border-gray-200" : "text-gray-600 hover:text-black"}`}
               >
                 One by One (Paged)
               </button>
               <button
                 onClick={() => setViewMode("ALL")}
-                className={`px-3 py-1 rounded text-xs font-bold transition ${viewMode === "ALL" ? "bg-[#c9a227] text-white shadow-sm" : "text-gray-600 hover:text-black"}`}
+                className={`px-3 py-1 rounded text-xs font-bold transition ${viewMode === "ALL" ? "bg-white text-gray-900 shadow-sm border border-gray-200" : "text-gray-600 hover:text-black"}`}
               >
                 Bulk All ({bookings.length})
               </button>
@@ -158,29 +1066,39 @@ export default function AdminBulkDocViewer() {
 
           {/* Paged Navigation (When in One by One Mode) */}
           {viewMode === "PAGED" && bookings.length > 0 && (
-            <div className="flex items-center gap-2 bg-gray-100 px-3 py-1 rounded-lg border border-gray-300">
+            <div className="flex flex-wrap items-center gap-2 bg-gray-100 px-3 py-1.5 rounded-lg border border-gray-300">
               <button
                 disabled={currentIndex === 0}
                 onClick={() => setCurrentIndex(i => Math.max(0, i - 1))}
-                className="p-1 rounded hover:bg-white disabled:opacity-30 disabled:hover:bg-transparent"
+                className="p-1 rounded bg-white hover:bg-gray-200 border border-gray-300 text-gray-800 disabled:opacity-30 disabled:hover:bg-white shadow-xs cursor-pointer"
                 title="Previous Stay"
               >
                 <ArrowLeft size={16} />
               </button>
-              <span className="font-mono font-bold text-gray-800">
+              <span className="font-mono font-bold text-gray-800 px-1">
                 {currentIndex + 1} of {bookings.length}
               </span>
               <button
                 disabled={currentIndex >= bookings.length - 1}
                 onClick={() => setCurrentIndex(i => Math.min(bookings.length - 1, i + 1))}
-                className="p-1 rounded hover:bg-white disabled:opacity-30 disabled:hover:bg-transparent"
+                className="p-1 rounded bg-white hover:bg-gray-200 border border-gray-300 text-gray-800 disabled:opacity-30 disabled:hover:bg-white shadow-xs cursor-pointer"
                 title="Next Stay"
               >
                 <ArrowRight size={16} />
               </button>
-              <span className="text-gray-700 text-xs font-bold font-mono ml-2 border-l border-gray-300 pl-2">
-                Room {bookings[currentIndex]?.assignedRoom?.roomNumber || "—"} &bull; {bookings[currentIndex]?.guestDetails?.firstName} {bookings[currentIndex]?.guestDetails?.lastName}
-              </span>
+              
+              <span className="text-gray-400">|</span>
+              <select
+                value={currentIndex}
+                onChange={(e) => setCurrentIndex(Number(e.target.value))}
+                className="bg-white border border-gray-300 rounded px-2 py-1 text-xs font-semibold text-gray-800 focus:outline-none max-w-xs"
+              >
+                {bookings.map((b: any, idx: number) => (
+                  <option key={b._id} value={idx}>
+                    #{idx + 1}: Room {b.assignedRoom?.roomNumber || "—"} &bull; {b.guestDetails?.firstName} {b.guestDetails?.lastName} ({b.status})
+                  </option>
+                ))}
+              </select>
             </div>
           )}
 
@@ -204,628 +1122,9 @@ export default function AdminBulkDocViewer() {
         </div>
       ) : (
         <div className="space-y-8 print:space-y-0">
-          {activeBookingsToRender.map((booking: any) => {
-            const guest = booking.guestDetails || {};
-            const foreign = booking.foreignGuestDetails;
-            const nights = differenceInDays(new Date(booking.checkOutDate), new Date(booking.checkInDate)) || 1;
-            const checkInDate = new Date(booking.checkInDate);
-            const checkOutDate = new Date(booking.checkOutDate);
-            const roomNum = booking.assignedRoom?.roomNumber || "101";
-            const roomCategoryName = booking.roomCategory?.name || "DELUXE";
-            const roomCategoryShort = roomCategoryName.substring(0, 3).toUpperCase();
-            const billNo = booking.billNumber || booking.bookingReference?.slice(-4) || "267";
-            const grcNo = booking.grcNumber || `GI${booking.bookingReference?.slice(-7) || "0006178"}`;
-            const dailyTariff = booking.ratePerNight ?? Math.round((booking.totalAmount - (booking.taxAmount || 0)) / nights);
-            const advanceAmount = booking.advanceAmount || 0;
-            const advanceMethod = (booking.paymentMethod || "CASH").toUpperCase();
-
-            // ID Type detection matching Photo 2
-            const idType = (guest.idType || "").toUpperCase();
-            const isAadhaar = idType.includes("AAD") || !idType; // default checked like photo
-            const isDL = idType.includes("DRIV") || idType.includes("DL");
-            const isVoter = idType.includes("VOTER") || idType.includes("ECI") || idType.includes("E.C.I");
-            const isGovt = !isAadhaar && !isDL && !isVoter;
-
-            // Invoice calculations matching Photo 1
-            const totalTariff = dailyTariff * nights;
-            const dailyTaxable = dailyTariff;
-            const dailyCgst = Math.round(dailyTaxable * 0.06 * 100) / 100;
-            const dailySgst = dailyCgst;
-            const totalTaxable = totalTariff;
-            const totalCgst = dailyCgst * nights;
-            const totalSgst = dailySgst * nights;
-            const totalFnb = booking.fnbAmount || 0;
-            const grandTotal = totalTaxable + totalCgst + totalSgst + totalFnb;
-            const net = Math.max(0, grandTotal - advanceAmount);
-            const roundedNet = Math.round(net);
-            const roundOff = Number((roundedNet - net).toFixed(2));
-
-            return (
-              <div key={booking._id} className="space-y-8 print:space-y-0">
-                {/* -------------------------------------------------------------
-                    DOCUMENT 1: GUEST REGISTRATION CARD (GRC) — EXACT REPLICA OF PHOTO 2
-                    ------------------------------------------------------------- */}
-                {(docType === "BOTH" || docType === "GRC") && (
-                  <div className="bg-white p-4 print:p-0 mx-auto max-w-[850px] print:m-0 print:break-after-page">
-                    <div className="print:hidden flex justify-between items-center mb-2 pb-1 border-b border-gray-300 text-xs">
-                      <span className="font-bold text-gray-800 uppercase tracking-wider flex items-center gap-1.5">
-                        <FileCheck2 size={15} className="text-[#c9a227]" />
-                        GRC &bull; Room {roomNum} &bull; {guest.firstName} {guest.lastName}
-                      </span>
-                      <span className="text-gray-500 font-mono">Bill #{billNo}</span>
-                    </div>
-
-                    {/* PHYSICAL GRC CARD (MATCHING PHOTO 2 EXACTLY) */}
-                    <div className="border-2 border-black p-3 text-[11px] leading-tight font-sans bg-white">
-                      
-                      {/* HEADER SECTION (EXACT TO PHOTO 2) */}
-                      <div className="border-b-2 border-black pb-2">
-                        <div className="flex justify-between items-start">
-                          {/* Hotel Name & Address */}
-                          <div className="w-7/12">
-                            <h1 className="text-2xl font-black tracking-widest font-serif uppercase text-black leading-none">
-                              YES HOTELS
-                            </h1>
-                            <p className="text-[9.5px] text-gray-800 font-normal mt-1 leading-snug">
-                              No. 51, Khata No. 749, Singasandra, Hosa Road Junction, Parappana Agrahara,<br />
-                              Electronic City Ph-2, Bengaluru-560100.
-                            </p>
-                          </div>
-
-                          {/* ID Proof Checkboxes & Bill No on Top Right */}
-                          <div className="w-5/12 text-right space-y-1">
-                            <div className="flex items-center justify-end gap-2 text-[10px] font-bold">
-                              <span>ID :</span>
-                              <label className="inline-flex items-center gap-0.5">
-                                <input type="checkbox" checked={isAadhaar} readOnly className="accent-black w-3 h-3" />
-                                <span>AAD</span>
-                              </label>
-                              <label className="inline-flex items-center gap-0.5">
-                                <input type="checkbox" checked={isDL} readOnly className="accent-black w-3 h-3" />
-                                <span>D.L</span>
-                              </label>
-                              <label className="inline-flex items-center gap-0.5">
-                                <input type="checkbox" checked={isVoter} readOnly className="accent-black w-3 h-3" />
-                                <span>E.C.I</span>
-                              </label>
-                              <label className="inline-flex items-center gap-0.5">
-                                <input type="checkbox" checked={isGovt} readOnly className="accent-black w-3 h-3" />
-                                <span>Govt. ID</span>
-                              </label>
-                            </div>
-
-                            <div className="text-[10px] font-bold flex justify-end items-center gap-1">
-                              <span>ID No. :</span>
-                              <span className="font-mono font-bold tracking-wider">{guest.idNumber || "9861 9814 4009"}</span>
-                            </div>
-
-                            <div className="text-[11px] font-bold flex justify-end items-center gap-1 pt-0.5">
-                              <span>Bill No.</span>
-                              <span className="text-red-700 text-base font-black font-mono ml-1">{billNo}</span>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Title Bar */}
-                        <div className="mt-2 pt-1 border-t border-black text-center">
-                          <h2 className="text-sm font-black uppercase tracking-wider">
-                            GUEST REGISTRATION CARD
-                          </h2>
-                          <p className="text-[8.5px] font-bold text-gray-700 uppercase tracking-tight">
-                            THE REGISTRATION OF FOREIGNERS RULES - 1939 FORM - C HOTEL ARRIVAL REPORT, RULE 14, ID PROOF IS REQUIRED FOR CHECK - IN
-                          </p>
-                        </div>
-                      </div>
-
-                      {/* MAIN TWO-COLUMN BODY (EXACT TO PHOTO 2) */}
-                      <div className="grid grid-cols-12 border-b-2 border-black">
-                        
-                        {/* LEFT COLUMN (5 COLS): For Foreigners Only + For Office Use Only + Signatures */}
-                        <div className="col-span-5 border-r-2 border-black p-2 space-y-2 flex flex-col justify-between">
-                          <div className="space-y-2">
-                            {/* BOX 1: For Foreigners Only */}
-                            <div className="border border-black p-1.5 bg-white text-[10px]">
-                              <div className="font-black uppercase text-center border-b border-black pb-0.5 mb-1 text-[9.5px]">
-                                For Foreigners Only
-                              </div>
-                              <div className="space-y-1">
-                                <div className="flex justify-between border-b border-gray-300 pb-0.5">
-                                  <span className="text-gray-700">Passport No.</span>
-                                  <span className="font-mono font-bold">{foreign?.passportNumber || "—"}</span>
-                                </div>
-                                <div className="flex justify-between border-b border-gray-300 pb-0.5">
-                                  <span className="text-gray-700">Place of Issue</span>
-                                  <span>{foreign?.passportIssuePlace || "—"}</span>
-                                </div>
-                                <div className="flex justify-between border-b border-gray-300 pb-0.5">
-                                  <span className="text-gray-700">Date of issue</span>
-                                  <span>{foreign?.passportIssueDate ? format(new Date(foreign.passportIssueDate), "dd/MM/yyyy") : "—"}</span>
-                                </div>
-                                <div className="flex justify-between border-b border-gray-300 pb-0.5">
-                                  <span className="text-gray-700">Visa No.</span>
-                                  <span className="font-mono font-bold">{foreign?.visaNumber || "—"}</span>
-                                </div>
-                                <div className="flex justify-between border-b border-gray-300 pb-0.5">
-                                  <span className="text-gray-700">Date of Expiry</span>
-                                  <span>{foreign?.passportExpiryDate ? format(new Date(foreign.passportExpiryDate), "dd/MM/yyyy") : "—"}</span>
-                                </div>
-                                <div className="flex justify-between border-b border-gray-300 pb-0.5">
-                                  <span className="text-gray-700">Place</span>
-                                  <span>{foreign?.visaPlace || "—"}</span>
-                                </div>
-                                <div className="flex justify-between">
-                                  <span className="text-gray-700">Visa Date</span>
-                                  <span>{foreign?.visaDate ? format(new Date(foreign.visaDate), "dd/MM/yyyy") : "—"}</span>
-                                </div>
-                              </div>
-                            </div>
-
-                            {/* BOX 2: For Office Use Only */}
-                            <div className="border border-black p-1.5 bg-white text-[10px]">
-                              <div className="font-black uppercase text-center border-b border-black pb-0.5 mb-1 text-[9.5px]">
-                                For Office Use Only
-                              </div>
-                              <div className="space-y-1">
-                                <div className="flex justify-between border-b border-dotted border-gray-400 pb-0.5">
-                                  <span className="font-bold">Room No.</span>
-                                  <span className="font-black text-xs font-mono">{roomNum}</span>
-                                  <span className="font-bold ml-2">Tariff</span>
-                                  <span className="font-black font-mono">{dailyTariff}/-</span>
-                                </div>
-                                <div className="flex justify-between border-b border-dotted border-gray-400 pb-0.5">
-                                  <span className="font-bold">Bill No.</span>
-                                  <span className="font-mono">{billNo}</span>
-                                  <span className="font-bold ml-2">Extra Bed</span>
-                                  <span className="font-mono">{booking.extraPersonsWithBed ? "YES" : "—"}</span>
-                                </div>
-                                <div className="flex justify-between border-b border-dotted border-gray-400 pb-0.5">
-                                  <span className="font-bold">Advance</span>
-                                  <span className="font-black font-mono">{advanceAmount}/-</span>
-                                  <span className="font-bold ml-2">Receipt No.</span>
-                                  <span className="font-mono">—</span>
-                                </div>
-
-                                <div className="pt-0.5">
-                                  <div className="font-bold text-[9px] uppercase text-gray-700">Billing Instruction / Credit Card Details</div>
-                                  <div className="flex flex-wrap gap-2 mt-0.5 text-[9.5px]">
-                                    <label className="flex items-center gap-1">
-                                      <input type="checkbox" checked={advanceMethod === "CASH"} readOnly className="accent-black w-2.5 h-2.5" /> Cash
-                                    </label>
-                                    <label className="flex items-center gap-1">
-                                      <input type="checkbox" checked={advanceMethod === "CARD"} readOnly className="accent-black w-2.5 h-2.5" /> Card / DD
-                                    </label>
-                                    <label className="flex items-center gap-1">
-                                      <input type="checkbox" checked={false} readOnly className="accent-black w-2.5 h-2.5" /> Reserved
-                                    </label>
-                                    <label className="flex items-center gap-1">
-                                      <input type="checkbox" checked={booking.paymentStatus === "PAID"} readOnly className="accent-black w-2.5 h-2.5" /> Net Pay
-                                    </label>
-                                  </div>
-                                </div>
-
-                                <div className="pt-0.5 border-t border-dotted border-gray-400">
-                                  <div className="font-bold text-[9px] uppercase text-gray-700">Type of Plan</div>
-                                  <div className="flex justify-between mt-0.5 text-[9.5px]">
-                                    <label className="flex items-center gap-1">
-                                      <input type="checkbox" checked={booking.ratePlan === "EP" || !booking.ratePlan} readOnly className="accent-black w-2.5 h-2.5" /> EP
-                                    </label>
-                                    <label className="flex items-center gap-1">
-                                      <input type="checkbox" checked={booking.ratePlan === "CP"} readOnly className="accent-black w-2.5 h-2.5" /> CP
-                                    </label>
-                                    <label className="flex items-center gap-1">
-                                      <input type="checkbox" checked={booking.ratePlan === "MAP"} readOnly className="accent-black w-2.5 h-2.5" /> MAP
-                                    </label>
-                                    <label className="flex items-center gap-1">
-                                      <input type="checkbox" checked={booking.ratePlan === "AP"} readOnly className="accent-black w-2.5 h-2.5" /> AP
-                                    </label>
-                                  </div>
-                                </div>
-
-                                <div className="pt-0.5 flex justify-between font-bold text-[9.5px]">
-                                  <span>B/ID No.</span>
-                                  <span className="font-mono">{booking.source || "walk in"}</span>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Receptionist & Front Office Manager Signatures */}
-                          <div className="flex justify-between items-end pt-6 pb-1 text-[9.5px] font-bold">
-                            <div className="text-center">
-                              <div className="h-6"></div>
-                              <div className="border-t border-black pt-0.5">Receptionist</div>
-                            </div>
-                            <div className="text-center">
-                              <div className="h-6"></div>
-                              <div className="border-t border-black pt-0.5">Front Office Manager</div>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* RIGHT COLUMN (7 COLS): GUEST DETAILS FORM (EXACT TO PHOTO 2) */}
-                        <div className="col-span-7 p-2.5 space-y-2 text-[10.5px] flex flex-col justify-between">
-                          <div className="space-y-2">
-                            {/* Name & GSTIN */}
-                            <div className="border-b border-dotted border-black pb-1">
-                              <span className="font-bold">Name (in capital Letters)</span>
-                              <span className="font-black text-sm uppercase font-serif ml-3 tracking-wide">
-                                {guest.firstName} {guest.lastName}
-                              </span>
-                            </div>
-
-                            <div className="border-b border-dotted border-black pb-1 flex justify-between">
-                              <div>
-                                <span className="font-bold">Designation :</span>
-                                <span className="ml-2">{guest.designation || "—"}</span>
-                              </div>
-                              <div>
-                                <span className="font-bold">GSTIN :</span>
-                                <span className="font-mono ml-2">{guest.gstin || "—"}</span>
-                              </div>
-                            </div>
-
-                            <div className="border-b border-dotted border-black pb-1">
-                              <span className="font-bold">Name of the Organization :</span>
-                              <span className="ml-2">{guest.organization || "—"}</span>
-                            </div>
-
-                            <div className="border-b border-dotted border-black pb-1">
-                              <span className="font-bold">Address :</span>
-                              <span className="ml-2 font-medium">{guest.address || "Bengaluru, Karnataka"}</span>
-                            </div>
-
-                            <div className="border-b border-dotted border-black pb-1 flex justify-between">
-                              <div>
-                                <span className="font-bold">Mob :</span>
-                                <span className="font-mono font-bold ml-2">{guest.phone || "—"}</span>
-                              </div>
-                              <div>
-                                <span className="font-bold">Vech. Reg. No. :</span>
-                                <span className="font-mono uppercase ml-2">{guest.vehicleNumber || "—"}</span>
-                              </div>
-                            </div>
-
-                            <div className="border-b border-dotted border-black pb-1">
-                              <span className="font-bold">Email :</span>
-                              <span className="font-mono ml-2">{guest.email || "—"}</span>
-                            </div>
-
-                            <div className="border-b border-dotted border-black pb-1 flex justify-between text-[10px]">
-                              <div>
-                                <span className="font-bold">Nationality :</span>
-                                <span className="ml-1">{guest.nationality || "INDIAN"}</span>
-                              </div>
-                              <div>
-                                <span className="font-bold">DOB :</span>
-                                <span className="ml-1">{guest.dateOfBirth ? format(new Date(guest.dateOfBirth), "dd/MM/yyyy") : "—"}</span>
-                              </div>
-                              <div>
-                                <span className="font-bold">Age :</span>
-                                <span className="ml-1">{guest.age || "—"}</span>
-                              </div>
-                            </div>
-
-                            <div className="border-b border-dotted border-black pb-1 flex justify-between text-[10px]">
-                              <div>
-                                <span className="font-bold">No. of Persons :</span>
-                                <span className="ml-1 font-bold">{booking.adults || 1}</span>
-                              </div>
-                              <div>
-                                <span className="font-bold">Child :</span>
-                                <span className="ml-1">{booking.children || 0}</span>
-                              </div>
-                              <div>
-                                <span className="font-bold">No. of Days :</span>
-                                <span className="ml-1 font-bold">{nights}</span>
-                              </div>
-                            </div>
-
-                            <div className="border-b border-dotted border-black pb-1 flex justify-between text-[10px]">
-                              <div>
-                                <span className="font-bold">Date of Arr :</span>
-                                <span className="ml-1 font-mono font-bold">{format(checkInDate, "dd/MM/yy")}</span>
-                                <span className="ml-2 font-bold">Time :</span>
-                                <span className="ml-1">{booking.arrivalTime || "12:00 PM"}</span>
-                              </div>
-                              <div>
-                                <span className="font-bold">Date Dep :</span>
-                                <span className="ml-1 font-mono font-bold">{format(checkOutDate, "dd/MM/yy")}</span>
-                                <span className="ml-2 font-bold">Time :</span>
-                                <span className="ml-1">{booking.departureTime || "11:00 AM"}</span>
-                              </div>
-                            </div>
-
-                            <div className="border-b border-dotted border-black pb-1 flex justify-between text-[10px]">
-                              <div>
-                                <span className="font-bold">Purpose of Visit :</span>
-                                <span className="ml-1">{guest.purposeOfVisit || "Personal / Business"}</span>
-                              </div>
-                              <div>
-                                <span className="font-bold">Proceeding to :</span>
-                                <span className="ml-1">{guest.proceedingTo || "—"}</span>
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Guest Signature Box at Bottom Right */}
-                          <div className="flex justify-end pt-4">
-                            <div className="border border-black p-2 w-48 h-16 flex flex-col justify-between text-center bg-gray-50/30">
-                              <div className="text-[9px] text-gray-400 italic">Signature</div>
-                              <div className="border-t border-black pt-0.5 font-bold uppercase text-[10px]">
-                                Guest Signature
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* -------------------------------------------------------------
-                    DOCUMENT 2: GST TAX INVOICE — EXACT REPLICA OF PHOTO 1
-                    ------------------------------------------------------------- */}
-                {(docType === "BOTH" || docType === "GST") && (
-                  <div className="bg-white p-4 print:p-0 mx-auto max-w-[850px] print:m-0 print:break-after-page">
-                    <div className="print:hidden flex justify-between items-center mb-2 pb-1 border-b border-gray-300 text-xs">
-                      <span className="font-bold text-gray-800 uppercase tracking-wider flex items-center gap-1.5">
-                        <Receipt size={15} className="text-[#c9a227]" />
-                        GST Invoice &bull; Room {roomNum} &bull; Bill #{billNo}
-                      </span>
-                      <span className="text-gray-500 font-mono">Invoice #{billNo}</span>
-                    </div>
-
-                    {/* PHYSICAL GST INVOICE SHEET (MATCHING PHOTO 1 EXACTLY) */}
-                    <div className="border border-black text-[10px] leading-tight font-medium bg-white">
-                      
-                      {/* HEADER SECTION (EXACT TO PHOTO 1) */}
-                      <div className="flex border-b border-black">
-                        {/* Logo Left */}
-                        <div className="w-1/3 p-2 flex items-center justify-center border-r border-black">
-                          <div className="text-center">
-                            <h1 className="font-serif text-3xl font-black italic tracking-widest uppercase">
-                              YES HOTELS
-                            </h1>
-                          </div>
-                        </div>
-                        {/* Address Right */}
-                        <div className="w-2/3 p-2 text-right text-[9.5px]">
-                          <h2 className="font-bold text-xs uppercase">YES HOTELS</h2>
-                          <p>No. 51, Khata No. 749, Singasandra, Hosa Road Junction,</p>
-                          <p>Parappana Agrahara, Electronic City Ph-2,</p>
-                          <p>Bengaluru, Karnataka - 560100</p>
-                          <p>Phone : 080-28522333 / 9902391178,</p>
-                          <p>Email : SALES@YESHOTELS.COM,</p>
-                          <p>Web : WWW.YESHOTELS.COM</p>
-                          <p className="font-bold">GST : 29AAAFY1234A1Z5</p>
-                        </div>
-                      </div>
-
-                      {/* INVOICE TITLE BAR */}
-                      <div className="text-center border-b border-black py-1 font-bold text-xs uppercase bg-gray-100 relative">
-                        GST INVOICE
-                        <div className="absolute right-2 top-1 text-[8.5px] font-normal normal-case">
-                          ACCOUNTS COPY - DUPLICATE
-                        </div>
-                      </div>
-
-                      {/* INFO ROW 1 (3-PART GRID) */}
-                      <div className="flex border-b border-black text-[9.5px]">
-                        <div className="w-1/2 p-1.5 border-r border-black grid grid-cols-[80px_1fr] gap-0.5">
-                          <div>Invoice No.</div><div>: <span className="font-bold font-mono">{billNo}</span></div>
-                          <div>Date</div><div>: {format(new Date(), "dd-MMM-yy")}</div>
-                          <div>State</div><div>: KARNATAKA</div>
-                        </div>
-                        <div className="w-1/4 p-1.5 border-r border-black grid grid-cols-[60px_1fr] gap-0.5">
-                          <div>GRC #</div><div>: <span className="font-mono">{grcNo}</span></div>
-                          <div className="col-span-2">&nbsp;</div>
-                          <div>State Code</div><div>: 29</div>
-                        </div>
-                        <div className="w-1/4 p-1.5 grid grid-cols-[60px_1fr] gap-0.5">
-                          <div>SAC Code</div><div>: 996311</div>
-                          <div>POS</div><div>: KARNATAKA</div>
-                        </div>
-                      </div>
-
-                      {/* INFO ROW 2 (GUEST & STAY DETAILS) */}
-                      <div className="flex border-b border-black min-h-[5.5rem] text-[9.5px]">
-                        {/* Guest Details Left */}
-                        <div className="w-1/2 p-1.5 border-r border-black relative">
-                          <div className="grid grid-cols-[60px_1fr] gap-0.5">
-                            <div>Guest</div><div className="font-bold uppercase">MR/MS {guest.firstName} {guest.lastName}</div>
-                            <div>Address</div><div className="uppercase">{guest.address || "Bengaluru, Karnataka"}</div>
-                          </div>
-                          <div className="absolute bottom-1 w-full grid grid-cols-[80px_1fr] gap-0.5 pr-2">
-                            <div>GSTIN / UIN</div><div className="truncate">: {guest.gstin || "—"}</div>
-                            <div>State</div><div>: KARNATAKA <span className="float-right mr-3">State Code 29</span></div>
-                          </div>
-                        </div>
-                        {/* Stay Details Right */}
-                        <div className="w-1/2 p-1.5 grid grid-cols-[70px_1fr_70px_1fr] gap-0.5 content-start">
-                          <div>Arr Date</div><div>: {format(checkInDate, "dd-MMM-yy")}</div>
-                          <div>Room No</div><div className="font-bold">: {roomNum}({roomCategoryShort})</div>
-                          <div>Arr Time</div><div>: {booking.arrivalTime || "12:00"}</div><div className="col-span-2"></div>
-                          <div>Dept Date</div><div>: {format(checkOutDate, "dd-MMM-yy")}</div><div className="col-span-2"></div>
-                          <div>Dept Time</div><div>: {booking.departureTime || "11:00"}</div><div className="col-span-2"></div>
-                          <div>Stay Days</div><div>: {nights}</div><div className="col-span-2"></div>
-                          <div className="col-span-4 mt-1 font-bold">
-                            M {booking.adults || 1} F 0 C {booking.children || 0}
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* TABLE OF CHARGES (EXACT COLUMN HEADERS MATCHING PHOTO 1) */}
-                      <table className="w-full text-center border-collapse text-[9.5px]">
-                        <thead>
-                          <tr className="border-b border-black font-semibold">
-                            <th className="border-r border-black p-1 w-24" rowSpan={2}>Description</th>
-                            <th className="border-r border-black p-1 w-14" rowSpan={2}>Tariff</th>
-                            <th className="border-r border-black p-1 w-12" rowSpan={2}>Ext Bed</th>
-                            <th className="border-r border-black p-1 w-12" rowSpan={2}>Disc</th>
-                            <th className="border-r border-black p-1 w-16" rowSpan={2}>Taxable<br/>Value</th>
-                            <th className="border-r border-black p-1" colSpan={2}>CGST</th>
-                            <th className="border-r border-black p-1" colSpan={2}>SGST</th>
-                            <th className="border-r border-black p-1 w-12" rowSpan={2}>F&amp;B</th>
-                            <th className="border-r border-black p-1 w-12" rowSpan={2}>Others</th>
-                            <th className="p-1 w-16" rowSpan={2}>Total</th>
-                          </tr>
-                          <tr className="border-b border-black font-semibold">
-                            <th className="border-r border-black p-0.5 border-t border-black w-8">Rate</th>
-                            <th className="border-r border-black p-0.5 border-t border-black w-12">Amount</th>
-                            <th className="border-r border-black p-0.5 border-t border-black w-8">Rate</th>
-                            <th className="border-r border-black p-0.5 border-t border-black w-12">Amount</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {Array.from({ length: nights }).map((_, i) => {
-                            const d = new Date(checkInDate);
-                            d.setDate(d.getDate() + i);
-                            const rowTotal = dailyTaxable + dailyCgst + dailySgst;
-                            return (
-                              <tr key={i} className="align-middle h-6">
-                                <td className="border-r border-black p-1 text-left font-mono font-bold">{roomNum} {format(d, "dd-MMM")}</td>
-                                <td className="border-r border-black p-1 text-right font-mono">{dailyTariff.toFixed(2)}</td>
-                                <td className="border-r border-black p-1 text-right">-</td>
-                                <td className="border-r border-black p-1 text-right">-</td>
-                                <td className="border-r border-black p-1 text-right font-mono">{dailyTaxable.toFixed(2)}</td>
-                                <td className="border-r border-black p-1 text-center font-mono">6%</td>
-                                <td className="border-r border-black p-1 text-right font-mono">{dailyCgst.toFixed(2)}</td>
-                                <td className="border-r border-black p-1 text-center font-mono">6%</td>
-                                <td className="border-r border-black p-1 text-right font-mono">{dailySgst.toFixed(2)}</td>
-                                <td className="border-r border-black p-1 text-right">-</td>
-                                <td className="border-r border-black p-1 text-right">-</td>
-                                <td className="p-1 text-right font-mono font-bold">{rowTotal.toFixed(2)}</td>
-                              </tr>
-                            );
-                          })}
-
-                          {/* Filler empty rows to give physical ledger appearance */}
-                          <tr className="h-10">
-                            <td className="border-r border-black"></td>
-                            <td className="border-r border-black"></td>
-                            <td className="border-r border-black"></td>
-                            <td className="border-r border-black"></td>
-                            <td className="border-r border-black"></td>
-                            <td className="border-r border-black"></td>
-                            <td className="border-r border-black"></td>
-                            <td className="border-r border-black"></td>
-                            <td className="border-r border-black"></td>
-                            <td className="border-r border-black"></td>
-                            <td className="border-r border-black"></td>
-                            <td></td>
-                          </tr>
-
-                          {/* SUB TOTAL ROW (EXACT TO PHOTO 1) */}
-                          <tr className="border-t border-b border-black font-bold bg-gray-50 h-7">
-                            <td className="border-r border-black p-1 text-left font-black">Sub Total</td>
-                            <td className="border-r border-black p-1 text-right font-mono font-bold">{totalTariff.toFixed(2)}</td>
-                            <td className="border-r border-black p-1 text-right">-</td>
-                            <td className="border-r border-black p-1 text-right">-</td>
-                            <td className="border-r border-black p-1 text-right font-mono font-bold">{totalTaxable.toFixed(2)}</td>
-                            <td className="border-r border-black p-1 text-right font-mono font-bold" colSpan={2}>{totalCgst.toFixed(2)}</td>
-                            <td className="border-r border-black p-1 text-right font-mono font-bold" colSpan={2}>{totalSgst.toFixed(2)}</td>
-                            <td className="border-r border-black p-1 text-right">{totalFnb ? totalFnb.toFixed(2) : "-"}</td>
-                            <td className="border-r border-black p-1 text-right">-</td>
-                            <td className="p-1 text-right font-mono font-black">{grandTotal.toFixed(2)}</td>
-                          </tr>
-                        </tbody>
-                      </table>
-
-                      {/* BOTTOM SUMMARY SECTION (EXACT TO PHOTO 1) */}
-                      <div className="flex border-b border-black min-h-[7.5rem]">
-                        {/* Left Side: Advance & Service Bills Notes */}
-                        <div className="w-3/4 border-r border-black p-1.5 flex flex-col justify-between text-[9px]">
-                          <div>
-                            <div className="flex font-bold">
-                              <span className="w-16">Advance</span>
-                              <span className="flex-1 font-mono">
-                                {advanceAmount > 0 ? (
-                                  <span>| {format(checkInDate, "dd.MM")}. Rs.{advanceAmount} (#{billNo}): {advanceMethod}</span>
-                                ) : (
-                                  <span>— None recorded</span>
-                                )}
-                              </span>
-                            </div>
-
-                            <div className="text-center mt-1.5 font-mono text-blue-900 tracking-tight italic text-[8.5px]">
-                              NET TRANSFER Ref.No. Dt.{format(checkInDate, "dd-MM-yy")}<br />
-                              Reservation Adv. to be Adjust<br />
-                              #{billNo} dt. {format(checkInDate, "dd/MM/yy")}.
-                            </div>
-                          </div>
-
-                          <div>
-                            <div className="font-bold flex">
-                              <span className="w-28">Balance Rupees:</span>
-                              <span className="uppercase font-mono font-black text-black">{numberToWords(roundedNet)}</span>
-                            </div>
-                            <div className="mt-0.5">
-                              <span className="font-bold">Service Bills:</span>
-                              <span className="font-mono ml-1 text-[8.5px]">
-                                {totalFnb > 0 ? `| ${format(checkInDate, "dd.MM")}. Rs.${totalFnb} (#POS) |` : "— None recorded"}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Right Side: Advance, Round Off, Net Box */}
-                        <div className="w-1/4">
-                          <div className="flex h-7 border-b border-black font-bold items-center text-[9.5px]">
-                            <div className="w-2/3 p-1 border-r border-black h-full flex items-center">Advance</div>
-                            <div className="w-1/3 p-1 text-right font-mono">{advanceAmount.toFixed(2)}</div>
-                          </div>
-                          <div className="flex h-7 border-b border-black font-bold items-center text-[9.5px]">
-                            <div className="w-2/3 p-1 border-r border-black h-full flex items-center">Round Off</div>
-                            <div className="w-1/3 p-1 text-right font-mono">{roundOff.toFixed(2)}</div>
-                          </div>
-                          <div className="flex h-8 font-bold bg-gray-50 items-center text-[10px]">
-                            <div className="w-2/3 p-1 border-r border-black h-full flex items-center font-black">Net</div>
-                            <div className="w-1/3 p-1 text-right font-black font-mono text-sm">{roundedNet.toFixed(2)}</div>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* FOOTER SECTION (EXACT TO PHOTO 1) */}
-                      <div className="p-2 relative h-32 text-[9px]">
-                        <div className="w-1/2 space-y-0.5">
-                          <p>*Regardless of the billing instruction, I agree to be held personally liable for the payment of the total amount of bill for my stay in the hotel.</p>
-                          <p>*All disputes subject to BENGALURU Jurisdiction.</p>
-                        </div>
-
-                        <div className="absolute top-2 right-2 text-right">
-                          <p>Certified that the particulars given above are true and correct.</p>
-                          <p className="mt-1 font-bold">For YES HOTELS</p>
-                        </div>
-
-                        {/* Room Key Icon & Return Notice */}
-                        <div className="absolute top-12 w-full text-center flex justify-center items-center gap-1.5 font-bold text-[9.5px]">
-                          <Key size={14} className="text-gray-700 rotate-90" />
-                          <span>We Request You To Return The Room Key</span>
-                        </div>
-
-                        <div className="absolute bottom-6 left-2 font-bold uppercase text-[9.5px]">
-                          Guest Signatory
-                        </div>
-
-                        <div className="absolute bottom-2 right-2 text-right">
-                          <p className="font-bold uppercase text-[9px]">USER</p>
-                          <p className="font-bold uppercase text-[9.5px]">Authorised Signatory</p>
-                        </div>
-
-                        <div className="absolute bottom-1 w-full text-center font-bold text-[9.5px]">
-                          Thank You! Visit Again!
-                        </div>
-
-                        <div className="absolute bottom-0 right-1 text-[8px] text-gray-500">
-                          E.&amp;O.E.
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            );
-          })}
+          {activeBookingsToRender.map((booking: any) => (
+            <BookingDocCard key={booking._id} booking={booking} docType={docType} />
+          ))}
         </div>
       )}
 

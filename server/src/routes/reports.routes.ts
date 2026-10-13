@@ -16,6 +16,7 @@ import {
   getMonthlyMIS,
   getDynamicReport
 } from "../controllers/reports.controller";
+import { getCheckInReport, getCheckOutReport, getDayUseSalesReport, getAdvanceOpsReport } from "../controllers/operations-reports.controller";
 
 const router = Router();
 const MANAGER_ROLES = ["ADMIN", "MANAGER", "FINANCE"];
@@ -35,6 +36,12 @@ router.get("/day-summary", protect, requirePropertyAccess, requirePermission("RE
 router.get("/monthly-mis", protect, requirePropertyAccess, requirePermission("REPORTS_LAYOUT", "VIEW"), getMonthlyMIS);
 
 // Unified dynamic report builder
+// Front-office operations reports (before the dynamic /:reportId route)
+router.get("/ops/check-ins", protect, requirePropertyAccess, requirePermission("REPORTS_LAYOUT", "VIEW"), getCheckInReport);
+router.get("/ops/check-outs", protect, requirePropertyAccess, requirePermission("REPORTS_LAYOUT", "VIEW"), getCheckOutReport);
+router.get("/ops/day-use-sales", protect, requirePropertyAccess, requirePermission("REPORTS_LAYOUT", "VIEW"), getDayUseSalesReport);
+router.get("/ops/advances", protect, requirePropertyAccess, requirePermission("REPORTS_LAYOUT", "VIEW"), getAdvanceOpsReport);
+
 router.get("/:reportId", protect, requirePropertyAccess, requirePermission("REPORTS_LAYOUT", "VIEW"), getDynamicReport);
 
 export default router;

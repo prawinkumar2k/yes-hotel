@@ -38,6 +38,18 @@ const Denominations = z
   })
   .optional();
 
+const PAID_OUT_LABELS: Record<string, string> = {
+  CASH_DROP: "Cash drop to hotel safe / finance",
+  PETTY_CASH: "Front desk petty cash expense",
+  REFUND: "Counter cash refund",
+  EARLY_CHECK_IN: "Early check-in",
+  WATER_BOTTLE: "Water bottle",
+  DENTAL_KIT: "Dental kit",
+  TEA_COFFEE_SHOP: "Tea / coffee shop",
+  KOVAI_KONGU_MESS: "Kovai Kongu Mess",
+  OTHER: "Other",
+};
+
 const actorOf = (req: Request) => String((req as any).user?.id || (req as any).user?._id);
 
 async function isShiftSupervisor(req: Request): Promise<boolean> {
@@ -182,12 +194,17 @@ export const recordPaidOut = async (req: Request, res: Response) => {
     const parsed = z
       .object({
         amount: z.coerce.number().positive("Amount must be greater than 0"),
-        reason: z.string().trim().min(3, "Reason is required"),
-        category: z.enum(["CASH_DROP", "PETTY_CASH", "REFUND", "OTHER"]).default("PETTY_CASH"),
+        reason: z.string().trim().optional(),
+        category: z.enum(["CASH_DROP", "PETTY_CASH", "REFUND", "EARLY_CHECK_IN", "WATER_BOTTLE", "DENTAL_KIT", "TEA_COFFEE_SHOP", "KOVAI_KONGU_MESS", "OTHER"]).default("PETTY_CASH"),
         recipient: z.string().trim().optional(),
       })
       .safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ success: false, message: "Invalid paid-out data", errors: parsed.error.issues });
+    // "Others" must say what the cash was for; the named categories describe themselves.
+    if (parsed.data.category === "OTHER" && (parsed.data.reason ?? "").length < 3) {
+      return res.status(400).json({ success: false, message: "Enter the reason for this paid-out" });
+    }
+    parsed.data.reason = parsed.data.reason || PAID_OUT_LABELS[parsed.data.category];
 
     const shift = await CashierShift.findById(req.params.id);
     if (!shift) return res.status(404).json({ success: false, message: "Shift not found" });

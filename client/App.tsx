@@ -1,4 +1,31 @@
-import { lazy, Suspense } from "react";
+import { lazy as reactLazy, Suspense, type ComponentType } from "react";
+
+/**
+ * Lazy page loader that survives a stale bundle: when a page chunk can't be fetched
+ * (a new deploy, or the dev server re-optimised its dependencies: "Failed to fetch
+ * dynamically imported module"), reload the app once instead of showing a crash.
+ * A session flag prevents a reload loop if the page is genuinely broken.
+ */
+const CHUNK_RELOAD_FLAG = "yes:chunk-reload";
+function lazy<T extends ComponentType<any>>(load: () => Promise<{ default: T }>) {
+  return reactLazy(() =>
+    load()
+      .then((mod) => {
+        try { sessionStorage.removeItem(CHUNK_RELOAD_FLAG); } catch { /* storage unavailable */ }
+        return mod;
+      })
+      .catch((err) => {
+        let reloaded = false;
+        try { reloaded = sessionStorage.getItem(CHUNK_RELOAD_FLAG) === "1"; } catch { /* storage unavailable */ }
+        if (!reloaded) {
+          try { sessionStorage.setItem(CHUNK_RELOAD_FLAG, "1"); } catch { /* storage unavailable */ }
+          window.location.reload();
+          return new Promise<{ default: T }>(() => {}); // the reload replaces the page
+        }
+        throw err;
+      }),
+  );
+}
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "./lib/queryClient";
@@ -68,6 +95,7 @@ const AdminContent = lazy(() => import("./pages/admin/AdminContent"));
 const AdminGuests = lazy(() => import("./pages/admin/AdminGuests"));
 const AdminPayments = lazy(() => import("./pages/admin/AdminPayments"));
 const AdminAdvances = lazy(() => import("./pages/admin/AdminAdvances"));
+const AdminAdvanceReceipt = lazy(() => import("./pages/admin/AdminAdvanceReceipt"));
 const AdminCashierShifts = lazy(() => import("./pages/admin/AdminCashierShifts"));
 const AdminRefunds = lazy(() => import("./pages/admin/AdminRefunds"));
 const AdminCoupons = lazy(() => import("./pages/admin/AdminCoupons"));
@@ -193,8 +221,8 @@ function App() {
                 <Route path="/admin/bookings" element={<PermissionRoute pageKey="BOOKINGS"><AdminLayout title="Bookings"><AdminBookings /></AdminLayout></PermissionRoute>} />
                 <Route path="/admin/ota-bookings" element={<PermissionRoute pageKey="BOOKINGS"><AdminLayout title="OTA Bookings"><AdminOTABookings /></AdminLayout></PermissionRoute>} />
                 <Route path="/admin/bookings/:id" element={<PermissionRoute pageKey="BOOKINGS"><AdminLayout title="Booking Details"><AdminBookingDetails /></AdminLayout></PermissionRoute>} />
-                <Route path="/admin/bookings/:id/folio-print" element={<PermissionRoute pageKey="BOOKINGS"><AdminFolioPrint /></PermissionRoute>} />
-                <Route path="/admin/bookings/:id/grc-print" element={<PermissionRoute pageKey="BOOKINGS"><AdminGRCPrint /></PermissionRoute>} />
+                <Route path="/admin/bookings/:id/folio-print" element={<PermissionRoute pageKey="BOOKINGS"><AdminLayout title="Folio & GST Invoice"><AdminFolioPrint /></AdminLayout></PermissionRoute>} />
+                <Route path="/admin/bookings/:id/grc-print" element={<PermissionRoute pageKey="BOOKINGS"><AdminLayout title="Guest Registration Card"><AdminGRCPrint /></AdminLayout></PermissionRoute>} />
                 <Route path="/admin/calendar" element={<PermissionRoute pageKey="CALENDAR"><AdminLayout title="Calendar"><AdminCalendar /></AdminLayout></PermissionRoute>} />
                 <Route path="/admin/check-in" element={<PermissionRoute pageKey="CHECK_IN"><AdminLayout title="Check-In"><AdminCheckIn /></AdminLayout></PermissionRoute>} />
                 <Route path="/admin/check-out" element={<PermissionRoute pageKey="CHECK_OUT"><AdminLayout title="Check-Out"><AdminCheckOut /></AdminLayout></PermissionRoute>} />
@@ -210,6 +238,7 @@ function App() {
                 <Route path="/admin/guests" element={<PermissionRoute pageKey="GUESTS"><AdminLayout title="Guests"><AdminGuests /></AdminLayout></PermissionRoute>} />
                 <Route path="/admin/payments" element={<PermissionRoute pageKey="PAYMENTS"><AdminLayout title="Payments"><AdminPayments /></AdminLayout></PermissionRoute>} />
                 <Route path="/admin/advances" element={<PermissionRoute pageKey="ADVANCES"><AdminLayout title="Advance Payments Ledger"><AdminAdvances /></AdminLayout></PermissionRoute>} />
+                <Route path="/admin/advances/:id/receipt" element={<PermissionRoute pageKey="ADVANCES"><AdminLayout title="Advance Receipt"><AdminAdvanceReceipt /></AdminLayout></PermissionRoute>} />
                 <Route path="/admin/cashier-shifts" element={<PermissionRoute pageKey="CASHIER_SHIFTS"><AdminLayout title="Cashier Shift & Drawer Reconciliation"><AdminCashierShifts /></AdminLayout></PermissionRoute>} />
                 <Route path="/admin/refunds" element={<PermissionRoute pageKey="REFUNDS"><AdminLayout title="Refunds"><AdminRefunds /></AdminLayout></PermissionRoute>} />
                 <Route path="/admin/coupons" element={<PermissionRoute pageKey="COUPONS"><AdminLayout title="Coupons"><AdminCoupons /></AdminLayout></PermissionRoute>} />

@@ -19,6 +19,32 @@ import { nights as countNights } from "../../../shared/dates";
  * GET /api/folios/booking/:bookingId
  * Returns the full folio and all lines for a given booking, supporting group aggregations.
  */
+/**
+ * Adds paymentMode / paymentReference to money lines for printing: from the linked Payment
+ * (method, transaction id), the linked advance (method, receipt no., reference), or the
+ * payment channel. Lines with no linked record keep paymentMode undefined (never guessed).
+ */
+async function attachPaymentModes(lines: any[]) {
+  const ids = (k: string) => [...new Set(lines.map((l) => l[k]).filter(Boolean).map(String))];
+  const { Payment } = await import("../models/Payment");
+  const { AdvancePayment } = await import("../models/AdvancePayment");
+  const { PaymentChannel } = await import("../models/PaymentChannel");
+  const [payments, advances, channels] = await Promise.all([
+    Payment.find({ _id: { $in: ids("paymentId") } }).select("method transactionId").lean(),
+    AdvancePayment.find({ _id: { $in: ids("advancePaymentId") } }).select("method advanceNumber referenceNumber").lean(),
+    (PaymentChannel as any).find({ _id: { $in: ids("paymentChannelId") } }).select("name type").lean(),
+  ]);
+  const byId = (rows: any[]) => new Map(rows.map((r) => [String(r._id), r]));
+  const p = byId(payments), a = byId(advances), c = byId(channels);
+  for (const l of lines) {
+    const pay = l.paymentId ? p.get(String(l.paymentId)) : undefined;
+    const adv = l.advancePaymentId ? a.get(String(l.advancePaymentId)) : undefined;
+    const ch = l.paymentChannelId ? c.get(String(l.paymentChannelId)) : undefined;
+    l.paymentMode = pay?.method ?? adv?.method ?? ch?.type ?? ch?.name;
+    l.paymentReference = pay?.transactionId ?? adv?.referenceNumber ?? adv?.advanceNumber;
+  }
+}
+
 export const getFolioByBooking = async (req: Request, res: Response) => {
   try {
     const { bookingId } = req.params;
@@ -44,6 +70,7 @@ export const getFolioByBooking = async (req: Request, res: Response) => {
         return res.status(404).json({ success: false, message: "Folio not available yet for this booking" });
       }
       const ownLines = await FolioLine.find({ folio: ownFolio._id }).sort({ date: 1, postedAt: 1 }).lean();
+      await attachPaymentModes(ownLines);
       return res.json({
         success: true,
         data: {
@@ -161,6 +188,7 @@ export const getFolioByBooking = async (req: Request, res: Response) => {
         .lean();
     }
 
+    await attachPaymentModes(lines);
     const roomsList = groupBookings.map((b: any) => b.assignedRoom?.roomNumber).filter(Boolean);
 
     return res.json({

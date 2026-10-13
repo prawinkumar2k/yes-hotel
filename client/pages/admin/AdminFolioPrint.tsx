@@ -25,6 +25,8 @@ function numberToWords(num: number): string {
 }
 
 export default function AdminFolioPrint() {
+  // Shown inside the registration pop-up: hide this page's own toolbar.
+  const embedded = typeof window !== "undefined" && window.self !== window.top;
   const { id } = useParams();
   const [searchParams] = useSearchParams();
 
@@ -73,7 +75,7 @@ export default function AdminFolioPrint() {
   const booking = bookingData?.data;
   const folio = folioData?.data?.folio;
   const lines = folioData?.data?.lines || [];
-  const advancesList = advancesData?.data?.advances || [];
+  const advancesList: any[] = Array.isArray(advancesData?.data) ? advancesData.data : (advancesData?.data?.advances || []);
   const groupBookings: any[] = folioData?.data?.groupBookings || booking?.groupBookings || [];
   const isMultiRoomGroup = groupBookings.length > 1 || folioData?.data?.isGroup;
 
@@ -205,17 +207,22 @@ export default function AdminFolioPrint() {
     ? `${allRoomsStr} (${booking.roomCategory?.name?.substring(0,3).toUpperCase() || "STA"})`
     : `${booking.assignedRoom?.roomNumber || "101"} (${booking.roomCategory?.name?.substring(0,3).toUpperCase() || "STA"})`;
 
-  const invoiceNo = isGroupFolio && groupBookings.length > 1
-    ? groupBookings.map(b => b.billNumber).filter(Boolean).join(" / ") || booking.billNumber || "BILL-2026-000001"
-    : booking.billNumber || folio?._id?.slice(-5).toUpperCase() || "BILL-2026-000001";
+  // The GST invoice number exists only once the folio is settled at checkout. Before that this
+  // sheet is a provisional bill and shows no invoice number.
+  const issuedFolios: any[] = (isGroupFolio && folioData?.data?.groupFolios?.length ? folioData.data.groupFolios : [folio]).filter(Boolean);
+  const issuedInvoiceNos = issuedFolios.map((f: any) => f.invoiceNumber).filter(Boolean);
+  const isProvisional = issuedInvoiceNos.length === 0;
+  const invoiceNo = isProvisional ? "Issued at checkout" : issuedInvoiceNos.join(" / ");
+  const invoiceDate = !isProvisional && issuedFolios.find((f: any) => f.invoiceNumber)?.closedAt ? new Date(issuedFolios.find((f: any) => f.invoiceNumber).closedAt) : new Date();
 
+  const creditLines = lines.filter((l: any) => l.direction === "CREDIT");
   const primaryAdvance = creditLines[0] || advancesList[0] || null;
 
   return (
     <AdminLayout title="Folio & GST Invoice">
       <div className="min-h-screen bg-white text-black p-4 font-sans print:p-0 print:m-0 mx-auto max-w-[850px]">
         {/* Top Control Bar (Hidden on print) */}
-        <div className="print:hidden mb-4 bg-gray-100 p-3 rounded-xl border border-gray-300 shadow-sm space-y-3">
+        <div className={`print:hidden mb-4 bg-gray-100 p-3 rounded-xl border border-gray-300 shadow-sm space-y-3${embedded ? " hidden" : ""}`}>
           <div className="flex flex-wrap justify-between items-center gap-3">
             <Link
               to={`/admin/front-desk`}
@@ -304,7 +311,7 @@ export default function AdminFolioPrint() {
 
           {/* INVOICE TITLE */}
           <div className="text-center border-b border-black py-1 font-bold text-sm bg-gray-100 relative">
-            GST INVOICE
+            {isProvisional ? "PROVISIONAL BILL (NOT A TAX INVOICE)" : "GST INVOICE"}
             <div className="absolute right-2 top-1 text-[9px] font-normal">ACCOUNTS COPY - DUPLICATE</div>
           </div>
 
@@ -312,7 +319,7 @@ export default function AdminFolioPrint() {
           <div className="flex border-b border-black">
             <div className="w-1/2 p-1 border-r border-black grid grid-cols-[80px_1fr] gap-1">
               <div>Invoice No.</div><div>: {invoiceNo}</div>
-              <div>Date</div><div>: {format(new Date(), "dd-MMM-yy")}</div>
+              <div>Date</div><div>: {format(invoiceDate, "dd-MMM-yy")}</div>
               <div>State</div><div>: KARNATAKA</div>
             </div>
             <div className="w-1/4 p-1 border-r border-black grid grid-cols-[60px_1fr] gap-1">
@@ -376,11 +383,11 @@ export default function AdminFolioPrint() {
                 const rowTaxable = row.tariff + row.extBed - row.disc;
                 const rowTotal = rowTaxable + row.cgst + row.sgst + row.fnb + row.others;
                 const cgstRate = rowTaxable > 0 && row.cgst > 0
-                  ? `${Math.round((row.cgst / rowTaxable) * 100)}%`
-                  : (row.cgst > 0 ? "6%" : "-%");
+                  ? `${Number(((row.cgst / rowTaxable) * 100).toFixed(1))}%`
+                  : "-%";
                 const sgstRate = rowTaxable > 0 && row.sgst > 0
-                  ? `${Math.round((row.sgst / rowTaxable) * 100)}%`
-                  : (row.sgst > 0 ? "6%" : "-%");
+                  ? `${Number(((row.sgst / rowTaxable) * 100).toFixed(1))}%`
+                  : "-%";
                 return (
                   <tr key={i} className="align-top h-8">
                     <td className="border-r border-black p-1 text-left font-mono font-bold">{row.description}</td>
@@ -428,10 +435,10 @@ export default function AdminFolioPrint() {
                    <div className="flex-1 font-mono text-[9px]">
                      {advanceLines.length > 0 ? (
                        advanceLines.map((a: any, i: number) => (
-                         <span key={i} className="mr-2">| {format(new Date(a.date), "dd.MM")}. Rs.{a.amount} ({a.description?.substring(0,10) || "ADV"}): {a.paymentMethod || "CASH"} </span>
+                         <span key={i} className="mr-2">| {format(new Date(a.date), "dd.MM")}. Rs.{a.amount} ({a.paymentReference || "ADV"}): {a.paymentMode || "—"} </span>
                        ))
                      ) : advanceTotal > 0 ? (
-                       <span>| {format(new Date(booking.checkInDate), "dd.MM")}. Rs.{advanceTotal} ({primaryAdvance?.advanceNumber?.slice(-6) || "ADV"}): {primaryAdvance?.method || booking.paymentMethod || "CASH"} </span>
+                       <span>| {format(new Date(booking.checkInDate), "dd.MM")}. Rs.{advanceTotal} ({primaryAdvance?.advanceNumber?.slice(-6) || "ADV"}): {primaryAdvance?.method || primaryAdvance?.paymentMode || "—"} </span>
                      ) : (
                        <span>-</span>
                      )}
@@ -442,15 +449,26 @@ export default function AdminFolioPrint() {
                      <div className="w-20 text-gray-700">Settlement</div>
                      <div className="flex-1 font-mono text-green-800">
                        {checkoutPaymentLines.map((p: any, i: number) => (
-                         <span key={i} className="mr-2">| {format(new Date(p.date), "dd.MM")}. Rs.{p.amount} ({p.description?.substring(0,12) || "PAID"}): {p.paymentMethod || "CASH"} </span>
+                         <span key={i} className="mr-2">| {format(new Date(p.date), "dd.MM")}. Rs.{p.amount} ({p.paymentReference || "PAID"}): {p.paymentMode || "—"} </span>
                        ))}
                      </div>
                    </div>
                  )}
-                 <div className="text-center mt-1.5 ml-8 font-mono text-blue-900 tracking-tight italic text-[9px]">
-                    NET TRANSFER Ref.No. Dt.{format(new Date(), "dd-MM-yy")}<br/>
-                    Reservation Adv. to be Adjust<br/>
-                    #{booking.billNumber || "00929"} dt. {format(new Date(booking.checkInDate), "dd/MM/yy")}.
+                 <div className="mt-1.5 text-[9px]">
+                   <span className="font-bold">Mode of Payment: </span>
+                   <span className="font-mono">
+                     {(() => {
+                       // Sum of money received by mode: advances and payments on this bill (from the linked records).
+                       const byMode = new Map<string, number>();
+                       const add = (mode: string | undefined, amt: number) => byMode.set(mode || "Not recorded", (byMode.get(mode || "Not recorded") || 0) + (Number(amt) || 0));
+                       if (advanceLines.length > 0) advanceLines.forEach((l: any) => add(l.paymentMode, l.amount));
+                       else advancesList.forEach((x: any) => add(x.method, x.amount));
+                       checkoutPaymentLines.forEach((l: any) => add(l.paymentMode, l.amount));
+                       return byMode.size === 0
+                         ? "— No payment received yet"
+                         : [...byMode.entries()].map(([m, v]) => `${m} ₹${v.toLocaleString("en-IN")}`).join("  |  ");
+                     })()}
+                   </span>
                  </div>
               </div>
               

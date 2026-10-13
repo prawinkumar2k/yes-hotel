@@ -1,13 +1,16 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { format } from "date-fns";
 import { nights as countNights } from "@shared/dates";
-import { Loader2, Printer, ArrowLeft, ShieldCheck, FileCheck2 } from "lucide-react";
+import { Loader2, Printer, ArrowLeft, ShieldCheck, FileCheck2, Eye, X } from "lucide-react";
 
 export default function AdminGRCPrint() {
+  // Shown inside the registration pop-up: hide this page's own toolbar.
+  const embedded = typeof window !== "undefined" && window.self !== window.top;
   const { id } = useParams();
+  const [openDoc, setOpenDoc] = useState<{ src: string; label: string } | null>(null);
 
   const { data: bookingData, isLoading: isBookingLoading } = useQuery({
     queryKey: ["adminBooking", id],
@@ -86,7 +89,7 @@ export default function AdminGRCPrint() {
   return (
     <div className="min-h-screen bg-white text-black p-4 font-sans print:p-0 print:m-0 mx-auto max-w-[850px]">
       {/* Top Toolbar (Hidden on Print) */}
-      <div className="print:hidden flex justify-between items-center mb-4 bg-gray-100 p-3 rounded-lg border border-gray-300">
+      <div className={`print:hidden flex justify-between items-center mb-4 bg-gray-100 p-3 rounded-lg border border-gray-300${embedded ? " hidden" : ""}`}>
         <Link
           to={`/admin/bookings/${id}`}
           className="flex items-center gap-1.5 text-xs font-bold text-gray-700 hover:text-black transition"
@@ -366,7 +369,7 @@ export default function AdminGRCPrint() {
               </div>
               <div>
                 <span className="text-[9px] uppercase font-bold text-gray-600 block">Proceeding To</span>
-                <span className="font-semibold">{guest.proceedingTo || "Local / Airport"}</span>
+                <span className="font-semibold">{guest.proceedingTo || "—"}</span>
               </div>
             </div>
 
@@ -389,24 +392,17 @@ export default function AdminGRCPrint() {
               <FileCheck2 size={13} className="text-black" />
               Verified Customer KYC Documents &amp; Identity Records:
             </div>
-            <div className="flex gap-4 overflow-x-auto py-1">
+            {/* Documents open on demand (a button per document), not as thumbnails on the card. */}
+            <div className="flex flex-wrap gap-2 py-1">
               {guest.idProofImages.map((img: string, idx: number) => (
-                <div key={idx} className="border border-black bg-white p-1 rounded shadow-sm text-center">
-                  {img.startsWith("data:image") || img.startsWith("http") ? (
-                    <img
-                      src={img}
-                      alt={`Customer Document ${idx + 1}`}
-                      className="h-28 w-44 object-contain rounded border border-gray-200"
-                    />
-                  ) : (
-                    <div className="h-24 w-36 bg-gray-100 flex items-center justify-center text-[9px] text-gray-500">
-                      ID Document #{idx + 1}
-                    </div>
-                  )}
-                  <span className="text-[9px] font-bold text-gray-600 mt-1 block uppercase">
-                    Document #{idx + 1}
-                  </span>
-                </div>
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => setOpenDoc({ src: img, label: `Document #${idx + 1}` })}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-black bg-white rounded text-[11px] font-bold uppercase hover:bg-gray-100 print:border-gray-400"
+                >
+                  <Eye size={13} /> View Document #{idx + 1}
+                </button>
               ))}
             </div>
           </div>
@@ -459,6 +455,30 @@ export default function AdminGRCPrint() {
       <div className="text-center text-[9px] text-gray-500 mt-2 print:mt-1 font-mono">
         Printed via YES HOTELS PMS &bull; Bengaluru &bull; All Rights Reserved
       </div>
+
+      {openDoc && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label={openDoc.label}
+          className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4 print:hidden"
+          onClick={() => setOpenDoc(null)}
+        >
+          <div className="relative max-w-5xl max-h-full" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-2 text-white text-sm font-bold">
+              <span>{openDoc.label}</span>
+              <button type="button" aria-label="Close" onClick={() => setOpenDoc(null)} className="p-1.5 rounded bg-white/10 hover:bg-white/20">
+                <X size={18} />
+              </button>
+            </div>
+            {openDoc.src.startsWith("data:image") || openDoc.src.startsWith("http") ? (
+              <img src={openDoc.src} alt={openDoc.label} className="max-h-[85vh] max-w-full object-contain rounded bg-white" />
+            ) : (
+              <div className="bg-white rounded p-8 text-sm text-gray-600">This document has no viewable image.</div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
