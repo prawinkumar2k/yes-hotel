@@ -1,3 +1,4 @@
+import { OtaPaymentModel } from "../services/ota.service";
 import "dotenv/config";
 import mongoose from "mongoose";
 import { hashPassword } from "../utils/auth";
@@ -589,6 +590,8 @@ async function seed() {
   const HIST_COUNT = 48;
   const SOURCES = [BookingSource.DIRECT_WEBSITE, BookingSource.OTA, BookingSource.WALK_IN, BookingSource.CORPORATE, BookingSource.PHONE, BookingSource.TRAVEL_AGENT];
   const OTA_NAMES = ["Booking.com", "Agoda", "MakeMyTrip", "Goibibo"];
+  // Typical commission per OTA; alternate prepaid / pay-at-hotel so both settlement paths have data.
+  const OTA_COMMISSION: Record<string, number> = { "Booking.com": 15, Agoda: 18, MakeMyTrip: 20, Goibibo: 20 };
   const historicalBookingIds: mongoose.Types.ObjectId[] = [];
   const historicalBookings: { id: mongoose.Types.ObjectId; guestEmail: string; guestName: string; roomNumber: string }[] = [];
 
@@ -643,6 +646,13 @@ async function seed() {
       paymentStatus: PaymentStatus.PAID,
       source,
       otaName: isOta ? pick(OTA_NAMES, i) : undefined,
+      ...(isOta
+        ? {
+            otaConfirmationNumber: `OTA-${100000 + i}`,
+            otaCommissionPercent: OTA_COMMISSION[pick(OTA_NAMES, i)],
+            otaPaymentModel: i % 2 === 0 ? OtaPaymentModel.OTA_PREPAID : OtaPaymentModel.PAY_AT_HOTEL,
+          }
+        : {}),
       bookingType: BookingType.INDIVIDUAL,
       isVipGuest: guest.isVip,
       checkedInAt: checkIn,
@@ -655,6 +665,18 @@ async function seed() {
     historicalBookings.push({ id: bh._id as mongoose.Types.ObjectId, guestEmail: guest.email, guestName: guest.fullName, roomNumber });
   }
   console.log(`  ✅ Created ${HIST_COUNT} historical checked-out bookings`);
+
+  // Chronology: a seeded booking's creation date must precede its check-in (walk-ins are
+  // booked on arrival). Booking.create stamps "now", so back-date historical rows here.
+  {
+    const late = await Booking.find({ bookingReference: /^YES-BKG-/, $expr: { $gt: ["$createdAt", "$checkInDate"] } }).select("_id checkInDate source").lean();
+    for (const [n, b] of late.entries()) {
+      const leadDays = b.source === BookingSource.WALK_IN ? 0 : 2 + (n % 20);
+      const bookedAt = new Date(new Date(b.checkInDate).getTime() - leadDays * 86_400_000 - 3 * 3_600_000);
+      await Booking.collection.updateOne({ _id: b._id }, { $set: { createdAt: bookedAt } });
+    }
+    console.log(`  ✅ Back-dated ${late.length} bookings so each was made before its stay`);
+  }
 
   // ─── 8b. PAYMENTS, ADVANCES & REFUNDS ──────────────────────────────────────
   console.log("\n💳 Seeding payment ledger...");

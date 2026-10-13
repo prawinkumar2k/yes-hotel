@@ -69,6 +69,8 @@ export default function AdminOTABookings() {
                 <th className="px-4 py-3 text-right text-xs font-bold text-gray-600 uppercase tracking-wide">Tariff</th>
                 <th className="px-4 py-3 text-right text-xs font-bold text-gray-600 uppercase tracking-wide">GST</th>
                 <th className="px-4 py-3 text-right text-xs font-bold text-gray-600 uppercase tracking-wide">Total</th>
+                <th className="px-4 py-3 text-right text-xs font-bold text-gray-600 uppercase tracking-wide">Commission</th>
+                <th className="px-4 py-3 text-right text-xs font-bold text-gray-600 uppercase tracking-wide">Net Settlement</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -81,7 +83,7 @@ export default function AdminOTABookings() {
                   </tr>
                 ))
               ) : bookings.length === 0 ? (
-                <tr><td colSpan={12} className="px-4 py-12 text-center text-gray-400">No OTA bookings found.</td></tr>
+                <tr><td colSpan={14} className="px-4 py-12 text-center text-gray-400">No OTA bookings found.</td></tr>
               ) : (
                 bookings.map((b: any, idx: number) => {
                   const tariff = b.totalAmount - b.taxAmount;
@@ -113,6 +115,16 @@ export default function AdminOTABookings() {
                       <td className="px-4 py-3 text-right text-gray-700">₹{(tariff || 0).toLocaleString("en-IN")}</td>
                       <td className="px-4 py-3 text-right text-gray-500">₹{(b.taxAmount || 0).toLocaleString("en-IN")}</td>
                       <td className="px-4 py-3 text-right font-bold text-gray-900">₹{(b.totalAmount || 0).toLocaleString("en-IN")}</td>
+                      <td className="px-4 py-3 text-right text-gray-700">
+                        {b.otaCommissionPercent != null ? <>₹{(b.otaCommissionAmount || 0).toLocaleString("en-IN")} <span className="text-gray-400">({b.otaCommissionPercent}%)</span></> : <span className="text-amber-600">Terms missing</span>}
+                      </td>
+                      <td className="px-4 py-3 text-right text-gray-700">
+                        {b.otaPaymentModel === "OTA_PREPAID"
+                          ? <span title="Guest prepaid the OTA; the OTA owes the hotel">OTA owes ₹{(b.otaReceivable || 0).toLocaleString("en-IN")}</span>
+                          : b.otaPaymentModel === "PAY_AT_HOTEL"
+                            ? <span title="Guest pays the hotel; the hotel owes the OTA its commission">Hotel owes ₹{(b.otaPayable || 0).toLocaleString("en-IN")}</span>
+                            : "—"}
+                      </td>
                     </tr>
                   );
                 })

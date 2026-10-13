@@ -1,3 +1,4 @@
+import { computeOtaSettlement, OtaPaymentModel } from "../services/ota.service";
 import mongoose, { Document, Schema } from "mongoose";
 import { propertyScoped } from "./plugins/propertyScoped";
 
@@ -212,6 +213,13 @@ export interface IBooking extends Document {
   travelAgent?: string;
   otaName?: string;          // if source=OTA, which OTA
   otaConfirmationNumber?: string;
+  // OTA terms (computed by ota.service.computeOtaSettlement on save)
+  otaCommissionPercent?: number;
+  otaPaymentModel?: OtaPaymentModel;
+  otaCommissionBase?: number;
+  otaCommissionAmount?: number;
+  otaReceivable?: number;    // OTA owes the hotel (OTA_PREPAID)
+  otaPayable?: number;       // hotel owes the OTA (PAY_AT_HOTEL)
 
   // Operational flags
   isVipGuest: boolean;
@@ -358,6 +366,12 @@ const BookingSchema = new Schema<IBooking>(
     travelAgent: { type: String },
     otaName: { type: String },
     otaConfirmationNumber: { type: String },
+    otaCommissionPercent: { type: Number, min: 0, max: 100 },
+    otaPaymentModel: { type: String, enum: Object.values(OtaPaymentModel) },
+    otaCommissionBase: { type: Number },
+    otaCommissionAmount: { type: Number },
+    otaReceivable: { type: Number },
+    otaPayable: { type: Number },
 
     isVipGuest: { type: Boolean, default: false },
     vipNotes: { type: String },
@@ -398,6 +412,14 @@ BookingSchema.index({ property: 1, checkInDate: 1 }, { sparse: true });
 BookingSchema.index({ registrationStatus: 1, checkInDate: -1 }, { sparse: true });
 
 // Staff views filter on propertyId; see plugins/propertyScoped.ts.
+// OTA settlement figures always follow the booking amount and the OTA terms (one rule).
+BookingSchema.pre("validate", function () {
+  const b = this as any;
+  if (b.source === BookingSource.OTA && b.otaCommissionPercent != null && b.otaPaymentModel) {
+    Object.assign(b, computeOtaSettlement({ totalAmount: b.totalAmount, taxAmount: b.taxAmount, commissionPercent: b.otaCommissionPercent, paymentModel: b.otaPaymentModel }));
+  }
+});
+
 BookingSchema.plugin(propertyScoped);
 
 export const Booking = (mongoose.models.Booking as mongoose.Model<IBooking>) || mongoose.model<IBooking>("Booking", BookingSchema);
