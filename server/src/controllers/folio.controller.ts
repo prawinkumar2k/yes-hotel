@@ -12,7 +12,7 @@ import {
   findFolioForBooking,
 } from "../services/folio.service";
 import { computeChargeTax, computeRoomTax, loadGstRules, taxCategoryForLine } from "../services/tax.service";
-import { nights as countNights } from "@shared/dates";
+import { nights as countNights } from "../../../shared/dates";
 
 /**
  * GET /api/folios/booking/:bookingId

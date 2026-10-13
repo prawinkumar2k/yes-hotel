@@ -61,7 +61,7 @@ import { createAuditLog } from "../services/audit.service";
 import { generateBillNumber } from "../utils/bill-number";
 import { generateBookingReference } from "../utils/booking-reference";
 import crypto from "crypto";
-import { nights as countNights, todayBusinessDate } from "@shared/dates";
+import { nights as countNights, todayBusinessDate } from "../../../shared/dates";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // STEP 1 — GUEST SEARCH

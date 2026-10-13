@@ -13,7 +13,7 @@
  * Supplies at the hotel are intra-state (place of supply = the property), so tax is
  * always split equally into CGST + SGST; there is no IGST for these supplies.
  */
-import { type BusinessDate, stayNights, toBusinessDate } from "@shared/dates";
+import { type BusinessDate, stayNights, toBusinessDate } from "../../../shared/dates";
 
 export type TaxCategory = "ROOM" | "FOOD" | "SERVICE";
 

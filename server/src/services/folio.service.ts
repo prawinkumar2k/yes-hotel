@@ -6,7 +6,7 @@ import { HotelSettings } from "../models/HotelSettings";
 import { createAuditLog } from "./audit.service";
 import { computeRoomTax, loadGstRules } from "./tax.service";
 import type { Request } from "express";
-import { nights as countNights } from "@shared/dates";
+import { nights as countNights } from "../../../shared/dates";
 
 
 

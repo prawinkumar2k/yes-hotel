@@ -4,7 +4,7 @@ import { Room, RoomStatus } from "../models/Room";
 import { RoomCategory } from "../models/RoomCategory";
 import { createAuditLog } from "../services/audit.service";
 import { transitionBookingStatus, IllegalBookingTransitionError } from "../services/booking-state.service";
-import { businessDayRange, businessMonthRange, todayBusinessDate } from "@shared/dates";
+import { businessDayRange, businessMonthRange, todayBusinessDate } from "../../../shared/dates";
 
 export const getAdminStats = async (req: Request, res: Response) => {
   try {

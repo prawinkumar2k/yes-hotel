@@ -4,7 +4,7 @@
  * discount caps by role, dynamic surge on high occupancy, and Indian GST rate tiers)
  * are enforced server-side.
  */
-import { addDays, todayBusinessDate, type BusinessDate } from "@shared/dates";
+import { addDays, todayBusinessDate, type BusinessDate } from "../../../shared/dates";
 import { computeRoomTax, type GstRule } from "./tax.service";
 
 export interface DynamicPricingParams {

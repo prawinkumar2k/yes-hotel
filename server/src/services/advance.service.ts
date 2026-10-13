@@ -6,7 +6,7 @@ import { FolioLineType } from "../models/FolioLine";
 import { HotelSettings } from "../models/HotelSettings";
 import { createAuditLog } from "./audit.service";
 import type { Request } from "express";
-import { todayBusinessDate } from "@shared/dates";
+import { todayBusinessDate } from "../../../shared/dates";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // ADVANCE NUMBER GENERATION

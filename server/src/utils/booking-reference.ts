@@ -1,6 +1,6 @@
 import { ClientSession } from "mongoose";
 import { Booking } from "../models/Booking";
-import { todayBusinessDate } from "@shared/dates";
+import { todayBusinessDate } from "../../../shared/dates";
 
 export async function generateBookingReference(source: string, session?: ClientSession): Promise<string> {
   // MMDD of the business date at the property (Asia/Kolkata).

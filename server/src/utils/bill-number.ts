@@ -1,7 +1,7 @@
 import { ClientSession } from "mongoose";
 import { Booking } from "../models/Booking";
 import { HotelSettings } from "../models/HotelSettings";
-import { todayBusinessDate } from "@shared/dates";
+import { todayBusinessDate } from "../../../shared/dates";
 
 /**
  * Generates a unique, sequential bill number for the Guest Registration Card.

@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { computeRoomTax, DEFAULT_GST_RULES } from "./tax.service";
-import { addDays } from "@shared/dates";
+import { addDays } from "../../../shared/dates";
 import { calculateDiscount, redeemCouponForBooking } from "./coupon.service";
 import { Coupon, DiscountType } from "../models/Coupon";
 import { Booking, BookingStatus, PaymentStatus } from "../models/Booking";

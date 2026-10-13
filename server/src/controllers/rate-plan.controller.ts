@@ -3,7 +3,7 @@ import { RatePlan, MealPlanType } from "../models/RatePlan";
 import { createAuditLog } from "../services/audit.service";
 import { calculateDynamicBookingTotals } from "../services/pricing.service";
 import { loadGstRules } from "../services/tax.service";
-import { isBusinessDate } from "@shared/dates";
+import { isBusinessDate } from "../../../shared/dates";
 
 
 /**

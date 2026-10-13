@@ -26,7 +26,7 @@ import { adjustAdvance } from "../services/advance.service";
 import { BookingEvent, BookingEventType } from "../models/BookingEvent";
 import { BookingInventoryDay } from "../models/BookingInventoryDay";
 import { BookingEnquiry, BookingEnquiryStatus } from "../models/BookingEnquiry";
-import { nights as countNights, toBusinessDate, todayBusinessDate } from "@shared/dates";
+import { nights as countNights, toBusinessDate, todayBusinessDate } from "../../../shared/dates";
 
 const guestDetailsSchema = z.object({
   firstName: z.string().trim().min(1, "Guest first name is required"),

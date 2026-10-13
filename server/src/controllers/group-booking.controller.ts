@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { GroupBooking, GroupBookingStatus } from "../models/GroupBooking";
 import { createAuditLog } from "../services/audit.service";
-import { nights as countNights } from "@shared/dates";
+import { nights as countNights } from "../../../shared/dates";
 
 /**
  * GET /api/group-bookings
