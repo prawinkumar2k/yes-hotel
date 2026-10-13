@@ -1,9 +1,9 @@
 import { useState } from "react";
+import { useRoomCategories } from "@/hooks/use-room-categories";
 import { useNavigate } from "react-router-dom";
 import { CalendarDays, ChevronDown, Users2, BedDouble, Search, Sparkles } from "lucide-react";
 import { format, addDays } from "date-fns";
 
-const ROOM_TYPES = ["Standard Luxury Suite", "Deluxe Ocean View", "Executive Presidential Suite"];
 
 function Field({
   icon,
@@ -40,7 +40,9 @@ export default function BookingBar() {
   const [adults, setAdults] = useState(2);
   const [children, setChildren] = useState(0);
   const [guestsOpen, setGuestsOpen] = useState(false);
-  const [room, setRoom] = useState(ROOM_TYPES[0]);
+  // Room types come from the live, active room categories (was a hard-coded list).
+  const { data: categories = [] } = useRoomCategories();
+  const [room, setRoom] = useState("");
 
   const handleSearch = () => {
     const params = new URLSearchParams();
@@ -48,6 +50,7 @@ export default function BookingBar() {
     if (checkOut) params.set("checkOut", checkOut);
     params.set("adults", String(adults));
     params.set("children", String(children));
+    if (room) params.set("category", room);
     navigate(`/search?${params.toString()}`);
   };
 
@@ -153,9 +156,12 @@ export default function BookingBar() {
             onChange={(e) => setRoom(e.target.value)}
             className="w-full cursor-pointer appearance-none bg-transparent text-xs font-mono font-bold text-white outline-none"
           >
-            {ROOM_TYPES.map((type) => (
-              <option key={type} value={type} className="bg-[#121316] text-white">
-                {type}
+            <option value="" className="bg-[#121316] text-white">
+              Any room type
+            </option>
+            {categories.map((c) => (
+              <option key={c._id} value={c._id} className="bg-[#121316] text-white">
+                {c.name}
               </option>
             ))}
           </select>

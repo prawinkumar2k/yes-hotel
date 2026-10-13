@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { queryClient } from "@/lib/queryClient";
+import { useRoomCategories } from "@/hooks/use-room-categories";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -228,8 +229,11 @@ export default function AdminEnquiries() {
                         <Badge variant="outline" className={`font-medium ${STATUS_COLORS[enq.status] || STATUS_COLORS.NEW}`}>
                           {enq.status.replace(/_/g, " ")}
                         </Badge>
+                        {enq.followUpOverdue && (
+                          <div className="text-xs mt-2 font-bold text-red-600">Follow-up overdue</div>
+                        )}
                         {enq.nextFollowUpDate && enq.status !== 'CONVERTED' && enq.status !== 'LOST' && enq.status !== 'CANCELLED' && (
-                          <div className={`text-xs mt-2 font-medium ${new Date(enq.nextFollowUpDate) < new Date() ? 'text-red-600' : 'text-amber-600'}`}>
+                          <div className={`text-xs mt-2 font-medium ${enq.followUpOverdue ? 'text-red-600' : 'text-amber-600'}`}>
                             Follow-up: {format(new Date(enq.nextFollowUpDate), "dd MMM, HH:mm")}
                           </div>
                         )}
@@ -280,15 +284,18 @@ function CreateEnquiryDialog({ open, onOpenChange }: { open: boolean, onOpenChan
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     guestName: "", phone: "", email: "", checkIn: "", checkOut: "",
-    adults: 1, children: 0, rooms: 1, roomType: "Deluxe Room",
+    adults: 1, children: 0, rooms: 1, roomType: "To be assigned", roomCategoryId: "",
     enquiryType: "INDIVIDUAL", source: "PHONE", notes: ""
   });
+
+  const { data: categories = [] } = useRoomCategories();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     try {
-      await api.post("/admin/booking-enquiries", formData);
+      const { roomCategoryId, ...rest } = formData;
+      await api.post("/admin/booking-enquiries", roomCategoryId ? formData : rest);
       toast({ title: "Success", description: "Enquiry created successfully" });
       queryClient.invalidateQueries({ queryKey: ["booking-enquiries"] });
       onOpenChange(false);
@@ -368,13 +375,16 @@ function CreateEnquiryDialog({ open, onOpenChange }: { open: boolean, onOpenChan
               <label className="text-sm font-medium text-gray-700">Room Type</label>
               <select 
                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background"
-                value={formData.roomType} onChange={e => setFormData({...formData, roomType: e.target.value})}
+                value={formData.roomCategoryId}
+                onChange={e => {
+                  const c = categories.find(x => x._id === e.target.value);
+                  setFormData({ ...formData, roomCategoryId: e.target.value, roomType: c?.name ?? "To be assigned" });
+                }}
               >
-                <option value="Deluxe Room">Deluxe Room</option>
-                <option value="Premium Room">Premium Room</option>
-                <option value="Executive Suite">Executive Suite</option>
-                <option value="Presidential Suite">Presidential Suite</option>
-                <option value="To be assigned">To be assigned</option>
+                <option value="">To be assigned</option>
+                {categories.map(c => (
+                  <option key={c._id} value={c._id}>{c.name}</option>
+                ))}
               </select>
             </div>
             <div className="space-y-2">

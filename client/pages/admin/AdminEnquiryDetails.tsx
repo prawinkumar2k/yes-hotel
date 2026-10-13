@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Loader2, ArrowLeft, Calendar, User, Phone, Mail, Clock, MessageSquare, Plus, FileText, CheckCircle, XCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
+import { useRoomCategories } from "@/hooks/use-room-categories";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 
 const STATUS_COLORS: Record<string, string> = {
@@ -334,11 +335,17 @@ function ConvertDialog({ enquiryId, open, onOpenChange, enquiry }: { enquiryId: 
   const { toast } = useToast();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const { data: categories = [] } = useRoomCategories();
+  const [categoryId, setCategoryId] = useState<string>(enquiry?.roomCategoryId?._id ?? enquiry?.roomCategoryId ?? "");
 
   const handleConvert = async () => {
     setLoading(true);
     try {
-      const res = await api.post(`/admin/booking-enquiries/${enquiryId}/convert`);
+      if (!categoryId) {
+        toast({ title: "Room category required", description: "Choose the room category to book.", variant: "destructive" });
+        return;
+      }
+      const res = await api.post(`/admin/booking-enquiries/${enquiryId}/convert`, { roomCategoryId: categoryId });
       toast({ title: "Success", description: res.data.message });
       onOpenChange(false);
       navigate(`/admin/bookings/${res.data.data.booking._id}`);
@@ -359,6 +366,20 @@ function ConvertDialog({ enquiryId, open, onOpenChange, enquiry }: { enquiryId: 
           <p className="text-sm text-gray-600">
             This will create a new Confirmed booking for <strong>{enquiry.guestName}</strong> from <strong>{format(new Date(enquiry.checkIn), "MMM d")} to {format(new Date(enquiry.checkOut), "MMM d")}</strong> ({enquiry.rooms} rooms).
           </p>
+          <div className="space-y-1">
+            <label className="text-sm font-medium text-gray-700">Room category</label>
+            <select
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              value={categoryId}
+              onChange={(e) => setCategoryId(e.target.value)}
+            >
+              <option value="">Choose a room category</option>
+              {categories.map((c) => (
+                <option key={c._id} value={c._id}>{c.name}</option>
+              ))}
+            </select>
+            <p className="text-xs text-gray-500">Priced with the category rate (or the quotation, if one was sent) plus GST.</p>
+          </div>
           <p className="text-sm text-gray-600">
             A guest profile will be automatically linked or created based on the phone number ({enquiry.phone}).
           </p>

@@ -18,6 +18,7 @@ export default function SearchPage() {
   const [checkOut, setCheckOut] = useState(searchParams.get("checkOut") || format(addDays(new Date(), 1), "yyyy-MM-dd"));
   const [adults, setAdults] = useState(parseInt(searchParams.get("adults") || "1"));
   const [children, setChildren] = useState(parseInt(searchParams.get("children") || "0"));
+  const preferredCategory = searchParams.get("category") || "";
 
   // Two genuinely reproduced bugs, both caught by e2e/public-site.spec.ts's
   // "auto-corrects check-out" regression test:
@@ -142,7 +143,10 @@ export default function SearchPage() {
               <p className="text-sm tracking-widest uppercase text-hotel-black/60 font-semibold mb-6">
                 {availableRooms?.length} Room{availableRooms?.length > 1 ? 's' : ''} Available
               </p>
-              {availableRooms?.map((room: any, i: number) => (
+              {[...(availableRooms ?? [])]
+                // The room type chosen in the booking bar is listed first.
+                .sort((a: any, b: any) => Number(b._id === preferredCategory) - Number(a._id === preferredCategory))
+                .map((room: any, i: number) => (
                 <motion.div
                   key={room._id}
                   initial={reducedMotion ? false : { opacity: 0, y: 24 }}

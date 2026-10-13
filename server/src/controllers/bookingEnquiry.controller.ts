@@ -10,7 +10,7 @@ import { NotificationType } from "../models/NotificationLog";
 import { sendNotification } from "../services/notification.service";
 import { createAuditLog } from "../services/audit.service";
 import mongoose from "mongoose";
-import { nights as countNights, toBusinessDate, todayBusinessDate } from "../../../shared/dates";
+import { nights as countNights, toBusinessDate, todayBusinessDate, businessDayRange } from "../../../shared/dates";
 
 // ─── Chatbot enquiry schema (public — strict, minimal) ─────────────────────
 const publicEnquirySchema = z.object({
@@ -180,9 +180,34 @@ export const submitBookingEnquiry = async (req: Request, res: Response) => {
 };
 
 // ─── ADMIN: GET /api/admin/booking-enquiries ──────────────────────────────
+const OPEN_ENQUIRY = [BookingEnquiryStatus.NEW, BookingEnquiryStatus.CONTACTED, BookingEnquiryStatus.FOLLOW_UP, BookingEnquiryStatus.QUOTATION_SENT, BookingEnquiryStatus.AWAITING_RESPONSE];
+
+/**
+ * Overdue follow-up (one rule): an open enquiry whose next follow-up date is before today's
+ * business date, or a NEW enquiry with no follow-up logged within 24 hours of arriving.
+ */
+export function overdueFollowUpFilter(now = new Date()) {
+  const todayStart = businessDayRange(todayBusinessDate()).start;
+  return {
+    status: { $in: OPEN_ENQUIRY },
+    $or: [
+      { nextFollowUpDate: { $lt: todayStart } },
+      { status: BookingEnquiryStatus.NEW, createdAt: { $lt: new Date(now.getTime() - 24 * 3600 * 1000) }, "followUps.0": { $exists: false } },
+    ],
+  };
+}
+
+export function isFollowUpOverdue(e: { status: string; nextFollowUpDate?: Date | null; createdAt?: Date; followUps?: unknown[] }, now = new Date()): boolean {
+  if (!OPEN_ENQUIRY.includes(e.status as BookingEnquiryStatus)) return false;
+  if (e.nextFollowUpDate && new Date(e.nextFollowUpDate) < businessDayRange(todayBusinessDate()).start) return true;
+  return e.status === BookingEnquiryStatus.NEW && !!e.createdAt && +new Date(e.createdAt) < now.getTime() - 24 * 3600 * 1000 && !(e.followUps?.length);
+}
+
+const escapeRegex = (v: string) => v.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
 export const getBookingEnquiries = async (req: Request, res: Response) => {
   try {
-    const { page = "1", limit = "20", status, source, priority, search, dateFrom, dateTo } = req.query;
+    const { page = "1", limit = "20", status, source, priority, search, dateFrom, dateTo, overdue: overdueOnly } = req.query;
     const p = parseInt(page as string);
     const l = Math.min(parseInt(limit as string), 100);
     const filter: Record<string, any> = {};
@@ -192,11 +217,12 @@ export const getBookingEnquiries = async (req: Request, res: Response) => {
     if (priority && priority !== "ALL") filter.priority = priority;
     if (dateFrom || dateTo) {
       filter.checkIn = {};
-      if (dateFrom) filter.checkIn.$gte = new Date(dateFrom as string);
-      if (dateTo) filter.checkIn.$lte = new Date(dateTo as string);
+      if (dateFrom) filter.checkIn.$gte = businessDayRange(String(dateFrom).slice(0, 10)).start;
+      if (dateTo) filter.checkIn.$lt = businessDayRange(String(dateTo).slice(0, 10)).end;
     }
+    if (overdueOnly === "true") Object.assign(filter, { $and: [overdueFollowUpFilter()] });
     if (search) {
-      const rx = new RegExp(search as string, "i");
+      const rx = new RegExp(escapeRegex(String(search)), "i");
       filter.$or = [
         { guestName: rx }, { phone: rx }, { email: rx },
         { company: rx }, { enquiryNumber: rx },
@@ -222,16 +248,14 @@ export const getBookingEnquiries = async (req: Request, res: Response) => {
       BookingEnquiry.countDocuments({ status: BookingEnquiryStatus.QUOTATION_SENT }),
       BookingEnquiry.countDocuments({ status: BookingEnquiryStatus.CONVERTED }),
       BookingEnquiry.countDocuments({ status: BookingEnquiryStatus.LOST }),
-      BookingEnquiry.countDocuments({
-        nextFollowUpDate: { $lt: new Date() },
-        status: { $nin: [BookingEnquiryStatus.CONVERTED, BookingEnquiryStatus.LOST, BookingEnquiryStatus.CANCELLED] },
-      }),
+      BookingEnquiry.countDocuments(overdueFollowUpFilter()),
     ]);
 
     return res.json({
       success: true,
       data: {
-        enquiries, total,
+        enquiries: enquiries.map((e: any) => ({ ...e, followUpOverdue: isFollowUpOverdue(e) })),
+        total,
         totalPages: Math.ceil(total / l),
         page: p,
         stats: { totalAll, newCount, followUpCount, quotationCount, convertedCount, lostCount, overdue },
@@ -342,12 +366,26 @@ export const updateBookingEnquiryStatus = async (req: Request, res: Response) =>
       return res.status(400).json({ success: false, message: "Invalid status value" });
     }
 
+    // CONVERTED is set only by the convert action (it must have a booking); closed enquiries stay closed.
+    if (status === BookingEnquiryStatus.CONVERTED) {
+      return res.status(400).json({ success: false, message: "Use Convert to Booking to convert an enquiry" });
+    }
+    if (status === BookingEnquiryStatus.LOST && !(typeof lostReason === "string" && lostReason.trim().length >= 3)) {
+      return res.status(400).json({ success: false, message: "A reason is required to mark an enquiry as lost" });
+    }
+    const current = await BookingEnquiry.findById(req.params.id).select("status").lean();
+    if (!current) return res.status(404).json({ success: false, message: "Enquiry not found" });
+    if (current.status === BookingEnquiryStatus.CONVERTED) {
+      return res.status(400).json({ success: false, message: "A converted enquiry cannot change status" });
+    }
+
     const update: Record<string, any> = { status };
     if (status === BookingEnquiryStatus.QUOTATION_SENT) update.quotationSentAt = new Date();
-    if (status === BookingEnquiryStatus.LOST && lostReason) update.lostReason = lostReason;
+    if (status === BookingEnquiryStatus.LOST) update.lostReason = lostReason.trim();
 
     const enquiry = await BookingEnquiry.findByIdAndUpdate(req.params.id, update, { returnDocument: "after" });
     if (!enquiry) return res.status(404).json({ success: false, message: "Enquiry not found" });
+    await createAuditLog({ req, action: "enquiry.status_changed", resourceType: "BookingEnquiry", resourceId: enquiry._id.toString(), metadata: { from: current.status, to: status, lostReason } });
 
     return res.json({ success: true, data: enquiry });
   } catch (error: any) {
@@ -363,6 +401,13 @@ export const addFollowUp = async (req: Request, res: Response) => {
       return res.status(400).json({ success: false, message: "Notes and contact method are required" });
     }
 
+    const current = await BookingEnquiry.findById(req.params.id).select("status").lean();
+    if (!current) return res.status(404).json({ success: false, message: "Enquiry not found" });
+    const closed = [BookingEnquiryStatus.CONVERTED, BookingEnquiryStatus.LOST, BookingEnquiryStatus.CANCELLED].includes(current.status);
+    if (nextFollowUpDate && isNaN(new Date(nextFollowUpDate).getTime())) {
+      return res.status(400).json({ success: false, message: "Invalid next follow-up date" });
+    }
+
     const followUp = {
       date: new Date(),
       method,
@@ -372,13 +417,14 @@ export const addFollowUp = async (req: Request, res: Response) => {
       createdAt: new Date(),
     };
 
+    // A follow-up note on a closed enquiry is kept, but does not reopen it.
     const update: Record<string, any> = {
       $push: { followUps: followUp },
-      $set: { status: BookingEnquiryStatus.FOLLOW_UP },
+      $set: closed ? {} : { status: BookingEnquiryStatus.FOLLOW_UP },
     };
     if (nextFollowUpDate) update.$set.nextFollowUpDate = new Date(nextFollowUpDate);
 
-    const enquiry = await BookingEnquiry.findByIdAndUpdate(req.params.id, update, { new: true });
+    const enquiry = await BookingEnquiry.findByIdAndUpdate(req.params.id, update, { returnDocument: "after" });
     if (!enquiry) return res.status(404).json({ success: false, message: "Enquiry not found" });
 
     await createAuditLog({
@@ -394,145 +440,147 @@ export const addFollowUp = async (req: Request, res: Response) => {
 };
 
 // ─── ADMIN: POST /api/admin/booking-enquiries/:id/convert ────────────────
+// Creates one CONFIRMED booking per requested room, inside one transaction, using the same
+// pricing (priceStay / GST service) and category inventory claim as booking creation.
+// A quoted amount, when present, is the agreed pre-tax room charge for the whole enquiry.
+class EnquiryConvertError extends Error {
+  constructor(message: string, public readonly status = 400) {
+    super(message);
+  }
+}
+
 export const convertEnquiryToBooking = async (req: Request, res: Response) => {
   const session = await mongoose.startSession();
-  session.startTransaction();
   try {
-    const enquiry = await BookingEnquiry.findById(req.params.id).session(session);
-    if (!enquiry) {
-      await session.abortTransaction();
-      return res.status(404).json({ success: false, message: "Enquiry not found" });
-    }
-    if (enquiry.status === BookingEnquiryStatus.CONVERTED) {
-      await session.abortTransaction();
-      return res.status(400).json({ success: false, message: "This enquiry has already been converted to a booking", data: { bookingId: enquiry.convertedToBookingId } });
-    }
-    if ([BookingEnquiryStatus.LOST, BookingEnquiryStatus.CANCELLED].includes(enquiry.status)) {
-      await session.abortTransaction();
-      return res.status(400).json({ success: false, message: `Cannot convert an enquiry with status: ${enquiry.status}` });
-    }
-
-    // Verify availability (basic check — real booking logic is in booking.controller)
-    const { Room } = await import("../models/Room");
-    const availableRooms = await Room.countDocuments({
-      sellStatus: "SELLABLE" as any,
-      occupancyStatus: "VACANT" as any,
-    }).session(session);
-    if (availableRooms < enquiry.rooms) {
-      await session.abortTransaction();
-      return res.status(400).json({ success: false, message: `Insufficient available rooms. Requested: ${enquiry.rooms}, Available: ${availableRooms}. Please assign rooms manually after booking creation.` });
-    }
-
-    // Get default property
-    const { Property } = await import("../models/Property");
-    const property = await Property.findOne({}).session(session).lean();
-
-    // Find or create guest profile
-    let guest = await Guest.findOne({ phone: enquiry.phone }).session(session);
-    if (!guest) {
-      const newGuest = await Guest.create({
-        propertyId: property?._id,
-        fullName: enquiry.guestName.trim(),
-        phone: enquiry.phone,
-        email: enquiry.email || undefined,
-      });
-      guest = Array.isArray(newGuest) ? newGuest[0] : newGuest;
-    }
-
-    // Generate booking reference
+    const { RoomCategory } = await import("../models/RoomCategory");
+    const { priceStay } = await import("./booking.controller");
+    const { reserveInventoryDays } = await import("../services/booking-safety.service");
+    const { computeRoomTax, loadGstRules } = await import("../services/tax.service");
     const { generateBookingReference } = await import("../utils/booking-reference");
-    const bookingReference = await generateBookingReference("ENQ");
 
-    // Create the booking as CONFIRMED (pending physical room assignment)
-    const [firstName, ...rest] = guest.fullName.trim().split(" ");
-    // Fetch room category or default
-    let finalRoomCategory = enquiry.roomCategoryId;
-    if (!finalRoomCategory) {
-      const { RoomCategory } = await import("../models/RoomCategory");
-      const defaultCategory = await RoomCategory.findOne({}).session(session).lean();
-      if (!defaultCategory) {
-        throw new Error("No room categories found in the system to assign to booking.");
+    const pre = await BookingEnquiry.findById(req.params.id).lean();
+    if (!pre) throw new EnquiryConvertError("Enquiry not found", 404);
+    const categoryId = (req.body?.roomCategoryId as string | undefined) || (pre.roomCategoryId ? String(pre.roomCategoryId) : undefined);
+    if (!categoryId || !mongoose.Types.ObjectId.isValid(categoryId)) {
+      throw new EnquiryConvertError("Choose the room category for this enquiry before converting it");
+    }
+    const category = await RoomCategory.findById(categoryId).lean();
+    if (!category) throw new EnquiryConvertError("Room category not found", 404);
+
+
+    const preRooms = Math.max(1, Number(pre.rooms) || 1);
+    let bookings: any[] = [];
+    await session.withTransaction(async () => {
+      bookings = [];
+      // Category sell limit, claimed first (like booking creation) for all rooms at once;
+      // throws when sold out and the whole conversion rolls back.
+      await reserveInventoryDays({ roomCategoryId: String(category._id), checkInDate: pre.checkIn, checkOutDate: pre.checkOut, session, count: preRooms });
+      const enquiry = await BookingEnquiry.findById(req.params.id).session(session);
+      if (!enquiry) throw new EnquiryConvertError("Enquiry not found", 404);
+      if (+enquiry.checkIn !== +pre.checkIn || +enquiry.checkOut !== +pre.checkOut || Math.max(1, Number(enquiry.rooms) || 1) !== preRooms) {
+        throw new EnquiryConvertError("The enquiry changed while converting; try again", 409);
       }
-      finalRoomCategory = defaultCategory._id as any;
-    }
+      if (enquiry.status === BookingEnquiryStatus.CONVERTED) throw new EnquiryConvertError("This enquiry has already been converted to a booking", 409);
+      if ([BookingEnquiryStatus.LOST, BookingEnquiryStatus.CANCELLED].includes(enquiry.status)) {
+        throw new EnquiryConvertError(`Cannot convert an enquiry with status: ${enquiry.status}`);
+      }
+      if (toBusinessDate(enquiry.checkIn) < todayBusinessDate()) throw new EnquiryConvertError("The enquiry's check-in date has passed; update the dates first");
+      if (enquiry.checkOut <= enquiry.checkIn) throw new EnquiryConvertError("Check-out must be after check-in");
+      const rooms = Math.max(1, Number(enquiry.rooms) || 1);
 
-    const newBooking = await Booking.create({
-      bookingReference,
-      property: property?._id,
-      customer: guest._id,
-      guestDetails: {
-        firstName,
-        lastName: rest.join(" ") || "",
-        phone: enquiry.phone,
-        email: enquiry.email || "",
-      },
-      checkInDate: enquiry.checkIn,
-      checkOutDate: enquiry.checkOut,
-      adults: enquiry.adults,
-      children: enquiry.children,
-      roomCategory: new mongoose.Types.ObjectId(finalRoomCategory),
-      status: BookingStatus.CONFIRMED,
-      source: "ADMIN" as any,
-      bookingType: "INDIVIDUAL" as any,
-      stayType: "NIGHTLY" as any,
-      paymentStatus: "UNPAID" as any,
-      registrationStatus: "DRAFT" as any,
-      signatureStatus: "NOT_COLLECTED" as any,
-      taxAmount: 0,
-      cgstAmount: 0,
-      sgstAmount: 0,
-      paidAmount: 0,
-      discountAmount: 0,
-      couponRedeemed: false,
-      extraPersonsNoBed: 0,
-      extraPersonsWithBed: 0,
-      extraChildrenNoBed: 0,
-      extraChildrenWithBed: 0,
-      kidsUnder3: 0,
-      totalAmount: enquiry.quotationAmount || enquiry.roomSubtotal || 0,
-      specialRequests: enquiry.specialRequirements,
+      // Price per room: the agreed quotation (pre-tax, whole enquiry) or the category rate.
+      const listed = await priceStay({ category: category as any, checkIn: enquiry.checkIn, checkOut: enquiry.checkOut });
+      const nights = listed.nights;
+      let perRoom = { roomCharges: listed.roomCharges, taxAmount: listed.taxAmount, cgst: listed.cgst, sgst: listed.sgst, totalAmount: listed.totalAmount };
+      if (enquiry.quotationAmount && enquiry.quotationAmount > 0) {
+        const roomCharges = Math.round((enquiry.quotationAmount / rooms) * 100) / 100;
+        const tax = computeRoomTax(await loadGstRules(), { checkIn: enquiry.checkIn, checkOut: enquiry.checkOut, nightlyValue: roomCharges / Math.max(1, nights) });
+        perRoom = { roomCharges, taxAmount: tax.tax, cgst: tax.cgst, sgst: tax.sgst, totalAmount: tax.total };
+      }
+
+      // Guest profile: reuse by email or phone; create only when there is an email (required and unique).
+      let guest: any = await Guest.findOne(
+        enquiry.email ? { $or: [{ email: enquiry.email.toLowerCase() }, { phone: enquiry.phone }] } : { phone: enquiry.phone },
+      ).session(session);
+      if (!guest && enquiry.email) {
+        [guest] = await Guest.create(
+          [{ propertyId: enquiry.propertyId, fullName: enquiry.guestName.trim(), phone: enquiry.phone, email: enquiry.email.toLowerCase() }],
+          { session },
+        );
+      }
+
+      const propertyId = enquiry.propertyId || (req as any).propertyId;
+      const [firstName, ...rest] = enquiry.guestName.trim().split(/\s+/);
+      const groupId = rooms > 1 ? new mongoose.Types.ObjectId() : undefined;
+      for (let i = 0; i < rooms; i++) {
+        const bookingReference = await generateBookingReference("ENQ", session);
+        const [created] = await Booking.create(
+          [{
+            propertyId,
+            bookingReference,
+            customer: guest?._id,
+            guestDetails: { firstName, lastName: rest.join(" "), phone: enquiry.phone, email: enquiry.email || "" },
+            checkInDate: enquiry.checkIn,
+            checkOutDate: enquiry.checkOut,
+            adults: i === 0 ? enquiry.adults : 1,
+            children: i === 0 ? enquiry.children : 0,
+            roomCategory: category._id,
+            status: BookingStatus.CONFIRMED,
+            source: "ADMIN" as any,
+            bookingType: (rooms > 1 ? "GROUP" : "INDIVIDUAL") as any,
+            groupId,
+            stayType: "NIGHTLY" as any,
+            paymentStatus: "UNPAID" as any,
+            ratePerNight: Math.round((perRoom.roomCharges / Math.max(1, nights)) * 100) / 100,
+            taxAmount: perRoom.taxAmount,
+            cgstAmount: perRoom.cgst,
+            sgstAmount: perRoom.sgst,
+            totalAmount: perRoom.totalAmount,
+            paidAmount: 0,
+            discountAmount: 0,
+            specialRequests: enquiry.specialRequirements,
+          }],
+          { session },
+        );
+        bookings.push(created);
+      }
+
+      enquiry.status = BookingEnquiryStatus.CONVERTED;
+      enquiry.convertedToBookingId = bookings[0]._id;
+      enquiry.convertedAt = new Date();
+      enquiry.convertedBy = req.user?.id ? new mongoose.Types.ObjectId(req.user.id) : undefined;
+      enquiry.roomCategoryId = category._id as any;
+      await enquiry.save({ session });
     });
-
-    const createdBooking = Array.isArray(newBooking) ? newBooking[0] : newBooking;
-    if (!createdBooking) {
-      throw new Error("Failed to create booking from enquiry.");
-    }
-
-    // Mark enquiry as converted
-    await BookingEnquiry.findByIdAndUpdate(
-      enquiry._id,
-      {
-        status: BookingEnquiryStatus.CONVERTED,
-        convertedToBookingId: createdBooking._id,
-        convertedAt: new Date(),
-        convertedBy: req.user?.id ? new mongoose.Types.ObjectId(req.user.id) : undefined,
-      },
-      { session }
-    );
 
     await createAuditLog({
       req,
       action: "enquiry.converted",
       resourceType: "BookingEnquiry",
-      resourceId: enquiry._id.toString(),
-      metadata: { bookingReference, bookingId: createdBooking._id.toString(), enquiryNumber: enquiry.enquiryNumber },
+      resourceId: String(req.params.id),
+      metadata: { bookings: bookings.map((x) => x.bookingReference), roomCategoryId: categoryId },
     });
 
-    await session.commitTransaction();
-
+    const label = bookings.length > 1 ? `${bookings.length} bookings` : `Booking ${bookings[0].bookingReference}`;
     return res.status(201).json({
       success: true,
-      message: `Booking ${bookingReference} created from enquiry ${enquiry.enquiryNumber}`,
+      message: `${label} created from enquiry`,
       data: {
-        booking: { _id: createdBooking._id, bookingReference: createdBooking.bookingReference },
-        enquiryId: enquiry._id,
+        booking: { _id: bookings[0]._id, bookingReference: bookings[0].bookingReference },
+        bookings: bookings.map((x) => ({ _id: x._id, bookingReference: x.bookingReference, totalAmount: x.totalAmount })),
+        enquiryId: req.params.id,
       },
     });
   } catch (error: any) {
-    await session.abortTransaction();
-    return res.status(500).json({ success: false, message: error.message });
+    const status =
+      error instanceof EnquiryConvertError
+        ? error.status
+        : error?.name === "BookingConflictError" || /sold out|no (rooms|inventory)|unavailable/i.test(error?.message ?? "")
+          ? 409
+          : 500;
+    return res.status(status).json({ success: false, message: error.message });
   } finally {
-    session.endSession();
+    await session.endSession();
   }
 };
 
