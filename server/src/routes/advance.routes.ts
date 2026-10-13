@@ -5,7 +5,8 @@ import { protect } from "../middleware/auth.middleware";
 import { Request, Response } from "express";
 import { AdvancePayment, AdvancePaymentMethod } from "../models/AdvancePayment";
 import { Guest } from "../models/Guest";
-import { receiveAdvance, adjustAdvance, refundAdvance, getAdvanceSummary } from "../services/advance.service";
+import mongoose from "mongoose";
+import { receiveAdvance, adjustAdvance, refundAdvance, getAdvanceSummary, reconcileAdvances } from "../services/advance.service";
 
 const router = Router();
 router.use(protect);
@@ -79,6 +80,18 @@ router.get("/", requirePropertyAccess, requirePermission("ADVANCES", "VIEW"), as
   }
 );
 
+// GET /api/advances/reconciliation — read-only: amount = applied + refunded + remaining, and applied = folio lines
+router.get("/reconciliation", requirePropertyAccess, requirePermission("ADVANCES", "VIEW"), async (req: Request, res: Response) => {
+    try {
+      const propertyId = (req as any).propertyId;
+      const data = await reconcileAdvances(propertyId ? { propertyId } : {});
+      return res.json({ success: true, data });
+    } catch (error: any) {
+      return res.status(500).json({ success: false, message: error.message });
+    }
+  }
+);
+
 // GET /api/advances/summary/:bookingId
 router.get("/summary/:bookingId", requirePropertyAccess, requirePermission("ADVANCES", "VIEW"), async (req: Request, res: Response) => {
     try {
@@ -97,10 +110,19 @@ router.post("/:id/adjust", requirePropertyAccess, requirePermission("ADVANCES", 
       if (!folioId || !bookingId || !amount) {
         return res.status(400).json({ success: false, message: "folioId, bookingId, and amount are required" });
       }
-      const result = await adjustAdvance(
-        { advancePaymentId: req.params.id as string, folioId: folioId as string, bookingId: bookingId as string, amount: Number(amount), performedBy: (req as any).user?.id as string, reason },
-        { req }
-      );
+      // Advance decrement, adjustment record and folio credit commit together.
+      const session = await mongoose.startSession();
+      let result: any;
+      try {
+        await session.withTransaction(async () => {
+          result = await adjustAdvance(
+            { advancePaymentId: req.params.id as string, folioId: folioId as string, bookingId: bookingId as string, amount: Number(amount), performedBy: (req as any).user?.id as string, reason },
+            { req, session }
+          );
+        });
+      } finally {
+        await session.endSession();
+      }
       return res.json({ success: true, data: result });
     } catch (error: any) {
       return res.status(400).json({ success: false, message: error.message });

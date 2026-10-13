@@ -494,6 +494,11 @@ export async function reverseFolioLine(
     },
     { req: opts.req, session: opts.session },
   );
+  // Reversing an advance application returns the money to the advance.
+  if (original.lineType === FolioLineType.ADVANCE_ADJUSTMENT && (original as any).advancePaymentId) {
+    const { restoreAdvanceForReversedLine } = await import("./advance.service");
+    await restoreAdvanceForReversedLine(original as any, { session: opts.session, performedBy: opts.postedBy, reason });
+  }
   await createAuditLog({
     req: opts.req,
     action: "folio.line_reversed",

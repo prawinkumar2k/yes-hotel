@@ -23,7 +23,7 @@ import { Folio, FolioStatus } from "../models/Folio";
 import { FolioLine, FolioLineType } from "../models/FolioLine";
 import { createFolio, postCharge, finalizeFolio, settleFolio, recomputeFolioBalance, findFolioForBooking, openFolioForBooking, postRecordedPaymentsToFolio, recordFolioPayment, FolioNotBalancedError } from "../services/folio.service";
 import { AdvancePayment, AdvancePaymentStatus } from "../models/AdvancePayment";
-import { adjustAdvance } from "../services/advance.service";
+import { adjustAdvance, applyAdvancesToFolio } from "../services/advance.service";
 import { BookingEvent, BookingEventType } from "../models/BookingEvent";
 import { BookingInventoryDay } from "../models/BookingInventoryDay";
 import { BookingEnquiry, BookingEnquiryStatus } from "../models/BookingEnquiry";
@@ -941,24 +941,18 @@ export const checkOut = async (req: Request, res: Response) => {
             { req, session }
           );
         } else {
-          const adv = await AdvancePayment.findOne({
-            $or: [{ booking: booking._id }, ...(booking.customer ? [{ guest: booking.customer }] : [])],
-            remainingBalance: { $gte: Number(advanceAdjustmentAmount) },
-            status: { $in: [AdvancePaymentStatus.RECEIVED, AdvancePaymentStatus.PARTIALLY_ADJUSTED] },
-          }).session(session);
-          if (adv) {
-            await adjustAdvance(
-              {
-                advancePaymentId: adv._id.toString(),
-                folioId: folio._id.toString(),
-                bookingId: booking._id.toString(),
-                amount: Number(advanceAdjustmentAmount),
-                performedBy: actorId?.toString() || "CHECKOUT",
-                reason: notes || "Checkout settlement from advance",
-              },
-              { req, session }
-            );
-          }
+          // Apply the booking's advances oldest-first, across several if needed, capped at the amount due.
+          await applyAdvancesToFolio(
+            {
+              bookingId: booking._id.toString(),
+              guestId: booking.customer ? String(booking.customer) : undefined,
+              folioId: folio._id.toString(),
+              maxAmount: Number(advanceAdjustmentAmount),
+              performedBy: actorId?.toString() || "CHECKOUT",
+              reason: notes || "Checkout settlement from advance",
+            },
+            { req, session }
+          );
         }
         folio = await Folio.findById(folio._id).session(session);
       }

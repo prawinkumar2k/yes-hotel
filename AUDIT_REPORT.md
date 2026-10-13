@@ -546,6 +546,24 @@ Available = VACANT + CLEAN + SELLABLE + not blocked. Occupancy % = occupied room
 
 ---
 
+### Step D — Advances
+
+| Issue | Root cause | Fix | Test |
+|---|---|---|---|
+| Duplicate advance numbers under load | `countDocuments()+1` | Atomic counter per month, continuing from the highest number already issued | `advance-ledger.spec.ts` (4 concurrent receipts) |
+| Advance not applied at checkout when split across advances | Checkout looked for one advance covering the whole amount, else silently skipped | `applyAdvancesToFolio`: oldest first, across advances, capped at the amount due | same |
+| Reversing an advance line lost the money | The folio line was removed but the advance stayed "applied" | `reverseFolioLine` restores the advance (balance, status, REVERSAL adjustment record) in the same transaction | same |
+| Partial writes on refund and manual adjust | Several separate writes | Refund and `POST /advances/:id/adjust` run in one transaction; refund needs a reason | same |
+| Inconsistent status | Status set ad hoc; PARTIALLY_REFUNDED advances could no longer be used | `advanceStatusFor` (one rule); all drawable statuses accepted | same |
+| Advances on closed bookings | — | Refused for CANCELLED, NO_SHOW or CHECKED_OUT bookings | — |
+| No reconciliation | — | `GET /api/advances/reconciliation` (ADVANCES:VIEW, read-only): amount = applied + refunded + remaining, and applied = unreversed folio lines | same |
+
+**Data (dry run, nothing changed):** `docs/repair/advance-reconciliation.md`. There are 12 advances, and 5 mismatch. The 4 seeded advances (ADV-2026-1000/1003/1006/1009) are marked applied but have no folio lines; the seed rewrite will fix them. ADV-202610-0012 has a ₹1,000 folio line, but the advance shows ₹0 applied; this needs your decision.
+
+**Verification (D):** tests 249 pass; `tsc` clean.
+
+---
+
 ## Appendix A — All mounted endpoints (243)
 
 | Method | Path | Handler | Auth | RBAC | Live GET (SUPER_ADMIN) | Used by FE |

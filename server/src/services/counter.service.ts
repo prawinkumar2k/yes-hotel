@@ -13,3 +13,9 @@ export async function nextSequence(key: string, session?: mongoose.ClientSession
   );
   return (doc as any)?.seq ?? (doc as any)?.value?.seq;
 }
+
+/** Raises a counter to at least `floor` (used to continue an existing numbering series). */
+export async function ensureSequenceAtLeast(key: string, floor: number, session?: mongoose.ClientSession): Promise<void> {
+  const db = mongoose.connection.db!;
+  await db.collection<{ _id: string; seq: number }>("counters").updateOne({ _id: key }, { $max: { seq: floor } }, { upsert: true, session });
+}

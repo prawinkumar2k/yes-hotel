@@ -3,6 +3,16 @@
 All changes, fixes, hardened services, and architectural migrations are documented chronologically in this file.
 
 ---
+## [Phase 1 · Step D — Advances] - 2026-10-13
+
+- Advance numbers come from an atomic monthly counter, so they no longer duplicate under load.
+- At checkout, advances are applied oldest first, across several advances if needed, capped at the amount due.
+- Reversing an advance line on the folio returns the money to the advance.
+- Refunds and manual adjustments are transactional, and a refund needs a reason.
+- Advance status follows one rule; advances can't be taken against closed bookings.
+- `GET /api/advances/reconciliation`; dry-run report in `docs/repair/advance-reconciliation.md`.
+
+---
 ## [Phase 1 · Steps B and C — Night audit, folio ledger] - 2026-10-13
 
 - Night audit: status and preview are read-only. The audit charges only nights not already covered, at the booking rate, and charges overstays once. No-shows release their room-nights. Each run is pinned to one date (409 on a repeat). Audited days are locked to postings, and the summary is computed from the day's data.
