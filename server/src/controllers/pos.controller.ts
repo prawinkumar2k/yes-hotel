@@ -7,6 +7,26 @@ import { createAuditLog } from "../services/audit.service";
 import { Room } from "../models/Room";
 import { MenuItem } from "../models/MenuItem";
 import { taxService } from "../services/tax.service";
+import mongoose from "mongoose";
+import { Booking, BookingStatus } from "../models/Booking";
+import { nextSequence } from "../services/counter.service";
+import { todayBusinessDate } from "../../../shared/dates";
+
+/** The in-house stay in a room now (a CHECKED_IN booking assigned to it), from bookings, not a cached pointer. */
+async function inHouseStayForRoom(roomNumber: string, session?: mongoose.ClientSession) {
+  const room = await Room.findOne({ roomNumber }).session(session ?? null);
+  if (!room) return { error: `Room ${roomNumber} not found` } as const;
+  const booking = await Booking.findOne({ assignedRoom: room._id, status: BookingStatus.CHECKED_IN }).session(session ?? null);
+  if (!booking) return { error: `Room ${roomNumber} has no checked-in guest` } as const;
+  const folio = await Folio.findOne({ booking: booking._id, status: FolioStatus.OPEN }).session(session ?? null);
+  if (!folio) return { error: `Room ${roomNumber}: the guest has no open folio` } as const;
+  return { room, booking, folio } as const;
+}
+
+async function nextKotNumber() {
+  const ymd = todayBusinessDate().replace(/-/g, "");
+  return `KOT-${ymd}-${String(await nextSequence(`kot:${ymd}`)).padStart(4, "0")}`;
+}
 
 /**
  * GET /api/pos/orders
@@ -94,82 +114,18 @@ export const createPosOrder = async (req: Request, res: Response) => {
     } catch (e: any) {
       return res.status(400).json({ success: false, message: e.message });
     }
-    const { formattedItems, subtotal, foodTax, taxAmount, grandTotal } = priced;
-    const kotNumber = `KOT-${Date.now()}`;
+    const { formattedItems, subtotal, taxAmount, grandTotal } = priced;
+    const kotNumber = await nextKotNumber();
 
+    // A room-service order must be for an in-house guest. Nothing is posted yet: the charge goes
+    // to the folio when the bill is settled (after the kitchen has served it).
     let folioId: string | undefined = undefined;
     let bookingId: string | undefined = undefined;
-
-    // Room charge integration: post to live folio if roomNumber specified and chargeToFolio is true
     if (chargeToFolio && roomNumber) {
-      const room = await Room.findOne({ roomNumber });
-      if (!room || !room.currentBooking) {
-        return res.status(400).json({
-          success: false,
-          message: `Cannot charge to Room ${roomNumber}: Room is not currently occupied by a checked-in guest.`,
-        });
-      }
-
-      bookingId = room.currentBooking.toString();
-      const folio = await Folio.findOne({ booking: room.currentBooking, status: FolioStatus.OPEN });
-      if (!folio) {
-        return res.status(400).json({
-          success: false,
-          message: `Cannot charge to Room ${roomNumber}: Guest has no open folio available for posting.`,
-        });
-      }
-
-      folioId = folio._id.toString();
-
-      // Post the taxable amount and its GST as separate lines, same
-      // convention as room charges (checkIn/night-audit split CGST+SGST
-      // rather than folding tax into the charge). Before this, the entire
-      // grandTotal (subtotal + tax) was posted as one RESTAURANT line, so
-      // folio.totalTax/cgst/sgst silently under-reported every restaurant
-      // charge's GST — a real gap for GST filing, which needs cgst+sgst
-      // collected across ALL revenue streams, not just room tariff.
-      await postCharge(
-        {
-          folioId,
-          bookingId,
-          lineType: FolioLineType.RESTAURANT,
-          description: `Restaurant Order ${kotNumber} (Room Service)`,
-          amount: subtotal,
-          date: new Date(),
-          postedBy: actorId?.toString() || "POS_SYSTEM",
-        },
-        { req }
-      );
-
-      if (taxAmount > 0) {
-        const { cgst, sgst } = foodTax;
-
-        await postCharge(
-          {
-            folioId,
-            bookingId,
-            lineType: FolioLineType.TAX_CGST,
-            description: `CGST on Restaurant Order ${kotNumber}`,
-            amount: cgst,
-            date: new Date(),
-            postedBy: actorId?.toString() || "POS_SYSTEM",
-          },
-          { req }
-        );
-
-        await postCharge(
-          {
-            folioId,
-            bookingId,
-            lineType: FolioLineType.TAX_SGST,
-            description: `SGST on Restaurant Order ${kotNumber}`,
-            amount: sgst,
-            date: new Date(),
-            postedBy: actorId?.toString() || "POS_SYSTEM",
-          },
-          { req }
-        );
-      }
+      const stay = await inHouseStayForRoom(String(roomNumber));
+      if ("error" in stay) return res.status(400).json({ success: false, message: `Cannot charge to room: ${stay.error}` });
+      bookingId = String(stay.booking._id);
+      folioId = String(stay.folio._id);
     }
 
     const order = await RestaurantOrder.create({
@@ -238,6 +194,9 @@ export const updateOrderStatus = async (req: Request, res: Response) => {
     if (!(await PermissionService.can((req as any).user, "RESTAURANT_POS", action, String((req as any).propertyId || "default")))) {
       return res.status(403).json({ success: false, message: `Forbidden: You lack ${action} permission for RESTAURANT_POS` });
     }
+    if (status === OrderStatus.BILLED) {
+      return res.status(400).json({ success: false, message: "Use Settle Bill to bill an order (room folio, cash, card or UPI)" });
+    }
     if (action === "VOID" && (typeof reason !== "string" || reason.trim().length < 3)) {
       return res.status(400).json({ success: false, message: "A reason (at least 3 characters) is required to void an order" });
     }
@@ -252,7 +211,11 @@ export const updateOrderStatus = async (req: Request, res: Response) => {
       });
     }
 
-    const order = await RestaurantOrder.findByIdAndUpdate(id, { status }, { new: true });
+    const order = await RestaurantOrder.findByIdAndUpdate(
+      id,
+      { status, ...(action === "VOID" ? { voidReason: reason.trim() } : {}) },
+      { returnDocument: "after" },
+    );
     if (!order) return res.status(404).json({ success: false, message: "Order not found" });
 
     await createAuditLog({
@@ -264,7 +227,7 @@ export const updateOrderStatus = async (req: Request, res: Response) => {
         kotNumber: order.kotNumber,
         previousStatus: existing.status,
         newStatus: status,
-        ...(action === "VOID" ? { voidReason: reason.trim(), voidedAmount: (existing as any).totalAmount } : {}),
+        ...(action === "VOID" ? { voidReason: reason.trim(), voidedAmount: existing.grandTotal } : {}),
       },
     });
 
@@ -278,3 +241,73 @@ export const updateOrderStatus = async (req: Request, res: Response) => {
   }
 };
 
+
+const SettleSchema = {
+  modes: ["ROOM", "CASH", "CARD", "UPI"] as const,
+};
+
+/**
+ * POST /api/pos/orders/:id/settle  { mode: "ROOM" | "CASH" | "CARD" | "UPI", roomNumber?, reference? }
+ * Bills a SERVED order. ROOM posts the food charge and its GST to the in-house guest's folio;
+ * other modes record the money taken (counted in the cashier's drawer when CASH).
+ * Everything happens in one transaction.
+ */
+export const settlePosOrder = async (req: Request, res: Response) => {
+  const session = await mongoose.startSession();
+  try {
+    const { mode, roomNumber, reference } = req.body ?? {};
+    if (!SettleSchema.modes.includes(mode)) {
+      return res.status(400).json({ success: false, message: "Choose how the bill is settled: ROOM, CASH, CARD or UPI" });
+    }
+    if ((mode === "CARD" || mode === "UPI") && !(typeof reference === "string" && reference.trim())) {
+      return res.status(400).json({ success: false, message: `A ${mode} reference (approval code / UTR) is required` });
+    }
+    const actorId = String((req as any).user?.id || (req as any).user?._id);
+    let settled: any;
+    await session.withTransaction(async () => {
+      const order = await RestaurantOrder.findById(req.params.id).session(session);
+      if (!order) throw Object.assign(new Error("Order not found"), { status: 404 });
+      if (order.status !== OrderStatus.SERVED) {
+        throw Object.assign(new Error(`Only a SERVED order can be billed (this one is ${order.status})`), { status: 400 });
+      }
+      // GST was fixed when the order was priced (FOOD rule); split it into CGST + SGST.
+      const cgst = Math.round((order.taxAmount / 2) * 100) / 100;
+      const sgst = Math.round((order.taxAmount - cgst) * 100) / 100;
+
+      if (mode === "ROOM") {
+        const target = String(roomNumber || order.roomNumber || "");
+        if (!target) throw Object.assign(new Error("Which room should the bill be charged to?"), { status: 400 });
+        const stay = await inHouseStayForRoom(target, session);
+        if ("error" in stay) throw Object.assign(new Error(`Cannot charge to room: ${stay.error}`), { status: 400 });
+        const folioId = String(stay.folio._id);
+        const bookingId = String(stay.booking._id);
+        const post = (lineType: FolioLineType, description: string, amount: number) =>
+          postCharge({ folioId, bookingId, lineType, description, amount, date: new Date(), postedBy: actorId }, { req, session });
+        await post(FolioLineType.RESTAURANT, `Restaurant ${order.kotNumber}`, order.subtotal);
+        if (cgst > 0) await post(FolioLineType.TAX_CGST, `CGST on ${order.kotNumber}`, cgst);
+        if (sgst > 0) await post(FolioLineType.TAX_SGST, `SGST on ${order.kotNumber}`, sgst);
+        order.folioId = stay.folio._id as any;
+        order.bookingId = stay.booking._id as any;
+        order.roomNumber = target;
+        order.chargeToFolio = true;
+      }
+      order.settlement = { mode, amount: order.grandTotal, settledBy: actorId as any, settledAt: new Date(), reference: reference?.trim() };
+      order.status = OrderStatus.BILLED;
+      await order.save({ session });
+      settled = order;
+    });
+
+    await createAuditLog({
+      req,
+      action: "pos.order_settled",
+      resourceType: "RestaurantOrder",
+      resourceId: String(settled._id),
+      metadata: { kotNumber: settled.kotNumber, mode: settled.settlement.mode, amount: settled.grandTotal, folioId: settled.folioId ? String(settled.folioId) : undefined },
+    });
+    return res.json({ success: true, message: `${settled.kotNumber} billed (${settled.settlement.mode})`, data: settled });
+  } catch (error: any) {
+    return res.status(error.status ?? 500).json({ success: false, message: error.message });
+  } finally {
+    await session.endSession();
+  }
+};

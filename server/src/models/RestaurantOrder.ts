@@ -33,6 +33,15 @@ export interface IRestaurantOrder extends Document {
   status: OrderStatus;
   chargeToFolio: boolean;
   notes?: string;
+  /** How the bill was settled (set when the order becomes BILLED). */
+  settlement?: {
+    mode: "ROOM" | "CASH" | "CARD" | "UPI";
+    amount: number;
+    settledBy: mongoose.Types.ObjectId;
+    settledAt: Date;
+    reference?: string;
+  };
+  voidReason?: string;
   createdAt: Date;
 }
 
@@ -48,6 +57,20 @@ const OrderItemSchema = new Schema<IOrderItem>({
 const RestaurantOrderSchema = new Schema<IRestaurantOrder>(
   {
     kotNumber: { type: String, required: true, unique: true },
+    settlement: {
+      type: new Schema(
+        {
+          mode: { type: String, enum: ["ROOM", "CASH", "CARD", "UPI"], required: true },
+          amount: { type: Number, required: true, min: 0 },
+          settledBy: { type: Schema.Types.ObjectId, ref: "User", required: true },
+          settledAt: { type: Date, required: true },
+          reference: { type: String, trim: true },
+        },
+        { _id: false },
+      ),
+      default: undefined,
+    },
+    voidReason: { type: String, trim: true },
     tableNumber: { type: String },
     roomNumber: { type: String },
     bookingId: { type: Schema.Types.ObjectId, ref: "Booking" },

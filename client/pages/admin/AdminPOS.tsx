@@ -181,18 +181,39 @@ export default function AdminPOS() {
   const advanceStatus = async (order: Order) => {
     const next = STATUS_CONFIG[order.status].next;
     if (!next) return;
+    // Billing is a settlement (room folio, cash, card or UPI), not a plain status change.
+    let settleBody: Record<string, string> | null = null;
+    if (next === "BILLED") {
+      const mode = (order.chargeToFolio
+        ? "ROOM"
+        : window.prompt("Settle bill by: CASH, CARD, UPI or ROOM", "CASH")?.trim().toUpperCase()) as string | undefined;
+      if (!mode || !["ROOM", "CASH", "CARD", "UPI"].includes(mode)) return;
+      settleBody = { mode };
+      if (mode === "ROOM" && !order.roomNumber) {
+        const room = window.prompt("Charge to which room number?")?.trim();
+        if (!room) return;
+        settleBody.roomNumber = room;
+      }
+      if (mode === "CARD" || mode === "UPI") {
+        const ref = window.prompt(`${mode} reference (approval code / UTR):`)?.trim();
+        if (!ref) return;
+        settleBody.reference = ref;
+      }
+    }
     setUpdatingId(order._id);
     try {
-      const res = await fetch(`/api/pos/orders/${order._id}/status`, {
-        method: "PATCH",
+      const res = await fetch(settleBody ? `/api/pos/orders/${order._id}/settle` : `/api/pos/orders/${order._id}/status`, {
+        method: settleBody ? "POST" : "PATCH",
         headers: getAuthHeaders(),
         credentials: "include",
-        body: JSON.stringify({ status: next }),
+        body: JSON.stringify(settleBody ?? { status: next }),
       });
       const data = await res.json();
       if (data.success) {
         setOrders(prev => prev.map(o => o._id === order._id ? { ...o, status: next } : o));
-        toast({ title: "Status Updated", description: `Order ${order.kotNumber} moved to ${STATUS_CONFIG[next].label}` });
+        toast({ title: settleBody ? "Bill Settled" : "Status Updated", description: settleBody ? data.message : `Order ${order.kotNumber} moved to ${STATUS_CONFIG[next].label}` });
+      } else {
+        toast({ title: "Could not update order", description: data.message, variant: "destructive" });
       }
     } finally {
       setUpdatingId(null);

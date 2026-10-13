@@ -143,14 +143,15 @@ describe("N4 / N5", () => {
 });
 
 describe("N2: POS roles", () => {
-  it("CASHIER cannot create orders or void, but can settle (BILLED)", async () => {
+  it("CASHIER cannot create orders or void, but can settle", async () => {
     expect((await call("CASHIER", "POST", "/api/pos/orders", {})).status).toBe(403);
     expect((await call("CASHIER", "PATCH", `/api/pos/orders/${fixtures.order}/status`, { status: "CANCELLED", reason: "test" })).status).toBe(403);
-    expect((await call("CASHIER", "PATCH", `/api/pos/orders/${fixtures.order}/status`, { status: "BILLED" })).status).toBe(200);
+    expect((await call("CASHIER", "POST", `/api/pos/orders/${fixtures.order}/settle`, { mode: "CASH" })).status).toBe(200);
   });
   it("RESTAURANT can create orders but cannot settle or void", async () => {
     expect([401, 403]).not.toContain((await call("RESTAURANT", "POST", "/api/pos/orders", {})).status);
     expect((await call("RESTAURANT", "PATCH", `/api/pos/orders/${fixtures.order2}/status`, { status: "BILLED" })).status).toBe(403);
+    expect((await call("RESTAURANT", "POST", `/api/pos/orders/${fixtures.order2}/settle`, { mode: "CASH" })).status).toBe(403);
     expect((await call("RESTAURANT", "PATCH", `/api/pos/orders/${fixtures.order2}/status`, { status: "CANCELLED", reason: "test" })).status).toBe(403);
   });
   it("MANAGER void requires a reason and is written to the audit trail", async () => {

@@ -1,3 +1,4 @@
+import { guestStats, bookingMatchForGuest, isPlaceholderEmail, phoneDigits } from "../services/guest-stats.service";
 import { Request, Response } from "express";
 import { Guest } from "../models/Guest";
 import { Booking } from "../models/Booking";
@@ -61,10 +62,17 @@ export const createGuest = async (req: Request, res: Response) => {
 
 export const getMyGuestProfile = async (req: Request, res: Response) => {
   try {
-    const user = (req as any).user;
-    if (!user || !user.email) return res.status(401).json({ success: false, message: "Unauthorized" });
+    // The access token carries the user id and role, not the email: resolve the account first.
+    const userId = (req as any).user?.id;
+    if (!userId) return res.status(401).json({ success: false, message: "Unauthorized" });
+    const { User } = await import("../models/User");
+    const account = await User.findById(userId).select("email role").lean();
+    if (!account) return res.status(401).json({ success: false, message: "Unauthorized" });
+    if (account.role !== "CUSTOMER") {
+      return res.status(403).json({ success: false, message: "Guest profiles are available to guest accounts only" });
+    }
 
-    const guest = await Guest.findOne({ email: user.email.toLowerCase() });
+    const guest = await Guest.findOne({ email: account.email.toLowerCase() });
     if (!guest) return res.status(404).json({ success: false, message: "Guest profile not found" });
 
     // Include loyalty transactions
@@ -85,119 +93,39 @@ export const getMyGuestProfile = async (req: Request, res: Response) => {
 export const getGuests = async (req: Request, res: Response) => {
   try {
     const { page = "1", limit = "15", search } = req.query;
-    const p = parseInt(page as string);
-    const l = parseInt(limit as string);
+    const p = Math.max(1, parseInt(page as string) || 1);
+    const l = Math.min(100, Math.max(1, parseInt(limit as string) || 15));
 
-    // Auto-sync: Discover any guests from Bookings that do not yet have a profile
-    try {
-      const recentBookingGuests = await Booking.find({
-        $or: [
-          { "guestDetails.email": { $exists: true, $ne: "" } },
-          { "guestDetails.phone": { $exists: true, $ne: "" } },
-        ],
-      })
-        .select("guestDetails totalAmount checkInDate checkOutDate")
-        .sort({ createdAt: -1 })
-        .limit(100)
-        .lean();
-
-      for (const b of recentBookingGuests) {
-        const email = b.guestDetails?.email?.toLowerCase()?.trim();
-        const phone = b.guestDetails?.phone?.trim();
-        if (!email && !phone) continue;
-
-        const orConditions: any[] = [];
-        if (email) orConditions.push({ email });
-        if (phone) orConditions.push({ phone });
-
-        const exists = await Guest.findOne({ $or: orConditions });
-        if (!exists) {
-          const fullName = `${b.guestDetails.firstName || ""} ${b.guestDetails.lastName || ""}`.trim() || "Guest";
-          await Guest.create({
-            fullName,
-            email: email || `${phone || "guest"}@yeshotels.local`,
-            phone: phone || "—",
-            address: b.guestDetails.address || "",
-            city: b.guestDetails.city || "",
-            state: b.guestDetails.state || "",
-            country: b.guestDetails.country || "India",
-            idType: b.guestDetails.idType,
-            idNumber: b.guestDetails.idNumber,
-            totalBookings: 1,
-            totalSpend: b.totalAmount || 0,
-            lastStay: b.checkOutDate || b.checkInDate,
-          });
-        }
-      }
-    } catch {
-      // Ignore background sync errors so user request always succeeds
-    }
-
+    // Read-only: listing guests never creates or updates records.
     const query: any = {};
     if (search && String(search).trim() !== "") {
-      const searchRegex = new RegExp(String(search).trim(), "i");
-      query.$or = [
-        { fullName: searchRegex },
-        { email: searchRegex },
-        { phone: searchRegex },
-      ];
+      const rx = new RegExp(String(search).trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
+      query.$or = [{ fullName: rx }, { email: rx }, { phone: rx }];
     }
+    // A walk-in profile with a generated placeholder email is hidden when a real profile
+    // with the same phone exists (the same person, recorded twice).
+    const realPhones = new Set(
+      (await Guest.find({ email: { $not: /@(yes-?hotels)\.local$/i } }).select("phone").lean()).map((g: any) => phoneDigits(g.phone)).filter((d) => d.length >= 7),
+    );
+    const placeholderDupes = (await Guest.find({ email: /@(yes-?hotels)\.local$/i }).select("_id phone").lean())
+      .filter((g: any) => realPhones.has(phoneDigits(g.phone)))
+      .map((g: any) => g._id);
+    if (placeholderDupes.length) query._id = { $nin: placeholderDupes };
 
     const [rawGuests, total] = await Promise.all([
-      Guest.find(query)
-        .select("-idNumber -idType") // don't expose sensitive info in list
-        .sort({ createdAt: -1 })
-        .skip((p - 1) * l)
-        .limit(l),
-      Guest.countDocuments(query)
+      Guest.find(query).select("-idNumber -idType").sort({ createdAt: -1 }).skip((p - 1) * l).limit(l).lean(),
+      Guest.countDocuments(query),
     ]);
-
     const guests = await Promise.all(
-      rawGuests.map(async (g) => {
-        if (!g.totalSpend || g.totalSpend === 0 || !g.lastStay) {
-          const guestBookings = await Booking.find({
-            $or: [
-              { "guestDetails.email": g.email },
-              ...(g.phone ? [{ "guestDetails.phone": g.phone }, { "guestDetails.phoneNumber": g.phone }] : []),
-            ],
-          }).select("totalAmount checkInDate checkOutDate").lean();
-
-          if (guestBookings.length > 0) {
-            const calculatedSpend = guestBookings.reduce((sum, b: any) => sum + (b.totalAmount || b.totalPrice || 0), 0);
-            const latestStay = guestBookings.reduce((latest: Date | null, b: any) => {
-              const d = b.checkOutDate ? new Date(b.checkOutDate) : (b.checkInDate ? new Date(b.checkInDate) : null);
-              if (!d) return latest;
-              return !latest || d > latest ? d : latest;
-            }, null);
-
-            const resolvedSpend = calculatedSpend > 0 ? calculatedSpend : (g.totalSpend || 0);
-            const resolvedCount = Math.max(g.totalBookings || 0, guestBookings.length);
-
-            await Guest.findByIdAndUpdate(g._id, {
-              totalSpend: resolvedSpend,
-              totalBookings: resolvedCount,
-              ...(latestStay ? { lastStay: latestStay } : {}),
-            });
-
-            const gObj = g.toObject ? g.toObject() : { ...g };
-            gObj.totalSpend = resolvedSpend;
-            gObj.totalBookings = resolvedCount;
-            if (latestStay) gObj.lastStay = latestStay;
-            return gObj;
-          }
-        }
-        return g;
-      })
+      rawGuests.map(async (g: any) => {
+        const { bookingIds: _ids, ...stats } = await guestStats(g);
+        return { ...g, ...stats, email: isPlaceholderEmail(g.email) ? "" : g.email, placeholderEmail: isPlaceholderEmail(g.email) };
+      }),
     );
 
     return res.status(200).json({
       success: true,
-      data: {
-        guests,
-        total,
-        totalPages: Math.ceil(total / l),
-        page: p
-      }
+      data: { guests, total, totalPages: Math.ceil(total / l), page: p, hiddenDuplicates: placeholderDupes.length },
     });
   } catch (error: any) {
     return res.status(500).json({ success: false, message: error.message });
@@ -209,61 +137,15 @@ export const getGuestById = async (req: Request, res: Response) => {
     const guest = await Guest.findById(req.params.id);
     if (!guest) return res.status(404).json({ success: false, message: "Guest not found" });
 
-    // Fetch booking history matching email or phone
-    const bookings = await Booking.find({
-      $or: [
-        { "guestDetails.email": guest.email },
-        ...(guest.phone ? [
-          { "guestDetails.phone": guest.phone },
-          { "guestDetails.phoneNumber": guest.phone },
-        ] : []),
-      ]
-    })
+    // Stays matched by customer id, real email or phone (never by a placeholder email).
+    const bookings = await Booking.find(bookingMatchForGuest(guest))
       .populate("roomCategory", "name")
       .populate("assignedRoom", "roomNumber")
-      .sort({ createdAt: -1 })
+      .sort({ checkInDate: -1 })
       .limit(50);
-
-    // Live calculation of guest stats from real bookings
-    const totalBookingsCount = Math.max(guest.totalBookings || 0, bookings.length);
-    const calculatedSpend = bookings.reduce((sum, b: any) => {
-      const bTotal = b.totalAmount || b.totalPrice || 0;
-      return sum + bTotal;
-    }, 0);
-    const resolvedSpend = calculatedSpend > 0 ? calculatedSpend : (guest.totalSpend || 0);
-
-    const latestStayDate = bookings.reduce((latest: Date | null, b: any) => {
-      const d = b.checkOutDate ? new Date(b.checkOutDate) : (b.checkInDate ? new Date(b.checkInDate) : null);
-      if (!d) return latest;
-      return !latest || d > latest ? d : latest;
-    }, guest.lastStay ? new Date(guest.lastStay) : null);
-
-    const calculatedPoints = (guest.loyaltyPoints && guest.loyaltyPoints > 0)
-      ? guest.loyaltyPoints
-      : Math.floor(resolvedSpend / 100);
-
-    // Synchronize to guest document if needed
-    let hasChanges = false;
-    if (guest.totalSpend !== resolvedSpend) {
-      guest.totalSpend = resolvedSpend;
-      hasChanges = true;
-    }
-    if (guest.totalBookings !== totalBookingsCount) {
-      guest.totalBookings = totalBookingsCount;
-      hasChanges = true;
-    }
-    if (latestStayDate && (!guest.lastStay || guest.lastStay.getTime() !== latestStayDate.getTime())) {
-      guest.lastStay = latestStayDate;
-      hasChanges = true;
-    }
-    if ((!guest.loyaltyPoints || guest.loyaltyPoints === 0) && calculatedPoints > 0) {
-      guest.loyaltyPoints = calculatedPoints;
-      hasChanges = true;
-    }
-
-    if (hasChanges) {
-      await guest.save();
-    }
+    // Read-only: figures are computed for the response, not written back.
+    const { bookingIds: _ids, ...stats } = await guestStats(guest);
+    Object.assign(guest, { totalSpend: stats.totalSpend, totalBookings: stats.totalBookings, lastStay: stats.lastStay ?? guest.lastStay });
 
     // Fetch complaints
     const complaints = await Complaint.find({ guestId: guest._id })
@@ -277,7 +159,7 @@ export const getGuestById = async (req: Request, res: Response) => {
 
     return res.status(200).json({ 
       success: true, 
-      data: { guest, bookings, complaints, loyaltyTransactions } 
+      data: { guest: { ...guest.toObject(), totalStays: stats.totalStays }, bookings, complaints, loyaltyTransactions } 
     });
   } catch (error: any) {
     return res.status(500).json({ success: false, message: error.message });

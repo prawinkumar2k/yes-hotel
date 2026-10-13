@@ -74,7 +74,7 @@ export default function AdminSettings() {
         </Link>
       </div>
 
-      <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow-md border border-gray-300 p-6 text-black">
+      <form key={settings?.updatedAt ?? "new"} onSubmit={handleSubmit} className="bg-white rounded-lg shadow-md border border-gray-300 p-6 text-black">
         <Tabs defaultValue="general">
           <TabsList className="mb-6 bg-gray-200 border border-gray-300 p-1">
             <TabsTrigger value="general" className="font-bold data-[state=active]:bg-hotel-gold data-[state=active]:text-black">General Info</TabsTrigger>
@@ -84,7 +84,7 @@ export default function AdminSettings() {
             <TabsTrigger value="occupancy" className="font-bold data-[state=active]:bg-hotel-gold data-[state=active]:text-black">Occupancy Tariffs</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="general" className="space-y-4">
+          <TabsContent forceMount value="general" className="space-y-4 data-[state=inactive]:hidden">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
               <div className="space-y-2">
                 <label className="text-sm font-bold text-black block">Hotel Name</label>
@@ -109,7 +109,7 @@ export default function AdminSettings() {
             </div>
           </TabsContent>
 
-          <TabsContent value="contact" className="space-y-4">
+          <TabsContent forceMount value="contact" className="space-y-4 data-[state=inactive]:hidden">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
               <div className="space-y-2">
                 <label className="text-sm font-bold text-black block">Phone Number</label>
@@ -134,7 +134,7 @@ export default function AdminSettings() {
             </div>
           </TabsContent>
 
-          <TabsContent value="booking" className="space-y-4">
+          <TabsContent forceMount value="booking" className="space-y-4 data-[state=inactive]:hidden">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
               <div className="space-y-2">
                 <label className="text-sm font-bold text-black block">Check-in Time</label>
@@ -174,23 +174,23 @@ export default function AdminSettings() {
             </div>
           </TabsContent>
 
-          <TabsContent value="occupancy" className="space-y-4">
+          <TabsContent forceMount value="occupancy" className="space-y-4 data-[state=inactive]:hidden">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
               <div className="space-y-2">
                 <label className="text-sm font-bold text-black block">Adult Extra Pax (No Bed) - ₹/night</label>
-                <Input name="extraPersonRate" type="number" required defaultValue={settings?.extraPersonRate || 800} className="border-gray-400 text-black font-medium" />
+                <Input name="extraPersonRate" type="number" required defaultValue={settings?.extraPersonRate ?? 800} className="border-gray-400 text-black font-medium" />
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-bold text-black block">Adult Extra Pax (With Bed) - ₹/night</label>
-                <Input name="extraBedRate" type="number" required defaultValue={settings?.extraBedRate || 1200} className="border-gray-400 text-black font-medium" />
+                <Input name="extraBedRate" type="number" required defaultValue={settings?.extraBedRate ?? 1200} className="border-gray-400 text-black font-medium" />
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-bold text-black block">Child 3-12 (No Bed) - ₹/night</label>
-                <Input name="childRateNoBed" type="number" required defaultValue={settings?.childRateNoBed || 400} className="border-gray-400 text-black font-medium" />
+                <Input name="childRateNoBed" type="number" required defaultValue={settings?.childRateNoBed ?? 400} className="border-gray-400 text-black font-medium" />
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-bold text-black block">Child 3-12 (With Bed) - ₹/night</label>
-                <Input name="childRateWithBed" type="number" required defaultValue={settings?.childRateWithBed || 600} className="border-gray-400 text-black font-medium" />
+                <Input name="childRateWithBed" type="number" required defaultValue={settings?.childRateWithBed ?? 600} className="border-gray-400 text-black font-medium" />
               </div>
               <div className="col-span-2">
                 <p className="text-xs text-gray-500 italic">Note: Kids under 3 years are considered free of charge and will not be billed for occupancy.</p>
@@ -198,31 +198,31 @@ export default function AdminSettings() {
             </div>
           </TabsContent>
 
-          <TabsContent value="mealplans" className="space-y-4">
+          <TabsContent forceMount value="mealplans" className="space-y-4 data-[state=inactive]:hidden">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
               <div className="space-y-2">
                 <label className="text-sm font-bold text-black block">EP (Room Only) - ₹/person</label>
-                <Input name="mealPlanRates.EP" type="number" required defaultValue={settings?.mealPlanRates?.EP || 0} className="border-gray-400 text-black font-medium" />
+                <Input name="mealPlanRates.EP" type="number" required defaultValue={settings?.mealPlanRates?.EP ?? 0} className="border-gray-400 text-black font-medium" />
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-bold text-black block">CP (Continental / Breakfast) - ₹/person</label>
-                <Input name="mealPlanRates.CP" type="number" required defaultValue={settings?.mealPlanRates?.CP || 500} className="border-gray-400 text-black font-medium" />
+                <Input name="mealPlanRates.CP" type="number" required defaultValue={settings?.mealPlanRates?.CP ?? 500} className="border-gray-400 text-black font-medium" />
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-bold text-black block">MAP (Half Board) - ₹/person</label>
-                <Input name="mealPlanRates.MAP" type="number" required defaultValue={settings?.mealPlanRates?.MAP || 1000} className="border-gray-400 text-black font-medium" />
+                <Input name="mealPlanRates.MAP" type="number" required defaultValue={settings?.mealPlanRates?.MAP ?? 1000} className="border-gray-400 text-black font-medium" />
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-bold text-black block">AP (Full Board) - ₹/person</label>
-                <Input name="mealPlanRates.AP" type="number" required defaultValue={settings?.mealPlanRates?.AP || 1500} className="border-gray-400 text-black font-medium" />
+                <Input name="mealPlanRates.AP" type="number" required defaultValue={settings?.mealPlanRates?.AP ?? 1500} className="border-gray-400 text-black font-medium" />
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-bold text-black block">RO (Room Only) - ₹/person</label>
-                <Input name="mealPlanRates.RO" type="number" required defaultValue={settings?.mealPlanRates?.RO || 0} className="border-gray-400 text-black font-medium" />
+                <Input name="mealPlanRates.RO" type="number" required defaultValue={settings?.mealPlanRates?.RO ?? 0} className="border-gray-400 text-black font-medium" />
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-bold text-black block">BB (Bed & Breakfast) - ₹/person</label>
-                <Input name="mealPlanRates.BB" type="number" required defaultValue={settings?.mealPlanRates?.BB || 500} className="border-gray-400 text-black font-medium" />
+                <Input name="mealPlanRates.BB" type="number" required defaultValue={settings?.mealPlanRates?.BB ?? 500} className="border-gray-400 text-black font-medium" />
               </div>
             </div>
           </TabsContent>

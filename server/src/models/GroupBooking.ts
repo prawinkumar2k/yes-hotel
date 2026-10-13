@@ -14,7 +14,9 @@ export interface IGroupRoomBlock {
   categoryName: string;
   roomsRequired: number;
   roomsConfirmed: number;
-  ratePerRoom: number;
+  ratePerRoom: number;      // pre-tax rate per room per night
+  roomsHeld?: number;       // inventory currently held for the block
+  roomsPickedUp?: number;   // rooms turned into named bookings (rooming list)
 }
 
 export interface IGroupBooking extends Document {
@@ -38,6 +40,8 @@ export interface IGroupBooking extends Document {
   balance: number;
   status: GroupBookingStatus;
   assignedBookings: mongoose.Types.ObjectId[]; // individual booking IDs
+  advanceIds?: mongoose.Types.ObjectId[];        // AdvancePayment records for this group
+  releaseDate?: Date;                            // cut-off: unpicked rooms go back on sale
   notes?: string;
   specialRequirements?: string;
   internalRemarks?: string;
@@ -48,7 +52,9 @@ const GroupRoomBlockSchema = new Schema<IGroupRoomBlock>({
   categoryName: { type: String, required: true },
   roomsRequired: { type: Number, required: true, min: 1 },
   roomsConfirmed: { type: Number, default: 0 },
-  ratePerRoom: { type: Number, required: true },
+  ratePerRoom: { type: Number, required: true, min: 0 },
+  roomsHeld: { type: Number, default: 0, min: 0 },
+  roomsPickedUp: { type: Number, default: 0, min: 0 },
 });
 
 const GroupBookingSchema = new Schema<IGroupBooking>(
@@ -72,6 +78,8 @@ const GroupBookingSchema = new Schema<IGroupBooking>(
     balance: { type: Number, default: 0 },
     status: { type: String, enum: Object.values(GroupBookingStatus), default: GroupBookingStatus.ENQUIRY },
     assignedBookings: [{ type: Schema.Types.ObjectId, ref: "Booking" }],
+    advanceIds: [{ type: Schema.Types.ObjectId, ref: "AdvancePayment" }],
+    releaseDate: { type: Date },
     notes: { type: String },
     specialRequirements: { type: String },
     internalRemarks: { type: String },
