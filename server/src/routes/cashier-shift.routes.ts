@@ -12,6 +12,7 @@ import {
   confirmHandover,
   closeShift,
   getCashierStaffList,
+  acceptShiftVariance,
 } from "../controllers/cashier-shift.controller";
 
 const router = Router();
@@ -40,5 +41,8 @@ router.post("/:id/handover/confirm", protect, requirePropertyAccess, requirePerm
 
 // Reconcile and close shift
 router.post("/:id/close", protect, requirePropertyAccess, requirePermission("CASHIER_SHIFTS", "CLOSE_SHIFT"), closeShift);
+
+// Manager/supervisor accepts a cash variance above the threshold (CAP.SHIFT_SUPERVISOR_OVERRIDE checked in the handler)
+router.post("/:id/accept", protect, requirePropertyAccess, requirePermission("CASHIER_SHIFTS", "RECONCILE"), acceptShiftVariance);
 
 export default router;

@@ -58,6 +58,7 @@ export interface ICashierShift extends Document {
 
   actualCashCounted?: number;
   closingDenominations?: IDenominationBreakdown;
+  varianceAcceptanceRequired?: boolean;
   cashVariance?: number;
   varianceReason?: string;
 
@@ -144,6 +145,7 @@ const CashierShiftSchema = new Schema<ICashierShift>(
     closingDenominations: { type: DenominationSchema },
     cashVariance: { type: Number },
     varianceReason: { type: String, trim: true },
+    varianceAcceptanceRequired: { type: Boolean, default: false },
 
     // Handover
     handoverToCashier: { type: Schema.Types.ObjectId, ref: "User" },
@@ -171,6 +173,10 @@ const CashierShiftSchema = new Schema<ICashierShift>(
 // Indexes for fast lookup & concurrency control
 CashierShiftSchema.index({ propertyId: 1, status: 1 });
 CashierShiftSchema.index({ propertyId: 1, drawerId: 1, status: 1 });
+// One active (OPEN or HANDOVER_PENDING) shift per drawer and per cashier, enforced by the database.
+const ACTIVE = { status: { $in: [CashierShiftStatus.OPEN, CashierShiftStatus.HANDOVER_PENDING] } };
+CashierShiftSchema.index({ propertyId: 1, drawerId: 1 }, { unique: true, partialFilterExpression: ACTIVE, name: "one_active_shift_per_drawer" });
+CashierShiftSchema.index({ cashier: 1 }, { unique: true, partialFilterExpression: ACTIVE, name: "one_active_shift_per_cashier" });
 CashierShiftSchema.index({ cashier: 1, status: 1 });
 CashierShiftSchema.index({ businessDate: 1, propertyId: 1 });
 

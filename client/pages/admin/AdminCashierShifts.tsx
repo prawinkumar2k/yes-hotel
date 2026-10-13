@@ -54,6 +54,7 @@ interface CashierShiftItem {
   expectedGateway?: number;
   actualCashCounted?: number;
   cashVariance?: number;
+  varianceAcceptanceRequired?: boolean;
   varianceReason?: string;
   status: "OPEN" | "HANDOVER_PENDING" | "CLOSED" | "RECONCILED";
   notes?: string;
@@ -255,6 +256,8 @@ export default function AdminCashierShifts() {
           targetCashierId,
           countedCash: handoverCount,
           denominations: handoverCount > 0 ? handoverDenominations : undefined,
+          // Any variance at handover needs a reason; the handover notes carry it.
+          varianceReason: handoverNotes,
           notes: handoverNotes,
         }),
       });
@@ -272,6 +275,19 @@ export default function AdminCashierShifts() {
       toast({ title: "Error", description: err.message, variant: "destructive" });
     } finally {
       setSubmittingHandover(false);
+    }
+  };
+
+  const handleAcceptVariance = async (shiftId: string) => {
+    const notes = window.prompt("Notes for accepting this cash variance:")?.trim();
+    if (!notes || notes.length < 3) return;
+    try {
+      const res = await fetch(`/api/cashier-shifts/${shiftId}/accept`, { method: "POST", headers: getAuthHeaders(), body: JSON.stringify({ notes }) });
+      const json = await res.json();
+      toast({ title: json.success ? "Variance Accepted" : "Could not accept", description: json.message, variant: json.success ? undefined : "destructive" });
+      if (json.success) fetchShifts();
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
     }
   };
 
@@ -319,7 +335,7 @@ export default function AdminCashierShifts() {
       });
       const json = await res.json();
       if (json.success) {
-        toast({ title: "Shift Closed & Reconciled", description: json.message });
+        toast({ title: json.data?.varianceAcceptanceRequired ? "Shift Closed — Awaiting Acceptance" : "Shift Closed & Reconciled", description: json.message });
         setShowCloseModal(false);
         setCloseDenominations(initialDenominations);
         setCloseCountedOverride("");
@@ -718,6 +734,9 @@ export default function AdminCashierShifts() {
                       >
                         {s.status}
                       </span>
+                      {s.varianceAcceptanceRequired && (
+                        <div className="text-[10px] text-amber-700 mt-1">variance needs acceptance</div>
+                      )}
                     </td>
                     <td className="p-3 text-right">
                       <button
@@ -727,6 +746,15 @@ export default function AdminCashierShifts() {
                       >
                         <Eye size={15} />
                       </button>
+                      {s.status === "CLOSED" && s.varianceAcceptanceRequired && (
+                        <button
+                          onClick={() => handleAcceptVariance(s._id)}
+                          className="ml-1 px-2 py-1 text-[10px] font-bold rounded border border-amber-300 text-amber-800 hover:bg-amber-50"
+                          title="Accept cash variance (manager)"
+                        >
+                          Accept
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))

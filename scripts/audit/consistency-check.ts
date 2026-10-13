@@ -49,7 +49,7 @@ async function main() {
     { $group: { _id: null, t: { $sum: "$amount" } } },
   ]).toArray();
   const folioCreditAgg = await db.collection("foliolines").aggregate([
-    { $match: { createdAt: { $gte: start, $lt: end }, direction: "CREDIT", description: { $regex: /payment/i } } },
+    { $match: { postedAt: { $gte: start, $lt: end }, lineType: "PAYMENT" } },
     { $group: { _id: null, t: { $sum: "$amount" } } },
   ]).toArray();
 
@@ -123,7 +123,7 @@ async function main() {
       cells: {
         "Dashboard (todayRevenue)": get(cc, "revenue.todayRevenue"),
         "Reports (executive paymentsToday)": get(exec, "paymentsToday"),
-        "Reports (day-summary page2.todayCashInward)": get(day, "page2.todayCashInward"),
+        "Reports (day-summary credits)": get(day, "credits"),
       },
     },
   ];

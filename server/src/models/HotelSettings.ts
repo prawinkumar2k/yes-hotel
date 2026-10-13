@@ -65,6 +65,7 @@ export interface IHotelSettings extends Document {
   // Invoice settings
   invoicePrefix: string;    // e.g. "INV"
   advancePrefix: string;    // e.g. "ADV"
+  cashVarianceThreshold?: number; // ₹; a cashier-shift variance above this needs manager acceptance
   receiptPrefix: string;    // e.g. "RCP"
   gstNumber?: string;       // Hotel's GSTIN
   panNumber?: string;
@@ -152,6 +153,7 @@ const HotelSettingsSchema = new Schema<IHotelSettings>(
     // ── INVOICE ──
     invoicePrefix: { type: String, default: "INV" },
     advancePrefix: { type: String, default: "ADV" },
+    cashVarianceThreshold: { type: Number, default: 100, min: 0 },
     receiptPrefix: { type: String, default: "RCP" },
     gstNumber: { type: String },
     panNumber: { type: String },
