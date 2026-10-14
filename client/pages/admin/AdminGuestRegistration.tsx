@@ -178,6 +178,12 @@ export default function AdminGuestRegistration() {
     childRateWithBed: Number(extraRates.childRateWithBed || 0),
   });
 
+  // Booking source. OTA bookings are typed in by hand from the OTA extranet / voucher (no online fetching).
+  const [sourceDetails, setSourceDetails] = useState(() => {
+    const q = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("source") : null;
+    return { bookingSource: q === "OTA" ? "OTA" : "WALK_IN", otaName: "", otaConfirmationNumber: "", otaCommissionPercent: "", otaPaymentModel: "OTA_PREPAID" };
+  });
+
   const [billingDetails, setBillingDetails] = useState({
     billingInstruction: "CASH",
     advanceAmount: "",
@@ -424,6 +430,8 @@ export default function AdminGuestRegistration() {
         roomId: roomsToBook[0]._id,
         roomIds: roomsToBook.map(r => r._id),
         ...billingDetails,
+        ...sourceDetails,
+        otaCommissionPercent: sourceDetails.bookingSource === "OTA" ? sourceDetails.otaCommissionPercent : undefined,
       };
 
       const res = await fetch(`/api/front-desk/registration/walk-in`, {
@@ -887,6 +895,50 @@ export default function AdminGuestRegistration() {
                 <div><label className="block text-xs font-bold text-gray-500 mb-1">Child 3-12 (With Bed)</label><div className="flex gap-2"><input type="number" min="0" aria-label="Child 3-12 (With Bed) count" title="Persons" className="w-20 px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm" value={stayDetails.extraChildrenWithBed} onChange={e => setStayDetails({...stayDetails, extraChildrenWithBed: parseInt(e.target.value)||0})} /><div className="relative flex-1"><span className="absolute left-2 top-2 text-xs text-gray-400">₹</span><input type="number" min="0" aria-label="Child 3-12 (With Bed) rate per person per night" className="w-full pl-5 pr-2 py-2 bg-[#fdfaf2] border border-[#e5c76b] rounded-lg text-sm" value={extraRates.childRateWithBed} onChange={e => setExtraRates({...extraRates, childRateWithBed: e.target.value})} /></div></div><p className="text-[10px] text-gray-500 mt-0.5">persons · ₹ per person / night</p></div>
                 <div><label className="block text-xs font-bold text-gray-500 mb-1">Other Charges (₹)</label><input type="number" min="0" className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm" value={stayDetails.otherCharges} onChange={e => setStayDetails({...stayDetails, otherCharges: parseInt(e.target.value)||0})} /></div>
                 <div><label className="block text-xs font-bold text-gray-500 mb-1">Other Charges Desc</label><input type="text" placeholder="e.g. Early Check-in" className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm" value={stayDetails.otherChargesDesc} onChange={e => setStayDetails({...stayDetails, otherChargesDesc: e.target.value})} /></div>
+              </div>
+            </div>
+
+            {/* BOOKING SOURCE — OTA details entered by hand */}
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+              <div className="bg-gray-50 px-6 py-3 border-b border-gray-200">
+                <h3 className="font-serif font-bold text-lg text-gray-800">Booking Source</h3>
+              </div>
+              <div className="p-6 space-y-4">
+                <div className="flex flex-wrap gap-2">
+                  {([["WALK_IN", "Walk-in"], ["PHONE", "Phone / Direct"], ["OTA", "OTA (MakeMyTrip, Booking.com …)"]] as const).map(([v, label]) => (
+                    <button key={v} type="button" onClick={() => { setSourceDetails({ ...sourceDetails, bookingSource: v }); if (v === "OTA" && sourceDetails.otaPaymentModel === "OTA_PREPAID") setBillingDetails({ ...billingDetails, billingInstruction: "OTA" }); }}
+                      className={`px-4 py-2 rounded-lg text-sm font-semibold border transition ${sourceDetails.bookingSource === v ? "bg-amber-100 border-amber-400 text-amber-900" : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"}`}>
+                      {label}
+                    </button>
+                  ))}
+                </div>
+                {sourceDetails.bookingSource === "OTA" && (
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold text-gray-500 mb-1">OTA *</label>
+                      <select required className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm" value={sourceDetails.otaName} onChange={e => setSourceDetails({ ...sourceDetails, otaName: e.target.value })}>
+                        <option value="">Select OTA</option>
+                        {["MakeMyTrip", "Goibibo", "Booking.com", "Agoda", "Expedia", "Airbnb", "Cleartrip", "Yatra", "EaseMyTrip", "Other"].map(o => <option key={o} value={o}>{o}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-gray-500 mb-1">OTA Booking / Confirmation No. *</label>
+                      <input required className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm font-mono" placeholder="e.g. NH7012345678" value={sourceDetails.otaConfirmationNumber} onChange={e => setSourceDetails({ ...sourceDetails, otaConfirmationNumber: e.target.value })} />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-gray-500 mb-1">Commission % *</label>
+                      <input required type="number" min="0" max="100" step="0.01" className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm" placeholder="18" value={sourceDetails.otaCommissionPercent} onChange={e => setSourceDetails({ ...sourceDetails, otaCommissionPercent: e.target.value })} />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-gray-500 mb-1">Who collects the money *</label>
+                      <select className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm" value={sourceDetails.otaPaymentModel} onChange={e => { setSourceDetails({ ...sourceDetails, otaPaymentModel: e.target.value }); setBillingDetails({ ...billingDetails, billingInstruction: e.target.value === "OTA_PREPAID" ? "OTA" : "CASH" }); }}>
+                        <option value="OTA_PREPAID">OTA prepaid (OTA pays the hotel)</option>
+                        <option value="PAY_AT_HOTEL">Pay at hotel (guest pays here)</option>
+                      </select>
+                    </div>
+                    <p className="md:col-span-4 text-xs text-gray-500">Enter these from the OTA voucher or extranet. Commission is worked out on the pre-tax room amount and shown on the OTA Bookings page.</p>
+                  </div>
+                )}
               </div>
             </div>
 

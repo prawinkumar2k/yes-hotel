@@ -55,7 +55,11 @@ export default function LoginPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(mode === "booking" ? { bookingReference, mobile } : { email, password }),
       });
-      const data = await res.json();
+      // A rate-limit or proxy error may not be JSON; show the real reason, not "network error".
+      const data = await res.json().catch(() => ({
+        success: false,
+        message: res.status === 429 ? "Too many failed attempts. Please wait 15 minutes and try again." : `Server error (${res.status}). Please try again.`,
+      }));
 
       if (data.success) {
         login(data.data);

@@ -43,6 +43,7 @@ export function buildReservationQuery(f: ReservationFilter): Record<string, any>
         { "guestDetails.firstName": { $regex: escaped, $options: "i" } },
         { "guestDetails.lastName": { $regex: escaped, $options: "i" } },
         { "guestDetails.email": { $regex: escaped, $options: "i" } },
+        { otaConfirmationNumber: { $regex: escaped, $options: "i" } },
       ],
     });
   }

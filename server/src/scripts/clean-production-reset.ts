@@ -1,5 +1,7 @@
 import mongoose from "mongoose";
 import * as dotenv from "dotenv";
+import crypto from "node:crypto";
+import { hashPassword } from "../utils/auth";
 import { User, UserRole } from "../models/User";
 import { Property } from "../models/Property";
 import { RoomCategory } from "../models/RoomCategory";
@@ -12,6 +14,12 @@ dotenv.config();
 const MONGODB_URI = process.env.MONGODB_URI || "mongodb://localhost:27017/yes_hotels";
 
 async function cleanProductionSeed() {
+  // This wipes every booking, payment, folio and guest. Never by accident: it needs an explicit flag.
+  if (!process.argv.includes("--confirm-wipe-all-hotel-data")) {
+    console.error("Refusing to run: this deletes ALL bookings, payments, folios and guests.");
+    console.error("Take a backup first, then re-run with --confirm-wipe-all-hotel-data.");
+    process.exit(1);
+  }
   console.log("🧹 Resetting to Fresh Clean Production State...");
   await mongoose.connect(MONGODB_URI);
   console.log("Connected to MongoDB:", MONGODB_URI);
@@ -36,7 +44,6 @@ async function cleanProductionSeed() {
     "verificationrequests",
     "restaurantorders",
     "complaints",
-    "auditlogs",
     "taskapprovals",
     "guestchangerequests",
     "otaconfigs",
@@ -158,25 +165,27 @@ async function cleanProductionSeed() {
 
   // 6. Ensure default staff users exist
   const USERS = [
-    { email: "admin@yeshotels.com", role: UserRole.ADMIN, firstName: "Super", lastName: "Admin", pass: "$2a$10$wO0jK0Bhy6eT/m2RzLdDkOLW0C1/r.W6W5lM3b0Qk8SgT2dG7Vwqa" }, // Admin@123
-    { email: "manager@yeshotels.com", role: UserRole.MANAGER, firstName: "Vikram", lastName: "Mehta", pass: "$2a$10$wO0jK0Bhy6eT/m2RzLdDkOLW0C1/r.W6W5lM3b0Qk8SgT2dG7Vwqa" },
-    { email: "reception@yeshotels.com", role: UserRole.RECEPTIONIST, firstName: "Priya", lastName: "Nair", pass: "$2a$10$wO0jK0Bhy6eT/m2RzLdDkOLW0C1/r.W6W5lM3b0Qk8SgT2dG7Vwqa" },
-    { email: "housekeeping@yeshotels.com", role: UserRole.HOUSEKEEPING, firstName: "Ramesh", lastName: "Kumar", pass: "$2a$10$wO0jK0Bhy6eT/m2RzLdDkOLW0C1/r.W6W5lM3b0Qk8SgT2dG7Vwqa" },
+    { email: "admin@yeshotels.com", role: UserRole.ADMIN, firstName: "Super", lastName: "Admin" },
+    { email: "manager@yeshotels.com", role: UserRole.MANAGER, firstName: "Vikram", lastName: "Mehta" },
+    { email: "reception@yeshotels.com", role: UserRole.RECEPTIONIST, firstName: "Priya", lastName: "Nair" },
+    { email: "housekeeping@yeshotels.com", role: UserRole.HOUSEKEEPING, firstName: "Ramesh", lastName: "Kumar" },
   ];
 
   for (const u of USERS) {
     const exists = await User.findOne({ email: u.email });
     if (!exists) {
+      // A fresh random password, shown once here. Never a published demo password.
+      const password = `Yh-${crypto.randomBytes(9).toString("base64url")}#7`;
       await User.create({
         email: u.email,
-        passwordHash: u.pass,
+        passwordHash: await hashPassword(password),
         firstName: u.firstName,
         lastName: u.lastName,
         role: u.role,
         propertyId: property._id,
         isActive: true,
       });
-      console.log(`  ✅ Created staff user: ${u.email}`);
+      console.log(`  ✅ Created staff user: ${u.email}  password (shown once): ${password}`);
     }
   }
 

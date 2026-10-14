@@ -34,8 +34,9 @@ export default function AdminOTABookings() {
           <h1 className="text-2xl font-serif font-bold text-gray-900 flex items-center gap-2">
             <Globe className="text-hotel-gold" /> OTA Bookings Ledger
           </h1>
-          <p className="text-sm text-gray-500">View and manage all reservations from external travel agencies</p>
+          <p className="text-sm text-gray-500">OTA reservations entered by the desk from the OTA voucher / extranet (nothing is fetched online)</p>
         </div>
+        <Link to="/admin/guest-registration?source=OTA" className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-amber-500 hover:bg-amber-600 text-white text-sm font-bold shadow-sm">+ New OTA Booking</Link>
       </div>
 
       <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm mb-6 flex flex-wrap gap-4 items-center">
@@ -96,7 +97,7 @@ export default function AdminOTABookings() {
                         </Link>
                       </td>
                       <td className="px-4 py-3 text-gray-600">{format(new Date(b.createdAt), "dd MMM yyyy, HH:mm")}</td>
-                      <td className="px-4 py-3 font-medium text-blue-700 bg-blue-50/50 rounded">{b.otaName || "External OTA"}</td>
+                      <td className="px-4 py-3 font-medium text-blue-700 bg-blue-50/50 rounded">{b.otaName || "External OTA"}{b.otaConfirmationNumber ? <span className="block text-[11px] font-mono text-gray-500">{b.otaConfirmationNumber}</span> : null}</td>
                       <td className="px-4 py-3 font-medium text-gray-900">{b.guestDetails?.firstName} {b.guestDetails?.lastName}</td>
                       <td className="px-4 py-3 text-gray-600">{format(new Date(b.checkInDate), "dd MMM yyyy")}</td>
                       <td className="px-4 py-3 text-gray-600">{format(new Date(b.checkOutDate), "dd MMM yyyy")}</td>

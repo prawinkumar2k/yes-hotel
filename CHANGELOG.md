@@ -3,6 +3,15 @@
 All changes, fixes, hardened services, and architectural migrations are documented chronologically in this file.
 
 ---
+## [OTA bookings entered by hand; reset script made safe] - 2026-10-14
+
+- **New Booking → Booking Source:** Walk-in, Phone / Direct, or **OTA**. For OTA, the desk types in the OTA (MakeMyTrip, Goibibo, Booking.com, Agoda, Expedia, Airbnb, Cleartrip, Yatra, EaseMyTrip, Other), the OTA confirmation number, commission % and who collects the money (OTA prepaid / pay at hotel). All four are required; commission and net settlement are worked out on the pre-tax room amount.
+- **OTA Bookings page:** a "New OTA Booking" button opens New Booking with OTA selected; the list shows the OTA confirmation number, and search finds bookings by it.
+- **No online fetching:** the channel "Sync" button is removed and the sync endpoint refuses (410). The old mock OTA webhook was never mounted on the server.
+- **`clean-production-reset.ts`:** refuses to run without `--confirm-wipe-all-hotel-data`; no longer deletes the audit log; logins it creates get a random password shown once, never `Admin@123`.
+- **Tests:** `server/src/routes/ota-manual-entry.integration.spec.ts` (3).
+
+---
 ## [Room service / counter sales as income; in the Monthly MIS] - 2026-10-14
 
 - **Room Service Sale** (Cashier Shifts): early check-in, water bottle, dental kit, tea/coffee shop, Kovai Kongu Mess and others are recorded as **sales** with quantity, amount, mode of payment (cash / UPI / card), optional room number, and what was sold for "Others". UPI needs the UTR and card the approval code.

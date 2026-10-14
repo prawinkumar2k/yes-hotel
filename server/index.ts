@@ -215,7 +215,10 @@ export function createServer() {
     // Brute-force budget for credential and payment-verification endpoints.
     // Dev/test get a looser default so e2e suites that log in repeatedly do not trip it.
     max: Number(process.env.RATE_LIMIT_AUTH_MAX) || (process.env.NODE_ENV === "production" ? 10 : 200),
-    message: "Too many attempts from this IP, please try again after 15 minutes",
+    // Only failed attempts count: a hotel's staff share one internet connection, and normal
+    // sign-ins must never lock the desk out. Wrong-password guessing is still limited.
+    skipSuccessfulRequests: true,
+    message: { success: false, message: "Too many failed attempts from this connection. Please wait 15 minutes and try again." },
     standardHeaders: true,
     legacyHeaders: false,
   });

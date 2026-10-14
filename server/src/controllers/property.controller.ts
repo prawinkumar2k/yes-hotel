@@ -92,23 +92,7 @@ export const deleteChannelMapping: RequestHandler = async (req, res) => {
  * Stub: In production this would call the OTA API to push rate/availability updates.
  * Currently simulates the sync and marks the mapping as SUCCESS.
  */
-export const syncChannelMapping: RequestHandler = async (req, res) => {
-  try {
-    const mapping = await ChannelMapping.findById(req.params.id);
-    if (!mapping) return res.status(404).json({ success: false, message: "Mapping not found" });
-
-    // Stub: simulate a successful sync
-    mapping.lastSyncedAt = new Date();
-    mapping.lastSyncStatus = "SUCCESS";
-    mapping.lastSyncError = undefined;
-    await mapping.save();
-
-    res.json({
-      success: true,
-      message: `Sync stub executed for channel ${mapping.channel}. In production, this would push rates/availability to the OTA API.`,
-      data: mapping,
-    });
-  } catch (e: any) {
-    res.status(500).json({ success: false, message: e.message });
-  }
+// OTA bookings are entered by hand at the desk; the hotel does not sync with OTA websites.
+export const syncChannelMapping: RequestHandler = async (_req, res) => {
+  res.status(410).json({ success: false, message: "Online OTA sync is not used. Enter OTA bookings from New Booking (Booking Source: OTA)." });
 };

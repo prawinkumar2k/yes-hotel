@@ -435,6 +435,13 @@ export const walkInArrivalRegistration = async (req: Request, res: Response) => 
         otherCharges = 0,
         otherChargesDesc,
 
+        // Booking source — OTA bookings are entered by hand (no channel fetching)
+        bookingSource,
+        otaName,
+        otaConfirmationNumber,
+        otaCommissionPercent,
+        otaPaymentModel,
+
         // Section E — Billing
         billingInstruction,
 
@@ -458,6 +465,24 @@ export const walkInArrivalRegistration = async (req: Request, res: Response) => 
       }
       if (!idType || !String(idType).trim()) {
         throw new Error("Select the ID proof type (or enter it under Other)");
+      }
+
+      // Booking source. OTA details are typed in by the desk from the OTA extranet / voucher.
+      const sourceCode = String(bookingSource || "WALK_IN").toUpperCase();
+      if (!["WALK_IN", "PHONE", "OTA"].includes(sourceCode)) throw new Error("Choose the booking source: Walk-in, Phone or OTA");
+      let otaFields: Record<string, unknown> = {};
+      if (sourceCode === "OTA") {
+        const name = String(otaName || "").trim();
+        const confirmation = String(otaConfirmationNumber || "").trim();
+        const pct = Number(otaCommissionPercent);
+        const model = String(otaPaymentModel || "");
+        if (!name) throw new Error("Select the OTA (e.g. MakeMyTrip, Booking.com)");
+        if (!confirmation) throw new Error("Enter the OTA booking / confirmation number");
+        if (otaCommissionPercent === undefined || otaCommissionPercent === "" || !Number.isFinite(pct) || pct < 0 || pct > 100) {
+          throw new Error("Enter the OTA commission % (0–100)");
+        }
+        if (!["OTA_PREPAID", "PAY_AT_HOTEL"].includes(model)) throw new Error("Choose who collects the money: OTA prepaid or pay at hotel");
+        otaFields = { otaName: name, otaConfirmationNumber: confirmation, otaCommissionPercent: pct, otaPaymentModel: model };
       }
 
       const allRoomIds: string[] = (Array.isArray(roomIds) && roomIds.length > 0)
@@ -657,7 +682,8 @@ export const walkInArrivalRegistration = async (req: Request, res: Response) => 
               discountAmount: 0,
               specialRequests: (i === 0 && otherCharges > 0) ? `Other Charges (₹${otherCharges}): ${otherChargesDesc || 'Additional items'}` : undefined,
               paymentStatus: PaymentStatus.UNPAID,
-              source: BookingSource.WALK_IN,
+              source: sourceCode as BookingSource,
+              ...otaFields,
               bookingType: rooms.length > 1 ? BookingType.GROUP : BookingType.WALK_IN,
               registrationStatus: RegistrationStatus.CONFIRMED,
               signatureStatus: SignatureStatus.NOT_COLLECTED,

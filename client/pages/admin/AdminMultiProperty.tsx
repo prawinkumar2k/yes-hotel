@@ -78,8 +78,8 @@ export default function AdminMultiProperty() {
     <div className="space-y-8 p-2">
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
         <div>
-          <h1 className="text-xl sm:text-3xl font-bold tracking-tight">All Hotel Locations & Booking Websites Sync</h1>
-          <p className="text-muted-foreground text-sm mt-1">Manage multiple hotel locations and sync rates/rooms with online booking websites (Booking.com, Agoda, Airbnb)</p>
+          <h1 className="text-xl sm:text-3xl font-bold tracking-tight">Hotel Locations & OTA Channels</h1>
+          <p className="text-muted-foreground text-sm mt-1">Hotel locations and the OTAs you list on. OTA bookings are entered by hand from New Booking; nothing is fetched or pushed online.</p>
         </div>
         <Button onClick={() => setAddPropertyOpen(true)} className="w-full sm:w-auto">
           <Plus className="mr-2 h-4 w-4" /> Add Hotel Location
@@ -179,9 +179,6 @@ export default function AdminMultiProperty() {
                       </td>
                       <td className="p-3">
                         <div className="flex gap-1">
-                          <Button variant="ghost" size="icon" title="Sync" onClick={() => syncMutation.mutate(m._id)} disabled={syncMutation.isPending}>
-                            <RefreshCw className="h-3.5 w-3.5" />
-                          </Button>
                           <Button variant="ghost" size="icon" title="Delete" onClick={() => { if (confirm("Delete this mapping?")) deleteMappingMutation.mutate(m._id); }}>
                             <Trash2 className="h-3.5 w-3.5 text-red-500" />
                           </Button>
