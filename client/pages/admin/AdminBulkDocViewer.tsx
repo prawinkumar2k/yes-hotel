@@ -98,7 +98,7 @@ function BookingDocCard({
   const invoiceDate = !isProvisional && issuedFolios.find((f: any) => f.invoiceNumber)?.closedAt ? new Date(issuedFolios.find((f: any) => f.invoiceNumber).closedAt) : new Date();
 
   const billNo = b.billNumber || "—";
-  const grcNo = b.billNumber || b.grcNumber || `GI${b.bookingReference?.slice(-7) || "0006178"}`;
+  const grcNo = b.billNumber || b.grcNumber || b.bookingReference || "—";
 
   // Process rows day-by-day with room number breakdown
   const debitLines = lines.filter((l: any) => l.direction !== "CREDIT");

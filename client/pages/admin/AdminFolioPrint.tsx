@@ -323,7 +323,7 @@ export default function AdminFolioPrint() {
               <div>State</div><div>: KARNATAKA</div>
             </div>
             <div className="w-1/4 p-1 border-r border-black grid grid-cols-[60px_1fr] gap-1">
-              <div>GRC #</div><div>: {booking.billNumber || "GI0006178"}</div>
+              <div>GRC #</div><div>: {booking.billNumber || booking.bookingReference || "—"}</div>
               <div className="col-span-2">&nbsp;</div>
               <div>State Code</div><div>: 29</div>
             </div>

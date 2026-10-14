@@ -47,8 +47,8 @@ export const createFloor = async (req: Request, res: Response) => {
     const floor = await Floor.create({
       ...data,
       propertyId,
-      createdBy: (req as any).user._id,
-      updatedBy: (req as any).user._id,
+      createdBy: (req as any).user.id,
+      updatedBy: (req as any).user.id,
     });
 
     await createAuditLog({
@@ -89,7 +89,7 @@ export const updateFloor = async (req: Request, res: Response) => {
 
     const floor = await Floor.findByIdAndUpdate(
       req.params.id,
-      { ...data, updatedBy: (req as any).user._id },
+      { ...data, updatedBy: (req as any).user.id },
       { returnDocument: "after" }
     );
     if (!floor) return res.status(404).json({ success: false, message: "Floor not found" });
@@ -162,7 +162,7 @@ export const createAmenity = async (req: Request, res: Response) => {
     const existing = await Amenity.findOne({ code: data.code.toUpperCase() });
     if (existing) return res.status(400).json({ success: false, message: "Code already exists" });
 
-    const amenity = await Amenity.create({ ...data, createdBy: (req as any).user._id, updatedBy: (req as any).user._id });
+    const amenity = await Amenity.create({ ...data, createdBy: (req as any).user.id, updatedBy: (req as any).user.id });
     await createAuditLog({ req, action: "amenity.created", resourceType: "Amenity", resourceId: amenity._id.toString(), metadata: { name: amenity.name } });
     return res.status(201).json({ success: true, data: amenity });
   } catch (error: any) {
@@ -178,7 +178,7 @@ export const updateAmenity = async (req: Request, res: Response) => {
       const existing = await Amenity.findOne({ code: data.code.toUpperCase(), _id: { $ne: req.params.id } });
       if (existing) return res.status(400).json({ success: false, message: "Code already exists" });
     }
-    const amenity = await Amenity.findByIdAndUpdate(req.params.id, { ...data, updatedBy: (req as any).user._id }, { returnDocument: "after" });
+    const amenity = await Amenity.findByIdAndUpdate(req.params.id, { ...data, updatedBy: (req as any).user.id }, { returnDocument: "after" });
     if (!amenity) return res.status(404).json({ success: false, message: "Not found" });
     await createAuditLog({ req, action: "amenity.updated", resourceType: "Amenity", resourceId: amenity._id.toString(), metadata: { name: amenity.name } });
     return res.status(200).json({ success: true, data: amenity });
@@ -236,7 +236,7 @@ export const createBedType = async (req: Request, res: Response) => {
     const existing = await BedType.findOne({ code: data.code.toUpperCase() });
     if (existing) return res.status(400).json({ success: false, message: "Code already exists" });
 
-    const item = await BedType.create({ ...data, createdBy: (req as any).user._id, updatedBy: (req as any).user._id });
+    const item = await BedType.create({ ...data, createdBy: (req as any).user.id, updatedBy: (req as any).user.id });
     await createAuditLog({ req, action: "bed_type.created", resourceType: "BedType", resourceId: item._id.toString(), metadata: { name: item.name } });
     return res.status(201).json({ success: true, data: item });
   } catch (error: any) {
@@ -252,7 +252,7 @@ export const updateBedType = async (req: Request, res: Response) => {
       const existing = await BedType.findOne({ code: data.code.toUpperCase(), _id: { $ne: req.params.id } });
       if (existing) return res.status(400).json({ success: false, message: "Code already exists" });
     }
-    const item = await BedType.findByIdAndUpdate(req.params.id, { ...data, updatedBy: (req as any).user._id }, { returnDocument: "after" });
+    const item = await BedType.findByIdAndUpdate(req.params.id, { ...data, updatedBy: (req as any).user.id }, { returnDocument: "after" });
     if (!item) return res.status(404).json({ success: false, message: "Not found" });
     await createAuditLog({ req, action: "bed_type.updated", resourceType: "BedType", resourceId: item._id.toString(), metadata: { name: item.name } });
     return res.status(200).json({ success: true, data: item });
@@ -309,7 +309,7 @@ export const createRoomView = async (req: Request, res: Response) => {
     const existing = await RoomView.findOne({ code: data.code.toUpperCase() });
     if (existing) return res.status(400).json({ success: false, message: "Code already exists" });
 
-    const item = await RoomView.create({ ...data, createdBy: (req as any).user._id, updatedBy: (req as any).user._id });
+    const item = await RoomView.create({ ...data, createdBy: (req as any).user.id, updatedBy: (req as any).user.id });
     await createAuditLog({ req, action: "room_view.created", resourceType: "RoomView", resourceId: item._id.toString(), metadata: { name: item.name } });
     return res.status(201).json({ success: true, data: item });
   } catch (error: any) {
@@ -325,7 +325,7 @@ export const updateRoomView = async (req: Request, res: Response) => {
       const existing = await RoomView.findOne({ code: data.code.toUpperCase(), _id: { $ne: req.params.id } });
       if (existing) return res.status(400).json({ success: false, message: "Code already exists" });
     }
-    const item = await RoomView.findByIdAndUpdate(req.params.id, { ...data, updatedBy: (req as any).user._id }, { returnDocument: "after" });
+    const item = await RoomView.findByIdAndUpdate(req.params.id, { ...data, updatedBy: (req as any).user.id }, { returnDocument: "after" });
     if (!item) return res.status(404).json({ success: false, message: "Not found" });
     await createAuditLog({ req, action: "room_view.updated", resourceType: "RoomView", resourceId: item._id.toString(), metadata: { name: item.name } });
     return res.status(200).json({ success: true, data: item });

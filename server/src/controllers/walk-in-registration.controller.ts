@@ -81,7 +81,6 @@ async function walkInStayTax(perRoomTaxable: number[], checkIn: Date, checkOut: 
 }
 import { receiveAdvance } from "../services/advance.service";
 import { createAuditLog } from "../services/audit.service";
-import { generateBillNumber } from "../utils/bill-number";
 import { generateBookingReference } from "../utils/booking-reference";
 import crypto from "crypto";
 import { nights as countNights, todayBusinessDate } from "../../../shared/dates";
@@ -596,12 +595,8 @@ export const walkInArrivalRegistration = async (req: Request, res: Response) => 
         const rmTaxBreakdown = await walkInStayTax([rmTaxableAmount], checkInDate, checkOutDate, nights);
         const rmTotalAmount = rmTaxableAmount + rmTaxBreakdown.totalTax;
 
-        let billNumber: string | undefined;
-        try {
-          billNumber = await generateBillNumber(session);
-        } catch {
-          billNumber = `BILL-${todayBusinessDate().slice(0, 4)}-${Date.now().toString().slice(-6)}`;
-        }
+        // No bill number at registration: it is issued when the bill is settled at checkout.
+        const billNumber: string | undefined = undefined;
 
         const bookingReference = await generateBookingReference("WALKIN", session);
 

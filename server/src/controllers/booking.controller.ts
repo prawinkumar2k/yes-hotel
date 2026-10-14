@@ -28,7 +28,7 @@ import { adjustAdvance, applyAdvancesToFolio } from "../services/advance.service
 import { BookingEvent, BookingEventType } from "../models/BookingEvent";
 import { BookingInventoryDay } from "../models/BookingInventoryDay";
 import { BookingEnquiry, BookingEnquiryStatus } from "../models/BookingEnquiry";
-import { nights as countNights, toBusinessDate, todayBusinessDate } from "../../../shared/dates";
+import { nights as countNights, toBusinessDate, todayBusinessDate, addDays as addBusinessDays } from "../../../shared/dates";
 
 const guestDetailsSchema = z.object({
   firstName: z.string().trim().min(1, "Guest first name is required"),
@@ -1175,6 +1175,21 @@ export const checkOut = async (req: Request, res: Response) => {
  * POST /api/bookings/:id/extension-check
  * Checks if extending stay to newCheckOutDate creates an availability conflict.
  */
+/**
+ * The guest's agreed nightly room rate (what their bill charges per night): the booking's own
+ * rate, else its pre-tax total spread over the booked nights, else the category list price.
+ * Used for stay extensions so an edited or negotiated tariff carries into the extra nights.
+ */
+function agreedNightlyRate(booking: any): number {
+  const booked = Math.max(1, countNights(booking.checkInDate, booking.checkOutDate));
+  return (
+    Number(booking.ratePerNight) ||
+    Math.round(((booking.totalAmount || 0) - (booking.taxAmount || 0)) / booked) ||
+    Number(booking.roomCategory?.basePrice) ||
+    0
+  );
+}
+
 export const checkExtensionConflict = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
@@ -1203,7 +1218,7 @@ export const checkExtensionConflict = async (req: Request, res: Response) => {
     }).lean();
 
     const additionalNights = countNights(currentCheckOut, targetCheckOut);
-    const basePrice = (booking.roomCategory as any)?.basePrice || 0;
+    const basePrice = agreedNightlyRate(booking);
     const additionalTariff = basePrice * additionalNights;
     // Quote exactly what extendStay posts: taxService room GST per added night.
     const extTax = computeRoomTax(await loadGstRules(), { checkIn: currentCheckOut, checkOut: targetCheckOut, nightlyValue: basePrice });
@@ -1255,7 +1270,7 @@ export const extendStay = async (req: Request, res: Response) => {
     }
 
     const additionalNights = countNights(currentCheckOut, targetCheckOut);
-    const basePrice = (booking.roomCategory as any)?.basePrice || 0;
+    const basePrice = agreedNightlyRate(booking);
     const additionalTariff = basePrice * additionalNights;
     // Room GST per added night via taxService (slab by per-night value, rule in force on each night).
     const extTax = computeRoomTax(await loadGstRules(), { checkIn: currentCheckOut, checkOut: targetCheckOut, nightlyValue: basePrice });
@@ -1333,6 +1348,7 @@ export const extendStay = async (req: Request, res: Response) => {
           bookingId: booking._id.toString(),
           lineType: FolioLineType.ROOM_CHARGE,
           description: `Stay Extension (${additionalNights} extra night${additionalNights > 1 ? "s" : ""})`,
+          coversNights: Array.from({ length: additionalNights }, (_, i) => addBusinessDays(toBusinessDate(currentCheckOut), i)),
           amount: additionalTariff,
           date: new Date(),
           postedBy: actorId?.toString() || "FRONT_DESK",

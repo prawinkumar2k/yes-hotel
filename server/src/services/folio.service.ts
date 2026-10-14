@@ -280,13 +280,16 @@ export async function settleFolio(
   folio.closedBy = new mongoose.Types.ObjectId(opts.closedBy);
   await ensurePropertyId(folio, folio.booking.toString(), opts.req, opts.session);
   await folio.save({ session: opts.session });
+  // The stay's bill number is issued here, with the invoice — never before checkout.
+  const { assignBillNumberAtCheckout } = await import("../utils/bill-number");
+  const billNumber = await assignBillNumberAtCheckout(folio.booking, opts.session);
 
   await createAuditLog({
     req: opts.req,
     action: "folio.settled",
     resourceType: "Folio",
     resourceId: folioId,
-    metadata: { invoiceNumber, balance: folio.balance },
+    metadata: { invoiceNumber, billNumber, balance: folio.balance },
   });
 
   return folio;

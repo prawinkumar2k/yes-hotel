@@ -3,6 +3,15 @@
 All changes, fixes, hardened services, and architectural migrations are documented chronologically in this file.
 
 ---
+## [Bill numbers at checkout; extensions at the agreed rate; Master Data fixes] - 2026-10-14
+
+- **Bill number** (`BILL-YYYY-NNNNNN`) is now issued when the bill is settled at checkout, together with the GST invoice number. Walk-in registration no longer creates one. It comes from the atomic counter, raised past any bill numbers already issued, so numbers never repeat. Bills already numbered keep their number.
+- **Print pages** (folio print, bulk documents) show the booking reference before checkout instead of the made-up `GI0006178`.
+- **Extend stay** charges the extra nights at the guest's agreed nightly rate (an edited or negotiated tariff carries over), not the category list price. The same applies to the extension price check, and the charge line records exactly which nights it covers, so the night audit never charges them again.
+- **Master Data Hub:** Properties opens the Properties page; the Buildings & Wings card, which had no page, is removed (building and wing are recorded per floor); unused placeholder counts removed. Floors, amenities, bed types and room views now record who created and changed each entry.
+- **Tests:** `server/src/routes/billing-numbers.integration.spec.ts` (3).
+
+---
 ## [Customer portal: booking-number sign-in, pay balance, reviews, profile, change requests] - 2026-10-14
 
 - **Sign in with booking number + mobile** (login page, second tab). No password needed: the booking number and the mobile on that booking (last 10 digits) prove the stay.

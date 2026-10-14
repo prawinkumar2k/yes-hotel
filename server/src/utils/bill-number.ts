@@ -1,50 +1,34 @@
 import { ClientSession } from "mongoose";
 import { Booking } from "../models/Booking";
-import { HotelSettings } from "../models/HotelSettings";
 import { todayBusinessDate } from "../../../shared/dates";
+import { ensureSequenceAtLeast, nextSequence } from "../services/counter.service";
 
 /**
- * Generates a unique, sequential bill number for the Guest Registration Card.
- * Format: BILL-YYYY-NNNNNN  (e.g. BILL-2026-000002)
+ * Bill number for a stay: BILL-YYYY-NNNNNN (e.g. BILL-2026-000002), sequential per calendar year.
+ * Issued only when the bill is settled at checkout (see settleFolio) — never at booking or check-in.
+ * Uses the shared counter (atomic; rolls back with the checkout transaction). The counter is first
+ * raised past any bill numbers issued by the older "highest + 1" scheme, so numbers never repeat.
  */
 export async function generateBillNumber(session?: ClientSession): Promise<string> {
   const prefix = "BILL";
-  const year = todayBusinessDate().slice(0, 4); // calendar year at the property
-  const pattern = new RegExp(`^${prefix}-${year}-(\\d+)`);
-
-  // Query highest existing billNumber for current year to avoid collisions
-  const latestQuery = Booking.findOne({ billNumber: pattern }).sort({ billNumber: -1 });
+  const year = todayBusinessDate().slice(0, 4);
+  const key = `bill:${year}`;
+  const latestQuery = Booking.findOne({ billNumber: new RegExp(`^${prefix}-${year}-\\d+$`) }).sort({ billNumber: -1 }).select("billNumber");
   if (session) latestQuery.session(session);
-  const latest = await latestQuery.exec();
+  const latest = await latestQuery.lean();
+  const highest = Number(latest?.billNumber?.split("-")[2] ?? 0);
+  if (highest > 0) await ensureSequenceAtLeast(key, highest, session);
+  return `${prefix}-${year}-${String(await nextSequence(key, session)).padStart(6, "0")}`;
+}
 
-  let seqNumber = 1;
-  if (latest && latest.billNumber) {
-    const match = latest.billNumber.match(pattern);
-    if (match && match[1]) {
-      seqNumber = Math.max(seqNumber, parseInt(match[1], 10) + 1);
-    }
-  }
-
-  // Fallback check on count just in case
-  const countQuery = Booking.countDocuments({ billNumber: { $exists: true } });
-  if (session) countQuery.session(session);
-  const count = await countQuery.exec();
-  if (count >= seqNumber) {
-    seqNumber = count + 1;
-  }
-
-  let candidate = `${prefix}-${year}-${String(seqNumber).padStart(6, "0")}`;
-
-  const checkExists = async (bNum: string) => {
-    const q = Booking.findOne({ billNumber: bNum }).select("_id");
-    if (session) q.session(session);
-    return await q.exec();
-  };
-
-  while (await checkExists(candidate)) {
-    seqNumber++;
-    candidate = `${prefix}-${year}-${String(seqNumber).padStart(6, "0")}`;
-  }
-
-  return candidate;
+/** Gives the booking its bill number if it doesn't have one yet (idempotent). */
+export async function assignBillNumberAtCheckout(bookingId: unknown, session?: ClientSession): Promise<string | undefined> {
+  const q = Booking.findById(bookingId).select("billNumber");
+  if (session) q.session(session);
+  const b = await q.lean();
+  if (!b) return undefined;
+  if (b.billNumber) return b.billNumber;
+  const billNumber = await generateBillNumber(session);
+  await Booking.updateOne({ _id: bookingId, billNumber: { $exists: false } }, { $set: { billNumber } }, { session });
+  return billNumber;
 }
