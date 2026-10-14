@@ -243,6 +243,15 @@ export interface IBooking extends Document {
 
   // Check-out
   checkedOutAt?: Date;
+  /** Checkout handoff: Receptionist initiates, the Cashier clears the bill, then checkout completes. */
+  checkoutClearance?: {
+    status: "PENDING" | "CLEARED";
+    initiatedBy?: mongoose.Types.ObjectId;
+    initiatedAt?: Date;
+    clearedBy?: mongoose.Types.ObjectId;
+    clearedAt?: Date;
+    note?: string;
+  };
   checkedOutBy?: mongoose.Types.ObjectId;
 }
 
@@ -397,6 +406,20 @@ const BookingSchema = new Schema<IBooking>(
     checkedInAt: { type: Date },
     checkedInBy: { type: Schema.Types.ObjectId, ref: "User" },
     checkedOutAt: { type: Date },
+    checkoutClearance: {
+      type: new Schema(
+        {
+          status: { type: String, enum: ["PENDING", "CLEARED"], required: true },
+          initiatedBy: { type: Schema.Types.ObjectId, ref: "User" },
+          initiatedAt: { type: Date },
+          clearedBy: { type: Schema.Types.ObjectId, ref: "User" },
+          clearedAt: { type: Date },
+          note: { type: String, trim: true },
+        },
+        { _id: false },
+      ),
+      default: undefined,
+    },
     checkedOutBy: { type: Schema.Types.ObjectId, ref: "User" },
   },
   { timestamps: true }

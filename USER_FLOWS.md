@@ -11,7 +11,7 @@ For hotel staff and the people testing the system. Each flow lists who can do it
 | SUPER_ADMIN, ADMIN | Everything. Only SUPER_ADMIN can create, edit or disable SUPER_ADMIN/ADMIN accounts |
 | MANAGER | Operations and approvals: CRITICAL approvals, POS voids, shift variances, night audit, check-in overrides |
 | SUPERVISOR | Floor supervision: HIGH approvals, shift variances, night-audit status |
-| RECEPTIONIST | Reservations, check-in/out, folios, payments, advances |
+| RECEPTIONIST (the Reception login) | One login with three functions: Front Desk & Reservations, the Verification Queue, and Cashier & Billing (payments, advances, refunds, shift) |
 | CASHIER | Payments, advances, cashier shift, settling POS bills |
 | FINANCE | Reports, night audit |
 | HOUSEKEEPING, MAINTENANCE | Room cleaning tasks, maintenance tickets |
@@ -42,11 +42,27 @@ Staff only see and act on the property they're assigned to.
 
 ## 3. Check-out
 
-1. Apply advances and take the final payment.
+0. **Front Desk:** open the stay's checkout, review the charges and choose **Send to Cashier & Billing**. The stay appears under **Bills to settle**; stays due out today or overdue appear there anyway.
+1. **Cashier & Billing:** apply advances and record the final payment. A receipt opens after each payment, and submitting the same payment twice records it once.
    - A payment larger than the amount due is refused unless the excess is returned as a refund with a reason.
 2. If the guest is in credit, the system refuses to check out until staff confirm a refund. It never refunds silently.
 3. Check-out completes only when the balance is exactly ₹0. The folio is settled with a GST invoice number `PREFIX/2026-27/000001`, sequential per financial year with no gaps.
 4. Settled folios can't be changed.
+
+## 3a. Verification Queue (Reception login)
+
+Completed work arrives here automatically; nothing can be verified before it is done.
+
+| Task | Arrives when | Verify | Reject (reason required) |
+|---|---|---|---|
+| Room cleaned — release | Housekeeping marks the room cleaned | The room becomes CLEAN and available to sell | The room goes back to housekeeping as DIRTY with the reason, and returns here when re-cleaned |
+| Cash variance | A shift closes with a variance above the threshold | The variance is accepted and the shift reconciled | Returned to Cashier & Billing; resubmit with a corrected explanation |
+| Refund | A refund is given (bill credit, advance, payment, at checkout) | Recorded as checked | Returned to Cashier & Billing for correction, then resubmitted |
+| Folio line voided | A charge or payment line is voided by reversal | Recorded as checked | Returned to Cashier & Billing |
+| Tariff below default | A walk-in rate, edited bill rate, discount or complimentary credit is below the default | Recorded as checked | Returned to the Front Desk |
+| Cancelled with advance | Staff cancel a booking that holds money | Recorded as checked | Returned to the Front Desk |
+
+Each task shows who did the work and when, who verified or rejected it and when, every attempt, and its full history.
 
 ## 4. Night audit (MANAGER, FINANCE)
 

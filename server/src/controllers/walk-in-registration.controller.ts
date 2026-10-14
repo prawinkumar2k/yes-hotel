@@ -385,6 +385,9 @@ export const walkInArrivalRegistration = async (req: Request, res: Response) => 
   let booking: any = null;
   let advance: any = null;
   let createdBookings: any[] = [];
+  // Tariffs agreed below the default rate; verified by Reception after registration.
+  let tariffConcessions: { bookingId: unknown; room: string; rate: number; defaultRate: number }[] = [];
+  let extraRateConcessions: Record<string, { agreed: number; default: number }> = {};
 
   try {
     await session.withTransaction(async () => {
@@ -564,6 +567,14 @@ export const walkInArrivalRegistration = async (req: Request, res: Response) => 
       // Group ID for linking multiple rooms
       const groupId = rooms.length > 1 ? new mongoose.Types.ObjectId() : undefined;
       createdBookings = [];
+      tariffConcessions = [];
+      extraRateConcessions = {};
+      {
+        const defaults = walkInExtraRates(settings, undefined);
+        for (const k of Object.keys(defaults) as (keyof typeof defaults)[]) {
+          if (agreedExtraRates[k] < defaults[k]) extraRateConcessions[k] = { agreed: agreedExtraRates[k], default: defaults[k] };
+        }
+      }
 
       for (let i = 0; i < rooms.length; i++) {
         const rm = rooms[i];
@@ -663,6 +674,9 @@ export const walkInArrivalRegistration = async (req: Request, res: Response) => 
         // this insert is what makes a concurrent double booking impossible.
         await claimRoomNights({ bookingId: created[0]._id as any, roomId: rm._id as any, checkIn: checkInDate, checkOut: checkOutDate, propertyId: propertyId as any, session });
         createdBookings.push(created[0]);
+        if (rmRatePerNight < baseRatePerNight) {
+          tariffConcessions.push({ bookingId: created[0]._id, room: rm.roomNumber, rate: rmRatePerNight, defaultRate: baseRatePerNight });
+        }
 
         // Mark assigned room OCCUPIED immediately for walk-in arrivals
         rm.status = RoomStatus.OCCUPIED;
@@ -770,6 +784,26 @@ export const walkInArrivalRegistration = async (req: Request, res: Response) => 
         $set: { lastStay: checkOutDate },
       }).session(session);
     });
+
+    // Tariffs below the default rate (room or extra-person rates) go to the Verification Queue.
+    if (tariffConcessions.length || Object.keys(extraRateConcessions).length) {
+      const { queueForVerification } = await import("../services/reception-verification");
+      const { VerificationType } = await import("../models/VerificationRequest");
+      const parts = [
+        ...tariffConcessions.map((t) => `Room ${t.room} ₹${t.rate} (default ₹${t.defaultRate})`),
+        ...Object.entries(extraRateConcessions).map(([k, v]) => `${k} ₹${v.agreed} (default ₹${v.default})`),
+      ];
+      await queueForVerification({
+        type: VerificationType.TARIFF_BELOW_DEFAULT,
+        subjectKey: `registration:${booking._id}:tariff`,
+        returnQueue: "FRONT_DESK",
+        summary: `Walk-in tariff below default: ${parts.join(", ")}`,
+        amount: tariffConcessions.reduce((t, c) => t + (c.defaultRate - c.rate), 0),
+        bookingId: booking._id,
+        details: { rooms: tariffConcessions.map((c) => ({ ...c, bookingId: String(c.bookingId) })), extraRates: extraRateConcessions },
+        req,
+      });
+    }
 
     // Audit log
     createAuditLog({

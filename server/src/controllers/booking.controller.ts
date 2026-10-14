@@ -1045,6 +1045,15 @@ export const checkOut = async (req: Request, res: Response) => {
 
       booking.checkedOutAt = new Date();
       booking.checkedOutBy = actorId ? new mongoose.Types.ObjectId(actorId) : undefined;
+      // Billing handoff complete: the bill was settled at exactly ₹0.
+      booking.checkoutClearance = {
+        ...(booking.checkoutClearance ?? {}),
+        status: "CLEARED",
+        initiatedAt: booking.checkoutClearance?.initiatedAt ?? new Date(),
+        initiatedBy: booking.checkoutClearance?.initiatedBy ?? (actorId as any),
+        clearedBy: actorId as any,
+        clearedAt: new Date(),
+      } as any;
       if (folio && folio.balance <= 1) {
         booking.paymentStatus = PaymentStatus.PAID;
       }
@@ -1106,6 +1115,24 @@ export const checkOut = async (req: Request, res: Response) => {
       resourceType: "Room",
       resourceId: booking.assignedRoom.toString(),
       metadata: { roomNumber, bookingId: booking._id.toString() },
+    });
+  }
+
+  // A refund given at checkout goes to the Verification Queue.
+  if (refundAmount && Number(refundAmount) > 0) {
+    const { queueForVerification } = await import("../services/reception-verification");
+    const { VerificationType } = await import("../models/VerificationRequest");
+    await queueForVerification({
+      type: VerificationType.REFUND,
+      subjectKey: `checkoutRefund:${booking._id}`,
+      returnQueue: "CASHIER",
+      summary: `Refund at checkout ₹${Number(refundAmount).toLocaleString("en-IN")}`,
+      amount: Number(refundAmount),
+      bookingId: booking._id,
+      folioId: folio?._id,
+      details: { invoiceNumber: folio?.invoiceNumber, reason: notes },
+      note: notes,
+      req,
     });
   }
 

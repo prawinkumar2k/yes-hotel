@@ -1,3 +1,5 @@
+import { queueForVerification } from "../services/reception-verification";
+import { VerificationType } from "../models/VerificationRequest";
 import { Router } from "express";
 import { requirePropertyAccess } from "../middleware/propertyAuth";
 import { requirePermission } from "../middleware/permissionAuth";
@@ -173,6 +175,18 @@ router.post("/:id/refund", requirePropertyAccess, requirePermission("ADVANCES", 
         { advancePaymentId: req.params.id as string, amount: Number(amount), performedBy: (req as any).user?.id as string, reason: reason as string },
         { req }
       );
+      const adv: any = await AdvancePayment.findById(req.params.id).select("advanceNumber booking method").lean();
+      await queueForVerification({
+        type: VerificationType.REFUND,
+        subjectKey: `advanceRefund:${result.adjustment._id}`,
+        returnQueue: "CASHIER",
+        summary: `Advance ${adv?.advanceNumber ?? ""} refund ₹${Number(amount).toLocaleString("en-IN")} (${adv?.method ?? ""})`,
+        amount: Number(amount),
+        bookingId: adv?.booking,
+        details: { advanceNumber: adv?.advanceNumber, method: adv?.method, reason },
+        note: String(reason),
+        req,
+      });
       return res.json({ success: true, data: result });
     } catch (error: any) {
       return res.status(400).json({ success: false, message: error.message });

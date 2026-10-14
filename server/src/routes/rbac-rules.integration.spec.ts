@@ -168,8 +168,9 @@ describe("N2: approval floors by priority", () => {
     expect((await call("SUPERVISOR", "POST", `/api/task-approvals/${fixtures.apprCritical}/approve`, {})).status).toBe(403);
     expect((await call("MANAGER", "POST", `/api/task-approvals/${fixtures.apprCritical}/approve`, {})).status).toBe(200);
   });
-  it("SUPERVISOR can approve a HIGH task approval; RECEPTIONIST cannot", async () => {
-    expect((await call("RECEPTIONIST", "POST", `/api/task-approvals/${fixtures.apprHigh2}/approve`, {})).status).toBe(403);
+  it("SUPERVISOR and the single Reception login can approve a HIGH task approval; CASHIER cannot", async () => {
+    expect((await call("CASHIER", "POST", `/api/task-approvals/${fixtures.apprHigh2}/approve`, {})).status).toBe(403);
+    expect((await call("RECEPTIONIST", "POST", `/api/task-approvals/${fixtures.apprHigh2}/approve`, {})).status).toBe(200);
     expect((await call("SUPERVISOR", "POST", `/api/task-approvals/${fixtures.apprHigh}/approve`, {})).status).toBe(200);
   });
   it("maintenance: SUPERVISOR cannot complete a CRITICAL ticket but can complete a HIGH one", async () => {

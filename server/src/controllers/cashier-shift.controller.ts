@@ -50,6 +50,24 @@ const PAID_OUT_LABELS: Record<string, string> = {
   OTHER: "Other",
 };
 
+/** A variance above the threshold goes to the Reception Verification Queue. */
+async function queueShiftVariance(shift: any, req: Request) {
+  if (!shift.varianceAcceptanceRequired) return;
+  const { submitForVerification } = await import("../services/verification.service");
+  const { VerificationType } = await import("../models/VerificationRequest");
+  await submitForVerification({
+    type: VerificationType.SHIFT_VARIANCE,
+    subjectKey: `shift:${shift._id}:variance`,
+    returnQueue: "CASHIER",
+    summary: `Shift #${shift.shiftNumber} (${shift.drawerId}) closed ₹${Number(shift.cashVariance ?? 0).toFixed(2)} ${Number(shift.cashVariance) < 0 ? "short" : "over"}`,
+    amount: Number(shift.cashVariance ?? 0),
+    propertyId: shift.propertyId,
+    details: { shiftId: String(shift._id), shiftNumber: shift.shiftNumber, drawerId: shift.drawerId, expectedCash: shift.expectedCash, counted: shift.actualCashCounted, variance: shift.cashVariance, reason: shift.varianceReason },
+    note: shift.varianceReason,
+    req,
+  });
+}
+
 const actorOf = (req: Request) => String((req as any).user?.id || (req as any).user?._id);
 
 async function isShiftSupervisor(req: Request): Promise<boolean> {
@@ -352,6 +370,7 @@ export const confirmHandover = async (req: Request, res: Response) => {
       closed = shift;
     });
 
+    await queueShiftVariance(closed, req);
     await createAuditLog({
       req,
       action: "cashier_shift.handover_confirmed",
@@ -406,6 +425,7 @@ export const closeShift = async (req: Request, res: Response) => {
     shift.varianceAcceptanceRequired = outcome.acceptanceRequired;
     await shift.save();
 
+    await queueShiftVariance(shift, req);
     await createAuditLog({
       req,
       action: "cashier_shift.closed",
@@ -416,7 +436,7 @@ export const closeShift = async (req: Request, res: Response) => {
     return res.json({
       success: true,
       message: outcome.acceptanceRequired
-        ? `Shift #${shift.shiftNumber} closed with a variance of ₹${shift.cashVariance!.toFixed(2)}; awaiting manager acceptance.`
+        ? `Shift #${shift.shiftNumber} closed with a variance of ₹${shift.cashVariance!.toFixed(2)}; sent to the Verification Queue.`
         : `Shift #${shift.shiftNumber} closed and reconciled.`,
       data: shift,
     });
@@ -433,19 +453,23 @@ export const acceptShiftVariance = async (req: Request, res: Response) => {
     const actorId = actorOf(req);
     const notes = String(req.body?.notes ?? "").trim();
     if (notes.length < 3) throw new ShiftRuleError("Acceptance notes are required");
-    if (!(await isShiftSupervisor(req))) throw new ShiftRuleError("Only a manager or supervisor can accept a cash variance", 403);
+    if (!(await isShiftSupervisor(req))) throw new ShiftRuleError("Only an authorized user can accept a cash variance", 403);
 
     const shift = await CashierShift.findById(req.params.id);
     if (!shift) return res.status(404).json({ success: false, message: "Shift not found" });
     if (shift.status !== CashierShiftStatus.CLOSED || !shift.varianceAcceptanceRequired) {
       throw new ShiftRuleError("This shift has no variance awaiting acceptance");
     }
-    if (String(shift.cashier) === actorId) throw new ShiftRuleError("You cannot accept the variance on your own shift", 403);
-
-    shift.supervisorApproval = { approvedBy: actorId as any, approvedAt: new Date(), notes };
-    shift.varianceAcceptanceRequired = false;
-    shift.status = CashierShiftStatus.RECONCILED;
-    await shift.save();
+    void actorId;
+    // Accepting is verifying the queued variance task (one record of who accepted and when).
+    await queueShiftVariance(shift, req);
+    const { VerificationRequest, VerificationStatus } = await import("../models/VerificationRequest");
+    const { reviewVerification } = await import("../services/verification.service");
+    const pending = await VerificationRequest.findOne({ subjectKey: `shift:${shift._id}:variance`, status: VerificationStatus.PENDING });
+    if (!pending) throw new ShiftRuleError("This shift has no variance awaiting acceptance");
+    await reviewVerification(String(pending._id), "APPROVE", notes, req);
+    const accepted = await CashierShift.findById(shift._id);
+    if (accepted) Object.assign(shift, accepted.toObject());
 
     await createAuditLog({
       req,

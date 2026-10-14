@@ -1,0 +1,40 @@
++ POST /api/bookings/quote (new route): PUBLIC, CUSTOMER, SUPER_ADMIN, ADMIN, MANAGER, SUPERVISOR, RECEPTIONIST, CASHIER, HOUSEKEEPING, MAINTENANCE, RESTAURANT, FINANCE, EVENTS, INVENTORY, PROCUREMENT
+GET /api/payments  +[RECEPTIONIST]
+GET /api/payments/detail/:id  +[RECEPTIONIST]
+GET /api/payments/:bookingId  +[RECEPTIONIST]
+GET /api/refunds  +[RECEPTIONIST]
++ GET /api/audit-logs/export (new route): SUPER_ADMIN, ADMIN
+GET /api/advances  +[RECEPTIONIST]
++ GET /api/advances/reconciliation (new route): SUPER_ADMIN, ADMIN, MANAGER, RECEPTIONIST, CASHIER, FINANCE
++ GET /api/advances/:id/receipt (new route): SUPER_ADMIN, ADMIN, MANAGER, RECEPTIONIST, CASHIER, FINANCE
+GET /api/advances/summary/:bookingId  +[RECEPTIONIST]
++ GET /api/verifications (new route): SUPER_ADMIN, ADMIN, MANAGER, SUPERVISOR, RECEPTIONIST, CASHIER
++ GET /api/verifications/counts (new route): SUPER_ADMIN, ADMIN, MANAGER, SUPERVISOR, RECEPTIONIST, CASHIER
++ POST /api/verifications/:id/approve (new route): SUPER_ADMIN, ADMIN, MANAGER, SUPERVISOR, RECEPTIONIST
++ POST /api/verifications/:id/reject (new route): SUPER_ADMIN, ADMIN, MANAGER, SUPERVISOR, RECEPTIONIST
++ POST /api/verifications/:id/resubmit (new route): SUPER_ADMIN, ADMIN, MANAGER, SUPERVISOR, RECEPTIONIST, CASHIER
++ GET /api/reception/billing-queue (new route): SUPER_ADMIN, ADMIN, MANAGER, RECEPTIONIST, CASHIER
++ POST /api/reception/bookings/:id/checkout/initiate (new route): SUPER_ADMIN, ADMIN, MANAGER, SUPERVISOR, RECEPTIONIST
++ POST /api/reception/folios/:folioId/payments (new route): SUPER_ADMIN, ADMIN, MANAGER, RECEPTIONIST, CASHIER
++ POST /api/reception/folios/:folioId/apply-advances (new route): SUPER_ADMIN, ADMIN, MANAGER, RECEPTIONIST, CASHIER
++ POST /api/reception/folios/:folioId/refunds (new route): SUPER_ADMIN, ADMIN, MANAGER, RECEPTIONIST, CASHIER
++ GET /api/reception/payments/:id/receipt (new route): SUPER_ADMIN, ADMIN, MANAGER, RECEPTIONIST, CASHIER, FINANCE
++ GET /api/reports/ops/check-ins (new route): SUPER_ADMIN, ADMIN, MANAGER, FINANCE
++ GET /api/reports/ops/check-outs (new route): SUPER_ADMIN, ADMIN, MANAGER, FINANCE
++ GET /api/reports/ops/day-use-sales (new route): SUPER_ADMIN, ADMIN, MANAGER, FINANCE
++ GET /api/reports/ops/advances (new route): SUPER_ADMIN, ADMIN, MANAGER, FINANCE
+GET /api/cashier-shifts/cashiers  +[RECEPTIONIST]
+GET /api/cashier-shifts/current  +[RECEPTIONIST]
+GET /api/cashier-shifts  +[RECEPTIONIST]
+GET /api/cashier-shifts/:id/details  +[RECEPTIONIST]
++ POST /api/cashier-shifts/:id/accept (new route): SUPER_ADMIN, ADMIN, MANAGER, RECEPTIONIST, CASHIER
++ GET /api/group-bookings/:id/rooming-list (new route): SUPER_ADMIN, ADMIN, MANAGER, RECEPTIONIST
++ POST /api/group-bookings/:id/pickup (new route): SUPER_ADMIN, ADMIN, MANAGER, RECEPTIONIST
++ POST /api/group-bookings/:id/release (new route): SUPER_ADMIN, ADMIN, MANAGER, RECEPTIONIST
+GET /api/payment-channels  +[RECEPTIONIST]
+GET /api/payment-channels/:id  +[RECEPTIONIST]
+GET /api/pos/orders  +[RECEPTIONIST]
++ POST /api/pos/orders/quote (new route): SUPER_ADMIN, ADMIN, MANAGER, RECEPTIONIST, CASHIER, RESTAURANT
++ POST /api/pos/orders/:id/settle (new route): SUPER_ADMIN, ADMIN, MANAGER, RECEPTIONIST, CASHIER
+PATCH /api/pos/orders/:id/status  +[RECEPTIONIST]
+GET /api/menu  +[RECEPTIONIST]

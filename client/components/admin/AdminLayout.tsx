@@ -9,7 +9,7 @@ import {
   ScrollText, Moon, DollarSign, Tag, Building2, UtensilsCrossed,
   Package, Truck, ShoppingBag, Landmark, AlertCircle, Monitor, Globe,
   PartyPopper, Sparkles, Search, Bell, Plus, ChevronDown, ChevronRight,
-  ShieldCheck, CheckCircle2, SlidersHorizontal, Smartphone
+  ShieldCheck, CheckCircle2, SlidersHorizontal, Smartphone, ClipboardCheck, Receipt
 } from "lucide-react";
 import CommandPalette from "./CommandPalette";
 import NotificationCenter from "./NotificationCenter";
@@ -106,12 +106,28 @@ export default function AdminLayout({ children, title, hidePadding }: { children
   });
   const newEnquiriesCount = newEnquiriesData?.total || 0;
 
+  // Verification Queue: tasks waiting to be verified (completed work)
+  const { data: verificationCounts } = useQuery({
+    queryKey: ["verification-counts"],
+    queryFn: async () => {
+      const token = getStoredAuthToken();
+      const res = await fetch("/api/verifications/counts", { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+      const json = await res.json();
+      return json.success ? json.data : null;
+    },
+    enabled: hasPageAccess("VERIFICATIONS"),
+    refetchInterval: 30000,
+  });
+  const pendingVerifications = verificationCounts?.pending || 0;
+
   const NAV_SECTIONS: NavSection[] = [
     {
       title: "FRONT OFFICE",
       items: [
         { label: "Dashboard", to: "/admin/dashboard", icon: LayoutDashboard, pageKey: "DASHBOARD.ADMIN" },
         { label: "Front Desk (Reception)", to: "/admin/front-desk", icon: Home, pageKey: "FRONT_DESK", badge: arrivalsCount > 0 ? arrivalsCount : undefined },
+        { label: "Verification Queue", to: "/admin/verifications", icon: ClipboardCheck, pageKey: "VERIFICATIONS", badge: pendingVerifications > 0 ? pendingVerifications : undefined },
+        { label: "Task Approvals", to: "/admin/task-approvals", icon: ShieldCheck, pageKey: "TASK_APPROVALS" },
         { label: "Room Rack (Tape Chart)", to: "/admin/calendar", icon: CalendarDays, pageKey: "CALENDAR" },
         { label: "Guest Directory", to: "/admin/guests", icon: Users, pageKey: "GUESTS" },
       ],
@@ -136,6 +152,7 @@ export default function AdminLayout({ children, title, hidePadding }: { children
     {
       title: "CASHIERING",
       items: [
+        { label: "Cashier & Billing", to: "/admin/billing", icon: Receipt, pageKey: "CASHIER_DESK" },
         { label: "Payments & Folios", to: "/admin/payments", icon: CreditCard, pageKey: "PAYMENTS" },
         { label: "Advance Deposits", to: "/admin/advances", icon: CreditCard, pageKey: "ADVANCES" },
         { label: "Cashier Shifts", to: "/admin/cashier-shifts", icon: DollarSign, pageKey: "CASHIER_SHIFTS" },

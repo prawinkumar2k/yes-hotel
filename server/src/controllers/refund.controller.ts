@@ -1,3 +1,5 @@
+import { queueForVerification } from "../services/reception-verification";
+import { VerificationType } from "../models/VerificationRequest";
 import { Request, Response } from "express";
 import { Refund, RefundStatus } from "../models/Refund";
 import { Payment, PaymentTxStatus } from "../models/Payment";
@@ -202,6 +204,17 @@ export const initiateRefund = async (req: Request, res: Response) => {
 
         await refundNotification(booking, data.amount);
 
+        await queueForVerification({
+          type: VerificationType.REFUND,
+          subjectKey: `refund:${refund._id}`,
+          returnQueue: "CASHIER",
+          summary: `Gateway refund ₹${Number(refund.amount).toLocaleString("en-IN")}`,
+          amount: Number(refund.amount),
+          bookingId: refund.booking,
+          details: { paymentId: String(refund.payment), reason: refund.reason },
+          note: refund.reason,
+          req,
+        });
         return res.status(200).json({ success: true, data: refund, message: "Refund processed successfully" });
       } catch (rzpError: any) {
         refund.status = RefundStatus.FAILED;
@@ -247,6 +260,17 @@ export const initiateRefund = async (req: Request, res: Response) => {
 
       await refundNotification(booking, data.amount);
 
+      await queueForVerification({
+        type: VerificationType.REFUND,
+        subjectKey: `refund:${refund._id}`,
+        returnQueue: "CASHIER",
+        summary: `Refund ₹${Number(refund.amount).toLocaleString("en-IN")}`,
+        amount: Number(refund.amount),
+        bookingId: refund.booking,
+        details: { paymentId: String(refund.payment), reason: refund.reason },
+        note: refund.reason,
+        req,
+      });
       return res.status(200).json({ success: true, data: refund, message: "Offline refund recorded successfully" });
     }
   } catch (error: any) {

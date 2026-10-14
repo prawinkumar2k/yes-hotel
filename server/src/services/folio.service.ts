@@ -522,7 +522,7 @@ export async function nextTransactionId(session?: mongoose.ClientSession): Promi
  * that points to it, in the same transaction. No payment line exists without a Payment.
  */
 export async function recordFolioPayment(
-  params: { folioId: string; bookingId: string; amount: number; method: string; description: string; postedBy: string; paymentChannelId?: string; notes?: string; propertyId?: any },
+  params: { folioId: string; bookingId: string; amount: number; method: string; description: string; postedBy: string; paymentChannelId?: string; notes?: string; propertyId?: any; clientRequestId?: string; reference?: string },
   opts: { req?: Request; session?: mongoose.ClientSession },
 ) {
   const { Payment, PaymentTxStatus } = await import("../models/Payment");
@@ -536,6 +536,8 @@ export async function recordFolioPayment(
       method,
       status: PaymentTxStatus?.COMPLETED ?? "COMPLETED",
       transactionId: await nextTransactionId(opts.session),
+      clientRequestId: params.clientRequestId || undefined,
+      reference: params.reference || undefined,
     }],
     { session: opts.session },
   );

@@ -96,8 +96,8 @@ describe("cashier shift rules", () => {
     expect(closed.statusCode).toBe(200);
     expect(closed.body.data).toMatchObject({ status: "CLOSED", varianceAcceptanceRequired: true, cashVariance: -500 });
 
-    const self = await call(acceptShiftVariance, { ...users.c.toObject(), role: UserRole.MANAGER }, { notes: "fine" }, { id: String(shift._id) });
-    expect(self.statusCode).toBe(403);
+    // A role without the override capability still cannot accept (single-login rule: the
+    // Reception login may accept its own shift; see reception-workflow.integration.spec).
     const cashier = await call(acceptShiftVariance, users.a, { notes: "fine" }, { id: String(shift._id) });
     expect(cashier.statusCode).toBe(403);
     const mgr = await call(acceptShiftVariance, users.m, { notes: "checked CCTV, recorded as loss" }, { id: String(shift._id) });

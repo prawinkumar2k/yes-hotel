@@ -1,6 +1,8 @@
+import { queueForVerification } from "../services/reception-verification";
+import { VerificationType } from "../models/VerificationRequest";
 import { Request, Response } from "express";
 import mongoose from "mongoose";
-import { Folio } from "../models/Folio";
+import { Folio, FolioStatus } from "../models/Folio";
 import { FolioLine, FolioLineType, FolioLineDirection } from "../models/FolioLine";
 import { Booking, PaymentStatus } from "../models/Booking";
 import {
@@ -243,6 +245,19 @@ export const postFolioCharge = async (req: Request, res: Response) => {
     if (isNaN(numAmount) || numAmount < 0) {
       return res.status(400).json({ success: false, message: "Amount must be a non-negative number" });
     }
+    // Money and ledger-control lines have their own endpoints (payments, advances, refunds,
+    // void-by-reversal); taxes come from applyTax. They can never be typed in as a charge.
+    const MONEY_OR_CONTROL = new Set<string>([FolioLineType.PAYMENT, FolioLineType.ADVANCE_ADJUSTMENT, FolioLineType.REFUND, FolioLineType.REVERSAL, FolioLineType.TAX_CGST, FolioLineType.TAX_SGST, FolioLineType.TAX_IGST]);
+    if (!Object.values(FolioLineType).includes(lineType) || MONEY_OR_CONTROL.has(lineType)) {
+      return res.status(400).json({ success: false, message: `${lineType} cannot be posted as a charge; use Record Payment, Apply Advance, Refund or Void` });
+    }
+    const isConcession = lineType === FolioLineType.DISCOUNT || lineType === FolioLineType.COMPLIMENTARY;
+    if (isConcession) {
+      const { PermissionService } = await import("../services/PermissionService");
+      if (!(await PermissionService.can((req as any).user, "CAP.EDIT_TARIFF"))) {
+        return res.status(403).json({ success: false, message: "Discounts and complimentary credits are set by the front desk" });
+      }
+    }
 
     // 1. Post the main charge line
     const { line, folio: updatedFolio } = await postCharge(
@@ -260,6 +275,21 @@ export const postFolioCharge = async (req: Request, res: Response) => {
       },
       { req }
     );
+
+    if (isConcession && numAmount > 0) {
+      await queueForVerification({
+        type: VerificationType.TARIFF_BELOW_DEFAULT,
+        subjectKey: `folioLine:${line._id}:concession`,
+        returnQueue: "FRONT_DESK",
+        summary: `${lineType === FolioLineType.DISCOUNT ? "Discount" : "Complimentary"} ₹${numAmount.toLocaleString("en-IN")}: ${description}`,
+        amount: numAmount,
+        bookingId: folio.booking,
+        folioId: folio._id,
+        details: { lineType, description, notes },
+        note: notes || description,
+        req,
+      });
+    }
 
     // 2. Optional automatic CGST / SGST split calculation for taxable charges
     // GST by supply category of the line (taxService): room, food or service.
@@ -384,225 +414,97 @@ export const settleFolioHandler = async (req: Request, res: Response) => {
  * - taxes
  */
 export const updateBookingBill = async (req: Request, res: Response) => {
+  // Changes the agreed tariff of a stay. The ledger is never rewritten: the existing room,
+  // extra-bed, other-charge, room-tax and discount lines are reversed and the new ones posted.
+  // Payments, advances, refunds and other charges are untouched (money is recorded through the
+  // payment/advance endpoints, never typed into a bill). A rate below the room's default rate,
+  // or a discount, is queued for Reception verification.
   try {
     const { bookingId } = req.params;
     if (!mongoose.Types.ObjectId.isValid(bookingId as string)) {
       return res.status(400).json({ success: false, message: "Invalid booking ID" });
     }
-
-    const {
-      ratePerNight,
-      extraBedAmount,
-      otherCharges,
-      otherChargesDesc,
-      discountAmount,
-      paidAmount,
-      applyTax = true,
-      customLines = [],
-    } = req.body;
-
-    const booking = await Booking.findById(bookingId).populate("assignedRoom");
-    if (!booking) {
-      return res.status(404).json({ success: false, message: "Booking not found" });
+    const { PermissionService } = await import("../services/PermissionService");
+    if (!(await PermissionService.can((req as any).user, "CAP.EDIT_TARIFF"))) {
+      return res.status(403).json({ success: false, message: "Tariffs are set by the front desk" });
     }
+    const { ratePerNight, extraBedAmount, otherCharges, otherChargesDesc, discountAmount, applyTax = true, reason } = req.body ?? {};
+    const booking: any = await Booking.findById(bookingId).populate("roomCategory", "basePrice name");
+    if (!booking) return res.status(404).json({ success: false, message: "Booking not found" });
+    const folio: any = await Folio.findOne({ booking: bookingId, status: FolioStatus.OPEN });
+    if (!folio) return res.status(409).json({ success: false, message: "There is no open folio for this booking (it opens at check-in)" });
 
-    let folio: any = await Folio.findOne({ booking: bookingId });
-    if (!folio) {
-      const actorId = (req as any).user?.id || (req as any).user?._id || "SYSTEM";
-      const guestId = booking.customer?.toString() || new mongoose.Types.ObjectId().toString();
-      folio = await createFolio(
-        {
-          bookingId: booking._id.toString(),
-          guestId,
-          roomId: (booking.assignedRoom as any)?._id?.toString() || (booking.assignedRoom as any)?.toString(),
-          checkInDate: booking.checkInDate,
-          checkOutDate: booking.checkOutDate,
-        },
-        { req }
-      );
-    }
-
-    const actorId = (req as any).user?.id || (req as any).user?._id || "SYSTEM";
+    const actorId = String((req as any).user?.id || (req as any).user?._id || "STAFF");
     const checkIn = new Date(booking.checkInDate);
     const checkOut = new Date(booking.checkOutDate);
     const nights = Math.max(1, countNights(checkIn, checkOut));
-
-    const newRatePerNight = Number(ratePerNight !== undefined ? ratePerNight : (booking.ratePerNight || 0));
-    const newRoomTotal = newRatePerNight * nights;
-    const newExtraBed = Number(extraBedAmount || 0);
-    const newOtherCharges = Number(otherCharges || 0);
-    const newDiscount = Number(discountAmount || 0);
-    const newPaidAmount = Number(paidAmount !== undefined ? paidAmount : (booking.paidAmount || 0));
-
-    // Calculate Tax
-    const taxableSubtotal = Math.max(0, newRoomTotal + newExtraBed + newOtherCharges - newDiscount);
-    let totalTax = 0;
-    let cgst = 0;
-    let sgst = 0;
-
-    if (applyTax) {
-      // Room GST per night; the slab is chosen by the per-night value of the edited bill.
-      const taxCalc = computeRoomTax(await loadGstRules(), { checkIn, checkOut, nightlyValue: taxableSubtotal / nights });
-      cgst = taxCalc.cgst;
-      sgst = taxCalc.sgst;
-      totalTax = taxCalc.tax;
+    const newRate = Number(ratePerNight !== undefined && ratePerNight !== "" ? ratePerNight : booking.ratePerNight || 0);
+    const newExtraBed = Math.max(0, Number(extraBedAmount || 0));
+    const newOther = Math.max(0, Number(otherCharges || 0));
+    const newDiscount = Math.max(0, Number(discountAmount || 0));
+    if (!(newRate >= 0) || [newExtraBed, newOther, newDiscount].some((n) => Number.isNaN(n))) {
+      return res.status(400).json({ success: false, message: "Enter valid amounts" });
     }
+    const editNote = typeof reason === "string" && reason.trim() ? reason.trim() : "Tariff updated at the front desk";
 
-    const totalBillAmount = taxableSubtotal + totalTax;
-
-    // Update Booking fields
-    booking.ratePerNight = newRatePerNight;
-    booking.totalAmount = totalBillAmount;
-    booking.taxAmount = totalTax;
-    booking.cgstAmount = cgst;
-    booking.sgstAmount = sgst;
-    booking.discountAmount = newDiscount;
-    booking.paidAmount = newPaidAmount;
-    booking.paymentStatus = (totalBillAmount - newPaidAmount) <= 0 ? PaymentStatus.PAID : (newPaidAmount > 0 ? PaymentStatus.PARTIAL : PaymentStatus.UNPAID);
-    await booking.save();
-
-    // Re-build Folio Lines ledger atomically
-    await FolioLine.deleteMany({ folio: folio._id });
-
-    // 1. Room Charge
-    if (newRoomTotal > 0) {
-      await FolioLine.create({
-        folio: folio._id,
-        booking: booking._id,
-        lineType: FolioLineType.ROOM_CHARGE,
-        direction: FolioLineDirection.DEBIT,
-        description: `Room Tariff (${nights} Night${nights > 1 ? 's' : ''} @ ₹${newRatePerNight.toLocaleString()}/night)`,
-        amount: newRoomTotal,
-        date: checkIn,
-        postedBy: actorId,
-      });
-    }
-
-    // 2. Extra Bed / Person
-    if (newExtraBed > 0) {
-      await FolioLine.create({
-        folio: folio._id,
-        booking: booking._id,
-        lineType: FolioLineType.EXTRA_BED,
-        direction: FolioLineDirection.DEBIT,
-        description: `Extra Bed / Person Charges`,
-        amount: newExtraBed,
-        date: checkIn,
-        postedBy: actorId,
-      });
-    }
-
-    // 3. Other Charges
-    if (newOtherCharges > 0) {
-      await FolioLine.create({
-        folio: folio._id,
-        booking: booking._id,
-        lineType: FolioLineType.ADDON,
-        direction: FolioLineDirection.DEBIT,
-        description: otherChargesDesc || "Ancillary & Service Charges",
-        amount: newOtherCharges,
-        date: checkIn,
-        postedBy: actorId,
-      });
-    }
-
-    // 4. Taxes
-    if (cgst > 0) {
-      await FolioLine.create({
-        folio: folio._id,
-        booking: booking._id,
-        lineType: FolioLineType.TAX_CGST,
-        direction: FolioLineDirection.DEBIT,
-        description: `CGST (6%) Tax`,
-        amount: cgst,
-        date: checkIn,
-        postedBy: actorId,
-      });
-    }
-    if (sgst > 0) {
-      await FolioLine.create({
-        folio: folio._id,
-        booking: booking._id,
-        lineType: FolioLineType.TAX_SGST,
-        direction: FolioLineDirection.DEBIT,
-        description: `SGST (6%) Tax`,
-        amount: sgst,
-        date: checkIn,
-        postedBy: actorId,
-      });
-    }
-
-    // 5. Discount
-    if (newDiscount > 0) {
-      await FolioLine.create({
-        folio: folio._id,
-        booking: booking._id,
-        lineType: FolioLineType.DISCOUNT,
-        direction: FolioLineDirection.CREDIT,
-        description: `Discount / Price Concession`,
-        amount: newDiscount,
-        date: checkIn,
-        postedBy: actorId,
-      });
-    }
-
-    // 6. Advance / Payment Received
-    if (newPaidAmount > 0) {
-      await FolioLine.create({
-        folio: folio._id,
-        booking: booking._id,
-        lineType: FolioLineType.ADVANCE_ADJUSTMENT,
-        direction: FolioLineDirection.CREDIT,
-        description: `Advance Payment Received (${(booking as any).billingInstruction || "CASH"})`,
-        amount: newPaidAmount,
-        date: new Date(),
-        postedBy: actorId,
-      });
-    }
-
-    // 7. Custom Lines
-    if (Array.isArray(customLines) && customLines.length > 0) {
-      for (const cl of customLines) {
-        if (cl && cl.description && Number(cl.amount) > 0) {
-          const isCredit = cl.direction === "CREDIT" || cl.lineType === "PAYMENT" || cl.lineType === "DISCOUNT";
-          await FolioLine.create({
-            folio: folio._id,
-            booking: booking._id,
-            lineType: cl.lineType || FolioLineType.ADDON,
-            direction: isCredit ? FolioLineDirection.CREDIT : FolioLineDirection.DEBIT,
-            description: cl.description,
-            amount: Number(cl.amount),
-            date: cl.date ? new Date(cl.date) : new Date(),
-            postedBy: actorId,
-          });
+    const REPLACED = new Set<string>([FolioLineType.ROOM_CHARGE, FolioLineType.EXTRA_BED, FolioLineType.ADDON, FolioLineType.DISCOUNT, FolioLineType.TAX_CGST, FolioLineType.TAX_SGST, FolioLineType.TAX_IGST]);
+    const isRoomTax = (l: any) => !/KOT|Restaurant|POS/i.test(String(l.description ?? ""));
+    const session = await mongoose.startSession();
+    let totals: any;
+    try {
+      await session.withTransaction(async () => {
+        const lines = await FolioLine.find({ folio: folio._id }).session(session).lean();
+        const reversed = new Set(lines.filter((l: any) => l.reversedLineId).map((l: any) => String(l.reversedLineId)));
+        for (const l of lines as any[]) {
+          if (l.lineType === FolioLineType.REVERSAL || reversed.has(String(l._id)) || !REPLACED.has(l.lineType)) continue;
+          if (String(l.lineType).startsWith("TAX_") && !isRoomTax(l)) continue;
+          await reverseFolioLine(String(folio._id), String(l._id), editNote, { req, session, postedBy: actorId });
         }
-      }
+        const post = (lineType: FolioLineType, description: string, amount: number) =>
+          amount > 0 ? postCharge({ folioId: String(folio._id), bookingId: String(booking._id), lineType, description, amount, date: checkIn, postedBy: actorId, notes: editNote }, { req, session }) : null;
+        await post(FolioLineType.ROOM_CHARGE, `Room Tariff (${nights} Night${nights > 1 ? "s" : ""} @ ₹${newRate.toLocaleString("en-IN")}/night)`, newRate * nights);
+        await post(FolioLineType.EXTRA_BED, "Extra Bed / Person Charges", newExtraBed);
+        await post(FolioLineType.ADDON, otherChargesDesc || "Other Charges", newOther);
+        await post(FolioLineType.DISCOUNT, "Discount / Price Concession", newDiscount);
+        let tax = { tax: 0, cgst: 0, sgst: 0 };
+        if (applyTax) {
+          const taxable = Math.max(0, newRate * nights + newExtraBed + newOther - newDiscount);
+          tax = computeRoomTax(await loadGstRules(), { checkIn, checkOut, nightlyValue: taxable / nights });
+          await post(FolioLineType.TAX_CGST, "CGST on Room Tariff", tax.cgst);
+          await post(FolioLineType.TAX_SGST, "SGST on Room Tariff", tax.sgst);
+        }
+        totals = await recomputeFolioBalance(String(folio._id), { session });
+        booking.ratePerNight = newRate;
+        booking.taxAmount = tax.tax;
+        booking.cgstAmount = tax.cgst;
+        booking.sgstAmount = tax.sgst;
+        booking.discountAmount = newDiscount;
+        booking.totalAmount = Math.round((newRate * nights + newExtraBed + newOther - newDiscount + tax.tax) * 100) / 100;
+        await booking.save({ session });
+      });
+    } finally {
+      await session.endSession();
     }
 
-    // Recompute Folio
-    const totals = await recomputeFolioBalance(folio._id.toString());
-    folio.totalCharges = totals.totalCharges;
-    folio.totalTax = totals.totalTax;
-    folio.cgst = totals.cgst;
-    folio.sgst = totals.sgst;
-    folio.igst = totals.igst;
-    folio.totalDiscounts = totals.totalDiscounts;
-    folio.totalPaid = totals.totalPaid;
-    folio.totalAdvanceAdjusted = totals.totalAdvanceAdjusted;
-    folio.balance = totals.balance;
-    await folio.save();
+    const defaultRate = Number(booking.roomCategory?.basePrice ?? 0);
+    if ((defaultRate > 0 && newRate < defaultRate) || newDiscount > 0) {
+      await queueForVerification({
+        type: VerificationType.TARIFF_BELOW_DEFAULT,
+        subjectKey: `billEdit:${booking._id}:${Date.now()}`,
+        returnQueue: "FRONT_DESK",
+        summary: `Bill edited: ₹${newRate}/night (default ₹${defaultRate})${newDiscount > 0 ? `, discount ₹${newDiscount}` : ""}`,
+        amount: Math.max(0, (defaultRate - newRate) * nights) + newDiscount,
+        bookingId: booking._id,
+        folioId: folio._id,
+        details: { rate: newRate, defaultRate, nights, discount: newDiscount, reason: editNote },
+        note: editNote,
+        req,
+      });
+    }
 
+    const updatedFolio = await Folio.findById(folio._id).lean();
     const lines = await FolioLine.find({ folio: folio._id }).sort({ date: 1, postedAt: 1 }).lean();
-
-    return res.json({
-      success: true,
-      message: "Bill updated and ledger reconciled successfully",
-      data: {
-        booking,
-        folio,
-        lines,
-      },
-    });
+    return res.json({ success: true, message: "Tariff updated; earlier lines reversed, new lines posted", data: { booking, folio: updatedFolio, lines, balance: totals?.balance } });
   } catch (error: any) {
     return res.status(500).json({ success: false, message: error.message });
   }
@@ -621,8 +523,21 @@ export const deleteFolioLine = async (req: Request, res: Response) => {
       return res.status(400).json({ success: false, message: "A reason is required to void a folio line" });
     }
     const actor = (req as any).user?.id ?? (req as any).user?._id;
+    const voided = await FolioLine.findById(lineId).lean();
     await reverseFolioLine(folioId, lineId, reason, { req, postedBy: actor ? String(actor) : "STAFF" });
     const folio = await Folio.findById(folioId).lean();
+    await queueForVerification({
+      type: VerificationType.FOLIO_VOID,
+      subjectKey: `folioLine:${lineId}:void`,
+      returnQueue: "CASHIER",
+      summary: `Voided "${voided?.description ?? "folio line"}" ₹${Number(voided?.amount ?? 0).toLocaleString("en-IN")}`,
+      amount: Number(voided?.amount ?? 0),
+      bookingId: folio?.booking,
+      folioId,
+      details: { lineType: voided?.lineType, description: voided?.description, reason },
+      note: reason,
+      req,
+    });
     const lines = await FolioLine.find({ folio: folioId }).sort({ date: 1, postedAt: 1 }).lean();
     return res.json({ success: true, message: "Line voided by reversal", data: { folio, lines } });
   } catch (error: any) {

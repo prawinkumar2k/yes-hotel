@@ -132,6 +132,11 @@ describe("money-desk mutations", () => {
   for (const role of ["receptionist", "cashier", "manager", "superAdmin"] as const) {
     it(`${role} passes authorization on every money mutation`, async () => {
       for (const [method, path] of MONEY_MUTATIONS) {
+        // Tariffs are front-desk decisions: the Cashier may not edit the bill (CAP.EDIT_TARIFF).
+        if (role === "cashier" && path.endsWith("/bill-edit")) {
+          expect(await call(role, method, path)).toBe(403);
+          continue;
+        }
         // Fake ids / empty bodies are rejected by the handlers; only auth failures matter here.
         expect([401, 403], `${method} ${path}`).not.toContain(await call(role, method, path));
       }

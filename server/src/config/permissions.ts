@@ -216,6 +216,38 @@ grant(base, [UserRole.MANAGER], "RATE_PLANS", ["CREATE", "EDIT"]);
 grant(base, [UserRole.MANAGER, UserRole.FINANCE], "CORPORATE_ACCOUNTS", ["VIEW", "CREATE", "EDIT"]);
 grant(base, [UserRole.MANAGER, UserRole.FINANCE], "REPORTS_LAYOUT", ["VIEW"]);
 grant(base, [UserRole.MANAGER, UserRole.SUPERVISOR, UserRole.RECEPTIONIST, UserRole.FINANCE], "TASK_APPROVALS", ["VIEW", "CREATE", "APPROVE", "REJECT"]);
+// ── Reception department workflow ───────────────────────────────────────────
+// Supervisor verification of refunds, tariffs below default, folio voids and cancelling a
+// booking that holds money: front-office roles request (and see their own requests);
+// SUPERVISOR and MANAGER review. Reviewers never approve their own requests.
+grant(base, [UserRole.RECEPTIONIST, UserRole.CASHIER], "VERIFICATIONS", ["VIEW", "CREATE"]);
+grant(base, [UserRole.SUPERVISOR, UserRole.MANAGER], "VERIFICATIONS", ["VIEW", "CREATE", "APPROVE", "REJECT"]);
+grant(base, [UserRole.SUPERVISOR, UserRole.MANAGER], "CAP.VERIFY_RECEPTION", ["ALLOW"]);
+// Checkout clearance: Receptionist initiates, the Cashier (or Manager) clears the bill.
+grant(base, [UserRole.CASHIER, UserRole.MANAGER], "CAP.PAYMENT_CLEARANCE", ["ALLOW"]);
+grant(base, [UserRole.CASHIER, UserRole.MANAGER], "CASHIER_DESK", ["VIEW"]);
+// ── Single Reception login: Front Desk + Verification Queue + Cashier & Billing ──
+// The RECEPTIONIST account carries the cashier and verification functions (one login for the
+// Reception department). Sensitive actions still check these permissions on the server.
+grant(base, [UserRole.RECEPTIONIST], "PAYMENTS", ["VIEW", "CREATE", "REFUND", "PRINT", "EXPORT"]);
+grant(base, [UserRole.RECEPTIONIST], "REFUNDS", ["VIEW", "CREATE", "PRINT", "EXPORT"]);
+grant(base, [UserRole.RECEPTIONIST], "ADVANCES", ["VIEW", "CREATE", "ADJUST", "REFUND", "PRINT", "EXPORT"]);
+grant(base, [UserRole.RECEPTIONIST], "CASHIER_SHIFTS", ["VIEW", "OPEN_SHIFT", "CLOSE_SHIFT", "RECONCILE", "EXPORT"]);
+grant(base, [UserRole.RECEPTIONIST], "CASHIER_DESK", ["VIEW"]);
+grant(base, [UserRole.RECEPTIONIST], "DASHBOARD.CASHIER", ["VIEW"]);
+grant(base, [UserRole.RECEPTIONIST], "PAYMENT_CHANNELS", ["VIEW"]);
+grant(base, [UserRole.RECEPTIONIST], "RESTAURANT_POS", ["VIEW", "SETTLE"]);
+grant(base, [UserRole.RECEPTIONIST], "MENU_MANAGEMENT", ["VIEW"]);
+grant(base, [UserRole.RECEPTIONIST], "VERIFICATIONS", ["VIEW", "APPROVE", "REJECT"]);
+grant(base, [UserRole.RECEPTIONIST], "CAP.VERIFY_RECEPTION", ["ALLOW"]);
+grant(base, [UserRole.RECEPTIONIST], "CAP.SHIFT_SUPERVISOR_OVERRIDE", ["ALLOW"]);
+grant(base, [UserRole.RECEPTIONIST], "CAP.PAYMENT_CLEARANCE", ["ALLOW"]);
+grant(base, [UserRole.RECEPTIONIST], "CAP.APPROVE_HIGH", ["ALLOW"]);
+grant(base, [UserRole.RECEPTIONIST], "CAP.CC_FINANCE", ["ALLOW"]);
+
+// Tariffs and price concessions are front-desk decisions; the Cashier cannot change them.
+grant(base, [UserRole.RECEPTIONIST, UserRole.SUPERVISOR, UserRole.MANAGER], "CAP.EDIT_TARIFF", ["ALLOW"]);
+
 // Audit logs, permissions/roles and multi-property (incl. GET /api/properties) stay full-access only.
 
 export const DEFAULT_ROLE_PERMISSIONS: Record<RoleKey, PermissionMap> = base;

@@ -218,9 +218,10 @@ export async function transitionHousekeepingStatus(
     // If provided, also update sellStatus atomically
     sellStatus?: SellStatus;
     releasedBy?: string;
+    session?: mongoose.ClientSession;
   }
 ): Promise<IRoom | null> {
-  const room = await Room.findById(roomId);
+  const room = await Room.findById(roomId).session(opts.session ?? null);
   if (!room) return null;
 
   const from = room.housekeepingStatus;
@@ -263,7 +264,23 @@ export async function transitionHousekeepingStatus(
   }
 
   Object.assign(room, updateFields);
-  await room.save();
+  await room.save({ session: opts.session });
+
+  // Housekeeping finished the room: queue it for Reception verification before it is released.
+  if (to === HousekeepingRoomStatus.CLEANING_COMPLETED) {
+    const { submitForVerification } = await import("./verification.service");
+    const { VerificationType } = await import("../models/VerificationRequest");
+    await submitForVerification({
+      type: VerificationType.ROOM_RELEASE,
+      subjectKey: `room:${room._id}:release`,
+      returnQueue: "HOUSEKEEPING",
+      summary: `Room ${room.roomNumber} cleaned — verify and release`,
+      roomId: room._id,
+      propertyId: room.propertyId,
+      details: { room: room.roomNumber, floor: room.floor },
+      req: opts.req,
+    });
+  }
 
   await createAuditLog({
     req: opts.req,

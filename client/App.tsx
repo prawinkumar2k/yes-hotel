@@ -96,6 +96,9 @@ const AdminGuests = lazy(() => import("./pages/admin/AdminGuests"));
 const AdminPayments = lazy(() => import("./pages/admin/AdminPayments"));
 const AdminAdvances = lazy(() => import("./pages/admin/AdminAdvances"));
 const AdminAdvanceReceipt = lazy(() => import("./pages/admin/AdminAdvanceReceipt"));
+const AdminVerificationQueue = lazy(() => import("./pages/admin/AdminVerificationQueue"));
+const AdminCashierBilling = lazy(() => import("./pages/admin/AdminCashierBilling"));
+const AdminPaymentReceipt = lazy(() => import("./pages/admin/AdminPaymentReceipt"));
 const AdminCashierShifts = lazy(() => import("./pages/admin/AdminCashierShifts"));
 const AdminRefunds = lazy(() => import("./pages/admin/AdminRefunds"));
 const AdminCoupons = lazy(() => import("./pages/admin/AdminCoupons"));
@@ -238,6 +241,9 @@ function App() {
                 <Route path="/admin/guests" element={<PermissionRoute pageKey="GUESTS"><AdminLayout title="Guests"><AdminGuests /></AdminLayout></PermissionRoute>} />
                 <Route path="/admin/payments" element={<PermissionRoute pageKey="PAYMENTS"><AdminLayout title="Payments"><AdminPayments /></AdminLayout></PermissionRoute>} />
                 <Route path="/admin/advances" element={<PermissionRoute pageKey="ADVANCES"><AdminLayout title="Advance Payments Ledger"><AdminAdvances /></AdminLayout></PermissionRoute>} />
+                <Route path="/admin/verifications" element={<PermissionRoute pageKey="VERIFICATIONS"><AdminLayout title="Verification Queue"><AdminVerificationQueue /></AdminLayout></PermissionRoute>} />
+                <Route path="/admin/billing" element={<PermissionRoute pageKey="CASHIER_DESK"><AdminLayout title="Cashier & Billing"><AdminCashierBilling /></AdminLayout></PermissionRoute>} />
+                <Route path="/admin/payments/:id/receipt" element={<PermissionRoute pageKey="PAYMENTS"><AdminLayout title="Payment Receipt"><AdminPaymentReceipt /></AdminLayout></PermissionRoute>} />
                 <Route path="/admin/advances/:id/receipt" element={<PermissionRoute pageKey="ADVANCES"><AdminLayout title="Advance Receipt"><AdminAdvanceReceipt /></AdminLayout></PermissionRoute>} />
                 <Route path="/admin/cashier-shifts" element={<PermissionRoute pageKey="CASHIER_SHIFTS"><AdminLayout title="Cashier Shift & Drawer Reconciliation"><AdminCashierShifts /></AdminLayout></PermissionRoute>} />
                 <Route path="/admin/refunds" element={<PermissionRoute pageKey="REFUNDS"><AdminLayout title="Refunds"><AdminRefunds /></AdminLayout></PermissionRoute>} />

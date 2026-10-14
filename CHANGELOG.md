@@ -3,6 +3,27 @@
 All changes, fixes, hardened services, and architectural migrations are documented chronologically in this file.
 
 ---
+## [Reception department — one login, three functions] - 2026-10-14
+
+- **One Reception login** (RECEPTIONIST) now covers Front Desk & Reservations, the Verification Queue and Cashier & Billing. The capabilities are granted through the existing permission map, and the server checks each one. See `docs/rbac/reception-access-diff.txt`. The existing Supervisor and Cashier accounts are unchanged.
+- **Verification Queue** (`/admin/verifications`): completed work arrives automatically for verification, never before it is done.
+  - **Room release:** a room arrives when housekeeping marks it cleaned. Verify releases it (CLEAN, available). Reject sends it back to housekeeping as DIRTY with the reason, and re-cleaning resubmits it automatically.
+  - **Shift variance:** a variance above the threshold arrives when the shift closes. Verify accepts it (shift RECONCILED).
+  - **Refunds, folio voids, cancellations with an advance, tariffs below default** (including discounts and complimentary credits): each arrives after the action is done.
+  - **Rejecting** needs a reason and returns the task to Housekeeping, the Front Desk or Cashier & Billing. Corrections are resubmitted as linked attempts, and the history records who did what and when.
+- **Cashier & Billing** (`/admin/billing`):
+  - **Bills to settle:** due out, overdue, or sent from the Front Desk.
+  - **Payments:** recorded with a payment receipt; a duplicate submission is recorded once, and overpayment is refused.
+  - **Advances:** applied oldest first.
+  - **Guest credit:** refunded with a reason.
+  - **Checkout:** completes at a ₹0 balance and hands the room to housekeeping.
+- **Front Desk** checkout now reviews the charges and sends the stay to Cashier & Billing.
+- **Integrity:**
+  - **Bill edit:** reverses and reposts the tariff lines. It no longer deletes the folio or invents "Advance Payment Received" lines, and payments are never edited.
+  - **Folio charges:** payment, advance, refund, reversal and tax lines can no longer be typed in as charges.
+  - **Cashier role:** cannot change tariffs.
+
+---
 ## [Phase 1 · Step M — Staff, RBAC & audit] - 2026-10-13
 
 - Session tracking: `lastActiveAt` (authenticated activity) alongside `lastLogin`. Successful and failed logins are audit-logged.

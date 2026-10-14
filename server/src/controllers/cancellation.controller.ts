@@ -1,3 +1,5 @@
+import { queueForVerification } from "../services/reception-verification";
+import { VerificationType } from "../models/VerificationRequest";
 import { Request, Response } from "express";
 import { Booking, BookingStatus } from "../models/Booking";
 import { RoomStatus } from "../models/Room";
@@ -63,6 +65,30 @@ export const cancelBooking = async (req: Request, res: Response) => {
     }
 
     booking.cancellationReason = reason;
+
+    // A staff cancellation of a booking that holds money is verified by Reception.
+    if (isAdmin) {
+      const { AdvancePayment } = await import("../models/AdvancePayment");
+      const { Payment } = await import("../models/Payment");
+      const [adv, paid] = await Promise.all([
+        AdvancePayment.aggregate([{ $match: { booking: booking._id } }, { $group: { _id: null, t: { $sum: "$amount" } } }]),
+        Payment.aggregate([{ $match: { booking: booking._id, status: { $in: ["COMPLETED", "PARTIALLY_REFUNDED"] } } }, { $group: { _id: null, t: { $sum: "$amount" } } }]),
+      ]);
+      const held = (adv[0]?.t ?? 0) + (paid[0]?.t ?? 0);
+      if (held > 0) {
+        await queueForVerification({
+          type: VerificationType.CANCEL_WITH_ADVANCE,
+          subjectKey: `booking:${booking._id}:cancel`,
+          returnQueue: "FRONT_DESK",
+          summary: `Cancelled with ₹${held.toLocaleString("en-IN")} received`,
+          amount: held,
+          bookingId: booking._id,
+          details: { previousStatus: currentStatus, reason },
+          note: reason,
+          req,
+        });
+      }
+    }
 
     // Calculate Penalty Percentage
     let penaltyPercentage = 0;

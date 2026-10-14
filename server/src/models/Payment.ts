@@ -24,6 +24,10 @@ export interface IPayment extends Document {
   /** @deprecated Use paymentChannel instead for new logic */
   method: PaymentMethod;
   transactionId?: string;
+  /** Idempotency key from the desk that recorded it: a retried or double-clicked submit is recorded once. */
+  clientRequestId?: string;
+  /** Card approval code / UPI UTR / cheque no. entered at the desk. */
+  reference?: string;
   razorpayOrderId?: string;
   razorpayPaymentId?: string;
   razorpaySignature?: string;
@@ -41,6 +45,8 @@ const PaymentSchema = new Schema<IPayment>(
     /** @deprecated */
     method: { type: String, enum: Object.values(PaymentMethod), required: true },
     transactionId: { type: String },
+    clientRequestId: { type: String },
+    reference: { type: String, trim: true },
     razorpayOrderId: { type: String },
     razorpayPaymentId: { type: String },
     razorpaySignature: { type: String },
@@ -59,6 +65,7 @@ const PaymentSchema = new Schema<IPayment>(
 // that makes replayed/duplicate payment verification impossible to record
 // twice, regardless of application-level races.
 PaymentSchema.index({ razorpayPaymentId: 1 }, { unique: true, sparse: true });
+PaymentSchema.index({ clientRequestId: 1 }, { unique: true, sparse: true });
 // Supports getPaymentByBooking and refund lookups.
 PaymentSchema.index({ booking: 1 });
 PaymentSchema.index({ status: 1, createdAt: -1 });

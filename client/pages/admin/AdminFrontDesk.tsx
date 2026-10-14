@@ -193,37 +193,26 @@ export default function AdminFrontDesk() {
     }
   };
 
+  // Checkout handoff: the Front Desk reviews the charges and sends the stay to Cashier & Billing,
+  // which takes the payment, applies advances and completes the checkout at a ₹0 balance.
   const handleProcessCheckOut = async () => {
     if (!checkOutModal.booking) return;
     setSubmittingAction(true);
     try {
       const token = getStoredAuthToken();
-      const finalPayAmount = settlementAmount !== "" ? Math.max(0, Number(settlementAmount)) : (checkOutModal.preview?.summary?.balanceDue || 0);
-      const res = await fetch(`/api/bookings/${checkOutModal.booking._id}/check-out`, {
+      const res = await fetch(`/api/reception/bookings/${checkOutModal.booking._id}/checkout/initiate`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify({
-          paymentMode,
-          paymentMethod: paymentMode,
-          paymentAmount: finalPayAmount,
-          refundAmount: checkOutModal.preview?.summary?.refundDue || 0,
-          advanceAdjustmentAmount: Math.min(
-            checkOutModal.preview?.totalAdvanceAvailable || 0, 
-            Math.max(0, checkOutModal.preview?.summary?.currentBalance || 0)
-          ),
-          notes: checkoutNotes || "Front Desk Express Checkout",
-        }),
+        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify({ note: checkoutNotes || undefined }),
       });
       const json = await res.json();
       if (json.success) {
-        toast({ title: "Check-Out Complete", description: `Guest ${checkOutModal.booking.guestDetails?.firstName} checked out. Room is now DIRTY for turnover.` });
+        toast({ title: "Sent to Cashier & Billing", description: json.message });
         setCheckOutModal({ open: false, booking: null, preview: null });
         queryClient.invalidateQueries();
+        navigate("/admin/billing");
       } else {
-        toast({ title: "Check-Out Failed", description: json.message, variant: "destructive" });
+        toast({ title: "Could not send to billing", description: json.message, variant: "destructive" });
       }
     } catch (err: any) {
       toast({ title: "Error", description: err.message, variant: "destructive" });
@@ -231,6 +220,7 @@ export default function AdminFrontDesk() {
       setSubmittingAction(false);
     }
   };
+
 
   // Handlers for Room Move
   const openRoomMove = (booking: any) => {
@@ -1503,7 +1493,7 @@ export default function AdminFrontDesk() {
                   onClick={handleProcessCheckOut}
                   className="px-5 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold shadow-lg disabled:opacity-50"
                 >
-                  {submittingAction ? "Processing..." : "Settle Folio & Complete Checkout"}
+                  {submittingAction ? "Sending..." : "Send to Cashier & Billing"}
                 </button>
               </div>
             </div>
@@ -1893,17 +1883,8 @@ export default function AdminFrontDesk() {
                       />
                     </div>
 
-                    <div>
-                      <label className="block font-bold text-gray-700 mb-1">
-                        Advance / Paid Amount (₹)
-                      </label>
-                      <input
-                        type="number"
-                        min="0"
-                        value={editBillForm.paidAmount}
-                        onChange={(e) => setEditBillForm({ ...editBillForm, paidAmount: parseFloat(e.target.value) || 0 })}
-                        className="w-full bg-white border border-gray-300 text-sm text-gray-900 font-bold p-2.5 rounded-xl focus:border-amber-500 focus:outline-none"
-                      />
+                    <div className="text-xs text-gray-600 self-end">
+                      Payments and advances are recorded in <b>Cashier &amp; Billing</b>; editing the tariff never changes them.
                     </div>
                   </div>
 

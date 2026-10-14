@@ -246,10 +246,11 @@ export function legacyRoomFields(s: RoomState) {
     occupancyStatus: s.occupancy,
     housekeepingStatus: s.hk,
     sellStatus: s.sell === "OOO" ? "OUT_OF_ORDER" : s.sell === "OOS" ? "OUT_OF_SERVICE" : s.blocked ? "BLOCKED" : "SELLABLE",
+    // A room with a guest in it is OCCUPIED, even while it is off sale (sellStatus says so).
     status:
-      s.sell === "OOO" ? "OUT_OF_ORDER"
+      s.occupancy === "OCCUPIED" ? "OCCUPIED"
+      : s.sell === "OOO" ? "OUT_OF_ORDER"
       : s.sell === "OOS" ? "OUT_OF_SERVICE"
-      : s.occupancy === "OCCUPIED" ? "OCCUPIED"
       : s.occupancy === "RESERVED" ? "RESERVED"
       : s.hk !== "CLEAN" ? "CLEANING"
       : "AVAILABLE",

@@ -644,6 +644,36 @@ Available = VACANT + CLEAN + SELLABLE + not blocked. Occupancy % = occupied room
 
 ---
 
+## Reception department — one login, three functions
+
+Decisions (from the owner):
+- **One Reception login.** The Verification Queue verifies completed work.
+- **Sensitive actions verified after completion:** refunds, folio voids, tariffs below default, and cancellations with an advance run first, then go to the Verification Queue.
+- **Shift variances:** the Reception login may accept variances on its own shift.
+- **Checkout:** Front Desk reviews the charges and sends the stay to billing; Cashier & Billing settles the bill and completes checkout.
+
+| Area | Before | After |
+|---|---|---|
+| Logins | Receptionist, Supervisor and Cashier were separate roles; the Reception desk could not verify or run the cashier screens | The RECEPTIONIST login holds the Front Desk, Verification Queue and Cashier & Billing functions through the existing permission map. Each sensitive action is still checked on the server. The full route-level diff is in `docs/rbac/reception-access-diff.txt`. The Supervisor and Cashier roles and accounts are unchanged |
+| Verification | No queue. Housekeeping inspection had to be passed by a MANAGER, and shift variances were accepted on a separate screen | `VerificationRequest` model with one queue. Tasks are created automatically when work completes: room cleaned, shift variance, refund, void, tariff below default, cancellation with advance. Verify or reject (with a reason); a rejected task returns to Housekeeping, Front Desk or Cashier; corrections are resubmitted as linked attempts. Verifier, time and history are recorded and audit-logged. The same task can't be pending twice or decided twice |
+| Room release | — | Verify → CLEAN and available, with `releasedBy` recorded. Reject → DIRTY, with the reason on the housekeeping task. Re-cleaning resubmits the task automatically |
+| Billing | Payment was taken inside the Front Desk checkout modal | Cashier & Billing page: bills to settle, apply advance, record payment (receipt; a `clientRequestId` makes a retry record once; overpayment refused), refund a guest credit, complete checkout at ₹0. The billing handoff (`checkoutClearance`) is recorded on the booking |
+| Bill edit | Deleted every folio line, including payments and advances, rebuilt the folio, and created an "Advance Payment Received" line from a typed number | Reverses and reposts only the tariff lines; money lines are untouched. Front-desk only (`CAP.EDIT_TARIFF`). A rate below the default goes to verification |
+| Folio charges | Any line type could be posted, including PAYMENT, ADVANCE and REFUND with no money record | Money and control line types are refused. Discounts and complimentary credits are front-desk only and verified |
+| Room legacy status | An occupied room with an open CRITICAL ticket showed OUT_OF_ORDER | Shows OCCUPIED; `sellStatus` still says OUT_OF_ORDER |
+
+**Tests:** `reception-workflow.integration.spec.ts` (9, over HTTP) covers:
+- **Role blocking:** blocked roles get 403.
+- **Billing to housekeeping:** send to billing → apply advance → duplicate-safe payment → overpayment refused → checkout → housekeeping.
+- **Room release cycle:** reject (reason required) → re-clean → resubmitted as attempt 2 → verify releases the room → a second approval is refused.
+- **Void cycle:** folio void → reject → resubmit → verify.
+- **Bill edit:** reversal-based, with payments untouched.
+- **Shift variance:** verified by the Reception login.
+
+**Updated tests for the new rules:** the Reception login can approve HIGH task approvals and accept its own shift variance; the Cashier can't edit tariffs.
+
+---
+
 ## Appendix A — All mounted endpoints (243)
 
 | Method | Path | Handler | Auth | RBAC | Live GET (SUPER_ADMIN) | Used by FE |
