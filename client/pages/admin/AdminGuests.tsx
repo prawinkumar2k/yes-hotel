@@ -319,7 +319,7 @@ export default function AdminGuests() {
                   <div className="space-y-3">
                     {viewData.bookings.map((booking: any) => {
                       const roomNo = booking.assignedRoom?.roomNumber || "—";
-                      const billNo = booking.billNumber || booking.bookingReference?.slice(-4) || "—";
+                      const billNo = booking.billNumber || "—";
                       return (
                         <div key={booking._id} className="border border-gray-200 bg-white p-3.5 rounded-xl shadow-sm hover:border-gray-400 transition space-y-2">
                           <div className="flex flex-wrap justify-between items-start gap-2">

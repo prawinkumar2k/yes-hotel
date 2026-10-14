@@ -3,6 +3,13 @@
 All changes, fixes, hardened services, and architectural migrations are documented chronologically in this file.
 
 ---
+## [Extend stay for the whole group; no bill number before checkout on the GRC] - 2026-10-14
+
+- **Extend Stay (Front Desk):** for a multi-room registration, choose **All N rooms** (default) or **Only room X**. Each room gets its own server quote (agreed rate + GST at the right slab) and its own bill update; rooms already staying until that date are skipped, and an unavailable room is named. Previously only the one room clicked was extended, so the other rooms' registration cards and bills kept the old date.
+- **GST wording:** the extend popup and the bill screens said "12% GST"; they now describe the real rule (5% up to ₹7,500 a night, 18% above, as CGST + SGST). The amounts were already calculated by the server.
+- **Registration card (GRC), registration summary and guest history** show "Issued at checkout" (or "—") instead of a made-up bill number from the booking reference. The bill number is still issued only when the bill is settled at checkout.
+
+---
 ## [OTA bookings entered by hand; reset script made safe] - 2026-10-14
 
 - **New Booking → Booking Source:** Walk-in, Phone / Direct, or **OTA**. For OTA, the desk types in the OTA (MakeMyTrip, Goibibo, Booking.com, Agoda, Expedia, Airbnb, Cleartrip, Yatra, EaseMyTrip, Other), the OTA confirmation number, commission % and who collects the money (OTA prepaid / pay at hotel). All four are required; commission and net settlement are worked out on the pre-tax room amount.

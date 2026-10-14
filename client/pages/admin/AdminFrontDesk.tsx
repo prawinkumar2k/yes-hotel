@@ -65,6 +65,9 @@ export default function AdminFrontDesk() {
   const [newCheckOutDate, setNewCheckOutDate] = useState("");
   const [extensionConflict, setExtensionConflict] = useState<string | null>(null);
   const [extensionCost, setExtensionCost] = useState<number>(0);
+  // Group stays: extend every room together (default) or only the chosen room. Per-room quote from the server.
+  const [extendScope, setExtendScope] = useState<"GROUP" | "ROOM">("GROUP");
+  const [extensionQuotes, setExtensionQuotes] = useState<Array<{ booking: any; room: string; cost: number; error?: string; skip?: boolean }>>([]);
 
   const [folioDrawer, setFolioDrawer] = useState<{ 
     open: boolean; 
@@ -261,67 +264,84 @@ export default function AdminFrontDesk() {
   };
 
   // Handlers for Stay Extension
-  const openExtendStay = (booking: any) => {
-    let nextDateStr = "";
-    if (booking.checkOutDate) {
-      nextDateStr = addDays(toBusinessDate(booking.checkOutDate), 1);
-    }
+  /** In-house rooms of the same stay (group registration), or just this booking. */
+  const extensionGroupOf = (booking: any, groupList?: any[]) => {
+    const list = (groupList && groupList.length ? groupList : booking?.groupBookings) || [];
+    const live = list.filter((g: any) => g && !["CHECKED_OUT", "CANCELLED", "NO_SHOW"].includes(g.status));
+    return live.length > 1 ? live : [booking];
+  };
+  const roomOf = (b: any) => b?.assignedRoom?.roomNumber || b?.roomNumber || b?.bookingReference || "Room";
+
+  const openExtendStay = (booking: any, groupList?: any[]) => {
+    const group = extensionGroupOf(booking, groupList);
+    const scope = group.length > 1 ? "GROUP" : "ROOM";
+    // Default new date: one night after the latest check-out in the stay.
+    const latest = group.map((g: any) => (g.checkOutDate ? toBusinessDate(g.checkOutDate) : "")).sort().pop() || "";
+    const nextDateStr = latest ? addDays(latest, 1) : "";
+    setExtendScope(scope);
     setNewCheckOutDate(nextDateStr);
     setExtensionConflict(null);
     setExtensionCost(0);
-    setExtendModal({ open: true, booking });
-    if (nextDateStr) {
-      handleCheckExtension(nextDateStr, booking);
-    }
+    setExtensionQuotes([]);
+    setExtendModal({ open: true, booking: { ...booking, groupBookings: group } });
+    if (nextDateStr) handleCheckExtension(nextDateStr, { ...booking, groupBookings: group }, scope);
   };
 
-  const handleCheckExtension = async (dateVal: string, targetBooking?: any) => {
+  const extensionTargets = (b: any, scope: "GROUP" | "ROOM") => (scope === "GROUP" ? b?.groupBookings || [b] : [b]);
+
+  const handleCheckExtension = async (dateVal: string, targetBooking?: any, scopeArg?: "GROUP" | "ROOM") => {
     setNewCheckOutDate(dateVal);
     const b = targetBooking || extendModal.booking;
+    const scope = scopeArg || extendScope;
     if (!b || !dateVal) return;
-    try {
-      const token = getStoredAuthToken();
-      const res = await fetch(`/api/bookings/${b._id}/extension-check`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify({ newCheckOutDate: dateVal }),
-      });
-      const json = await res.json();
-      if (json.success && json.data) {
-        setExtensionConflict(null);
-        setExtensionCost(json.data?.additionalTotal || json.data?.additionalAmount || json.data?.additionalTariff || 0);
-      } else {
-        setExtensionConflict(json.message || "Room unavailable for selected dates");
-      }
-    } catch (err: any) {
-      setExtensionConflict(err.message);
-    }
+    const token = getStoredAuthToken();
+    const quotes = await Promise.all(
+      extensionTargets(b, scope).map(async (t: any) => {
+        const room = roomOf(t);
+        // A room already staying until (or past) the new date needs no extension.
+        if (t.checkOutDate && toBusinessDate(t.checkOutDate) >= dateVal) return { booking: t, room, cost: 0, skip: true };
+        try {
+          const res = await fetch(`/api/bookings/${t._id}/extension-check`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+            body: JSON.stringify({ newCheckOutDate: dateVal }),
+          });
+          const json = await res.json();
+          if (json.success && json.data) return { booking: t, room, cost: Number(json.data.additionalTotal || json.data.additionalAmount || json.data.additionalTariff || 0) };
+          return { booking: t, room, cost: 0, error: json.message || "Room unavailable for the selected dates" };
+        } catch (err: any) {
+          return { booking: t, room, cost: 0, error: err.message };
+        }
+      }),
+    );
+    setExtensionQuotes(quotes);
+    setExtensionCost(quotes.reduce((t, q) => t + (q.error || q.skip ? 0 : q.cost), 0));
+    const errs = quotes.filter((q) => q.error);
+    const todo = quotes.filter((q) => !q.skip && !q.error);
+    setExtensionConflict(errs.length ? errs.map((q) => `Room ${q.room}: ${q.error}`).join(" · ") : todo.length === 0 ? "Already staying until this date — pick a later check-out" : null);
   };
 
   const handleProcessExtend = async () => {
     if (!extendModal.booking || !newCheckOutDate || extensionConflict) return;
     setSubmittingAction(true);
+    const token = getStoredAuthToken();
+    const done: string[] = [];
+    const failed: string[] = [];
     try {
-      const token = getStoredAuthToken();
-      const res = await fetch(`/api/bookings/${extendModal.booking._id}/extend`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify({ newCheckOutDate }),
-      });
-      const json = await res.json();
-      if (json.success) {
-        toast({ title: "Stay Extended", description: `Check-out extended to ${new Date(newCheckOutDate).toLocaleDateString()}` });
-        setExtendModal({ open: false, booking: null });
-        queryClient.invalidateQueries();
-      } else {
-        toast({ title: "Extension Failed", description: json.message, variant: "destructive" });
+      for (const q of extensionQuotes.filter((x) => !x.skip && !x.error)) {
+        const res = await fetch(`/api/bookings/${q.booking._id}/extend`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+          body: JSON.stringify({ newCheckOutDate }),
+        });
+        const json = await res.json().catch(() => ({ success: false, message: `Server error (${res.status})` }));
+        if (json.success) done.push(q.room);
+        else failed.push(`Room ${q.room}: ${json.message}`);
       }
+      if (done.length) toast({ title: "Stay Extended", description: `Room ${done.join(", ")} extended to ${new Date(newCheckOutDate).toLocaleDateString("en-IN")}. Bills updated.` });
+      if (failed.length) toast({ title: "Some rooms were not extended", description: failed.join(" · "), variant: "destructive" });
+      if (!failed.length) setExtendModal({ open: false, booking: null });
+      queryClient.invalidateQueries();
     } catch (err: any) {
       toast({ title: "Error", description: err.message, variant: "destructive" });
     } finally {
@@ -1588,6 +1608,30 @@ export default function AdminFrontDesk() {
               </div>
             )}
 
+            {(extendModal.booking.groupBookings?.length ?? 0) > 1 && (
+              <div className="grid grid-cols-2 gap-2">
+                {([["GROUP", `All ${extendModal.booking.groupBookings.length} rooms`], ["ROOM", `Only room ${roomOf(extendModal.booking)}`]] as const).map(([v, label]) => (
+                  <button key={v} type="button" onClick={() => { setExtendScope(v); handleCheckExtension(newCheckOutDate, extendModal.booking, v); }}
+                    className={`py-2 rounded-xl text-xs font-bold border transition ${extendScope === v ? "bg-purple-100 border-purple-400 text-purple-900" : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"}`}>
+                    {label}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {newCheckOutDate && extensionQuotes.length > 0 && (
+              <ul className="text-xs divide-y divide-gray-100 border border-gray-200 rounded-xl">
+                {extensionQuotes.map((q) => (
+                  <li key={q.booking._id} className="flex items-center justify-between px-3 py-2">
+                    <span className="font-semibold">Room {q.room}</span>
+                    <span className={q.error ? "text-red-600" : q.skip ? "text-gray-400" : "font-mono font-bold"}>
+                      {q.error ? "Unavailable" : q.skip ? "Already until this date" : `₹${q.cost.toLocaleString("en-IN")}`}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+
             {newCheckOutDate && !extensionConflict && (
               <div className="bg-purple-50 border border-purple-200 p-3.5 rounded-xl text-xs text-purple-900 space-y-1">
                 <div className="flex items-center justify-between">
@@ -1595,7 +1639,7 @@ export default function AdminFrontDesk() {
                   <span className="font-mono font-black text-sm text-purple-950">₹{extensionCost.toLocaleString()}</span>
                 </div>
                 <p className="text-[11px] text-purple-700">
-                  This extension amount will automatically be posted to the guest's folio ledger with applicable 12% GST.
+                  Posted to each room's bill at the agreed room rate, with GST at the applicable slab (5% up to ₹7,500 a night, 18% above). The registration card, folio and invoice show the new check-out date.
                 </p>
               </div>
             )}
@@ -1771,7 +1815,7 @@ export default function AdminFrontDesk() {
                   onClick={() => {
                     const bookingToExtend = folioDrawer.booking;
                     setFolioDrawer({ open: false, booking: null, folio: null, isGroupFolio: false, allGroupBookings: [] });
-                    openExtendStay(bookingToExtend);
+                    openExtendStay(bookingToExtend, folioDrawer.allGroupBookings);
                   }}
                   className="px-3 py-1.5 bg-purple-50 hover:bg-purple-100 text-purple-700 rounded-xl font-bold border border-purple-200 transition flex items-center gap-1.5 shadow-xs"
                   title="Extend Guest Stay / Room Duration"
@@ -1809,7 +1853,7 @@ export default function AdminFrontDesk() {
                         <Edit2 size={15} className="text-amber-700" /> Live Bill & Tariff Modifier
                       </h4>
                       <p className="text-[11px] text-amber-800 mt-0.5">
-                        Change base tariff, extra bed, ancillary charges, discounts or advances. All ledger entries & 12% GST will recalculate automatically.
+                        Change base tariff, extra bed, ancillary charges, discounts or advances. All ledger entries and GST (5% up to ₹7,500 a night, 18% above) recalculate automatically.
                       </p>
                     </div>
                     <span className="text-[10px] font-mono font-bold bg-amber-200 text-amber-900 px-2 py-0.5 rounded">
@@ -1896,7 +1940,7 @@ export default function AdminFrontDesk() {
                         onChange={(e) => setEditBillForm({ ...editBillForm, applyTax: e.target.checked })}
                         className="w-4 h-4 rounded text-amber-600 focus:ring-amber-500"
                       />
-                      <span>Apply 12% GST (6% CGST + 6% SGST SAC 996311)</span>
+                      <span>Apply GST (CGST + SGST at the room-rate slab, SAC 996311)</span>
                     </label>
 
                     <div className="flex items-center gap-2">
@@ -2063,7 +2107,7 @@ export default function AdminFrontDesk() {
                   </span>
                 </div>
                 <div className="p-3 bg-white rounded-xl border border-gray-200 shadow-2xs">
-                  <span className="text-[10px] text-gray-500 block uppercase font-sans">GST Taxes (12%)</span>
+                  <span className="text-[10px] text-gray-500 block uppercase font-sans">GST Taxes (CGST + SGST)</span>
                   <span className="text-sm font-bold text-gray-900">
                     ₹{(folioDrawer.folio?.totalTax || 0).toLocaleString()}
                   </span>

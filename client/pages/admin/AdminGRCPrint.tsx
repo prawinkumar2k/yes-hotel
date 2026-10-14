@@ -81,7 +81,8 @@ export default function AdminGRCPrint() {
   const isVoter = idType.includes("VOTER") || idType.includes("ECI") || idType.includes("E.C.I");
   const isGovt = !isAadhaar && !isDL && !isVoter;
 
-  const billNo = booking.billNumber || booking.bookingReference?.slice(-4) || "—";
+  // The bill number exists only after checkout; until then the card shows none.
+  const billNo = booking.billNumber || "Issued at checkout";
   const ratePerNight = booking.ratePerNight ?? (booking.totalAmount / nights);
   const advanceAmount = latestAdvance?.amount ?? (booking.advanceAmount ?? 0);
   const advanceMethod = latestAdvance?.method ?? booking.paymentMethod ?? "CASH";

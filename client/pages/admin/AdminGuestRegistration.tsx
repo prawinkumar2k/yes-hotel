@@ -1457,7 +1457,7 @@ export default function AdminGuestRegistration() {
             STEP 5: DONE — BOTH GRC (CONSENT FORM) & GST INVOICE RENDERED VISIBLE ON PAGE
             ========================================================================= */}
         {step === "DONE" && registeredBooking && (() => {
-          const billNo = registeredBooking.billNumber || registeredBooking.bookingReference || "—";
+          const billNo = registeredBooking.billNumber || "Issued at checkout";
           const allRoomNumbers = selectedRooms.length > 0
             ? selectedRooms.map(r => r.roomNumber).join(", ")
             : (selectedRoom?.roomNumber || "—");

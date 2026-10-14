@@ -1163,7 +1163,8 @@ export const printRegistrationCard = async (req: Request, res: Response) => {
     const isVoter = idType.includes("VOTER") || idType.includes("ECI");
     const isGovt = !isAadhaar && !isDL && !isVoter;
 
-    const billNo = booking.billNumber || booking.bookingReference?.slice(-4) || "—";
+    // The bill number exists only after checkout; until then the card shows none.
+    const billNo = booking.billNumber || "Issued at checkout";
     const ratePerNight = (booking as any).ratePerNight ?? Math.round((booking.totalAmount - (booking.taxAmount || 0)) / nights);
     const advanceAmount = advance?.amount ?? (booking as any).advanceAmount ?? 0;
     const advanceMethod = advance?.method ?? (booking as any).paymentMethod ?? "CASH";
@@ -1174,7 +1175,7 @@ export const printRegistrationCard = async (req: Request, res: Response) => {
 <html>
 <head><link rel="icon" href="/favicon.svg" type="image/svg+xml" />
 <meta charset="utf-8">
-<title>Guest Registration Card — ${esc(billNo)}</title>
+<title>Guest Registration Card — ${esc(booking.bookingReference)}</title>
 <style>
   @page { margin: 8mm; size: A4 portrait; }
   * { box-sizing: border-box; }
