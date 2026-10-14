@@ -79,6 +79,11 @@ function guestPhone(n: number) {
 }
 
 async function seed() {
+  // Demo data with public passwords must never land on a live hotel database.
+  if (process.env.NODE_ENV === "production" && process.env.ALLOW_DEMO_SEED !== "yes") {
+    console.error("Refusing to seed demo data in production (set ALLOW_DEMO_SEED=yes only on a throwaway database).");
+    process.exit(1);
+  }
   console.log("🌱 YES Hotels — Comprehensive Enterprise Seed Script");
   console.log("Connecting to:", MONGODB_URI.replace(/\/\/.*@/, "//***@"));
 
@@ -766,6 +771,8 @@ async function seed() {
     await CashierShift.create({
       propertyId: property._id,
       shiftNumber: "CS-2026-001",
+      drawerId: "DRAWER-01",
+      businessDate: new Date(),
       cashier: receptionId,
       openedAt: new Date(),
       openingFloat: 5000,

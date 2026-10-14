@@ -27,12 +27,6 @@ import {
   Hash
 } from "lucide-react";
 
-const DEMO_ACCOUNTS = [
-  { role: "Admin", email: "admin@yeshotels.com", password: "Admin@123", note: "General system & property administration", icon: ShieldCheck, badge: "bg-amber-100 text-amber-900 border-amber-300" },
-  { role: "Manager", email: "manager@yeshotels.com", password: "Manager@123", note: "Operations, maintenance, restaurant, night audit & reports", icon: UserCheck, badge: "bg-indigo-100 text-indigo-900 border-indigo-300" },
-  { role: "Reception", email: "reception@yeshotels.com", password: "Reception@123", note: "Front desk, verification queue & cashier/billing", icon: Calendar, badge: "bg-emerald-100 text-emerald-900 border-emerald-300" },
-  { role: "Housekeeping", email: "housekeeping@yeshotels.com", password: "House@123", note: "Room status & cleaning tasks", icon: Sparkles, badge: "bg-sky-100 text-sky-900 border-sky-300" },
-];
 
 const LIGHT_HERO_IMAGE = "/gallery/hotel-60.jpg";
 
@@ -372,45 +366,6 @@ export default function LoginPage() {
               </p>
             </div>
 
-            {/* Dev Demo Account Picker */}
-            {!import.meta.env.PROD && (
-              <div className="mt-8 pt-6 border-t border-stone-200/70">
-                <div className="flex items-center justify-between mb-3">
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-amber-800 flex items-center gap-1.5">
-                    <Key className="w-3.5 h-3.5 text-amber-600" /> Dev Demo Quick Fill
-                  </span>
-                  <span className="text-[10px] bg-amber-100 text-amber-800 px-2 py-0.5 rounded font-mono">Development</span>
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  {DEMO_ACCOUNTS.map((acc) => {
-                    const IconComp = acc.icon;
-                    return (
-                      <button
-                        key={acc.email}
-                        type="button"
-                        onClick={() => {
-                          setEmail(acc.email);
-                          setPassword(acc.password);
-                          toast({ title: `Loaded ${acc.role}`, description: acc.email });
-                        }}
-                        className="flex flex-col text-left p-2.5 rounded-xl border border-stone-200 bg-stone-50/70 hover:bg-amber-50/80 hover:border-amber-300 transition-all group"
-                      >
-                        <div className="flex items-center justify-between w-full mb-1">
-                          <div className="flex items-center gap-1.5">
-                            <IconComp className="w-3.5 h-3.5 text-slate-600 group-hover:text-amber-700" />
-                            <span className="text-xs font-bold text-slate-800 group-hover:text-amber-950">{acc.role}</span>
-                          </div>
-                          <span className={`text-[9px] px-1.5 py-0.2 rounded font-semibold border ${acc.badge}`}>
-                            Fill
-                          </span>
-                        </div>
-                        <span className="text-[10px] text-slate-500 line-clamp-1 group-hover:text-slate-700">{acc.note}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
           </motion.div>
         </div>
 
