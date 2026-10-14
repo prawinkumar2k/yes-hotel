@@ -152,7 +152,6 @@ export default function AdminLayout({ children, title, hidePadding }: { children
         { label: "All Reservations", to: "/admin/bookings", icon: CalendarDays, pageKey: "BOOKINGS" },
         { label: "Guest Change Requests", to: "/admin/change-requests", icon: CalendarClock, pageKey: "BOOKINGS", badge: pendingChangeRequests > 0 ? pendingChangeRequests : undefined },
         { label: "OTA Bookings", to: "/admin/ota-bookings", icon: Globe, pageKey: "BOOKINGS" },
-        { label: "Groups & Banquets", to: "/admin/group-bookings", icon: Users, pageKey: "GROUP_BOOKINGS" },
       ],
     },
     {
@@ -166,7 +165,6 @@ export default function AdminLayout({ children, title, hidePadding }: { children
     {
       title: "CASHIERING",
       items: [
-        { label: "Cashier & Billing", to: "/admin/billing", icon: Receipt, pageKey: "CASHIER_DESK" },
         { label: "Payments & Folios", to: "/admin/payments", icon: CreditCard, pageKey: "PAYMENTS" },
         { label: "Advance Deposits", to: "/admin/advances", icon: CreditCard, pageKey: "ADVANCES" },
         { label: "Cashier Shifts", to: "/admin/cashier-shifts", icon: DollarSign, pageKey: "CASHIER_SHIFTS" },
@@ -177,7 +175,6 @@ export default function AdminLayout({ children, title, hidePadding }: { children
       items: [
         { label: "Reports & Analytics", to: "/admin/reports", icon: BarChart3, pageKey: "REPORTS_LAYOUT" },
         { label: "Promotions & Offers", to: "/admin/coupons", icon: Tag, pageKey: "COUPONS" },
-        { label: "Restaurant & POS", to: "/admin/pos", icon: UtensilsCrossed, pageKey: "RESTAURANT_POS" },
       ],
     },
     {
