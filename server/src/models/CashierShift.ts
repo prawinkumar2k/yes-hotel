@@ -29,6 +29,23 @@ export interface IPaidOut {
   createdAt: Date;
 }
 
+/** Items the desk sells to guests (income) — never a paid-out. */
+export const COUNTER_SALE_CATEGORIES = ["EARLY_CHECK_IN", "WATER_BOTTLE", "DENTAL_KIT", "TEA_COFFEE_SHOP", "KOVAI_KONGU_MESS", "OTHER"] as const;
+export type CounterSaleCategory = (typeof COUNTER_SALE_CATEGORIES)[number];
+
+export interface ICounterSale {
+  _id?: mongoose.Types.ObjectId;
+  category: CounterSaleCategory;
+  description: string;
+  quantity: number;
+  amount: number;          // total collected for this sale
+  mode: "CASH" | "UPI" | "CARD";
+  reference?: string;      // UTR / card approval code
+  roomNumber?: string;
+  recordedBy?: mongoose.Types.ObjectId;
+  createdAt: Date;
+}
+
 export interface ICashierShift extends Document {
   propertyId: mongoose.Types.ObjectId;
   shiftNumber: string;
@@ -48,6 +65,8 @@ export interface ICashierShift extends Document {
   cashRefunds: number;
   paidOuts: IPaidOut[];
   totalPaidOut: number;
+  counterSales: ICounterSale[];
+  totalCounterSales: number;
 
   // Expected vs Counted
   expectedCash: number;
@@ -96,6 +115,21 @@ const DenominationSchema = new Schema<IDenominationBreakdown>(
   { _id: false }
 );
 
+const CounterSaleSchema = new Schema<ICounterSale>(
+  {
+    category: { type: String, enum: COUNTER_SALE_CATEGORIES as unknown as string[], required: true },
+    description: { type: String, required: true, trim: true },
+    quantity: { type: Number, default: 1, min: 1 },
+    amount: { type: Number, required: true, min: 0 },
+    mode: { type: String, enum: ["CASH", "UPI", "CARD"], required: true },
+    reference: { type: String, trim: true },
+    roomNumber: { type: String, trim: true },
+    recordedBy: { type: Schema.Types.ObjectId, ref: "User" },
+    createdAt: { type: Date, default: Date.now },
+  },
+  { _id: true }
+);
+
 const PaidOutSchema = new Schema<IPaidOut>(
   {
     amount: { type: Number, required: true, min: 0 },
@@ -132,6 +166,8 @@ const CashierShiftSchema = new Schema<ICashierShift>(
     cashRefunds: { type: Number, default: 0 },
     paidOuts: { type: [PaidOutSchema], default: [] },
     totalPaidOut: { type: Number, default: 0 },
+    counterSales: { type: [CounterSaleSchema], default: [] },
+    totalCounterSales: { type: Number, default: 0 },
 
     // Expected Drawer & Digital Totals
     expectedCash: { type: Number, default: 0 },

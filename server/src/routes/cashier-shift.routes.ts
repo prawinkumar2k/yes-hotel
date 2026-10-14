@@ -8,6 +8,7 @@ import {
   getShiftDetails,
   openShift,
   recordPaidOut,
+  recordCounterSale,
   initiateHandover,
   confirmHandover,
   closeShift,
@@ -34,6 +35,8 @@ router.post("/open", protect, requirePropertyAccess, requirePermission("CASHIER_
 
 // Record paid-out (cash drop / petty expense)
 router.post("/:id/paid-out", protect, requirePropertyAccess, requirePermission("CASHIER_SHIFTS", "RECONCILE"), recordPaidOut);
+// Record a room service / counter sale (income)
+router.post("/:id/sales", protect, requirePropertyAccess, requirePermission("CASHIER_SHIFTS", "RECONCILE"), recordCounterSale);
 
 // Handover workflows
 router.post("/:id/handover/initiate", protect, requirePropertyAccess, requirePermission("CASHIER_SHIFTS", "CLOSE_SHIFT"), initiateHandover);

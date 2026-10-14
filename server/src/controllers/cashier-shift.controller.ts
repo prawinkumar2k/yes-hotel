@@ -213,7 +213,8 @@ export const recordPaidOut = async (req: Request, res: Response) => {
       .object({
         amount: z.coerce.number().positive("Amount must be greater than 0"),
         reason: z.string().trim().optional(),
-        category: z.enum(["CASH_DROP", "PETTY_CASH", "REFUND", "EARLY_CHECK_IN", "WATER_BOTTLE", "DENTAL_KIT", "TEA_COFFEE_SHOP", "KOVAI_KONGU_MESS", "OTHER"]).default("PETTY_CASH"),
+        // Money leaving the drawer only. Items sold to guests are counter sales (POST /:id/sales).
+        category: z.enum(["CASH_DROP", "PETTY_CASH", "REFUND", "OTHER"]).default("PETTY_CASH"),
         recipient: z.string().trim().optional(),
       })
       .safeParse(req.body);
@@ -247,6 +248,58 @@ export const recordPaidOut = async (req: Request, res: Response) => {
       metadata: { shiftNumber: shift.shiftNumber, ...parsed.data },
     });
     return res.json({ success: true, message: `Cash paid-out of ₹${parsed.data.amount.toLocaleString("en-IN")} recorded`, data: shift });
+  } catch (error: any) {
+    return fail(res, error);
+  }
+};
+
+// ─── POST /api/cashier-shifts/:id/sales ─────────────────────────────────────
+// Room service / counter sale: the guest pays the desk for an item (water bottle, dental kit,
+// early check-in …). Income — cash goes into the drawer, UPI/card into their own totals.
+export const recordCounterSale = async (req: Request, res: Response) => {
+  try {
+    const actorId = actorOf(req);
+    const { COUNTER_SALE_CATEGORIES } = await import("../models/CashierShift");
+    const parsed = z
+      .object({
+        category: z.enum(COUNTER_SALE_CATEGORIES),
+        amount: z.coerce.number().positive("Amount must be greater than 0"),
+        quantity: z.coerce.number().int().min(1).max(999).default(1),
+        mode: z.enum(["CASH", "UPI", "CARD"]).default("CASH"),
+        reference: z.string().trim().max(60).optional(),
+        roomNumber: z.string().trim().max(20).optional(),
+        reason: z.string().trim().max(200).optional(),
+      })
+      .safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ success: false, message: parsed.error.issues[0]?.message ?? "Invalid sale", errors: parsed.error.issues });
+    const d = parsed.data;
+    if (d.category === "OTHER" && (d.reason ?? "").length < 3) {
+      return res.status(400).json({ success: false, message: "Enter what was sold (Others)" });
+    }
+    if (d.mode !== "CASH" && !d.reference) {
+      return res.status(400).json({ success: false, message: d.mode === "UPI" ? "Enter the UPI reference (UTR)" : "Enter the card approval code" });
+    }
+
+    const shift = await CashierShift.findById(req.params.id);
+    if (!shift) return res.status(404).json({ success: false, message: "Shift not found" });
+    if (shift.status !== CashierShiftStatus.OPEN) throw new ShiftRuleError("Sales can only be recorded on an OPEN shift");
+    if (String(shift.cashier) !== actorId && !(await isShiftSupervisor(req))) {
+      throw new ShiftRuleError("Only the shift's cashier or a supervisor can record sales on this drawer", 403);
+    }
+
+    const description = d.category === "OTHER" ? d.reason! : (d.reason ? `${PAID_OUT_LABELS[d.category]} — ${d.reason}` : PAID_OUT_LABELS[d.category]);
+    (shift as any).counterSales.push({ category: d.category, description, quantity: d.quantity, amount: d.amount, mode: d.mode, reference: d.reference, roomNumber: d.roomNumber, recordedBy: actorId, createdAt: new Date() });
+    (shift as any).totalCounterSales = (shift as any).counterSales.reduce((t: number, c: any) => t + (Number(c.amount) || 0), 0);
+    await shift.save();
+
+    await createAuditLog({
+      req,
+      action: "cashier_shift.counter_sale",
+      resourceType: "CashierShift",
+      resourceId: shift._id.toString(),
+      metadata: { shiftNumber: shift.shiftNumber, ...d, description },
+    });
+    return res.status(201).json({ success: true, message: `${description}: ₹${d.amount.toLocaleString("en-IN")} (${d.mode}) recorded`, data: shift });
   } catch (error: any) {
     return fail(res, error);
   }

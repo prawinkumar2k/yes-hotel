@@ -158,7 +158,18 @@ export async function computeShiftLedger(shift: any) {
     items.push({ id: o._id, type: "POS_BILL", description: `Restaurant ${o.kotNumber}`, amount, mode, date: o.settlement.settledAt, reference: o.settlement.reference || o.kotNumber });
   }
 
-  // 6. Paid-outs (cash drops, petty cash)
+  // 6. Room service / counter sales (water bottle, dental kit, early check-in …): money in
+  let counterSales = 0;
+  for (const c of (shift.counterSales || []) as any[]) {
+    const mode = modeOf(c.mode);
+    const amount = Number(c.amount) || 0;
+    counterSales += amount;
+    totals[mode] += amount;
+    if (mode === "CASH") cashCollected += amount;
+    items.push({ id: c._id, type: "COUNTER_SALE", description: `${c.description}${c.quantity > 1 ? ` ×${c.quantity}` : ""}${c.roomNumber ? ` (Room ${c.roomNumber})` : ""}`, amount, mode, date: c.createdAt, reference: c.reference || "" });
+  }
+
+  // 7. Paid-outs (cash drops, petty cash)
   const totalPaidOut = (shift.paidOuts || []).reduce((t: number, p: any) => t + (Number(p.amount) || 0), 0);
 
   const openingFloat = Number(shift.openingFloat) || 0;
@@ -167,6 +178,7 @@ export async function computeShiftLedger(shift: any) {
     cashAdvances: r2(cashAdvances),
     cashRefunds: r2(cashRefunds),
     totalPaidOut: r2(totalPaidOut),
+    totalCounterSales: r2(counterSales),
     expectedCash: r2(openingFloat + cashCollected + cashAdvances - cashRefunds - totalPaidOut),
     expectedUpi: r2(totals.UPI),
     expectedCard: r2(totals.CARD),

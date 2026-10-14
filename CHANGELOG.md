@@ -3,6 +3,15 @@
 All changes, fixes, hardened services, and architectural migrations are documented chronologically in this file.
 
 ---
+## [Room service / counter sales as income; in the Monthly MIS] - 2026-10-14
+
+- **Room Service Sale** (Cashier Shifts): early check-in, water bottle, dental kit, tea/coffee shop, Kovai Kongu Mess and others are recorded as **sales** with quantity, amount, mode of payment (cash / UPI / card), optional room number, and what was sold for "Others". UPI needs the UTR and card the approval code.
+  - Cash sales add to the drawer's expected cash; UPI and card go to their own totals. They appear in the shift's transaction list.
+  - Previously these items could only be entered as **paid-outs**, which took them *out* of the expected cash. The paid-out form now offers only cash drop, petty cash, refund and others. Old paid-out entries are left as they were.
+- **Monthly MIS:** new columns Early Check-in, Water Bottle, Dental Kit, Tea / Coffee, Kovai Kongu Mess, Other Sales and Room Service Total (also in the TOTAL row). Sales are included in the Cash / Card / UPI collections and in Sales Total. **Expenses** now shows petty-cash paid-outs (it was always 0).
+- **Tests:** `server/src/routes/counter-sales.integration.spec.ts` (4).
+
+---
 ## [Bill numbers at checkout; extensions at the agreed rate; Master Data fixes] - 2026-10-14
 
 - **Bill number** (`BILL-YYYY-NNNNNN`) is now issued when the bill is settled at checkout, together with the GST invoice number. Walk-in registration no longer creates one. It comes from the atomic counter, raised past any bill numbers already issued, so numbers never repeat. Bills already numbered keep their number.

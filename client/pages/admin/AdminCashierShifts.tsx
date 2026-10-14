@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import {
   DollarSign, Plus, RefreshCw, Lock, CheckCircle2, AlertTriangle, Clock,
   ShieldCheck, X, CreditCard, ArrowUpRight, Scale, ChevronRight, ArrowRightLeft,
-  Banknote, FileText, User, AlertCircle, Eye, Printer, Smartphone, Send
+  Banknote, FileText, User, AlertCircle, Eye, Printer, Smartphone, Send, ShoppingBag
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
@@ -114,6 +114,10 @@ export default function AdminCashierShifts() {
   const [paidOutReason, setPaidOutReason] = useState("");
   const [paidOutCategory, setPaidOutCategory] = useState<string>("PETTY_CASH");
   const [submittingPaidOut, setSubmittingPaidOut] = useState(false);
+  // Room service / counter sale (income): water bottle, dental kit, early check-in …
+  const [showSaleModal, setShowSaleModal] = useState(false);
+  const [sale, setSale] = useState({ category: "WATER_BOTTLE", quantity: "1", amount: "", mode: "CASH", reference: "", roomNumber: "", reason: "" });
+  const [submittingSale, setSubmittingSale] = useState(false);
 
   // Shift Details Drilldown Modal
   const [selectedShiftForDetails, setSelectedShiftForDetails] = useState<CashierShiftItem | null>(null);
@@ -236,6 +240,45 @@ export default function AdminCashierShifts() {
       toast({ title: "Error", description: err.message, variant: "destructive" });
     } finally {
       setSubmittingPaidOut(false);
+    }
+  };
+
+  const handleRecordSale = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!currentShift) return;
+    const amt = parseFloat(sale.amount);
+    if (!amt || amt <= 0) {
+      toast({ title: "Invalid Amount", description: "Sale amount must be greater than zero", variant: "destructive" });
+      return;
+    }
+    setSubmittingSale(true);
+    try {
+      const res = await fetch(`/api/cashier-shifts/${currentShift._id}/sales`, {
+        method: "POST",
+        headers: getAuthHeaders(),
+        body: JSON.stringify({
+          category: sale.category,
+          amount: amt,
+          quantity: Number(sale.quantity) || 1,
+          mode: sale.mode,
+          reference: sale.reference || undefined,
+          roomNumber: sale.roomNumber || undefined,
+          reason: sale.reason || undefined,
+        }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        toast({ title: "Sale Recorded", description: json.message });
+        setShowSaleModal(false);
+        setSale({ category: sale.category, quantity: "1", amount: "", mode: "CASH", reference: "", roomNumber: "", reason: "" });
+        fetchShifts();
+      } else {
+        toast({ title: "Failed to record sale", description: json.message, variant: "destructive" });
+      }
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    } finally {
+      setSubmittingSale(false);
     }
   };
 
@@ -542,6 +585,12 @@ export default function AdminCashierShifts() {
 
               <div className="flex flex-wrap items-center gap-2">
                 <button
+                  onClick={() => setShowSaleModal(true)}
+                  className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition flex items-center gap-1.5 shadow-sm"
+                >
+                  <ShoppingBag size={14} /> Room Service Sale
+                </button>
+                <button
                   onClick={() => setShowPaidOutModal(true)}
                   className="px-3.5 py-2 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 rounded-lg text-xs font-bold transition flex items-center gap-1.5 shadow-2xs"
                 >
@@ -594,6 +643,8 @@ export default function AdminCashierShifts() {
                                   ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
                                   : tx.type === "ADVANCE_PAYMENT"
                                   ? "bg-blue-50 text-blue-700 border border-blue-200"
+                                  : tx.type === "COUNTER_SALE"
+                                  ? "bg-lime-50 text-lime-800 border border-lime-200"
                                   : "bg-red-50 text-red-700 border border-red-200"
                               }`}
                             >
@@ -995,11 +1046,6 @@ export default function AdminCashierShifts() {
                 <option value="CASH_DROP">Cash Drop to Hotel Safe / Finance</option>
                 <option value="PETTY_CASH">Front Desk Petty Cash Expense</option>
                 <option value="REFUND">Counter Cash Refund</option>
-                <option value="EARLY_CHECK_IN">Early Check-in</option>
-                <option value="WATER_BOTTLE">Water Bottle</option>
-                <option value="DENTAL_KIT">Dental Kit</option>
-                <option value="TEA_COFFEE_SHOP">Tea / Coffee Shop</option>
-                <option value="KOVAI_KONGU_MESS">Kovai Kongu Mess</option>
                 <option value="OTHER">Others</option>
               </select>
             </div>
@@ -1047,6 +1093,70 @@ export default function AdminCashierShifts() {
                 className="flex-1 py-2.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold shadow-md transition disabled:opacity-50"
               >
                 {submittingPaidOut ? "Recording..." : "Save Paid-Out"}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* MODAL: ROOM SERVICE / COUNTER SALE (income) */}
+      {showSaleModal && currentShift && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <form onSubmit={handleRecordSale} className="bg-white rounded-2xl w-full max-w-md p-6 shadow-2xl space-y-4">
+            <div className="flex justify-between items-center border-b border-gray-100 pb-3">
+              <h3 className="font-serif font-bold text-lg flex items-center gap-2">
+                <ShoppingBag className="text-emerald-600" size={20} /> Room Service / Counter Sale
+              </h3>
+              <button type="button" onClick={() => setShowSaleModal(false)} className="text-gray-400 hover:text-gray-700"><X size={20} /></button>
+            </div>
+            <p className="text-xs text-gray-500">Money the guest pays the desk. Cash is added to the drawer; UPI and card go to their own totals.</p>
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 mb-1">Item *</label>
+              <select value={sale.category} onChange={(e: any) => setSale({ ...sale, category: e.target.value })} className={`w-full bg-gray-50 border border-gray-200 text-sm text-gray-900 rounded-lg p-2.5 outline-none font-semibold`}>
+                <option value="EARLY_CHECK_IN">Early Check-in</option>
+                <option value="WATER_BOTTLE">Water Bottle</option>
+                <option value="DENTAL_KIT">Dental Kit</option>
+                <option value="TEA_COFFEE_SHOP">Tea / Coffee Shop</option>
+                <option value="KOVAI_KONGU_MESS">Kovai Kongu Mess</option>
+                <option value="OTHER">Others</option>
+              </select>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">Quantity</label>
+                <input type="number" min="1" step="1" value={sale.quantity} onChange={(e) => setSale({ ...sale, quantity: e.target.value })} className={`w-full bg-gray-50 border border-gray-200 text-sm text-gray-900 rounded-lg p-2.5 outline-none font-mono`} />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">Total Amount (₹) *</label>
+                <input type="number" min="1" step="0.01" required value={sale.amount} onChange={(e) => setSale({ ...sale, amount: e.target.value })} placeholder="40" className={`w-full bg-gray-50 border border-gray-200 text-sm text-gray-900 rounded-lg p-2.5 outline-none font-mono font-bold`} />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">Mode of Payment *</label>
+                <select value={sale.mode} onChange={(e: any) => setSale({ ...sale, mode: e.target.value })} className={`w-full bg-gray-50 border border-gray-200 text-sm text-gray-900 rounded-lg p-2.5 outline-none font-semibold`}>
+                  <option value="CASH">Cash</option>
+                  <option value="UPI">UPI</option>
+                  <option value="CARD">Card</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">Room No. (optional)</label>
+                <input value={sale.roomNumber} onChange={(e) => setSale({ ...sale, roomNumber: e.target.value })} placeholder="101" className={`w-full bg-gray-50 border border-gray-200 text-sm text-gray-900 rounded-lg p-2.5 outline-none`} />
+              </div>
+            </div>
+            {sale.mode !== "CASH" && (
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">{sale.mode === "UPI" ? "UPI Reference (UTR) *" : "Card Approval Code *"}</label>
+                <input required value={sale.reference} onChange={(e) => setSale({ ...sale, reference: e.target.value })} className={`w-full bg-gray-50 border border-gray-200 text-sm text-gray-900 rounded-lg p-2.5 outline-none font-mono`} />
+              </div>
+            )}
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 mb-1">{sale.category === "OTHER" ? "What was sold? *" : "Note (optional)"}</label>
+              <input required={sale.category === "OTHER"} minLength={sale.category === "OTHER" ? 3 : undefined} value={sale.reason} onChange={(e) => setSale({ ...sale, reason: e.target.value })} placeholder={sale.category === "OTHER" ? "e.g. Phone charger" : ""} className={`w-full bg-gray-50 border border-gray-200 text-sm text-gray-900 rounded-lg p-2.5 outline-none`} />
+            </div>
+            <div className="flex gap-3 border-t border-gray-100 pt-4">
+              <button type="button" onClick={() => setShowSaleModal(false)} className="flex-1 py-2.5 bg-gray-100 text-gray-700 rounded-xl text-xs font-semibold hover:bg-gray-200 transition">Cancel</button>
+              <button type="submit" disabled={submittingSale} className="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-md transition disabled:opacity-50">
+                {submittingSale ? "Recording..." : "Save Sale"}
               </button>
             </div>
           </form>

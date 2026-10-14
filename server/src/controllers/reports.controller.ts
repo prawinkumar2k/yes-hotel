@@ -843,6 +843,14 @@ export const getMonthlyMIS = async (req: Request, res: Response) => {
         advances: 0,
         advancesAdj: 0,
         advancesUnadj: 0,
+        // Room service / counter sales by item
+        rsEarlyCheckIn: 0,
+        rsWater: 0,
+        rsDental: 0,
+        rsTeaCoffee: 0,
+        rsKovaiMess: 0,
+        rsOther: 0,
+        salesRoomService: 0,
       };
     }
 
@@ -891,11 +899,37 @@ export const getMonthlyMIS = async (req: Request, res: Response) => {
       else if (anyF.lineType === "RESTAURANT") dailyData[day].salesFb += f.amount;
     });
 
+    // Room service / counter sales recorded on cashier shifts (income), and petty-cash expenses.
+    const { CashierShift } = await import("../models/CashierShift");
+    const RS_FIELD: Record<string, string> = { EARLY_CHECK_IN: "rsEarlyCheckIn", WATER_BOTTLE: "rsWater", DENTAL_KIT: "rsDental", TEA_COFFEE_SHOP: "rsTeaCoffee", KOVAI_KONGU_MESS: "rsKovaiMess", OTHER: "rsOther" };
+    const shifts = await CashierShift.find({
+      $or: [
+        { counterSales: { $elemMatch: { createdAt: { $gte: startOfMonth, $lte: endOfMonth } } } },
+        { paidOuts: { $elemMatch: { createdAt: { $gte: startOfMonth, $lte: endOfMonth } } } },
+      ],
+    }).select("counterSales paidOuts").lean();
+    for (const sh of shifts as any[]) {
+      for (const c of sh.counterSales || []) {
+        if (c.createdAt < startOfMonth || c.createdAt > endOfMonth) continue;
+        const row = dailyData[bizDayOfMonth(c.createdAt)];
+        const amount = Number(c.amount) || 0;
+        row[RS_FIELD[c.category] ?? "rsOther"] += amount;
+        row.salesRoomService += amount;
+        if (c.mode === "CASH") row.cash += amount;
+        else if (c.mode === "CARD") row.card += amount;
+        else if (c.mode === "UPI") row.upi += amount;
+      }
+      for (const p of sh.paidOuts || []) {
+        if (p.createdAt < startOfMonth || p.createdAt > endOfMonth || p.category !== "PETTY_CASH") continue;
+        dailyData[bizDayOfMonth(p.createdAt)].expenses += Number(p.amount) || 0;
+      }
+    }
+
     // Compute totals per row
     Object.values(dailyData).forEach(row => {
       row.dayTotal = row.cash + row.card + row.upi + row.paytm + row.ota;
       row.grandTotal = row.dayTotal - row.refunds - row.expenses;
-      row.salesTotal = row.salesRoom + row.salesFb;
+      row.salesTotal = row.salesRoom + row.salesFb + row.salesRoomService;
       row.difference = row.grandTotal - row.salesTotal;
     });
 

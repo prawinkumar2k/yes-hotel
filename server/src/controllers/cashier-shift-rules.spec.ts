@@ -86,7 +86,9 @@ describe("cashier shift rules", () => {
     const tooMuch = await call(recordPaidOut, users.c, { amount: 5000, reason: "bank drop" }, { id: String(shift._id) });
     expect(tooMuch.statusCode).toBe(400);
     // Named categories need no reason; "Others" does.
-    expect((await call(recordPaidOut, users.c, { amount: 20, category: "WATER_BOTTLE" }, { id: String(shift._id) })).statusCode).toBe(200);
+    // Items sold to guests are counter sales (income), never paid-outs.
+    expect((await call(recordPaidOut, users.c, { amount: 20, category: "WATER_BOTTLE" }, { id: String(shift._id) })).statusCode).toBe(400);
+    expect((await call(recordPaidOut, users.c, { amount: 20, category: "PETTY_CASH" }, { id: String(shift._id) })).statusCode).toBe(200);
     expect((await call(recordPaidOut, users.c, { amount: 20, category: "OTHER" }, { id: String(shift._id) })).statusCode).toBe(400);
     expect((await call(recordPaidOut, users.c, { amount: 30, category: "OTHER", reason: "auto fare for guest" }, { id: String(shift._id) })).statusCode).toBe(200);
 
