@@ -244,6 +244,8 @@ grant(base, [UserRole.RECEPTIONIST], "CAP.SHIFT_SUPERVISOR_OVERRIDE", ["ALLOW"])
 grant(base, [UserRole.RECEPTIONIST], "CAP.PAYMENT_CLEARANCE", ["ALLOW"]);
 grant(base, [UserRole.RECEPTIONIST], "CAP.APPROVE_HIGH", ["ALLOW"]);
 grant(base, [UserRole.RECEPTIONIST], "CAP.CC_FINANCE", ["ALLOW"]);
+// Reports (read-only): check-in/out, day-use sales, advances, daily summary, in-house list, GRC/invoices, MIS.
+grant(base, [UserRole.RECEPTIONIST], "REPORTS_LAYOUT", ["VIEW"]);
 
 // ── Four staff logins: Admin, Manager, Reception, Housekeeping ───────────────
 // The Manager takes over the department dashboards of the retired logins (Cashier,
