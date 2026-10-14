@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { User, UserRole } from "../models/User";
-import { accountChangeDenial } from "../config/permissions";
+import { accountChangeDenial, ASSIGNABLE_STAFF_ROLES } from "../config/permissions";
 import { Property } from "../models/Property";
 import { StaffProfile, Department, EmploymentStatus } from "../models/StaffProfile";
 import bcrypt from "bcryptjs";
@@ -13,7 +13,7 @@ const createStaffSchema = z.object({
   email: z.string().email(),
   phone: z.string().optional(),
   password: z.string().min(6),
-  role: z.enum([UserRole.ADMIN, UserRole.MANAGER, UserRole.RECEPTIONIST, UserRole.HOUSEKEEPING, UserRole.MAINTENANCE]),
+  role: z.enum(ASSIGNABLE_STAFF_ROLES),
   department: z.nativeEnum(Department),
   employmentStatus: z.nativeEnum(EmploymentStatus),
   emergencyContactName: z.string().optional(),
@@ -26,7 +26,9 @@ const updateStaffSchema = z.object({
   firstName: z.string().min(2).optional(),
   lastName: z.string().min(2).optional(),
   phone: z.string().optional(),
-  role: z.enum([UserRole.ADMIN, UserRole.MANAGER, UserRole.RECEPTIONIST, UserRole.HOUSEKEEPING, UserRole.MAINTENANCE]).optional(),
+  // Any value is parsed; assigning a role outside ASSIGNABLE_STAFF_ROLES is refused below
+  // (an unchanged retired role on an old account is accepted).
+  role: z.string().optional(),
   department: z.nativeEnum(Department).optional(),
   employmentStatus: z.nativeEnum(EmploymentStatus).optional(),
   emergencyContactName: z.string().optional(),
@@ -176,7 +178,12 @@ export const updateStaff = async (req: Request, res: Response) => {
     if (data.firstName) user.firstName = data.firstName;
     if (data.lastName) user.lastName = data.lastName;
     if (data.phone !== undefined) user.phone = data.phone;
-    if (data.role) user.role = data.role;
+    if (data.role && data.role !== user.role) {
+      if (!(ASSIGNABLE_STAFF_ROLES as readonly string[]).includes(data.role)) {
+        return res.status(400).json({ success: false, message: "Staff logins are Admin, Manager, Reception and Housekeeping" });
+      }
+      user.role = data.role as any;
+    }
     if (data.isActive !== undefined) user.isActive = data.isActive;
     await user.save();
     

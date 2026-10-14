@@ -125,15 +125,12 @@ async function seed() {
 
   // ─── 2. USERS ───────────────────────────────────────────────────────────────
   console.log("\n📦 Seeding users...");
+  // Four staff logins (Admin, Manager, Reception, Housekeeping) and the demo guest.
   const USERS = [
     { firstName: "Super", lastName: "Admin", email: "admin@yeshotels.com", password: "Admin@123", role: UserRole.ADMIN },
     { firstName: "Hotel", lastName: "Manager", email: "manager@yeshotels.com", password: "Manager@123", role: UserRole.MANAGER },
     { firstName: "Front", lastName: "Desk", email: "reception@yeshotels.com", password: "Reception@123", role: UserRole.RECEPTIONIST },
-    { firstName: "Ravi", lastName: "Kumar", email: "reception2@yeshotels.com", password: "Reception@123", role: UserRole.RECEPTIONIST },
     { firstName: "House", lastName: "Keeping", email: "housekeeping@yeshotels.com", password: "House@123", role: UserRole.HOUSEKEEPING },
-    { firstName: "Lakshmi", lastName: "Devi", email: "housekeeping2@yeshotels.com", password: "House@123", role: UserRole.HOUSEKEEPING },
-    { firstName: "Main", lastName: "Tenance", email: "maintenance@yeshotels.com", password: "Main@123", role: UserRole.MAINTENANCE },
-    { firstName: "Ramesh", lastName: "Babu", email: "maintenance2@yeshotels.com", password: "Main@123", role: UserRole.MAINTENANCE },
     { firstName: "John", lastName: "Doe", email: "customer@yeshotels.com", password: "Customer@123", role: UserRole.CUSTOMER },
   ];
 
@@ -880,7 +877,7 @@ async function seed() {
       issueTitle: "AC Cooling Insufficient",
       description: "Guest reported AC thermostat not dropping below 24 degrees.",
       priority: MaintenancePriority.MEDIUM,
-      assignedTo: maintUserId,
+      assignedTo: maintUserId ?? managerId, // maintenance is handled by the Manager
       status: MaintenanceStatus.IN_PROGRESS,
     });
     console.log("  ✅ Created Maintenance Ticket for Room 103");
@@ -905,7 +902,7 @@ async function seed() {
       issueTitle: title,
       description: `Guest/staff reported: ${title.toLowerCase()}.`,
       priority: pick(TICKET_PRIORITIES, i),
-      assignedTo: pick(maintainerIds.length ? maintainerIds : [maintUserId!], i),
+      assignedTo: pick(maintainerIds.length ? maintainerIds : [managerId!], i),
       status,
       resolvedAt: status === MaintenanceStatus.RESOLVED || status === MaintenanceStatus.CLOSED ? daysAgo(i % 4) : undefined,
     });

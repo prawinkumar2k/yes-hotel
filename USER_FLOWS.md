@@ -6,17 +6,17 @@ For hotel staff and the people testing the system. Each flow lists who can do it
 
 ## Roles at a glance
 
-| Role | Main work |
+The hotel has four staff logins:
+
+| Login | Main work |
 |---|---|
-| SUPER_ADMIN, ADMIN | Everything. Only SUPER_ADMIN can create, edit or disable SUPER_ADMIN/ADMIN accounts |
-| MANAGER | Operations and approvals: CRITICAL approvals, POS voids, shift variances, night audit, check-in overrides |
-| SUPERVISOR | Floor supervision: HIGH approvals, shift variances, night-audit status |
-| RECEPTIONIST (the Reception login) | One login with three functions: Front Desk & Reservations, the Verification Queue, and Cashier & Billing (payments, advances, refunds, shift) |
-| CASHIER | Payments, advances, cashier shift, settling POS bills |
-| FINANCE | Reports, night audit |
-| HOUSEKEEPING, MAINTENANCE | Room cleaning tasks, maintenance tickets |
-| RESTAURANT | POS orders and the kitchen (KOT) |
-| CUSTOMER | Their own bookings, folio (read-only) and loyalty |
+| Admin (`admin@`) | Everything: settings, staff, master data, audit trail |
+| Manager (`manager@`) | Operations and approvals: CRITICAL approvals, check-in overrides, plus the work of the retired logins: maintenance, restaurant/POS (orders, settle, void), night audit, finance and reports |
+| Reception (`reception@`) | Front Desk & Reservations, the Verification Queue, and Cashier & Billing (payments, advances, refunds, shift) |
+| Housekeeping (`housekeeping@`) | Room cleaning tasks; cleaned rooms go to Reception for verification |
+| Customer | Their own bookings, folio (read-only) and loyalty (not a staff login) |
+
+The Supervisor, Cashier, Finance, Maintenance and Restaurant roles are retired. Their old accounts are disabled, and new staff accounts can only be Admin, Manager, Reception or Housekeeping.
 
 Staff only see and act on the property they're assigned to.
 

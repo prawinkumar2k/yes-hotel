@@ -120,10 +120,11 @@ It creates:
 |---|---|---|
 | Admin | admin@yeshotels.com | Admin@123 |
 | Manager | manager@yeshotels.com | Manager@123 |
-| Receptionist | reception@yeshotels.com | Reception@123 |
+| Reception | reception@yeshotels.com | Reception@123 |
 | Housekeeping | housekeeping@yeshotels.com | House@123 |
-| Maintenance | maintenance@yeshotels.com | Main@123 |
 | Customer | customer@yeshotels.com | Customer@123 |
+
+Staff logins are these four: Admin, Manager, Reception (front desk, verification queue, cashier & billing) and Housekeeping. The Manager also covers maintenance, restaurant/POS, night audit and reports.
 
 These are development/demo credentials only — never reuse them in a production deployment, and rotate/replace them before any real launch.
 

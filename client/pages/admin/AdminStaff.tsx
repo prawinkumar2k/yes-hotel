@@ -143,9 +143,8 @@ export default function AdminStaff() {
             <option value="">All Roles</option>
             <option value="ADMIN">Admin</option>
             <option value="MANAGER">Manager</option>
-            <option value="RECEPTIONIST">Receptionist</option>
+            <option value="RECEPTIONIST">Reception</option>
             <option value="HOUSEKEEPING">Housekeeping</option>
-            <option value="MAINTENANCE">Maintenance</option>
           </select>
           <select className="border border-gray-400 rounded-md px-3 py-2 text-sm text-black font-bold bg-white" value={deptFilter} onChange={(e) => { setDeptFilter(e.target.value); setPage(1); }}>
             <option value="">All Departments</option>
@@ -273,10 +272,13 @@ export default function AdminStaff() {
                 <select name="role" className="w-full border rounded-md p-2 text-sm" defaultValue={editingStaff?.role || "RECEPTIONIST"}>
                   <option value="ADMIN">Admin</option>
                   <option value="MANAGER">Manager</option>
-                  <option value="RECEPTIONIST">Receptionist</option>
+                  <option value="RECEPTIONIST">Reception</option>
                   <option value="HOUSEKEEPING">Housekeeping</option>
-                  <option value="MAINTENANCE">Maintenance</option>
+                  {editingStaff?.role && !["ADMIN", "MANAGER", "RECEPTIONIST", "HOUSEKEEPING"].includes(editingStaff.role) && (
+                    <option value={editingStaff.role} disabled>{editingStaff.role} (retired role)</option>
+                  )}
                 </select>
+                <p className="text-[11px] text-gray-500">Staff logins: Admin, Manager, Reception, Housekeeping.</p>
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium">Account Status</label>

@@ -27,9 +27,8 @@ import {
 
 const DEMO_ACCOUNTS = [
   { role: "Admin", email: "admin@yeshotels.com", password: "Admin@123", note: "General system & property administration", icon: ShieldCheck, badge: "bg-amber-100 text-amber-900 border-amber-300" },
-  { role: "Manager", email: "manager@yeshotels.com", password: "Manager@123", note: "Operations & executive reporting panel", icon: UserCheck, badge: "bg-indigo-100 text-indigo-900 border-indigo-300" },
-  { role: "Supervisor", email: "supervisor@yeshotels.com", password: "Supervisor@123", note: "Floor supervision & operational desk", icon: UserCheck, badge: "bg-slate-100 text-slate-800 border-slate-300" },
-  { role: "Receptionist", email: "reception@yeshotels.com", password: "Reception@123", note: "Bookings, check-in & desk calendar", icon: Calendar, badge: "bg-emerald-100 text-emerald-900 border-emerald-300" },
+  { role: "Manager", email: "manager@yeshotels.com", password: "Manager@123", note: "Operations, maintenance, restaurant, night audit & reports", icon: UserCheck, badge: "bg-indigo-100 text-indigo-900 border-indigo-300" },
+  { role: "Reception", email: "reception@yeshotels.com", password: "Reception@123", note: "Front desk, verification queue & cashier/billing", icon: Calendar, badge: "bg-emerald-100 text-emerald-900 border-emerald-300" },
   { role: "Housekeeping", email: "housekeeping@yeshotels.com", password: "House@123", note: "Room status & cleaning tasks", icon: Sparkles, badge: "bg-sky-100 text-sky-900 border-sky-300" },
 ];
 

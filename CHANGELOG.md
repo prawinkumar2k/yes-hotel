@@ -3,6 +3,17 @@
 All changes, fixes, hardened services, and architectural migrations are documented chronologically in this file.
 
 ---
+## [Four staff logins: Admin, Manager, Reception, Housekeeping] - 2026-10-14
+
+- **Accounts:** the hotel now runs on four staff logins: `admin@`, `manager@`, `reception@` and `housekeeping@`.
+  - Disabled, not deleted (history kept): superadmin@, supervisor@, cashier@, finance@, maintenance@, maintenance2@, restaurant@, reception2@ and housekeeping2@.
+  - Done after a backup (`backups/2026-10-14T05-46-42-680`) with `scripts/migrations/2026-10-14-four-staff-logins.mjs`; the change is audit-logged and their sessions are ended.
+- **Manager:** takes over maintenance, restaurant/POS, night audit, finance and reports, plus the Cashier, Finance, Maintenance and Restaurant dashboards.
+- **Staff accounts:** can only be given those four roles (server and form). Editing an old account doesn't silently change its retired role.
+- **Seed and docs:** the seed, login page and README list the four logins.
+- **Note:** with superadmin disabled, ADMIN accounts can't be managed from inside the app. Re-enable superadmin@ if you need that.
+
+---
 ## [Reception department — one login, three functions] - 2026-10-14
 
 - **One Reception login** (RECEPTIONIST) now covers Front Desk & Reservations, the Verification Queue and Cashier & Billing. The capabilities are granted through the existing permission map, and the server checks each one. See `docs/rbac/reception-access-diff.txt`. The existing Supervisor and Cashier accounts are unchanged.

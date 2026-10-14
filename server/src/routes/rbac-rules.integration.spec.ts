@@ -116,6 +116,26 @@ describe("N3: account management guards", () => {
   });
 });
 
+describe("Four staff logins: Admin, Manager, Reception, Housekeeping", () => {
+  it("only those four roles can be given to staff accounts", async () => {
+    for (const r of ["SUPERVISOR", "CASHIER", "FINANCE", "MAINTENANCE", "RESTAURANT"]) {
+      expect((await call("ADMIN", "POST", "/api/staff", newStaff(r, `retired-${r.toLowerCase()}`))).status, r).toBe(400);
+    }
+    for (const r of ["MANAGER", "RECEPTIONIST", "HOUSEKEEPING"]) {
+      expect((await call("ADMIN", "POST", "/api/staff", newStaff(r, `four-${r.toLowerCase()}`))).status, r).toBe(201);
+    }
+  });
+  it("the Manager covers every page and action of the retired logins", async () => {
+    const { DEFAULT_ROLE_PERMISSIONS } = await import("../config/permissions");
+    const mgr = DEFAULT_ROLE_PERMISSIONS.MANAGER as Record<string, string[]>;
+    for (const r of ["SUPERVISOR", "CASHIER", "FINANCE", "MAINTENANCE", "RESTAURANT"] as const) {
+      for (const [page, acts] of Object.entries(DEFAULT_ROLE_PERMISSIONS[r] as Record<string, string[]>)) {
+        for (const a of acts) expect(mgr[page] ?? [], `${r} ${page}:${a}`).toContain(a);
+      }
+    }
+  });
+});
+
 describe("N1: staff accounts always get a property", () => {
   it("a staff user created by a MANAGER inherits the manager's property", async () => {
     const body = newStaff("RECEPTIONIST", "prop");

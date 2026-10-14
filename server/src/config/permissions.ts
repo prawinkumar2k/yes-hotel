@@ -245,6 +245,17 @@ grant(base, [UserRole.RECEPTIONIST], "CAP.PAYMENT_CLEARANCE", ["ALLOW"]);
 grant(base, [UserRole.RECEPTIONIST], "CAP.APPROVE_HIGH", ["ALLOW"]);
 grant(base, [UserRole.RECEPTIONIST], "CAP.CC_FINANCE", ["ALLOW"]);
 
+// ── Four staff logins: Admin, Manager, Reception, Housekeeping ───────────────
+// The Manager takes over the department dashboards of the retired logins (Cashier,
+// Finance, Maintenance, Restaurant); it already holds their actions.
+grant(base, [UserRole.MANAGER], "DASHBOARD.CASHIER", ["VIEW"]);
+grant(base, [UserRole.MANAGER], "DASHBOARD.FINANCE", ["VIEW"]);
+grant(base, [UserRole.MANAGER], "DASHBOARD.MAINTENANCE", ["VIEW"]);
+grant(base, [UserRole.MANAGER], "DASHBOARD.RESTAURANT", ["VIEW"]);
+
+/** Staff roles that can be given to accounts. Other roles stay in the model for history only. */
+export const ASSIGNABLE_STAFF_ROLES = [UserRole.ADMIN, UserRole.MANAGER, UserRole.RECEPTIONIST, UserRole.HOUSEKEEPING] as const;
+
 // Tariffs and price concessions are front-desk decisions; the Cashier cannot change them.
 grant(base, [UserRole.RECEPTIONIST, UserRole.SUPERVISOR, UserRole.MANAGER], "CAP.EDIT_TARIFF", ["ALLOW"]);
 
