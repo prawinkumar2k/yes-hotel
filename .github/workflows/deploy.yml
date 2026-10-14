@@ -1,0 +1,44 @@
+name: Continuous Deployment to Hostinger VPS
+
+on:
+  push:
+    branches:
+      - main
+      - hardening/phase-1
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Remote Deployment via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: 187.127.217.225
+          username: root
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            set -e
+            echo "🚀 Deployment started on Hostinger VPS..."
+            cd /opt/yeshotels
+            
+            # Fetch and align with latest push
+            git fetch origin
+            git reset --hard origin/${{ github.ref_name }}
+            
+            # Rebuild and restart app container (zero DB downtime)
+            echo "🐳 Rebuilding and updating Docker containers..."
+            docker compose up -d --build --no-deps yeshotels-app
+            
+            # Verify app status
+            echo "🔍 Verifying app readiness..."
+            for i in $(seq 1 30); do
+              if curl -s -f http://127.0.0.1:3100/api/ready > /dev/null; then
+                echo "✅ App is healthy and responding!"
+                exit 0
+              fi
+              echo "Waiting for app to start ($i/30)..."
+              sleep 2
+            done
+            
+            echo "❌ Application readiness check timed out!"
+            exit 1

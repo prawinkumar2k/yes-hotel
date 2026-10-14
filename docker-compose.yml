@@ -1,0 +1,48 @@
+services:
+  yeshotels-db:
+    image: mongo:8
+    container_name: yeshotels-db
+    restart: unless-stopped
+    command: ["--replSet", "rs0", "--bind_ip_all"]
+    volumes:
+      - yeshotels-mongo-data:/data/db
+    healthcheck:
+      test: ["CMD-SHELL", "mongosh --quiet --eval 'try { rs.status().ok } catch(e) { rs.initiate().ok }'"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+      start_period: 10s
+    networks:
+      - yeshotels-net
+
+  yeshotels-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: yeshotels-app
+    restart: unless-stopped
+    ports:
+      - "3100:3100"
+    environment:
+      - NODE_ENV=production
+      - PORT=3100
+      - MONGODB_URI=mongodb://yeshotels-db:27017/yes_hotels?replicaSet=rs0
+      - CLIENT_URL=${CLIENT_URL:-http://187.127.217.225:3100}
+      - JWT_ACCESS_SECRET=${JWT_ACCESS_SECRET}
+      - COOKIE_SECURE=false
+      - UPGRADE_INSECURE_REQUESTS=false
+    volumes:
+      - yeshotels-uploads:/app/uploads
+    depends_on:
+      yeshotels-db:
+        condition: service_healthy
+    networks:
+      - yeshotels-net
+
+volumes:
+  yeshotels-mongo-data:
+  yeshotels-uploads:
+
+networks:
+  yeshotels-net:
+    driver: bridge

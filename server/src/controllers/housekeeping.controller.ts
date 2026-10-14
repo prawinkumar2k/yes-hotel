@@ -94,7 +94,10 @@ export const updateHousekeepingTask = async (req: Request, res: Response) => {
           await transitionHousekeepingStatus(roomId, targetRoomStatus, {
             req,
             action: "housekeeping.task_status_change",
-            metadata: { taskId: existingTask._id.toString() },
+            metadata: {
+              taskId: existingTask._id.toString(),
+              ...(data.cleaningProofPhoto ? { cleaningProofPhoto: data.cleaningProofPhoto } : {}),
+            },
             releasedBy: targetRoomStatus === HousekeepingRoomStatus.CLEAN ? actorId?.toString() : undefined,
           });
         } catch (error: any) {
@@ -159,6 +162,7 @@ const ROOM_STATUS_UPDATE_ROLES_REQUIRING_MANAGER = new Set([HousekeepingRoomStat
 const updateRoomStatusSchema = z.object({
   status: z.nativeEnum(HousekeepingRoomStatus),
   notes: z.string().optional(),
+  cleaningProofPhoto: z.string().optional(),
 });
 
 export const getHousekeepingDashboard = async (_req: Request, res: Response) => {
@@ -179,7 +183,7 @@ export const getHousekeepingDashboard = async (_req: Request, res: Response) => 
 
 export const updateRoomHousekeepingStatus = async (req: Request, res: Response) => {
   try {
-    const { status, notes } = updateRoomStatusSchema.parse(req.body);
+    const { status, notes, cleaningProofPhoto } = updateRoomStatusSchema.parse(req.body);
     const actorRole = (req as any).user?.role;
 
     // Passing inspection is a supervisory action — the frontend already
@@ -193,7 +197,7 @@ export const updateRoomHousekeepingStatus = async (req: Request, res: Response) 
     const room = await transitionHousekeepingStatus(String(req.params.id), status, {
       req,
       action: "housekeeping.mobile_status_change",
-      metadata: { notes },
+      metadata: { notes, cleaningProofPhoto },
     });
 
     if (!room) return res.status(404).json({ success: false, message: "Room not found" });

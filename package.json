@@ -118,6 +118,7 @@
     "recharts": "^3.10.0",
     "serverless-http": "^4.0.0",
     "sonner": "^2.0.7",
+    "ssh2": "^1.17.0",
     "tailwind-merge": "^2.6.1",
     "tailwindcss": "^4.3.3",
     "tailwindcss-animate": "^1.0.7",

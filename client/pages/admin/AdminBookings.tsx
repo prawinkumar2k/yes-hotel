@@ -2,7 +2,7 @@ import { useAuth } from "../../context/AuthContext";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { useState } from "react";
-import { Search, ChevronRight, ChevronLeft } from "lucide-react";
+import { Search, ChevronRight, ChevronLeft, Plus } from "lucide-react";
 
 const STATUS_COLORS: Record<string, string> = {
   PENDING: "bg-yellow-100 text-yellow-800",
@@ -46,6 +46,13 @@ export default function AdminBookings() {
       <div className="max-w-7xl mx-auto p-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-3">
           <h1 className="text-xl sm:text-2xl font-bold text-gray-800">All Reservations</h1>
+          <Link
+            to="/admin/guest-registration"
+            className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white rounded-xl text-sm font-bold shadow-md hover:shadow-lg transition transform active:scale-95"
+          >
+            <Plus size={18} className="stroke-[2.5]" />
+            New Walk-In Reservation
+          </Link>
         </div>
 
         {/* Filters */}

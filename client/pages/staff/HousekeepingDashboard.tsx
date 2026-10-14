@@ -29,7 +29,15 @@ const STATUS_ACTION: Record<string, string> = {
   CLEANING: "Complete Cleaning",
 };
 
-function TaskCard({ task, userId, onUpdate }: { task: any; userId?: string; onUpdate: (id: string, status: string) => void }) {
+function TaskCard({
+  task,
+  userId,
+  onUpdate,
+}: {
+  task: any;
+  userId?: string;
+  onUpdate: (id: string, status: string, roomNumber?: string) => void;
+}) {
   const isAssignedToMe = task.assignedTo?._id === userId || task.assignedTo?.id === userId;
   const roomNo = task.room?.roomNumber || (task.room as any) || "—";
   const floor = task.room?.floor;
@@ -71,7 +79,7 @@ function TaskCard({ task, userId, onUpdate }: { task: any; userId?: string; onUp
         </span>
         {isAssignedToMe && nextStatus && action && (
           <button
-            onClick={() => onUpdate(task._id, nextStatus)}
+            onClick={() => onUpdate(task._id, nextStatus, String(roomNo))}
             className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white text-xs font-semibold rounded-lg transition"
           >
             {action} <ChevronRight className="w-3 h-3" />
@@ -104,12 +112,30 @@ export default function HousekeepingDashboard() {
     refetchInterval: 20000,
   });
 
+  const [proofModal, setProofModal] = useState<{ open: boolean; taskId: string; targetStatus: string; roomNumber?: string }>({
+    open: false,
+    taskId: "",
+    targetStatus: "",
+  });
+  const [proofPhoto, setProofPhoto] = useState<string>("");
+
+  const handlePhotoUploadChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setProofPhoto(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const updateTaskMutation = useMutation({
-    mutationFn: async ({ id, status }: { id: string; status: string }) => {
-      const res = await fetch(`/api/housekeeping/${id}`, {
+    mutationFn: async ({ id, status, cleaningProofPhoto }: { id: string; status: string; cleaningProofPhoto?: string }) => {
+      const res = await fetch(`/api/admin/housekeeping/${id}`, {
         method: "PATCH",
         headers: { ...getHeaders(), "Content-Type": "application/json" },
-        body: JSON.stringify({ status }),
+        body: JSON.stringify({ status, cleaningProofPhoto }),
       });
       const json = await res.json();
       if (!json.success) throw new Error(json.message);
@@ -117,12 +143,26 @@ export default function HousekeepingDashboard() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["hkCommandCenter"] });
+      setProofModal({ open: false, taskId: "", targetStatus: "" });
+      setProofPhoto("");
       toast({ title: "Task Updated", description: "Room status updated successfully." });
     },
     onError: (err: any) => {
       toast({ title: "Update Failed", description: err.message, variant: "destructive" });
     }
   });
+
+  const handleTaskAction = (taskId: string, targetStatus: string, roomNumber?: string, photoOverride?: string) => {
+    if ((targetStatus === "CLEANING_COMPLETED" || targetStatus === "CLEAN") && !photoOverride && !proofPhoto) {
+      setProofModal({ open: true, taskId, targetStatus, roomNumber });
+      return;
+    }
+    updateTaskMutation.mutate({
+      id: taskId,
+      status: targetStatus,
+      cleaningProofPhoto: photoOverride || proofPhoto || undefined,
+    });
+  };
 
   const hk = commandData?.housekeeping || {};
   const pulse = commandData?.hotelPulse || {};
@@ -252,7 +292,7 @@ export default function HousekeepingDashboard() {
                     key={task._id}
                     task={task}
                     userId={user?._id}
-                    onUpdate={(id, status) => updateTaskMutation.mutate({ id, status })}
+                    onUpdate={(id, status, roomNumber) => handleTaskAction(id, status, roomNumber)}
                   />
                 ))}
               </div>
@@ -260,6 +300,49 @@ export default function HousekeepingDashboard() {
           </div>
         </div>
       </div>
+
+      {proofModal.open && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl w-full max-w-sm p-5 space-y-4 shadow-2xl border border-slate-200">
+            <h3 className="font-bold text-base text-slate-900 flex items-center gap-2">
+              📷 Upload Cleaning Proof Photo
+            </h3>
+            <p className="text-xs text-slate-500">
+              Attach a photo of Room {proofModal.roomNumber || "Cleaning"} to complete turnover. Reception verifies this before release.
+            </p>
+            <input
+              type="file"
+              accept="image/*"
+              capture="environment"
+              onChange={handlePhotoUploadChange}
+              className="text-xs text-slate-600 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-amber-500 file:text-white cursor-pointer"
+            />
+            {proofPhoto && (
+              <img
+                src={proofPhoto}
+                alt="Cleaning Proof Preview"
+                className="h-36 w-full object-cover rounded-lg border border-slate-200"
+              />
+            )}
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setProofModal({ open: false, taskId: "", targetStatus: "" })}
+                className="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-100"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => handleTaskAction(proofModal.taskId, proofModal.targetStatus, proofModal.roomNumber, proofPhoto)}
+                className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-amber-500 hover:bg-amber-600 text-white"
+              >
+                Submit Photo & Complete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </AdminLayout>
   );
 }

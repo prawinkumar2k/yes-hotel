@@ -16,9 +16,13 @@ const REFRESH_COOKIE_NAME = "refresh_token";
 const REFRESH_COOKIE_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
 
 function setRefreshCookie(res: Response, token: string) {
+  const isSecure = process.env.COOKIE_SECURE !== undefined
+    ? process.env.COOKIE_SECURE === "true"
+    : process.env.NODE_ENV === "production";
+
   res.cookie(REFRESH_COOKIE_NAME, token, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
+    secure: isSecure,
     sameSite: "lax",
     // Scoped to only the auth routes that need it — the cookie is never
     // sent on ordinary API requests.

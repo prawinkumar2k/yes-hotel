@@ -140,9 +140,15 @@ describe("Reception: one login, three functions", () => {
     expect((await db().collection("housekeepingtasks").findOne({ _id: task!._id }))!.notes).toMatch(/Bathroom/);
 
     expect((await hk("CLEANING")).status).toBe(200);
-    expect((await hk("CLEANING_COMPLETED")).status).toBe(200);
+    const photoData = "data:image/jpeg;base64,mockproofphoto123";
+    const resComplete = await call("housekeeping", "PATCH", `/api/admin/housekeeping/${task!._id}`, {
+      status: "CLEANING_COMPLETED",
+      cleaningProofPhoto: photoData,
+    });
+    expect(resComplete.status).toBe(200);
     pending = (await call("reception", "GET", "/api/verifications?status=PENDING&type=ROOM_RELEASE")).json.data.find((v: any) => String(v.room) === String(ids.room));
     expect(pending).toMatchObject({ attempt: 2 });
+    expect(pending.details?.cleaningProofPhoto).toBe(photoData);
     expect(pending.resubmissionOf).toBeTruthy();
 
     const ok = await call("reception", "POST", `/api/verifications/${pending._id}/approve`, { note: "Inspected" });

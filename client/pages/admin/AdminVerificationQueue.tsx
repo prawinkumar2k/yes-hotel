@@ -48,6 +48,7 @@ export default function AdminVerificationQueue() {
   const [type, setType] = useState("");
   const [search, setSearch] = useState("");
   const [openHistory, setOpenHistory] = useState<string | null>(null);
+  const [selectedPhoto, setSelectedPhoto] = useState<{ url: string; title: string } | null>(null);
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["verifications", tab, type, search],
@@ -156,6 +157,25 @@ export default function AdminVerificationQueue() {
                       {r.details.room ? ` · Room ${r.details.room}` : ""}{r.details.guest ? ` · ${r.details.guest}` : ""}
                     </div>
                   )}
+                  {r.details?.cleaningProofPhoto && (
+                    <div className="mt-2.5 flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setSelectedPhoto({ url: r.details.cleaningProofPhoto, title: `Room ${r.details.room || ""} Cleaning Proof` })}
+                        className="group relative block rounded-lg overflow-hidden border border-slate-200 hover:border-amber-400 transition shadow-sm"
+                      >
+                        <img
+                          src={r.details.cleaningProofPhoto}
+                          alt="Cleaning Proof"
+                          className="h-16 w-24 object-cover group-hover:scale-105 transition"
+                        />
+                        <span className="absolute inset-0 bg-black/25 flex items-center justify-center opacity-0 group-hover:opacity-100 transition text-[10px] text-white font-bold">
+                          View Photo
+                        </span>
+                      </button>
+                      <span className="text-[11px] text-slate-500">📷 Housekeeping cleaning proof attached</span>
+                    </div>
+                  )}
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
                   {r.status === "PENDING" && canReview && (
@@ -184,6 +204,45 @@ export default function AdminVerificationQueue() {
               )}
             </div>
           ))}
+        </div>
+      )}
+
+      {selectedPhoto && (
+        <div
+          className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
+          onClick={() => setSelectedPhoto(null)}
+        >
+          <div
+            className="bg-white rounded-2xl max-w-lg w-full p-4 border border-slate-200 shadow-2xl space-y-3"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+              <span className="text-sm font-bold text-slate-800">{selectedPhoto.title}</span>
+              <button
+                type="button"
+                onClick={() => setSelectedPhoto(null)}
+                className="text-slate-400 hover:text-slate-600 text-lg font-bold px-2 py-0.5 rounded"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="rounded-xl overflow-hidden bg-slate-950 flex items-center justify-center max-h-[70vh]">
+              <img
+                src={selectedPhoto.url}
+                alt={selectedPhoto.title}
+                className="max-h-[70vh] w-auto max-w-full object-contain"
+              />
+            </div>
+            <div className="flex justify-end pt-1">
+              <button
+                type="button"
+                onClick={() => setSelectedPhoto(null)}
+                className="px-4 py-1.5 rounded-lg text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700"
+              >
+                Close
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

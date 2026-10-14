@@ -285,7 +285,7 @@ function App() {
 
 
                 {/* ROLE-SPECIFIC DASHBOARDS */}
-                <Route path="/front-desk/dashboard" element={<PermissionRoute pageKey="DASHBOARD.FRONT_DESK"><FrontDeskDashboard /></PermissionRoute>} />
+                <Route path="/front-desk/dashboard" element={<PermissionRoute pageKey="DASHBOARD.FRONT_DESK"><AdminLayout title="Front Desk Command Center"><FrontDeskDashboard /></AdminLayout></PermissionRoute>} />
                 <Route path="/housekeeping/dashboard" element={<PermissionRoute pageKey="DASHBOARD.HOUSEKEEPING"><HousekeepingDashboard /></PermissionRoute>} />
                 <Route path="/maintenance/dashboard" element={<PermissionRoute pageKey="DASHBOARD.MAINTENANCE"><MaintenanceDashboard /></PermissionRoute>} />
                 <Route path="/cashier/dashboard" element={<PermissionRoute pageKey="DASHBOARD.CASHIER"><CashierDashboard /></PermissionRoute>} />

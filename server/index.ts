@@ -170,14 +170,14 @@ export function createServer() {
         // (net::ERR_SSL_PROTOCOL_ERROR) and the browser also blocks the
         // resulting scheme mismatch as an unsafe frame load. Only meaningful
         // once this app is actually served over HTTPS in production.
-        upgradeInsecureRequests: isProduction ? [] : null,
+        upgradeInsecureRequests: (isProduction && process.env.UPGRADE_INSECURE_REQUESTS !== "false" && process.env.COOKIE_SECURE !== "false") ? [] : null,
       },
     },
     // COOP/OAC only need to be off in dev (they warn on non-HTTPS
     // localhost); a real production deployment is served over HTTPS and
     // should have them on.
-    crossOriginOpenerPolicy: isProduction ? undefined : false,
-    originAgentCluster: isProduction ? undefined : false,
+    crossOriginOpenerPolicy: (isProduction && process.env.COOKIE_SECURE !== "false") ? undefined : false,
+    originAgentCluster: (isProduction && process.env.COOKIE_SECURE !== "false") ? undefined : false,
   }));
   app.use(
     cors({

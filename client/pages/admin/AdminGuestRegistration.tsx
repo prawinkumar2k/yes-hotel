@@ -614,8 +614,12 @@ export default function AdminGuestRegistration() {
               <div className="relative flex justify-center"><span className="bg-white px-4 text-xs text-gray-400 font-bold uppercase tracking-widest">Or</span></div>
             </div>
 
-            <button onClick={skipToWalkIn} className="mt-4 flex items-center justify-center gap-2 w-full max-w-md mx-auto py-3 bg-[#c9a227]/10 text-black border border-[#c9a227] rounded-xl hover:bg-[#c9a227] transition font-bold">
-              <Plus size={18} /> New Walk-In Guest
+            <button
+              onClick={skipToWalkIn}
+              className="mt-4 flex items-center justify-center gap-3 w-full max-w-lg mx-auto py-4 px-6 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white rounded-2xl shadow-lg hover:shadow-xl transition transform active:scale-[0.98] font-bold text-base tracking-wide"
+            >
+              <Plus size={22} className="stroke-[3]" />
+              Start New Walk-In Registration
             </button>
           </div>
         )}

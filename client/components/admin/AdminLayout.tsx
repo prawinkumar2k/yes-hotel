@@ -407,6 +407,15 @@ export default function AdminLayout({ children, title, hidePadding }: { children
               <span>BD: {new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}</span>
             </div>
 
+            {/* Prominent Walk-In / Reservation Button */}
+            <Link
+              to="/admin/guest-registration"
+              className="flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs shadow-sm hover:shadow transition transform active:scale-95"
+            >
+              <Plus size={15} className="stroke-[2.5]" />
+              <span>New Walk-In</span>
+            </Link>
+
             {/* Quick Action Button */}
             <button
               onClick={() => setQuickActionOpen(true)}

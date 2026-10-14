@@ -136,8 +136,8 @@ export default function AdminDashboard() {
   }
 
   if (isFrontDesk && !isExecutive) return <AdminLayout title="Front Desk Dashboard"><FrontDeskDashboard commandData={D} /></AdminLayout>;
-  if (isHousekeeping && !isExecutive) return <AdminLayout title="Housekeeping Dashboard"><HousekeepingDashboard commandData={D} /></AdminLayout>;
-  if (isMaintenance && !isExecutive) return <AdminLayout title="Maintenance Dashboard"><MaintenanceDashboard commandData={D} /></AdminLayout>;
+  if (isHousekeeping && !isExecutive) return <HousekeepingDashboard commandData={D} />;
+  if (isMaintenance && !isExecutive) return <MaintenanceDashboard commandData={D} />;
 
   // Derived values
   const pulse = D?.hotelPulse;

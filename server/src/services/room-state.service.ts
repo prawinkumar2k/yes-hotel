@@ -277,7 +277,11 @@ export async function transitionHousekeepingStatus(
       summary: `Room ${room.roomNumber} cleaned — verify and release`,
       roomId: room._id,
       propertyId: room.propertyId,
-      details: { room: room.roomNumber, floor: room.floor },
+      details: {
+        room: room.roomNumber,
+        floor: room.floor,
+        ...(opts.metadata?.cleaningProofPhoto ? { cleaningProofPhoto: opts.metadata.cleaningProofPhoto } : {}),
+      },
       req: opts.req,
     });
   }
