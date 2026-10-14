@@ -1151,7 +1151,7 @@ export const printRegistrationCard = async (req: Request, res: Response) => {
 
     const html = `<!DOCTYPE html>
 <html>
-<head>
+<head><link rel="icon" href="/favicon.svg" type="image/svg+xml" />
 <meta charset="utf-8">
 <title>Guest Registration Card — ${esc(billNo)}</title>
 <style>
