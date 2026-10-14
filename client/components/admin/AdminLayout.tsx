@@ -140,7 +140,6 @@ export default function AdminLayout({ children, title, hidePadding }: { children
       items: [
         { label: "Dashboard", to: "/admin/dashboard", icon: LayoutDashboard, pageKey: "DASHBOARD.ADMIN" },
         { label: "Front Desk (Reception)", to: "/admin/front-desk", icon: Home, pageKey: "FRONT_DESK", badge: arrivalsCount > 0 ? arrivalsCount : undefined },
-        { label: "Verification Queue", to: "/admin/verifications", icon: ClipboardCheck, pageKey: "VERIFICATIONS", badge: pendingVerifications > 0 ? pendingVerifications : undefined },
         { label: "Task Approvals", to: "/admin/task-approvals", icon: ShieldCheck, pageKey: "TASK_APPROVALS" },
         { label: "Room Rack (Tape Chart)", to: "/admin/calendar", icon: CalendarDays, pageKey: "CALENDAR" },
         { label: "Guest Directory", to: "/admin/guests", icon: Users, pageKey: "GUESTS" },
