@@ -37,6 +37,18 @@ const guestDetailsSchema = z.object({
   phone: z.string().trim().min(5, "Guest phone is required"),
 });
 
+/** A signed-in guest's saved address / ID / GST details, copied onto their new booking for Reception. */
+async function savedGuestExtras(req: Request): Promise<Record<string, string>> {
+  if ((req.user as any)?.role !== "CUSTOMER") return {};
+  const { User } = await import("../models/User");
+  const u: any = await User.findById(req.user!.id).select("savedDetails").lean();
+  const s = u?.savedDetails ?? {};
+  const out: Record<string, string> = {};
+  for (const k of ["address", "city", "state", "country", "idType", "idNumber", "gstin"] as const) if (s[k]) out[k] = s[k];
+  if (s.company) out.organization = s.company;
+  return out;
+}
+
 const createBookingSchema = z.object({
   roomCategoryId: z.string().min(1, "Room category is required"),
   checkInDate: z.string().min(1, "Check-in date is required"),
@@ -330,13 +342,14 @@ export const createBooking = async (req: Request, res: Response) => {
         const defaultProp = await Property.findOne().lean();
         const propertyId = (req as any).propertyId || (req.user as any)?.propertyId || defaultProp?._id || new mongoose.Types.ObjectId();
         
+        const savedExtras = await savedGuestExtras(req);
         const created = await Booking.create(
           [
             {
               propertyId,
               bookingReference,
               customer: req.user?.id ?? undefined,
-              guestDetails,
+              guestDetails: { ...savedExtras, ...guestDetails },
               roomCategory: roomCategoryId,
               checkInDate: checkIn,
               checkOutDate: checkOut,

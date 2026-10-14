@@ -37,7 +37,7 @@ export default function CustomerReviews() {
           <div className="bg-hotel-white border border-hotel-black/10 p-12 text-center">
             <Star size={40} className="mx-auto text-hotel-black/20 mb-4" />
             <p className="text-hotel-black/50 mb-4">You haven't written any reviews yet.</p>
-            <p className="text-sm text-hotel-black/40">You can write a review after checking out of your stay.</p>
+            <p className="text-sm text-hotel-black/40">You can write a review from a completed stay in My Bookings.</p>
           </div>
         ) : (
           <div className="space-y-6">
@@ -45,8 +45,8 @@ export default function CustomerReviews() {
               <div key={r._id} className="bg-hotel-white border border-hotel-black/10 p-6">
                 <div className="flex items-center justify-between mb-4">
                   <div>
-                    <Link to={`/customer/bookings/${r.booking}`} className="text-sm font-medium text-hotel-gold hover:underline">
-                      Booking Reference
+                    <Link to={`/customer/bookings/${r.booking?._id ?? r.booking}`} className="text-sm font-medium text-hotel-gold hover:underline">
+                      {r.booking?.bookingReference ?? "Booking"}
                     </Link>
                     <p className="text-xs text-hotel-black/50 mt-1">
                       Submitted on {new Date(r.createdAt).toLocaleDateString()}
@@ -59,6 +59,7 @@ export default function CustomerReviews() {
                   </div>
                 </div>
                 
+                {r.title && <p className="font-medium text-hotel-black mb-1">{r.title}</p>}
                 <p className="text-hotel-black/80">{r.comment}</p>
                 
                 <div className="mt-4 pt-4 border-t border-hotel-black/10 flex justify-between items-center text-sm">

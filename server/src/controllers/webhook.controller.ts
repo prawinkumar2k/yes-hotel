@@ -120,6 +120,24 @@ export const handleRazorpayWebhook = async (req: Request, res: Response) => {
           logger.error("webhook.payment_captured_missing_booking_id", { requestId: req.id, razorpayPaymentId: paymentEntity.id });
           break;
         }
+        // A guest paying the balance of an existing stay: record it, never re-confirm the booking.
+        if (paymentEntity.notes?.purpose === "BALANCE") {
+          const { Booking } = await import("../models/Booking");
+          const { recordBalancePayment } = await import("../services/customer.service");
+          const booking = await Booking.findById(bookingId);
+          if (!booking) {
+            logger.error("webhook.balance_payment_missing_booking", { requestId: req.id, bookingId, razorpayPaymentId: paymentEntity.id });
+            break;
+          }
+          await recordBalancePayment({
+            booking,
+            amount: Math.round(Number(paymentEntity.amount)) / 100,
+            gatewayPaymentId: paymentEntity.id,
+            gatewayOrderId: paymentEntity.order_id,
+            method: "RAZORPAY",
+          });
+          break;
+        }
         try {
           await finalizePaymentSuccess({
             bookingId,

@@ -22,7 +22,9 @@ import {
   Key,
   CreditCard,
   UtensilsCrossed,
-  Landmark
+  Landmark,
+  Phone,
+  Hash
 } from "lucide-react";
 
 const DEMO_ACCOUNTS = [
@@ -40,6 +42,9 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
+  const [mode, setMode] = useState<"password" | "booking">("password");
+  const [bookingReference, setBookingReference] = useState("");
+  const [mobile, setMobile] = useState("");
   const reducedMotion = useReducedMotion();
 
   const { login } = useAuth();
@@ -51,10 +56,10 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      const res = await fetch("/api/auth/login", {
+      const res = await fetch(mode === "booking" ? "/api/auth/booking-login" : "/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify(mode === "booking" ? { bookingReference, mobile } : { email, password }),
       });
       const data = await res.json();
 
@@ -78,7 +83,8 @@ export default function LoginPage() {
           PROCUREMENT: "/procurement/dashboard",
           CUSTOMER: "/customer/dashboard",
         };
-        navigate(ROLE_ROUTES[role] || "/customer/dashboard");
+        // Booking login opens the stay the guest just proved.
+        navigate(mode === "booking" && data.data.bookingId ? `/customer/bookings/${data.data.bookingId}` : ROLE_ROUTES[role] || "/customer/dashboard");
       } else {
         toast({ title: "Login Failed", description: data.message, variant: "destructive" });
       }
@@ -199,6 +205,76 @@ export default function LoginPage() {
               </p>
             </div>
 
+            {/* Sign-in method */}
+            <div role="tablist" aria-label="Sign-in method" className="grid grid-cols-2 gap-1 p-1 mb-6 rounded-xl bg-stone-100 border border-stone-200">
+              {([["password", "Email & password"], ["booking", "Booking no. + mobile"]] as const).map(([key, label]) => (
+                <button
+                  key={key}
+                  type="button"
+                  role="tab"
+                  aria-selected={mode === key}
+                  onClick={() => setMode(key)}
+                  className={`py-2 rounded-lg text-xs font-semibold transition-all ${mode === key ? "bg-white text-amber-800 shadow-sm border border-amber-200" : "text-slate-500 hover:text-slate-800"}`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+
+            {mode === "booking" ? (
+              <form onSubmit={handleSubmit} className="space-y-5">
+                <p className="text-xs text-slate-500 -mt-2">
+                  Guests: no password needed. Use the booking number from your confirmation and the mobile number you booked with.
+                </p>
+                <div>
+                  <label htmlFor="login-booking" className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-2">
+                    Booking Number
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                      <Hash className="w-4 h-4" />
+                    </div>
+                    <input
+                      id="login-booking"
+                      required
+                      autoComplete="off"
+                      placeholder="e.g. YH-20261014-0001"
+                      value={bookingReference}
+                      onChange={(e) => setBookingReference(e.target.value.toUpperCase())}
+                      className="w-full pl-10 pr-4 py-3 bg-stone-50 border border-stone-200 rounded-xl text-slate-900 placeholder:text-slate-400 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500 focus:bg-white transition-all"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label htmlFor="login-mobile" className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-2">
+                    Mobile Number
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                      <Phone className="w-4 h-4" />
+                    </div>
+                    <input
+                      id="login-mobile"
+                      type="tel"
+                      inputMode="numeric"
+                      autoComplete="tel"
+                      required
+                      placeholder="10-digit mobile"
+                      value={mobile}
+                      onChange={(e) => setMobile(e.target.value)}
+                      className="w-full pl-10 pr-4 py-3 bg-stone-50 border border-stone-200 rounded-xl text-slate-900 placeholder:text-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500 focus:bg-white transition-all"
+                    />
+                  </div>
+                </div>
+                <button
+                  type="submit"
+                  disabled={isLoading || bookingReference.trim().length < 3 || mobile.replace(/\D/g, "").length < 10}
+                  className="w-full py-3.5 px-6 rounded-xl bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800 text-white font-semibold text-sm shadow-lg shadow-amber-600/25 active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
+                >
+                  {isLoading ? <span>Finding your booking...</span> : <><span>View My Booking</span><ArrowRight className="w-4 h-4" /></>}
+                </button>
+              </form>
+            ) : (
             <form onSubmit={handleSubmit} className="space-y-5">
               {/* Email field */}
               <div>
@@ -285,6 +361,7 @@ export default function LoginPage() {
                 )}
               </button>
             </form>
+            )}
 
             <div className="mt-8 text-center pt-6 border-t border-stone-100">
               <p className="text-xs text-slate-500">

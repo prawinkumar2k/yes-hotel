@@ -9,6 +9,7 @@ import { GoldButton, OutlineButton } from "@/components/hotel/HotelButtons";
 import { format } from "date-fns";
 import { nights as countNights } from "@shared/dates";
 import { Loader2, ArrowLeft, Download, AlertTriangle, Calendar, User, CreditCard } from "lucide-react";
+import { BalancePanel, ChangeRequestPanel, ReviewPanel } from "@/components/customer/BookingSelfService";
 
 async function apiFetch(url: string, token?: string, method = "GET", body?: any) {
   const res = await fetch(url, {
@@ -188,7 +189,7 @@ export default function CustomerBookingDetails() {
                   <span>₹{(booking.totalAmount - booking.taxAmount).toLocaleString("en-IN")}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span>Taxes (18% GST)</span>
+                  <span>Taxes (GST)</span>
                   <span>₹{booking.taxAmount.toLocaleString("en-IN")}</span>
                 </div>
                 <div className="border-t border-hotel-white/20 pt-4 mt-2">
@@ -205,6 +206,12 @@ export default function CustomerBookingDetails() {
                 </div>
               </div>
             </div>
+
+            <BalancePanel booking={booking} />
+
+            <ChangeRequestPanel booking={booking} />
+
+            <ReviewPanel booking={booking} />
 
             {isCancellable && (
               <div className="bg-hotel-white p-6 border border-hotel-black/10 text-center">

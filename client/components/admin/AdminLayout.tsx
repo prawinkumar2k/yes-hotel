@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { usePermissions } from "../../context/PermissionContext";
 import {
-  LayoutDashboard, CalendarDays, BedDouble, Users, CreditCard,
+  LayoutDashboard, CalendarDays, CalendarClock, BedDouble, Users, CreditCard,
   BarChart3, Settings, Home, Wrench, LogIn, LogOut, MenuIcon, X,
   Image, HelpCircle, MessageSquare, FileText, Star, Ticket, RotateCcw,
   ScrollText, Moon, DollarSign, Tag, Building2, UtensilsCrossed,
@@ -120,6 +120,20 @@ export default function AdminLayout({ children, title, hidePadding }: { children
   });
   const pendingVerifications = verificationCounts?.pending || 0;
 
+  // Guest change requests (dates / guests) waiting for Reception
+  const { data: changeRequestCounts } = useQuery({
+    queryKey: ["change-request-counts"],
+    queryFn: async () => {
+      const token = getStoredAuthToken();
+      const res = await fetch("/api/change-requests/counts", { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+      const json = await res.json();
+      return json.success ? json.data : null;
+    },
+    enabled: hasPageAccess("BOOKINGS"),
+    refetchInterval: 60000,
+  });
+  const pendingChangeRequests = changeRequestCounts?.pending || 0;
+
   const NAV_SECTIONS: NavSection[] = [
     {
       title: "FRONT OFFICE",
@@ -137,6 +151,7 @@ export default function AdminLayout({ children, title, hidePadding }: { children
       items: [
         { label: "Enquiries", to: "/admin/enquiries", icon: MessageSquare, pageKey: "ENQUIRIES", badge: newEnquiriesCount > 0 ? newEnquiriesCount : undefined },
         { label: "All Reservations", to: "/admin/bookings", icon: CalendarDays, pageKey: "BOOKINGS" },
+        { label: "Guest Change Requests", to: "/admin/change-requests", icon: CalendarClock, pageKey: "BOOKINGS", badge: pendingChangeRequests > 0 ? pendingChangeRequests : undefined },
         { label: "OTA Bookings", to: "/admin/ota-bookings", icon: Globe, pageKey: "BOOKINGS" },
         { label: "Groups & Banquets", to: "/admin/group-bookings", icon: Users, pageKey: "GROUP_BOOKINGS" },
       ],

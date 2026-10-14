@@ -3,6 +3,25 @@
 All changes, fixes, hardened services, and architectural migrations are documented chronologically in this file.
 
 ---
+## [Customer portal: booking-number sign-in, pay balance, reviews, profile, change requests] - 2026-10-14
+
+- **Sign in with booking number + mobile** (login page, second tab). No password needed: the booking number and the mobile on that booking (last 10 digits) prove the stay.
+  - The guest's account is the one already linked to the booking, else the customer account with the booking's email, else a new customer account.
+  - Rooms booked together (same group) with the same mobile are linked too.
+  - A booking that points at a staff email or staff account is refused (409); staff accounts are never turned into guest accounts.
+  - Wrong mobile and unknown booking get the same message. Rate-limited like password login; every success and failure is audit-logged.
+- **Add a stay** (My Bookings): link a desk, phone or third-party booking with the same two details. A stay already linked to another account is refused.
+- **Pay balance online** (booking page). The amount due is the open folio balance in-house, or the booking total less payments and advances before arrival. Part-payments allowed; overpayment refused.
+  - Razorpay order is tagged `purpose: BALANCE`; verification checks the signature and takes the amount from the gateway order, never from the browser. The webhook records these as balance payments and never re-confirms the booking.
+  - Recorded once per gateway payment id. In-house it also posts a folio PAYMENT line.
+  - Without Razorpay keys, a dev-only demo payment is offered (refused in production or when keys are set).
+- **Reviews:** a review form on completed (checked-out) stays; My Reviews now shows the booking number and title.
+- **Profile:** saved address / ID / company / GSTIN (copied onto the guest's next website booking for Reception); change password (current password required, other sessions signed out). The profile update no longer returns the password hash.
+- **Change requests:** guests ask to change dates or guests (one open request per booking; in-house guests can change only check-out and guests). Reception sees them under **Reservations → Guest Change Requests** with a badge, updates the reservation with the normal tools, then approves or declines with a reason the guest sees. Guests can withdraw a waiting request.
+- **Fix:** customer booking page showed "Taxes (18% GST)" for every booking; now "Taxes (GST)".
+- **Tests:** `server/src/routes/customer-portal.integration.spec.ts` (11 HTTP tests).
+
+---
 ## [Four staff logins: Admin, Manager, Reception, Housekeeping] - 2026-10-14
 
 - **Accounts:** the hotel now runs on four staff logins: `admin@`, `manager@`, `reception@` and `housekeeping@`.

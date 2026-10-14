@@ -14,7 +14,7 @@ The hotel has four staff logins:
 | Manager (`manager@`) | Operations and approvals: CRITICAL approvals, check-in overrides, plus the work of the retired logins: maintenance, restaurant/POS (orders, settle, void), night audit, finance and reports |
 | Reception (`reception@`) | Front Desk & Reservations, the Verification Queue, and Cashier & Billing (payments, advances, refunds, shift) |
 | Housekeeping (`housekeeping@`) | Room cleaning tasks; cleaned rooms go to Reception for verification |
-| Customer | Their own bookings, folio (read-only) and loyalty (not a staff login) |
+| Customer | Their own stays: pay the balance, request changes, review, profile (not a staff login; see flow 13) |
 
 The Supervisor, Cashier, Finance, Maintenance and Restaurant roles are retired. Their old accounts are disabled, and new staff accounts can only be Admin, Manager, Reception or Housekeeping.
 
@@ -148,3 +148,19 @@ Every screen uses the same definitions.
   - Every sensitive change, login and failed login is recorded, with before/after values, IP address and device.
   - Entries can't be edited or deleted.
   - Filter by action, role, item or date, and export to CSV.
+
+## 13. Guest (customer) portal
+
+**Sign in.** Either email + password, or **booking number + mobile** (the mobile on that booking). The second needs no account: one is created for the guest, and the rooms booked with it are attached. A booking linked to a staff email can't be used this way.
+
+From their account a guest can:
+
+1. **Add a stay** booked at the desk, by phone or by someone else, with its booking number and mobile. A stay already on another account is refused.
+2. **Pay the balance online**, in full or in part:
+   - before arrival: booking total less payments and advances;
+   - in-house: the open folio balance (the payment posts to the folio).
+   Paying more than is due is refused, and one gateway payment is recorded once.
+3. **Ask to change** dates or guests. One open request per booking; in-house guests can only change the check-out date or guests. The guest can withdraw a waiting request.
+   - **Reception** (Reservations → Guest Change Requests): check availability and price, update the reservation with the normal booking tools, then **Approve** (optional message) or **Decline** (reason required). The guest sees the reply.
+4. **Review** a completed stay (one review per stay; shown publicly after approval).
+5. **Profile:** name and phone; saved address, ID, company and GSTIN (added to their next website booking); change password (current password required).

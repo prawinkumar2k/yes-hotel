@@ -39,6 +39,7 @@ import roomRackRoutes from "./src/routes/room-rack.routes";
 import frontDeskRoutes from "./src/routes/front-desk.routes";
 import advanceRoutes from "./src/routes/advance.routes";
 import verificationRoutes from "./src/routes/verification.routes";
+import { customerRouter, changeRequestRouter } from "./src/routes/customer.routes";
 import receptionRoutes from "./src/routes/reception.routes";
 import folioRoutes from "./src/routes/folio.routes";
 import nightAuditRoutes from "./src/routes/night-audit.routes";
@@ -229,6 +230,10 @@ export function createServer() {
   });
   app.use("/api", generalLimiter);
   app.use("/api/auth/login", strictLimiter);
+  app.use("/api/auth/booking-login", strictLimiter);
+  app.use("/api/auth/change-password", strictLimiter);
+  app.use("/api/customer/bookings/link", strictLimiter);
+  app.use("/api/customer/payments/verify", strictLimiter);
   app.use("/api/auth/register", strictLimiter);
   app.use("/api/auth/forgot-password", strictLimiter);
   app.use("/api/auth/reset-password", strictLimiter);
@@ -296,6 +301,8 @@ export function createServer() {
   app.use("/api/front-desk/registration", walkInRegistrationRoutes);
   app.use("/api/advances", advanceRoutes);
   app.use("/api/verifications", verificationRoutes);
+  app.use("/api/customer", customerRouter);
+  app.use("/api/change-requests", changeRequestRouter);
   app.use("/api/reception", receptionRoutes);
   app.use("/api/folios", folioRoutes);
   app.use("/api/night-audit", nightAuditRoutes);

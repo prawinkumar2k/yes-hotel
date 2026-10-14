@@ -29,10 +29,26 @@ export default function GuestDetailsPage() {
   const [form, setForm] = useState({
     firstName: storedGuest?.firstName || user?.firstName || "",
     lastName: storedGuest?.lastName || user?.lastName || "",
-    email: storedGuest?.email || user?.email || "",
+    email: storedGuest?.email || (user?.email?.endsWith("@guests.yeshotels.local") ? "" : user?.email) || "",
     phone: storedGuest?.phone || "",
     specialRequests: "",
   });
+
+  // Signed-in guests: fill the phone from their profile and note that saved address / ID / GST
+  // details go onto the booking automatically (the server copies them).
+  const [hasSavedDetails, setHasSavedDetails] = useState(false);
+  useEffect(() => {
+    if (user?.role !== "CUSTOMER" || !user.token) return;
+    fetch("/api/auth/me", { headers: { Authorization: `Bearer ${user.token}` } })
+      .then((r) => r.json())
+      .then((j) => {
+        const me = j?.data;
+        if (!me) return;
+        setForm((f) => ({ ...f, phone: f.phone || me.phone || "" }));
+        setHasSavedDetails(!!me.savedDetails && Object.values(me.savedDetails).some(Boolean));
+      })
+      .catch(() => undefined);
+  }, [user]);
 
   useEffect(() => {
     if (category && checkIn && checkOut && storedMatchesSelection && hasCompleteGuestContact(storedGuest)) {
@@ -101,6 +117,7 @@ export default function GuestDetailsPage() {
           <div className="md:col-span-2">
             <h2 className="font-serif text-xl sm:text-2xl text-hotel-black mb-6">Guest Information</h2>
             <form id="guest-form" onSubmit={handleSubmit} className="bg-hotel-white border border-hotel-black/10 p-4 sm:p-6 md:p-8 space-y-6 shadow-sm">
+              {hasSavedDetails && <p className="text-xs text-hotel-black/60 bg-hotel-ivory border border-hotel-gold/30 px-3 py-2">Your saved address, ID and GST details will be added to this booking.</p>}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                 <div>
                   <label className="block text-sm text-hotel-black/60 mb-2">First Name *</label>
