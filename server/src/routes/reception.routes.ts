@@ -120,10 +120,14 @@ router.post("/bookings/:id/checkout/initiate", requirePermission("CHECK_OUT", "C
     if (booking.checkoutClearance?.status) {
       return res.json({ success: true, message: "Already waiting in Cashier & Billing", data: booking.checkoutClearance });
     }
+    // Leaving before the booked date: credit the unused nights (and their GST) so the bill is right.
+    const { applyEarlyDeparture } = await import("../services/early-departure.service");
+    const early = await applyEarlyDeparture(String(booking._id), { req });
+    if (early) Object.assign(booking, (await Booking.findById(booking._id).select("checkOutDate totalAmount taxAmount cgstAmount sgstAmount").lean()) ?? {});
     booking.checkoutClearance = { status: "PENDING", initiatedBy: actorId(req) as any, initiatedAt: new Date(), note: req.body?.note };
     await booking.save();
     await createAuditLog({ req, action: "booking.checkout_initiated", resourceType: "Booking", resourceId: String(booking._id), metadata: { bookingReference: booking.bookingReference } });
-    return res.json({ success: true, message: "Sent to Cashier & Billing for settlement", data: booking.checkoutClearance });
+    return res.json({ success: true, message: early?.nightsCredited.length ? `Sent to Cashier & Billing. ${early.nightsCredited.length} unused night(s) credited (₹${(early.roomCredit + early.taxCredit.cgst + early.taxCredit.sgst).toLocaleString("en-IN")}).` : "Sent to Cashier & Billing for settlement", data: booking.checkoutClearance, earlyDeparture: early });
   } catch (error: any) {
     return fail(res, 500, error.message);
   }

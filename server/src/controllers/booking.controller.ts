@@ -941,6 +941,13 @@ export const checkOut = async (req: Request, res: Response) => {
   // (stay charges + recorded payments) opened here, in its own transaction.
   await openFolioForBooking(booking, actorId?.toString() || "CHECKOUT", { req });
 
+  // Leaving before the booked date: credit the unused nights (and their GST) before settling.
+  {
+    const { applyEarlyDeparture } = await import("../services/early-departure.service");
+    const early = await applyEarlyDeparture(String(booking._id), { req });
+    if (early) Object.assign(booking, (await Booking.findById(booking._id).select("checkOutDate totalAmount taxAmount cgstAmount sgstAmount").lean()) ?? {});
+  }
+
   const {
     advanceAdjustmentAmount,
     advancePaymentId,
