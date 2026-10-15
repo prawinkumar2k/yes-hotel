@@ -223,9 +223,7 @@ export default function AdminLayout({ children, title, hidePadding }: { children
         {/* Brand Header */}
         <div className="p-4 border-b border-slate-100 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2.5 overflow-hidden">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-hotel-gold to-amber-700 flex items-center justify-center font-serif font-black text-black text-sm shrink-0 shadow-sm">
-              Y
-            </div>
+            <img src="/brand/yes-mark.png" alt="YES HOTELS" className="w-9 h-9 object-contain shrink-0" />
             {!collapsed && (
               <div className="flex flex-col">
                 <span className="font-serif text-sm tracking-widest text-black uppercase font-bold">

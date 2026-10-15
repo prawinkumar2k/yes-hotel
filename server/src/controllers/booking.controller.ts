@@ -540,7 +540,7 @@ export const getMyBookingInvoice = async (req: Request, res: Response) => {
     const esc = (s: any) => String(s ?? "").replace(/[<>&]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;" }[c] as string));
 
     const html = `<!DOCTYPE html>
-<html><head><link rel="icon" href="/favicon.svg" type="image/svg+xml" /><meta charset="utf-8"><title>Invoice ${esc(booking.bookingReference)}</title>
+<html><head><link rel="icon" href="/favicon-32.png" type="image/png" /><meta charset="utf-8"><title>Invoice ${esc(booking.bookingReference)}</title>
 <style>
   body { font-family: Georgia, serif; color: #1a1a1a; max-width: 700px; margin: 40px auto; padding: 0 20px; }
   h1 { font-size: 22px; letter-spacing: 2px; text-transform: uppercase; }
@@ -555,7 +555,7 @@ export const getMyBookingInvoice = async (req: Request, res: Response) => {
 </style></head>
 <body>
   <div class="header">
-    <div><h1>YES Hotels</h1><div class="muted">Tax Invoice</div></div>
+    <div><img src="/brand/yes-hotels-logo-sm.png" alt="YES HOTELS" style="height:64px;width:auto;display:block" /><h1>YES HOTELS</h1><div class="muted">Tax Invoice</div></div>
     <div class="right">
       <div><strong>${esc(booking.bookingReference)}</strong></div>
       <div class="muted">${esc(booking._id.getTimestamp().toLocaleDateString())}</div>

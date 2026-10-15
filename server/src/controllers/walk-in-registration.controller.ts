@@ -1173,7 +1173,7 @@ export const printRegistrationCard = async (req: Request, res: Response) => {
 
     const html = `<!DOCTYPE html>
 <html>
-<head><link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+<head><link rel="icon" href="/favicon-32.png" type="image/png" />
 <meta charset="utf-8">
 <title>Guest Registration Card — ${esc(booking.bookingReference)}</title>
 <style>
@@ -1228,7 +1228,7 @@ export const printRegistrationCard = async (req: Request, res: Response) => {
   <!-- HEADER -->
   <div class="header">
     <div>
-      <h1 class="brand-title">${esc(hotelName)}</h1>
+      <img src="/brand/yes-hotels-logo-sm.png" alt="YES HOTELS" style="height:64px;width:auto;display:block;margin-bottom:4px" /><h1 class="brand-title">${esc(hotelName)}</h1>
       <div class="hotel-address">${esc(hotelAddress)}</div>
     </div>
     <div class="bill-box">

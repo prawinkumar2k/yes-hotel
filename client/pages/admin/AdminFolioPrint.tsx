@@ -295,6 +295,7 @@ export default function AdminFolioPrint() {
           <div className="flex border-b border-black">
             <div className="w-1/3 p-2 flex items-center justify-center border-r border-black">
                <div className="flex flex-col items-center">
+                 <img src="/brand/yes-hotels-logo-sm.png" alt="YES HOTELS" className="h-16 w-auto object-contain mb-1 print:h-14" />
                  <h1 className="font-serif text-3xl font-black italic tracking-widest uppercase">YES HOTELS</h1>
                </div>
             </div>

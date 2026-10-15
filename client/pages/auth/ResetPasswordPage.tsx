@@ -6,6 +6,7 @@ import * as z from "zod";
 import { motion } from "framer-motion";
 import { useToast } from "@/components/ui/use-toast";
 import { Loader2, Lock, Eye, EyeOff, ShieldCheck, ArrowRight } from "lucide-react";
+import BrandLogo from "@/components/hotel/BrandLogo";
 
 const resetSchema = z.object({
   password: z.string().min(8, "Password must be at least 8 characters"),
@@ -85,9 +86,7 @@ export default function ResetPasswordPage() {
 
         <div className="relative z-10 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-3 group">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-amber-700 flex items-center justify-center shadow-md shadow-amber-500/20 text-white font-serif font-bold text-xl group-hover:scale-105 transition-transform">
-              Y
-            </div>
+            <BrandLogo className="w-12 h-12" />
             <div>
               <span className="font-serif text-2xl font-bold tracking-wider text-slate-900 uppercase block leading-none">
                 YES <span className="text-amber-600">HOTELS</span>
@@ -125,9 +124,7 @@ export default function ResetPasswordPage() {
       <div className="lg:col-span-7 flex flex-col justify-between p-6 sm:p-12 lg:p-16 bg-[#FDFBF7]">
         <div className="flex lg:hidden items-center justify-between mb-8">
           <Link to="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-500 to-amber-700 flex items-center justify-center text-white font-serif font-bold text-lg">
-              Y
-            </div>
+            <BrandLogo className="w-10 h-10" />
             <span className="font-serif text-xl font-bold tracking-wider text-slate-900 uppercase">
               YES <span className="text-amber-600">HOTELS</span>
             </span>

@@ -162,7 +162,7 @@ const ALL_STAFF = ["ADMIN", "SUPER_ADMIN", "MANAGER", "RECEPTIONIST", "CASHIER",
 function PageLoader() {
   return (
     <div className="min-h-screen bg-hotel-ivory flex items-center justify-center">
-      <p className="font-serif text-xl text-hotel-gold animate-pulse">YES HOTELS</p>
+      <img src="/brand/yes-mark.png" alt="YES HOTELS" className="w-16 h-16 object-contain animate-pulse" />
     </div>
   );
 }

@@ -122,6 +122,7 @@ export default function AdminGRCPrint() {
         <div className="border-b-2 border-black pb-2 text-center relative">
           <div className="flex items-center justify-between">
             <div className="text-left w-2/3">
+              <img src="/brand/yes-hotels-logo-sm.png" alt="YES HOTELS" className="h-16 w-auto object-contain" />
               <h1 className="text-3xl font-black tracking-widest font-serif uppercase text-black">
                 YES HOTELS
               </h1>

@@ -3,6 +3,7 @@ import { Link, useLocation } from "react-router-dom";
 import { Menu, X, Sparkles, BedDouble, LogIn, User, LayoutDashboard, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/context/AuthContext";
+import BrandLogo from "@/components/hotel/BrandLogo";
 
 const NAV_LINKS: { label: string; hash?: string; route: string }[] = [
   { label: "Home", hash: "home", route: "/" },
@@ -79,9 +80,7 @@ export default function Navbar({ transparent = true }: { transparent?: boolean }
             isHeroTransparent ? "text-white" : "text-slate-800"
           )}
         >
-          <span className="p-1.5 bg-[#c9a227]/10 rounded-lg border border-[#c9a227]/30 text-[#c9a227] group-hover:bg-[#c9a227] group-hover:text-black transition">
-            <BedDouble size={18} />
-          </span>
+          <BrandLogo className="w-9 h-9 md:w-10 md:h-10 group-hover:scale-105 transition-transform" />
           <span>YES <span className="text-[#c9a227] font-normal italic">HOTELS</span></span>
         </Link>
 

@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { useHotelSettings } from "@/hooks/usePublicData";
 import { HOTEL, hotelAddressOneLine } from "@shared/hotel-info";
 import { Sparkles, ArrowRight, BedDouble } from "lucide-react";
+import BrandLogo from "@/components/hotel/BrandLogo";
 
 const DESCRIPTION =
   "A contemporary 3-star boutique hotel at Hosa Road Junction, Electronic City — clean, comfortable rooms beside Hosa Road Metro, with a 24-hour front desk.";
@@ -44,8 +45,7 @@ export default function Footer() {
           {/* Brand Info */}
           <div className="md:col-span-2 space-y-4">
             <Link to="/" className="font-serif text-2xl font-bold tracking-wider text-white flex items-center gap-2">
-              <BedDouble className="text-[#c9a227]" size={20} />
-              YES <span className="text-[#c9a227] italic font-normal">HOTELS</span>
+              <BrandLogo variant="full" className="h-20 w-auto" />
             </Link>
             <p className="text-gray-400 font-sans font-light text-sm max-w-md leading-relaxed">
               {DESCRIPTION}
