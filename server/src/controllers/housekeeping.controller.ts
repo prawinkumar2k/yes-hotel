@@ -8,12 +8,19 @@ import {
   IllegalHousekeepingTransitionError,
 } from "../services/room-state.service";
 
+/** A cleaning proof photo: a JPEG / PNG / WebP image as a data URL, at most ~2 MB (phones send ~200 KB). */
+const proofPhotoSchema = z
+  .string()
+  .max(2_800_000, "Photo is too large — please retake it")
+  .refine((v) => /^data:image\/(jpeg|png|webp);base64,/.test(v), "Attach a photo (JPEG, PNG or WebP)")
+  .optional();
+
 const updateTaskSchema = z.object({
   status: z.nativeEnum(HousekeepingStatus).optional(),
   priority: z.nativeEnum(HousekeepingPriority).optional(),
   notes: z.string().optional(),
   assignedTo: z.string().optional(),
-  cleaningProofPhoto: z.string().optional(),
+  cleaningProofPhoto: proofPhotoSchema,
 });
 
 export const getHousekeepingTasks = async (req: Request, res: Response) => {
@@ -162,7 +169,7 @@ const ROOM_STATUS_UPDATE_ROLES_REQUIRING_MANAGER = new Set([HousekeepingRoomStat
 const updateRoomStatusSchema = z.object({
   status: z.nativeEnum(HousekeepingRoomStatus),
   notes: z.string().optional(),
-  cleaningProofPhoto: z.string().optional(),
+  cleaningProofPhoto: proofPhotoSchema,
 });
 
 export const getHousekeepingDashboard = async (_req: Request, res: Response) => {

@@ -297,6 +297,8 @@ export async function transitionHousekeepingStatus(
       housekeepingTo: to,
       ...(opts.sellStatus ? { sellStatus: opts.sellStatus } : {}),
       ...opts.metadata,
+      // The audit log records that a cleaning photo was attached, not the image itself.
+      ...(opts.metadata?.cleaningProofPhoto ? { cleaningProofPhoto: undefined, cleaningProofPhotoAttached: true } : {}),
     },
   });
 

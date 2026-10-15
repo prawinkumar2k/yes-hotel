@@ -121,13 +121,23 @@ export default function HousekeepingDashboard() {
 
   const handlePhotoUploadChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setProofPhoto(reader.result as string);
+    if (!file) return;
+    // Phone photos are 3-5 MB; send a 1280px JPEG (~150-250 KB) — plenty to verify a room.
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const img = new Image();
+      img.onload = () => {
+        const scale = Math.min(1, 1280 / Math.max(img.width, img.height));
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.round(img.width * scale);
+        canvas.height = Math.round(img.height * scale);
+        canvas.getContext("2d")?.drawImage(img, 0, 0, canvas.width, canvas.height);
+        setProofPhoto(canvas.toDataURL("image/jpeg", 0.72));
       };
-      reader.readAsDataURL(file);
-    }
+      img.onerror = () => setProofPhoto(reader.result as string);
+      img.src = reader.result as string;
+    };
+    reader.readAsDataURL(file);
   };
 
   const updateTaskMutation = useMutation({
