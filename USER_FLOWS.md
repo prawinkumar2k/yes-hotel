@@ -164,3 +164,26 @@ From their account a guest can:
    - **Reception** (Reservations → Guest Change Requests): check availability and price, update the reservation with the normal booking tools, then **Approve** (optional message) or **Decline** (reason required). The guest sees the reply.
 4. **Review** a completed stay (one review per stay; shown publicly after approval).
 5. **Profile:** name and phone; saved address, ID, company and GSTIN (added to their next website booking); change password (current password required).
+
+## 14. Extend, leave early, or move room (Front Desk)
+
+- **Extend stay:** for a group, extend **all rooms** (default) or only one. Each room's bill gets the extra nights at its agreed rate plus GST, and the new check-out date shows on the registration card and bill.
+- **Leave early:** when Reception sends an early-leaving guest to **Cashier & Billing**, the nights not stayed (and their GST) are taken off the bill, the check-out date updates, and those nights can be sold again.
+- **Room move:** Front Desk → Move room. Choose a clean, vacant room and either keep the current rate or use the new room's rate. The old room goes to housekeeping as dirty, the new room shows occupied, and the bill adds (or takes off) the rate difference for nights already charged, with GST.
+
+## 15. Live chat
+
+1. A guest chats on the website; **Talk to Reception** passes the chat to staff.
+2. **Live Chat** (Reception, Admin) shows it instantly with an unread count; reply in the box — the guest sees it immediately.
+3. **Take over** to assign it to yourself; **Resolve** when done. Chats with no guest activity for 24 hours become *Abandoned*.
+
+## 16. Guest sign-in
+
+- Email + password, a **6-digit code emailed** from bookings@yeshotels.in (valid 10 minutes, 5 tries, used once), or **booking number + mobile**.
+- Signing in links the guest's bookings to their account. Staff accounts never receive codes.
+
+## 17. Passwords
+
+- Everyone changes their own password with the key icon next to *Sign out*.
+- Admin resets a forgotten staff password from **Staff**.
+- The owner's master password opens staff logins only; each use appears in the audit log (see docs/OPERATIONS.md).
