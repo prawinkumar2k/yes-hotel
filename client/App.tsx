@@ -64,8 +64,10 @@ const ContactPage = lazy(() => import("./pages/public/ContactPage"));
 const FAQPage = lazy(() => import("./pages/public/FAQPage"));
 const GalleryPage = lazy(() => import("./pages/public/GalleryPage"));
 const LegalPage = lazy(() => import("./pages/public/LegalPage"));
+const SeoLandingPage = lazy(() => import("./pages/public/SeoLandingPage"));
 
 const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
+const AdminSeo = lazy(() => import("./pages/admin/AdminSeo"));
 const AdminFrontDesk = lazy(() => import("./pages/admin/AdminFrontDesk"));
 const AdminGuestRegistration = lazy(() => import("./pages/admin/AdminGuestRegistration"));
 const AdminRoomRack = lazy(() => import("./pages/admin/AdminRoomRack"));
@@ -189,6 +191,7 @@ function App() {
                 <Route path="/about" element={<AboutPage />} />
                 <Route path="/rooms" element={<RoomsPage />} />
                 <Route path="/rooms/:slug" element={<RoomDetailsPage />} />
+                <Route path="/hotels-near/:slug" element={<SeoLandingPage />} />
                 <Route path="/gallery" element={<GalleryPage />} />
                 <Route path="/faq" element={<FAQPage />} />
                 <Route path="/contact" element={<ContactPage />} />
@@ -274,6 +277,7 @@ function App() {
                 <Route path="/admin/night-audit" element={<PermissionRoute pageKey="NIGHT_AUDIT"><AdminLayout title="Automated Night Audit & Business Date Engine"><AdminNightAudit /></AdminLayout></PermissionRoute>} />
                 <Route path="/staff/mobile-housekeeping" element={<PermissionRoute pageKey="HOUSEKEEPING"><AdminLayout title="Mobile Housekeeping"><MobileHousekeeping /></AdminLayout></PermissionRoute>} />
                 <Route path="/admin/analytics" element={<Navigate to="/admin/reports" replace />} />
+                <Route path="/admin/seo" element={<PermissionRoute pageKey="SETTINGS"><AdminLayout title="Local SEO & Discovery"><AdminSeo /></AdminLayout></PermissionRoute>} />
                 <Route path="/admin/settings" element={<PermissionRoute pageKey="SETTINGS"><AdminLayout title="Settings"><AdminSettings /></AdminLayout></PermissionRoute>} />
                 <Route path="/admin/settings/payment-channels" element={<PermissionRoute pageKey="PAYMENT_CHANNELS"><AdminLayout title="Payment Channels"><AdminPaymentChannels /></AdminLayout></PermissionRoute>} />
                 <Route path="/admin/audit-logs" element={<PermissionRoute pageKey="AUDIT_LOGS"><AdminLayout title="Audit Logs"><AdminAuditLogs /></AdminLayout></PermissionRoute>} />

@@ -163,6 +163,14 @@ export default function PaymentPage() {
             guestDetails: bookingData.guestDetails,
             specialRequests: bookingData.specialRequests,
             couponCode: appliedCoupon?.code,
+            attribution: (() => {
+              try {
+                const raw = sessionStorage.getItem("yes:attribution");
+                return raw ? JSON.parse(raw) : (bookingData.attribution || undefined);
+              } catch {
+                return bookingData.attribution || undefined;
+              }
+            })(),
           }),
         });
         const bookingJson = await bookingRes.json();

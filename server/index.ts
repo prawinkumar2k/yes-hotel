@@ -64,6 +64,7 @@ import walkInRegistrationRoutes from "./src/routes/walk-in-registration.routes";
 import permissionRoutes from "./src/routes/permission.routes";
 import posRoutes from "./src/routes/pos.routes";
 import menuRoutes from "./src/routes/menu.routes";
+import seoRoutes from "./src/routes/seo.routes";
 import { getJwtSecret } from "./src/config/jwt";
 
 
@@ -334,6 +335,7 @@ export function createServer() {
   app.use("/api/permissions", permissionRoutes);
   app.use("/api/pos", posRoutes);
   app.use("/api/menu", menuRoutes);
+  app.use("/api/seo", seoRoutes);
 
 
   // Example API routes

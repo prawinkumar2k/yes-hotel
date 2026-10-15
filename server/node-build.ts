@@ -1,10 +1,12 @@
 import path from "node:path";
+import fs from "node:fs";
 import mongoose from "mongoose";
 import { createServer } from "./index";
 import { attachRealtime } from "./src/realtime/socket";
 import * as express from "express";
 import { logger } from "./src/services/logger.service";
 import { stopJobWorker } from "./src/services/job-queue.service";
+import { injectSeoTagsIntoHtml } from "./src/services/seo-meta-injector.service";
 
 const app = createServer();
 const port = process.env.PORT || 3000;
@@ -26,13 +28,21 @@ app.use(express.static(distPath, { redirect: false }));
 // executes in the actual compiled production entrypoint, which crashed on
 // boot before ever reaching app.listen(). Found via an isolated
 // `pnpm install --prod` + real `node dist/server/node-build.mjs` boot test.
-app.get("/*splat", (req, res) => {
+app.get("/*splat", async (req, res) => {
   // Don't serve index.html for API routes
   if (req.path.startsWith("/api/") || req.path.startsWith("/health")) {
     return res.status(404).json({ error: "API endpoint not found" });
   }
 
-  res.sendFile(path.join(distPath, "index.html"));
+  try {
+    const indexPath = path.join(distPath, "index.html");
+    const rawHtml = await fs.promises.readFile(indexPath, "utf8");
+    const enrichedHtml = await injectSeoTagsIntoHtml(rawHtml, req.path);
+    res.setHeader("Content-Type", "text/html; charset=utf-8");
+    return res.status(200).send(enrichedHtml);
+  } catch {
+    return res.sendFile(path.join(distPath, "index.html"));
+  }
 });
 
 const server = app.listen(port, () => {

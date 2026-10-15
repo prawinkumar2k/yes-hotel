@@ -253,6 +253,18 @@ export interface IBooking extends Document {
     note?: string;
   };
   checkedOutBy?: mongoose.Types.ObjectId;
+
+  // ── SEO & MARKETING ATTRIBUTION ──
+  attribution?: {
+    utmSource?: string;
+    utmMedium?: string;
+    utmCampaign?: string;
+    utmTerm?: string;
+    utmContent?: string;
+    landingPage?: string;
+    referrer?: string;
+    device?: string;
+  };
 }
 
 const BookingSchema = new Schema<IBooking>(
@@ -421,6 +433,22 @@ const BookingSchema = new Schema<IBooking>(
       default: undefined,
     },
     checkedOutBy: { type: Schema.Types.ObjectId, ref: "User" },
+    attribution: {
+      type: new Schema(
+        {
+          utmSource: { type: String, trim: true },
+          utmMedium: { type: String, trim: true },
+          utmCampaign: { type: String, trim: true },
+          utmTerm: { type: String, trim: true },
+          utmContent: { type: String, trim: true },
+          landingPage: { type: String, trim: true, index: true },
+          referrer: { type: String, trim: true },
+          device: { type: String, trim: true },
+        },
+        { _id: false }
+      ),
+      default: undefined,
+    },
   },
   { timestamps: true }
 );

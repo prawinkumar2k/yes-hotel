@@ -29,6 +29,7 @@ import { BookingEvent, BookingEventType } from "../models/BookingEvent";
 import { BookingInventoryDay } from "../models/BookingInventoryDay";
 import { BookingEnquiry, BookingEnquiryStatus } from "../models/BookingEnquiry";
 import { nights as countNights, toBusinessDate, todayBusinessDate, addDays as addBusinessDays } from "../../../shared/dates";
+import { SeoLandingPage } from "../models/SeoLandingPage";
 
 const guestDetailsSchema = z.object({
   firstName: z.string().trim().min(1, "Guest first name is required"),
@@ -58,6 +59,18 @@ const createBookingSchema = z.object({
   guestDetails: guestDetailsSchema,
   specialRequests: z.string().optional(),
   couponCode: z.string().optional(),
+  attribution: z
+    .object({
+      utmSource: z.string().optional(),
+      utmMedium: z.string().optional(),
+      utmCampaign: z.string().optional(),
+      utmTerm: z.string().optional(),
+      utmContent: z.string().optional(),
+      landingPage: z.string().optional(),
+      referrer: z.string().optional(),
+      device: z.string().optional(),
+    })
+    .optional(),
 });
 
 function getIdempotencyKey(req: Request) {
@@ -224,7 +237,7 @@ export const createBooking = async (req: Request, res: Response) => {
       });
     }
 
-    const { roomCategoryId, checkInDate, checkOutDate, adults, children, guestDetails, specialRequests, couponCode } = parsed.data;
+    const { roomCategoryId, checkInDate, checkOutDate, adults, children, guestDetails, specialRequests, couponCode, attribution } = parsed.data;
 
     // Validate dates before claiming an idempotency slot — an invalid request
     // must never leave a stale IN_PROGRESS BookingIdempotency record behind.
@@ -361,6 +374,7 @@ export const createBooking = async (req: Request, res: Response) => {
               discountAmount,
               appliedCoupon,
               specialRequests,
+              attribution: attribution || undefined,
             },
           ],
           { session }
@@ -446,6 +460,26 @@ export const createBooking = async (req: Request, res: Response) => {
       }
     } catch (enqErr: any) {
       logger.warn("booking.enquiry_autoconvert_failed", { error: enqErr?.message });
+    }
+
+    // Attribute completed booking to SEO Landing Page if originated from one
+    if (attribution?.landingPage) {
+      try {
+        const slug = attribution.landingPage.replace(/^\/hotels-near\/?/, "").replace(/^\//, "");
+        if (slug) {
+          await SeoLandingPage.updateOne(
+            { slug },
+            {
+              $inc: {
+                "analytics.completedBookings": 1,
+                "analytics.revenueAttributed": booking.totalAmount || 0,
+              },
+            }
+          );
+        }
+      } catch (seoErr: any) {
+        logger.warn("booking.seo_attribution_update_failed", { error: seoErr?.message });
+      }
     }
 
     await createAuditLog({

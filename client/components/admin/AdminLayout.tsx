@@ -198,6 +198,7 @@ export default function AdminLayout({ children, title, hidePadding }: { children
       title: "MANAGEMENT",
       items: [
         { label: "Reports & Analytics", to: "/admin/reports", icon: BarChart3, pageKey: "REPORTS_LAYOUT" },
+        { label: "Local SEO & Discovery", to: "/admin/seo", icon: Globe, pageKey: "SETTINGS" },
         { label: "Promotions & Offers", to: "/admin/coupons", icon: Tag, pageKey: "COUPONS" },
       ],
     },
