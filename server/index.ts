@@ -203,10 +203,13 @@ export function createServer() {
     // In development the same localhost IP also carries every manual API
     // test/curl call plus several 30-45s polling queries across admin pages,
     // all sharing one 15-minute budget — 300 gets exhausted well within a
-    // normal working session and starts 429ing real traffic. Not a
-    // production concern (one IP per real hotel/office), so only relaxed
-    // outside production.
-    max: Number(process.env.RATE_LIMIT_API_MAX) || (process.env.NODE_ENV === "production" ? 300 : 5000),
+    // normal working session and starts 429ing real traffic.
+    //
+    // The same is true in production: every staff member at the hotel shares
+    // the hotel's one internet connection (one IP), and each staff screen polls
+    // badge counts every 30-60 s. 300 per 15 min locked the whole desk out in
+    // testing, so production allows 3,000 — still far below any flood.
+    max: Number(process.env.RATE_LIMIT_API_MAX) || (process.env.NODE_ENV === "production" ? 3000 : 5000),
     standardHeaders: true,
     legacyHeaders: false,
     message: "Too many requests from this IP, please try again after 15 minutes",
