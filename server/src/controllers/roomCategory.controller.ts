@@ -104,10 +104,19 @@ export const updateCategory = async (req: Request, res: Response) => {
 
 export const deleteCategory = async (req: Request, res: Response) => {
   try {
-    const activeBookings = await Booking.exists({
-      roomCategory: req.params.id,
-      status: { $in: [BookingStatus.PENDING, BookingStatus.CONFIRMED, BookingStatus.CHECKED_IN] }
-    });
+    // A room type that still has rooms can't go: those rooms would have no type and could not be sold.
+    const { Room } = await import("../models/Room");
+    const roomsInType = await Room.countDocuments({ category: req.params.id });
+    if (roomsInType > 0) {
+      return res.status(409).json({
+        success: false,
+        message: `This room type still has ${roomsInType} room${roomsInType === 1 ? "" : "s"}. Move them to another room type (Rooms Management → Edit) first.`,
+      });
+    }
+
+    // Any booking ever made with this type (including past stays) keeps it — deactivate instead of
+    // deleting, so old invoices and reports still show the room type.
+    const activeBookings = await Booking.exists({ roomCategory: req.params.id });
 
     if (activeBookings) {
       // Soft deactivate
@@ -118,12 +127,12 @@ export const deleteCategory = async (req: Request, res: Response) => {
         action: "room_category.deactivated",
         resourceType: "RoomCategory",
         resourceId: req.params.id,
-        metadata: { reason: "has active bookings" },
+        metadata: { reason: "has bookings" },
       });
 
       return res.status(200).json({
         success: true,
-        message: "Category has active bookings. Soft deactivated instead.",
+        message: "This room type has bookings on record, so it was switched off (hidden from booking) instead of deleted.",
         data: category
       });
     }

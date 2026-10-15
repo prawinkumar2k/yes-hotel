@@ -146,7 +146,11 @@ export const deleteRoom = async (req: Request, res: Response) => {
     }
     
     // Are there any bookings referencing this physical room? (Even historical)
-    const bookingsCount = await Booking.countDocuments({ "assignedRooms.roomId": req.params.id });
+    // Bookings and held room-nights that ever used this room (the field is assignedRoom).
+    const { RoomNight } = await import("../models/RoomNight");
+    const bookingsCount =
+      (await Booking.countDocuments({ $or: [{ assignedRoom: req.params.id }, { "assignedRooms.roomId": req.params.id }] })) +
+      (await RoomNight.countDocuments({ room: req.params.id }));
     
     if (bookingsCount > 0) {
       // Deactivate instead
