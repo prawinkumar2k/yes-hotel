@@ -2,8 +2,10 @@ import React, { ReactNode, useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { usePermissions } from "../../context/PermissionContext";
+import { useStaffRealtime } from "@/hooks/useStaffRealtime";
+import { queryClient } from "@/lib/queryClient";
 import {
-  LayoutDashboard, CalendarDays, CalendarClock, BedDouble, Users, CreditCard,
+  LayoutDashboard, CalendarDays, CalendarClock, MessagesSquare, BedDouble, Users, CreditCard,
   BarChart3, Settings, Home, Wrench, LogIn, LogOut, MenuIcon, X,
   Image, HelpCircle, MessageSquare, FileText, Star, Ticket, RotateCcw,
   ScrollText, Moon, DollarSign, Tag, Building2, UtensilsCrossed,
@@ -134,6 +136,24 @@ export default function AdminLayout({ children, title, hidePadding }: { children
   });
   const pendingChangeRequests = changeRequestCounts?.pending || 0;
 
+  // Live chat: unread / waiting counts, refreshed instantly by real-time events on every staff page
+  const canChat = hasPageAccess("ENQUIRIES");
+  const { data: chatCounts } = useQuery({
+    queryKey: ["live-chat-counts"],
+    queryFn: async () => {
+      const token = getStoredAuthToken();
+      const res = await fetch("/api/chat/staff/counts", { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+      const json = await res.json();
+      return json.success ? json.data : null;
+    },
+    enabled: canChat,
+    refetchInterval: 120000,
+  });
+  useStaffRealtime((event) => {
+    if (event.startsWith("chat:")) queryClient.invalidateQueries({ queryKey: ["live-chat-counts"] });
+  }, () => queryClient.invalidateQueries({ queryKey: ["live-chat-counts"] }), canChat);
+  const chatBadge = (chatCounts?.unread || 0) + (chatCounts?.waiting || 0);
+
   const NAV_SECTIONS: NavSection[] = [
     {
       title: "FRONT OFFICE",
@@ -151,6 +171,7 @@ export default function AdminLayout({ children, title, hidePadding }: { children
         { label: "Enquiries", to: "/admin/enquiries", icon: MessageSquare, pageKey: "ENQUIRIES", badge: newEnquiriesCount > 0 ? newEnquiriesCount : undefined },
         { label: "All Reservations", to: "/admin/bookings", icon: CalendarDays, pageKey: "BOOKINGS" },
         { label: "Guest Change Requests", to: "/admin/change-requests", icon: CalendarClock, pageKey: "BOOKINGS", badge: pendingChangeRequests > 0 ? pendingChangeRequests : undefined },
+        { label: "Live Chat", to: "/admin/live-chat", icon: MessagesSquare, pageKey: "ENQUIRIES", badge: chatBadge > 0 ? chatBadge : undefined },
         { label: "OTA Bookings", to: "/admin/ota-bookings", icon: Globe, pageKey: "BOOKINGS" },
       ],
     },

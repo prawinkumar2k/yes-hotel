@@ -34,6 +34,10 @@ function expressPlugin(): Plugin {
 
       // Add Express app as middleware to Vite dev server
       server.middlewares.use(app);
+      // Live chat (Socket.IO) on the dev server too. Imported lazily so the build config stays light.
+      if (server.httpServer) {
+        import("./server/src/realtime/socket").then(({ attachRealtime }) => attachRealtime(server.httpServer as any));
+      }
     },
   };
 }

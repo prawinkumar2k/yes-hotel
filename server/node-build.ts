@@ -1,6 +1,7 @@
 import path from "node:path";
 import mongoose from "mongoose";
 import { createServer } from "./index";
+import { attachRealtime } from "./src/realtime/socket";
 import * as express from "express";
 import { logger } from "./src/services/logger.service";
 import { stopJobWorker } from "./src/services/job-queue.service";
@@ -36,6 +37,8 @@ app.get("/*splat", (req, res) => {
 const server = app.listen(port, () => {
   logger.info("server_started", { port });
 });
+// Live chat and other real-time updates share the same port (path /socket.io).
+attachRealtime(server);
 
 // Real graceful shutdown: stop accepting new connections, let in-flight
 // requests (e.g. a booking transaction, a payment verification) finish,

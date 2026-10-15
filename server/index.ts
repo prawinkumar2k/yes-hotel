@@ -40,6 +40,7 @@ import frontDeskRoutes from "./src/routes/front-desk.routes";
 import advanceRoutes from "./src/routes/advance.routes";
 import verificationRoutes from "./src/routes/verification.routes";
 import { customerRouter, changeRequestRouter } from "./src/routes/customer.routes";
+import chatRoutes from "./src/routes/chat.routes";
 import receptionRoutes from "./src/routes/reception.routes";
 import folioRoutes from "./src/routes/folio.routes";
 import nightAuditRoutes from "./src/routes/night-audit.routes";
@@ -306,6 +307,7 @@ export function createServer() {
   app.use("/api/advances", advanceRoutes);
   app.use("/api/verifications", verificationRoutes);
   app.use("/api/customer", customerRouter);
+  app.use("/api/chat", chatRoutes);
   app.use("/api/change-requests", changeRequestRouter);
   app.use("/api/reception", receptionRoutes);
   app.use("/api/folios", folioRoutes);

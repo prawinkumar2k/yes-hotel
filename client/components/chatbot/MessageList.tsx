@@ -9,7 +9,8 @@ export default function MessageList({ messages, onQuickAction, endRef }: Props) 
     <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto overscroll-contain bg-hotel-ivory/70 px-4 py-4 [webkit-overflow-scrolling:touch]" aria-live="polite">
       {messages.map((message) => (
         <motion.div key={message.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className={message.sender === "user" ? "ml-auto max-w-[86%]" : "max-w-[92%]"}>
-          <div className={message.sender === "user" ? "rounded-2xl rounded-br-sm bg-hotel-black px-3.5 py-2.5 text-sm leading-relaxed text-hotel-white" : "rounded-2xl rounded-bl-sm border border-hotel-black/10 bg-hotel-white px-3.5 py-2.5 text-sm leading-relaxed text-hotel-black"}>
+          {message.sender === "staff" && <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-hotel-gold-text">Front desk</p>}
+          <div className={message.sender === "user" ? "rounded-2xl rounded-br-sm bg-hotel-black px-3.5 py-2.5 text-sm leading-relaxed text-hotel-white" : message.sender === "staff" ? "rounded-2xl rounded-bl-sm border border-hotel-gold/50 bg-amber-50 px-3.5 py-2.5 text-sm leading-relaxed text-hotel-black whitespace-pre-line" : "rounded-2xl rounded-bl-sm border border-hotel-black/10 bg-hotel-white px-3.5 py-2.5 text-sm leading-relaxed text-hotel-black"}>
             {message.kind === "details" ? (() => {
               const [heading, ...rows] = message.text.split("\n");
               return <><p className="mb-3 font-medium">{heading}</p><div className="space-y-2">{rows.slice(0, -1).map((row) => { const separator = row.indexOf(":"); return <p key={row} className="border-b border-hotel-black/8 pb-1.5 last:border-0"><strong className="font-semibold">{row.slice(0, separator)}:</strong>{row.slice(separator + 1)}</p>; })}</div><p className="mt-3 border-t border-hotel-black/10 pt-2 text-xs text-hotel-black/60">{rows[rows.length - 1]}</p></>;

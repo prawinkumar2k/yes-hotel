@@ -12,6 +12,7 @@ import BookingSummary from "./BookingSummary";
 import MessageList from "./MessageList";
 import QuickActions from "./QuickActions";
 import type { BookingState, ChatMessage } from "./types";
+import { useLiveChat } from "./useLiveChat";
 
 type Step = "idle" | "checkin" | "checkout" | "guests" | "checking" | "guestName" | "guestLastName" | "phone" | "email" | "summary" | "submitted";
 type PendingAction = "Check Room Availability" | "Hotel Information" | "Contact YES Hotels" | null;
@@ -27,6 +28,22 @@ export default function ChatWindow({ onMinimize, onClose }: { onMinimize: () => 
   const [submitting, setSubmitting] = useState(false);
   const [lastRooms, setLastRooms] = useState<AvailableRoom[]>([]);
   const [input, setInput] = useState("");
+  // Live connection to Reception / Admin (saved on the server; replies arrive in real time)
+  const live = useLiveChat({
+    onIncoming: (incoming) => setMessages((current) => {
+      const known = new Set(current.map((m) => m.id));
+      const fresh = incoming.filter((m) => !known.has(m.id));
+      if (!fresh.length) return current;
+      // A restored conversation replaces the default welcome line.
+      const base = current.length === 1 && current[0].sender === "assistant" && fresh.length > 1 ? [] : current;
+      return [...base, ...fresh];
+    }),
+  });
+  useEffect(() => { live.sync(messages).catch(() => undefined); }, [messages, live.sync]);
+  useEffect(() => {
+    if (booking.guestName || booking.phone || booking.email) live.setDetails({ name: booking.guestName || undefined, phone: booking.phone || undefined, email: booking.email || undefined });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [booking.guestName, booking.phone, booking.email, live.hasSession]);
   const endRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages, step]);
@@ -68,6 +85,13 @@ export default function ChatWindow({ onMinimize, onClose }: { onMinimize: () => 
   }
 
   function handleAction(action: string) {
+    if (action === "Talk to Reception") {
+      userSays("Talk to Reception");
+      say("I've let our front desk know. A team member will reply right here — you can keep typing your question below.");
+      live.requestStaff().catch(() => say("Sorry, I couldn't reach the front desk. Please call +91 87698 28787."));
+      setStep("idle");
+      return;
+    }
     if (action === "Check Room Availability" || action === "Hotel Information" || action === "Contact YES Hotels") {
       return beginActionWithContact(action);
     }
@@ -258,6 +282,7 @@ export default function ChatWindow({ onMinimize, onClose }: { onMinimize: () => 
   }
 
   function reloadConversation() {
+    live.reset();
     setMessages([newMessage("assistant", "Welcome to YES Hotels. How can I help you today?")]);
     setBooking(initialBooking);
     setPendingAction(null);
@@ -275,7 +300,8 @@ export default function ChatWindow({ onMinimize, onClose }: { onMinimize: () => 
     {step === "checkin" || step === "checkout" || step === "guests" || step === "guestName" || step === "guestLastName" || step === "phone" || step === "email" ? <BookingFlow step={step} booking={booking} onDate={handleDate} onBack={handleDateBack} onGuests={handleGuests} onText={handleGuestText} requireEmail={Boolean(pendingAction)} /> : null}
     {step === "summary" && <BookingSummary booking={booking} onConfirm={confirmEnquiry} submitting={submitting} />}
     {step === "submitted" && <button type="button" onClick={goToPayment} className="m-4 bg-hotel-gold px-4 py-3 text-xs font-semibold uppercase tracking-[0.12em] text-hotel-black">Continue to Booking &amp; Payment</button>}
-    {showQuick && <QuickActions onAction={handleAction} unavailable={booking.availabilityStatus === "unavailable"} />}
-    {step === "idle" && !showQuick && <form className="flex gap-2 border-t border-hotel-black/10 bg-hotel-white p-3" onSubmit={(event) => { event.preventDefault(); if (input.trim()) { userSays(input.trim()); say("Please choose one of the options above so I can help with your stay."); setInput(""); } }}><input value={input} onChange={(event) => setInput(event.target.value)} placeholder="Ask your concierge" className="min-w-0 flex-1 bg-hotel-ivory px-3 py-2 text-sm outline-none" aria-label="Message YES Hotels concierge" /><button type="submit" aria-label="Send message" className="bg-hotel-black p-2 text-hotel-gold hover:bg-hotel-gold hover:text-hotel-black"><ArrowUp size={17} /></button></form>}
+    {live.withStaff && <p className="border-t border-hotel-black/10 bg-amber-50 px-4 py-2 text-[11px] text-hotel-black/70">{live.status === "ASSIGNED" ? "You're chatting with our front desk." : "Waiting for the front desk to reply…"}{!live.connected && " (reconnecting…)"}</p>}
+    {showQuick && !live.withStaff && <QuickActions onAction={handleAction} unavailable={booking.availabilityStatus === "unavailable"} />}
+    {step === "idle" && (!showQuick || live.withStaff) && <form className="flex gap-2 border-t border-hotel-black/10 bg-hotel-white p-3" onSubmit={(event) => { event.preventDefault(); if (input.trim()) { userSays(input.trim()); if (!live.withStaff) say("Please choose one of the options above, or tap \"Talk to Reception\" to chat with our front desk."); setInput(""); } }}><input value={input} onChange={(event) => setInput(event.target.value)} placeholder={live.withStaff ? "Message the front desk" : "Ask your concierge"} className="min-w-0 flex-1 bg-hotel-ivory px-3 py-2 text-sm outline-none" aria-label="Message YES Hotels concierge" /><button type="submit" aria-label="Send message" className="bg-hotel-black p-2 text-hotel-gold hover:bg-hotel-gold hover:text-hotel-black"><ArrowUp size={17} /></button></form>}
   </section>;
 }

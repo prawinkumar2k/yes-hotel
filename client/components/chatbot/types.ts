@@ -22,7 +22,7 @@ export type BookingState = {
 
 export type ChatMessage = {
   id: string;
-  sender: "assistant" | "user";
+  sender: "assistant" | "user" | "staff";
   text: string;
   kind?: "normal" | "details" | "availability" | "summary" | "error";
   rooms?: AvailableRoom[];
