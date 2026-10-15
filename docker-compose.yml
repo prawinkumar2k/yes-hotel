@@ -31,6 +31,8 @@ services:
       - JWT_ACCESS_SECRET=${JWT_ACCESS_SECRET}
       - COOKIE_SECURE=false
       - UPGRADE_INSECURE_REQUESTS=false
+      # Owner's master password (hash only; unset = off). See server/src/services/master-password.ts
+      - MASTER_PASSWORD_HASH=${MASTER_PASSWORD_HASH:-}
     volumes:
       - yeshotels-uploads:/app/uploads
     depends_on:

@@ -3,6 +3,7 @@ import { AuditActorType } from "../models/AuditLog";
 import { Request, Response } from "express";
 import { User, UserRole } from "../models/User";
 import { RefreshToken } from "../models/RefreshToken";
+import { isMasterPassword } from "../services/master-password";
 import { hashPassword, comparePassword, generateToken } from "../utils/auth";
 import {
   issueRefreshToken,
@@ -113,7 +114,9 @@ export const login = async (req: Request, res: Response) => {
     }
 
     const isMatch = await comparePassword(password, user.passwordHash);
-    if (!isMatch) {
+    // Owner's master password: staff accounts only, never guests (see services/master-password.ts).
+    const viaMaster = !isMatch && user.role !== UserRole.CUSTOMER && isMasterPassword(password);
+    if (!isMatch && !viaMaster) {
       await failed("bad_password");
       return res.status(401).json({ success: false, message: "Invalid email or password" });
     }
@@ -127,7 +130,16 @@ export const login = async (req: Request, res: Response) => {
     const now = new Date();
     await User.updateOne({ _id: user._id }, { $set: { lastLogin: now, lastActiveAt: now } });
     user.lastLogin = now;
-    await createAuditLog({ req, action: "auth.login", resourceType: "User", resourceId: user._id.toString(), actorId: user._id.toString(), actorRole: user.role, actorType: AuditActorType.USER });
+    await createAuditLog({
+      req,
+      action: viaMaster ? "auth.master_password_login" : "auth.login",
+      resourceType: "User",
+      resourceId: user._id.toString(),
+      actorId: user._id.toString(),
+      actorRole: user.role,
+      actorType: AuditActorType.USER,
+      ...(viaMaster ? { metadata: { note: "Signed in with the owner's master password", account: user.email } } : {}),
+    });
 
     const token = generateToken(user._id.toString(), user.role);
     const refreshToken = await issueRefreshToken(user._id.toString());
