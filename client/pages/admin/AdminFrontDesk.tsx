@@ -78,7 +78,7 @@ export default function AdminFrontDesk() {
   }>({ open: false, booking: null, folio: null, isGroupFolio: false, allGroupBookings: [] });
   const [newChargeDesc, setNewChargeDesc] = useState("");
   const [newChargeAmount, setNewChargeAmount] = useState("");
-  const [newChargeType, setNewChargeType] = useState("ANCILLARY");
+  const [newChargeType, setNewChargeType] = useState("ADDON");
   const [showAddCharge, setShowAddCharge] = useState(false);
   const [isEditingBill, setIsEditingBill] = useState(false);
   const [editBillForm, setEditBillForm] = useState({
@@ -463,7 +463,7 @@ export default function AdminFrontDesk() {
         body: JSON.stringify({
           description: newChargeDesc,
           amount: parseFloat(newChargeAmount),
-          lineType: newChargeType || "ANCILLARY",
+          lineType: newChargeType || "ADDON",
         }),
       });
       const json = await res.json();
@@ -1988,11 +1988,13 @@ export default function AdminFrontDesk() {
                       onChange={(e) => setNewChargeType(e.target.value)}
                       className="bg-white border border-gray-300 text-xs text-gray-900 rounded-xl p-2.5"
                     >
-                      <option value="ANCILLARY">Ancillary Service</option>
-                      <option value="MINIBAR">Minibar</option>
+                      <option value="ADDON">Other / Add-on</option>
+                      <option value="EARLY_CHECK_IN">Early Check-in</option>
+                      <option value="LATE_CHECK_OUT">Late Check-out</option>
+                      <option value="EXTRA_BED">Extra Bed</option>
+                      <option value="EXTRA_PERSON">Extra Person</option>
                       <option value="LAUNDRY">Laundry</option>
-                      <option value="RESTAURANT">Food & Beverage</option>
-                      <option value="MISCELLANEOUS">Miscellaneous</option>
+                      <option value="RESTAURANT">Food / Breakfast</option>
                     </select>
                     <input
                       type="number"

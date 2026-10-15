@@ -539,9 +539,12 @@ function FolioSection({ bookingId, userToken }: { bookingId: string; userToken?:
                 className="w-full text-xs border rounded p-2 focus:ring-1 focus:ring-indigo-500"
               >
                 <option value="ROOM_CHARGE">ROOM_CHARGE — Nightly Tariff</option>
-                <option value="LAUNDRY">LAUNDRY — Express Laundry Service</option>
-                <option value="MINIBAR">MINIBAR — Minibar Refreshments</option>
-                <option value="ADDON">ADDON — Spa / Activity / Tour</option>
+                <option value="EARLY_CHECK_IN">EARLY_CHECK_IN — Early Check-in</option>
+                <option value="LATE_CHECK_OUT">LATE_CHECK_OUT — Late Check-out</option>
+                <option value="EXTRA_BED">EXTRA_BED — Extra Bed</option>
+                <option value="LAUNDRY">LAUNDRY — Laundry</option>
+                <option value="RESTAURANT">RESTAURANT — Food / Breakfast</option>
+                <option value="ADDON">ADDON — Other / Add-on</option>
                 <option value="DISCOUNT">DISCOUNT — Managerial Discount</option>
               </select>
             </div>

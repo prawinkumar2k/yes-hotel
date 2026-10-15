@@ -64,21 +64,20 @@ async function cleanProductionSeed() {
   let property = await Property.findOne({ code: "YES-BLR" });
   if (!property) {
     property = await Property.create({
-      name: "YES Hotels Bengaluru",
+      name: "YES HOTELS",
       code: "YES-BLR",
-      addressLine1: "42, Residency Road, Shanthala Nagar, Ashok Nagar",
+      addressLine1: "2nd Floor, Building No. 51 / A51, Khata No. 749, Hosur Main Road, Hosa Road Junction, Parappana Agrahara, Begur, Electronic City",
       city: "Bengaluru",
       state: "Karnataka",
       country: "India",
-      pincode: "560025",
-      phone: "+91 80 4567 8900",
-      email: "reservations.blr@yeshotels.com",
+      pincode: "560100",
+      phone: "+91 87698 28787",
       timezone: "Asia/Kolkata",
       currency: "INR",
       totalRooms: 19,
       isActive: true,
       isHeadOffice: true,
-      starRating: 5,
+      starRating: 3,
     });
   }
 
@@ -87,10 +86,9 @@ async function cleanProductionSeed() {
     {},
     {
       hotelName: "YES Hotels Bengaluru",
-      address: "42, Residency Road, Shanthala Nagar, Ashok Nagar, Bengaluru, Karnataka 560025",
-      phone: "+91 80 4567 8900",
-      email: "reservations.blr@yeshotels.com",
-      checkInTime: "14:00",
+      address: "2nd Floor, Building No. 51 / A51, Khata No. 749, Hosur Main Road, Hosa Road Junction, Parappana Agrahara, Begur, Electronic City, Bengaluru, Karnataka 560100",
+      phone: "+91 87698 28787",
+      checkInTime: "12:00",
       checkOutTime: "11:00",
       currency: "INR",
       currencySymbol: "₹",

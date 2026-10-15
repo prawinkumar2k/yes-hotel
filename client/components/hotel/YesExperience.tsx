@@ -7,34 +7,34 @@ const STAGES = [
   {
     n: "01",
     label: "ARRIVE",
-    copy: "Leave the ordinary world behind as bespoke architecture welcomes your stay.",
-    image: "/gallery/hotel-01.jpg",
-    tagline: "ARCHITECTURAL ENTRANCE & CONCIERGE",
+    copy: "A warm welcome at our 24-hour front desk, help with your luggage and quick check-in from 12 noon.",
+    image: "/gallery/hotel-02.jpg",
+    tagline: "24-HOUR FRONT DESK & QUICK CHECK-IN",
     link: "/rooms",
   },
   {
     n: "02",
-    label: "UNWIND",
-    copy: "Let time slow down by private infinity pools overlooking panoramic horizons.",
-    image: "/gallery/hotel-11.jpg",
-    tagline: "SANCTUARY & INFINITY POOLS",
-    link: "/gallery",
+    label: "REST",
+    copy: "Air-conditioned rooms with plush beds, soft lighting, a flat-screen TV and free high-speed Wi-Fi.",
+    image: "/gallery/hotel-24.jpg",
+    tagline: "COMFORTABLE, SPOTLESS ROOMS",
+    link: "/rooms",
   },
   {
     n: "03",
-    label: "INDULGE",
-    copy: "Savor Michelin-inspired gastronomy and artisanal cocktails crafted for memory.",
-    image: "/gallery/hotel-08.jpg",
-    tagline: "FINE DINING & MIXOLOGY",
-    link: "/contact",
+    label: "WORK & UNWIND",
+    copy: "A work desk, tea and coffee in your room, and a quiet corner to read, call home or catch up on work.",
+    image: "/gallery/hotel-81.jpg",
+    tagline: "WORK DESK · TEA / COFFEE · WI-FI",
+    link: "/rooms",
   },
   {
     n: "04",
-    label: "REMEMBER",
-    copy: "Take the transcendent feeling of signature hospitality home with you forever.",
-    image: "/gallery/hotel-13.jpg",
-    tagline: "SUNSET SUITES & VILLA ESCAPES",
-    link: "/about",
+    label: "GET AROUND",
+    copy: "Right at Hosa Road Junction on Hosur Road, beside Hosa Road Metro Station, with free on-site parking.",
+    image: "/gallery/hotel-53.jpg",
+    tagline: "HOSA ROAD JUNCTION · NEAR METRO",
+    link: "/contact",
   },
 ];
 
@@ -65,7 +65,7 @@ export default function YesExperience() {
               <Sparkles size={13} className="text-[#c9a227]" /> THE YES EXPERIENCE
             </div>
             <h2 className="font-serif text-4xl sm:text-6xl text-slate-800 font-normal leading-tight">
-              A Four-Act <span className="text-[#c9a227] italic font-serif">Sanctuary Journey</span>.
+              Your Stay, <span className="text-[#c9a227] italic font-serif">Step by Step</span>.
             </h2>
           </div>
 
@@ -148,7 +148,7 @@ export default function YesExperience() {
                     to={STAGES[activeStage].link}
                     className="inline-flex items-center gap-3 min-h-[44px] px-6 py-3 rounded-full bg-[#c9a227] text-black font-semibold text-xs font-mono uppercase tracking-widest hover:bg-[#b8911f] transition-all shadow-md"
                   >
-                    Experience Act {STAGES[activeStage].n} <ArrowRight size={15} />
+                    Learn More <ArrowRight size={15} />
                   </Link>
                 </div>
               </motion.div>

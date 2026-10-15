@@ -74,7 +74,7 @@ export default function RegisterPage() {
               <span className="font-serif text-2xl font-bold tracking-wider text-slate-900 uppercase block leading-none">
                 YES <span className="text-amber-600">HOTELS</span>
               </span>
-              <span className="text-[10px] tracking-[0.25em] text-amber-700/80 font-medium uppercase">Luxurious Sanctuaries</span>
+              <span className="text-[10px] tracking-[0.25em] text-amber-700/80 font-medium uppercase">Boutique Hotel · Bengaluru</span>
             </div>
           </Link>
         </div>
@@ -95,7 +95,7 @@ export default function RegisterPage() {
             </span>
           </h1>
           <p className="mt-4 text-base text-slate-600 leading-relaxed font-light">
-            Create an account to manage bookings, earn luxury rewards, request room customizations, and enjoy priority concierge service.
+            Create an account to manage your bookings, pay online and request changes to your stay.
           </p>
 
           <div className="mt-8 space-y-3 border-t border-amber-200/60 pt-6">
@@ -142,7 +142,7 @@ export default function RegisterPage() {
             <div className="mb-6 text-center sm:text-left">
               <h2 className="text-2xl sm:text-3xl font-serif font-bold text-slate-900">Create Account</h2>
               <p className="mt-1 text-sm text-slate-500">
-                Join YES HOTELS for an unparalleled luxury experience
+                Join YES HOTELS to manage your stays
               </p>
             </div>
 

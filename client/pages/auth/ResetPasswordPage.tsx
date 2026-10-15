@@ -92,7 +92,7 @@ export default function ResetPasswordPage() {
               <span className="font-serif text-2xl font-bold tracking-wider text-slate-900 uppercase block leading-none">
                 YES <span className="text-amber-600">HOTELS</span>
               </span>
-              <span className="text-[10px] tracking-[0.25em] text-amber-700/80 font-medium uppercase">Luxurious Sanctuaries</span>
+              <span className="text-[10px] tracking-[0.25em] text-amber-700/80 font-medium uppercase">Boutique Hotel · Bengaluru</span>
             </div>
           </Link>
         </div>

@@ -5,6 +5,7 @@ import Navbar from "@/components/hotel/Navbar";
 import { GoldButton } from "@/components/hotel/HotelButtons";
 import { Users, Bed, Wind, CheckCircle2, Wifi, Tv, Coffee } from "lucide-react";
 import { usePageMeta } from "@/hooks/usePageMeta";
+import { HOTEL } from "@shared/hotel-info";
 
 // Code-split: three.js + fiber + drei add real weight to the bundle, and a
 // 3D scene is only relevant on this one page — no reason for every other
@@ -92,17 +93,14 @@ export default function RoomDetailsPage() {
                   </div>
                 }
               >
-                <RoomShowcase3D image={category.images?.[0] || "/gallery/hotel-50.jpg"} />
+                <RoomShowcase3D image={category.images?.[0] || "/gallery/hotel-24.jpg"} />
               </Suspense>
             </div>
 
             <div>
               <h2 className="font-serif text-2xl text-hotel-black mb-6">Amenities</h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {[
-                  "Free High-Speed Wi-Fi", "55-inch Smart TV", "Mini Bar", "Premium Toiletries", 
-                  "In-room Safe", "24/7 Room Service", "Coffee/Tea Maker", "Work Desk"
-                ].map(item => (
+                {(category.amenities?.length ? category.amenities : HOTEL.inRoom).map((item: string) => (
                   <div key={item} className="flex items-center gap-3 text-hotel-black/70">
                     <CheckCircle2 size={16} className="text-hotel-gold" />
                     <span>{item}</span>

@@ -26,15 +26,15 @@ export default function Rooms() {
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-slate-200 pb-8">
           <div className="space-y-3">
             <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#c9a227]/10 border border-[#c9a227]/30 text-[#866A1C] text-xs font-mono font-bold tracking-widest uppercase">
-              <Sparkles size={13} className="text-[#c9a227]" /> CURATED SUITES &amp; VILLAS
+              <Sparkles size={13} className="text-[#c9a227]" /> OUR ROOMS
             </div>
             <h2 className="font-serif text-3xl sm:text-4xl md:text-5xl lg:text-6xl text-slate-800 font-normal leading-tight">
-              Select Your <span className="text-[#c9a227] italic font-serif">Sanctuary</span>.
+              Choose Your <span className="text-[#c9a227] italic font-serif">Room</span>.
             </h2>
           </div>
 
           <p className="max-w-md text-xs sm:text-sm text-slate-500 font-light leading-relaxed">
-            Architectural suites engineered with spatial acoustic isolation, natural linen, and panoramic ocean vistas.
+            Air-conditioned rooms with free Wi-Fi, a work desk, tea / coffee and daily housekeeping.
           </p>
         </div>
 
@@ -47,7 +47,7 @@ export default function Rooms() {
         )}
 
         {error && (
-          <p className="text-red-500 text-sm">Failed to load live suite catalog. Please try again.</p>
+          <p className="text-red-500 text-sm">Could not load rooms. Please try again.</p>
         )}
 
         {/* Alternating Spatial Room Rows */}
@@ -102,7 +102,7 @@ function RoomRow({ room, index }: { room: any; index: number }) {
         </span>
 
         <span className="absolute bottom-6 right-6 flex items-center gap-2 bg-[#c9a227] text-black px-4 py-2 text-xs font-mono font-bold uppercase tracking-widest rounded-xl shadow-lg opacity-0 transition-all duration-300 group-hover:opacity-100 group-hover:translate-y-0 translate-y-2">
-          Inspect Suite <ArrowUpRight size={14} />
+          View Room <ArrowUpRight size={14} />
         </span>
       </Link>
 
@@ -110,7 +110,7 @@ function RoomRow({ room, index }: { room: any; index: number }) {
       <div className="w-full lg:w-[35%] space-y-6">
         <div>
           <span className="font-mono text-xs text-[#866A1C] tracking-[0.3em] uppercase block mb-1">
-            SUITE 0{index + 1}
+            ROOM 0{index + 1}
           </span>
           <h3 className="font-serif text-3xl sm:text-4xl text-slate-800 font-normal">{room.name}</h3>
         </div>

@@ -1,20 +1,16 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { useHotelSettings } from "@/hooks/usePublicData";
+import { HOTEL, hotelAddressOneLine } from "@shared/hotel-info";
 import { Sparkles, ArrowRight, BedDouble } from "lucide-react";
 
-const FALLBACK = {
-  hotelName: "YES HOTELS",
-  description:
-    "A signature luxury hospitality brand crafted for spatial peace, bespoke service, and memories that stay long after checkout.",
-  email: "reservations@yeshotels.com",
-  phone: "+91 98765 43210",
-  address: "Luxury Beach Promenade, Suite 100, Goa 403001",
-};
+const DESCRIPTION =
+  "A contemporary 3-star boutique hotel at Hosa Road Junction, Electronic City — clean, comfortable rooms beside Hosa Road Metro, with a 24-hour front desk.";
 
 export default function Footer() {
   const { data } = useHotelSettings();
-  const settings = data ?? FALLBACK;
+  // Contact details come from the hotel's own facts; an email shows only when one is saved in settings.
+  const email: string | undefined = (data as any)?.email || undefined;
 
   return (
     <footer className="bg-[#0b0b0b] text-white border-t border-[#262930] pt-16 md:pt-20 lg:pt-24 pb-8 md:pb-10 lg:pb-12 relative overflow-hidden">
@@ -52,7 +48,7 @@ export default function Footer() {
               YES <span className="text-[#c9a227] italic font-normal">HOTELS</span>
             </Link>
             <p className="text-gray-400 font-sans font-light text-sm max-w-md leading-relaxed">
-              {settings.description ?? FALLBACK.description}
+              {DESCRIPTION}
             </p>
           </div>
 
@@ -62,26 +58,28 @@ export default function Footer() {
             <ul className="space-y-2 text-gray-300 font-sans text-sm">
               <li><Link to="/" className="hover:text-[#c9a227] transition">Home</Link></li>
               <li><Link to="/about" className="hover:text-[#c9a227] transition">About Us</Link></li>
-              <li><Link to="/rooms" className="hover:text-[#c9a227] transition">Suites & Villas</Link></li>
-              <li><Link to="/gallery" className="hover:text-[#c9a227] transition">Visual Gallery</Link></li>
-              <li><Link to="/contact" className="hover:text-[#c9a227] transition">Contact Concierge</Link></li>
+              <li><Link to="/rooms" className="hover:text-[#c9a227] transition">Rooms</Link></li>
+              <li><Link to="/gallery" className="hover:text-[#c9a227] transition">Gallery</Link></li>
+              <li><Link to="/contact" className="hover:text-[#c9a227] transition">Contact Us</Link></li>
             </ul>
           </div>
 
           {/* Contact Details */}
           <div className="space-y-4">
-            <span className="text-[#c9a227] font-bold uppercase tracking-widest block">Concierge Desk</span>
+            <span className="text-[#c9a227] font-bold uppercase tracking-widest block">Front Desk · 24 Hours</span>
             <ul className="space-y-2 text-gray-300 font-sans text-sm">
-              <li>{settings.email ?? FALLBACK.email}</li>
-              <li>{settings.phone ?? FALLBACK.phone}</li>
-              <li className="text-gray-400 text-xs">{settings.address ?? FALLBACK.address}</li>
+              <li><a href={HOTEL.phoneHref} className="hover:text-[#c9a227] transition">{HOTEL.phones[0]}</a></li>
+              {email && <li><a href={`mailto:${email}`} className="hover:text-[#c9a227] transition">{email}</a></li>}
+              <li><a href={HOTEL.instagramUrl} target="_blank" rel="noreferrer" className="hover:text-[#c9a227] transition">Instagram @{HOTEL.instagram}</a></li>
+              <li className="text-gray-400 text-xs">{hotelAddressOneLine()}</li>
+              <li className="text-gray-400 text-xs">Check-in {HOTEL.checkIn} · Check-out {HOTEL.checkOut}</li>
             </ul>
           </div>
         </div>
 
         {/* Copyright Bar */}
         <div className="border-t border-[#262930] pt-8 flex flex-col sm:flex-row items-center justify-between text-xs font-mono text-gray-500 gap-4">
-          <p>© {new Date().getFullYear()} YES HOTELS LUXURY SUITES. All rights reserved.</p>
+          <p>© {new Date().getFullYear()} YES HOTELS, Bengaluru. All rights reserved.</p>
           <div className="flex gap-6">
             <Link to="/privacy-policy" className="hover:text-gray-300 transition">Privacy Policy</Link>
             <Link to="/terms-and-conditions" className="hover:text-gray-300 transition">Terms of Service</Link>

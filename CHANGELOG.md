@@ -3,6 +3,16 @@
 All changes, fixes, hardened services, and architectural migrations are documented chronologically in this file.
 
 ---
+## [Website and records match the real hotel] - 2026-10-15
+
+- **One source of hotel facts** (`shared/hotel-info.ts`): 3-star boutique hotel at Hosa Road Junction, Hosur Road, Electronic City, Bengaluru 560100; +91 87698 28787; Instagram @yeshotel_blr; check-in 12:00 PM–11:30 PM, check-out 11:00 AM; 24-hour front desk; real in-room and property amenities; Google/MakeMyTrip 4.8, Trip.com 8.5, Booking.com 8.2. No spa, pool, gym, minibar, bar or banquet hall.
+- **Website copy** (hero, our story, YES experience, video slides, rooms, gallery, about, contact, FAQ intro, room details, sign-in pages, page titles/descriptions): beach-resort, infinity-pool, spa, Michelin dining, butler and "5-star luxury" claims replaced with the real hotel; the New York / Goa addresses and fake phone numbers replaced. Each section now uses a real photo or video that matches its text.
+- **About page:** real amenities lists, ratings, address and timings. **Chatbot:** answers with the real facts.
+- **Staff screens:** charge lists offer early check-in, late check-out, extra bed/person, laundry, food/breakfast and other — no minibar or spa. The Front Desk "Add charge" form defaulted to a type the server rejects (`ANCILLARY` / `MISCELLANEOUS`); fixed.
+- **Live database (backup taken):** hotel settings and property (name, address, pincode 560100, phone, 3-star, check-in 12:00; invented email removed); 15 gallery captions now describe the real photos; 8 FAQs rewritten from published facts; 5 invented testimonials hidden (kept); About content; room types given true descriptions, amenities and room photos. Room-type names and prices unchanged — awaiting the real ones.
+- `clean-production-reset.ts` uses the real address, phone, pincode and star rating.
+
+---
 ## [GST 2.5% + 2.5% everywhere] - 2026-10-15
 
 - **Guest services** (laundry, spa, transport, add-ons) are now billed at GST 5% = CGST 2.5% + SGST 2.5%, like rooms, extras and food (they were 18% = 9% + 9%). Room nights above ₹7,500 keep the statutory 18% slab. Rates can be overridden per property in settings (`gstRules`).

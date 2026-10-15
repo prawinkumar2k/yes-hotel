@@ -6,6 +6,7 @@ import { Mail, Phone, MapPin, Loader2, CheckCircle2, Clock3 } from "lucide-react
 import { useToast } from "@/components/ui/use-toast";
 import { usePageMeta } from "@/hooks/usePageMeta";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
+import { HOTEL } from "@shared/hotel-info";
 
 type ContactFormState = {
   name: string;
@@ -15,31 +16,32 @@ type ContactFormState = {
   message: string;
 };
 
+// Real hotel details (shared/hotel-info.ts).
 const contactCards = [
   {
     icon: MapPin,
     title: "Visit Us",
-    lines: ["123 Grand Avenue", "Prestige District", "New York, NY 10001"],
+    lines: [HOTEL.address.line1, HOTEL.address.line2, `${HOTEL.address.area}, ${HOTEL.address.city} ${HOTEL.address.pincode}`, HOTEL.landmark],
   },
   {
     icon: Phone,
     title: "Reservations",
-    lines: ["+1 (800) YES-STAY", "Available 24/7"],
+    lines: [...HOTEL.phones, "Front desk answers 24 hours"],
   },
   {
     icon: Mail,
-    title: "Email",
-    lines: ["hello@yeshotels.com", "events@yeshotels.com"],
+    title: "Online",
+    lines: ["www.yeshotels.in", `Instagram @${HOTEL.instagram}`],
   },
   {
     icon: Clock3,
     title: "Front Desk",
-    lines: ["Open daily", "6:00 AM - 11:00 PM"],
+    lines: ["Open 24 hours", `Check-in ${HOTEL.checkInWindow}`, `Check-out ${HOTEL.checkOut}`],
   },
 ];
 
 export default function ContactPage() {
-  usePageMeta("Contact Us", "Get in touch with YES Hotels for reservations, inquiries, and support.");
+  usePageMeta("Contact Us", "Call +91 87698 28787 or visit YES HOTELS at Hosa Road Junction, Hosur Road, Electronic City, Bengaluru 560100.");
   const reducedMotion = useReducedMotion();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);

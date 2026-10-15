@@ -253,7 +253,7 @@ export default function AdminRoomCategories() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Amenities (Comma separated)</label>
-                <input type="text" placeholder="WiFi, Minibar, Ocean View" value={formData.amenities} onChange={e => setFormData({...formData, amenities: e.target.value})} className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-1 focus:ring-hotel-gold" />
+                <input type="text" placeholder="Free Wi-Fi, AC, Flat-screen TV, Work desk" value={formData.amenities} onChange={e => setFormData({...formData, amenities: e.target.value})} className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-1 focus:ring-hotel-gold" />
               </div>
               <div className="pt-4 flex justify-end gap-3 border-t border-gray-100">
                 <button type="button" onClick={closeModal} className="px-4 py-2 text-gray-600 hover:text-gray-800 font-medium">Cancel</button>

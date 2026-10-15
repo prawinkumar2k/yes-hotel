@@ -51,7 +51,7 @@ function TiltImage({ src, alt, reducedMotion }: { src: string; alt: string; redu
 }
 
 export default function RoomsPage() {
-  usePageMeta("Rooms & Suites", "Explore our thoughtfully designed rooms and suites, each crafted for comfort and effortless luxury.");
+  usePageMeta("Rooms", "Air-conditioned rooms at YES HOTELS, Hosa Road Junction, Bengaluru — free Wi-Fi, work desk, tea/coffee and daily housekeeping.");
   const { data: categories, isLoading } = useQuery({
     queryKey: ["roomCategories"],
     queryFn: async () => {
@@ -73,10 +73,10 @@ export default function RoomsPage() {
         transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
         className="py-20 px-6 text-center"
       >
-        <h1 className="font-serif text-4xl sm:text-5xl md:text-6xl text-hotel-black mb-6">Our Rooms & Suites</h1>
+        <h1 className="font-serif text-4xl sm:text-5xl md:text-6xl text-hotel-black mb-6">Our Rooms</h1>
         <p className="max-w-2xl mx-auto text-hotel-black/60 leading-relaxed">
-          Experience uncompromising luxury in our meticulously designed rooms and suites.
-          Every space is a sanctuary crafted to provide the ultimate in comfort and aesthetic pleasure.
+          Clean, air-conditioned rooms with plush beds, a work desk, flat-screen TV and free high-speed Wi-Fi.
+          Book by the night, by the hour, or for a week or a month — check-in from 12 noon, check-out 11 AM.
         </p>
       </motion.div>
 

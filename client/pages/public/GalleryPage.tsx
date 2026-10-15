@@ -32,7 +32,7 @@ const SPAN_PATTERN = [
 ];
 
 export default function GalleryPage() {
-  usePageMeta("Gallery", "A visual tour of YES Hotels — our rooms, dining, amenities, and exteriors.");
+  usePageMeta("Gallery", "Photos of YES HOTELS, Bengaluru — reception, rooms, bathrooms and the building on Hosur Road.");
   const [activeCategory, setActiveCategory] = useState("");
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const reducedMotion = useReducedMotion();
@@ -61,7 +61,7 @@ export default function GalleryPage() {
         <div className="text-center mb-12">
           <h1 className="font-serif text-4xl sm:text-5xl text-hotel-black mb-6">Gallery</h1>
           <p className="text-hotel-black/60 max-w-2xl mx-auto">
-            A visual journey through the exceptional spaces, amenities, and experiences that define YES Hotels.
+            Our reception, rooms, bathrooms and building at Hosa Road Junction — real photos of YES HOTELS.
           </p>
         </div>
 

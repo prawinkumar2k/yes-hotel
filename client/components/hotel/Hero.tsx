@@ -4,7 +4,7 @@ import { useReducedMotion } from "@/hooks/useReducedMotion";
 import { ArrowDown, Sparkles } from "lucide-react";
 
 const HERO_VIDEO_URL = "/videos/yes-hotel-01.mp4";
-const HERO_POSTER_IMAGE = "/gallery/hotel-53.jpg";
+const HERO_POSTER_IMAGE = "/gallery/hotel-11.jpg";
 
 export default function Hero() {
   const reducedMotion = useReducedMotion();
@@ -29,7 +29,7 @@ export default function Hero() {
       {reducedMotion ? (
         <img
           src={HERO_POSTER_IMAGE}
-          alt="YES HOTELS cinematic pool and lounge"
+          alt="Reception and lobby at YES HOTELS, Hosa Road Junction, Bengaluru"
           className="absolute inset-0 h-full w-full object-cover scale-105 transition-transform duration-1000"
         />
       ) : (
@@ -65,7 +65,7 @@ export default function Hero() {
             }}
           >
             <Sparkles size={13} className="text-[#c9a227]" />
-            A Signature Luxury Hotel OS Experience
+            Boutique Hotel · Hosa Road Junction, Bengaluru
           </div>
 
           {/* Layer 5: Massive Overlapping Editorial Typography */}
@@ -86,7 +86,7 @@ export default function Hero() {
               transform: `translate(${pointer.x * 15}px, ${pointer.y * 15}px)`,
             }}
           >
-            Immerse in bespoke hospitality, spatial architecture, and seamless luxury stay operations.
+            Clean, comfortable rooms on Hosur Road beside Hosa Road Metro — a 24-hour front desk, free Wi-Fi and free parking.
           </p>
         </div>
       </div>
@@ -98,7 +98,7 @@ export default function Hero() {
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-2 text-xs font-mono text-gray-400 pt-2">
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-[#c9a227] animate-ping" />
-            <span>01 / 06 · ARCHITECTURAL LANDING</span>
+            <span>RATED 4.8 / 5 ON GOOGLE &amp; MAKEMYTRIP</span>
           </div>
 
           <a href="#about" className="flex items-center gap-2 min-h-[44px] hover:text-[#c9a227] transition">

@@ -6,43 +6,43 @@ import { Link } from "react-router-dom";
 const SCENES = [
   {
     num: "01",
-    title: "SIGNATURE SUITES",
-    category: "ACCOMMODATIONS",
-    description: "Floor-to-ceiling glass, Italian marble, and ocean views designed for deep rest.",
-    image: "/videos/yes-02.mp4",
+    title: "YOUR ROOM",
+    category: "ROOMS",
+    description: "Plush beds, soft lighting, city-view windows in select rooms and daily housekeeping.",
+    image: "/videos/yes-04.mp4",
     link: "/rooms",
   },
   {
     num: "02",
-    title: "MICHELIN GASTRONOMY",
-    category: "DINING & BARS",
-    description: "Culinary artistry with locally harvested coastal ingredients and rare vintage wines.",
+    title: "EASY ARRIVAL",
+    category: "WELCOME",
+    description: "Our team helps with your luggage and gets you settled quickly, any time of day or night.",
+    image: "/videos/yes-02.mp4",
+    link: "/rooms",
+  },
+  {
+    num: "03",
+    title: "WORK OR STAY LONGER",
+    category: "BUSINESS & LONG STAYS",
+    description: "Free high-speed Wi-Fi and a work desk in every room. Stay by the night, by the hour, or weekly and monthly.",
     image: "/videos/yes-03.mp4",
     link: "/contact",
   },
   {
-    num: "03",
-    title: "INFINITY HORIZONS",
-    category: "POOL & CABANAS",
-    description: "Heated salt-water infinity pools blending seamlessly into the sunset ocean.",
-    image: "/videos/yes-04.mp4",
-    link: "/gallery",
-  },
-  {
     num: "04",
-    title: "HOLISTIC SPA & WELLNESS",
-    category: "RENEWAL",
-    description: "Ayurvedic therapies, steam sanctuaries, and personalized sound bath rituals.",
-    image: "/videos/yes-05.mp4",
-    link: "/about",
+    title: "AT HOSA ROAD JUNCTION",
+    category: "LOCATION",
+    description: "On Hosur Road beside Hosa Road Metro Station, on the Electronic City corridor — with free on-site parking.",
+    image: "/videos/yes-hotel-01.mp4",
+    link: "/contact",
   },
   {
     num: "05",
-    title: "BANQUETS & EVENTS",
-    category: "CELEBRATIONS",
-    description: "Bespoke beachfront weddings and executive summits engineered with precision.",
-    image: "/gallery/hotel-08.jpg",
-    link: "/contact",
+    title: "CLEAN & SAFE",
+    category: "OUR PROMISE",
+    description: "Spotless rooms, CCTV and fire safety on every floor, and a lift to all floors.",
+    image: "/gallery/hotel-50.jpg",
+    link: "/about",
   },
 ];
 
@@ -78,10 +78,10 @@ export default function HorizontalStory() {
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6 border-b border-slate-200 pb-6">
           <div className="space-y-3">
             <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#c9a227]/10 border border-[#c9a227]/30 text-[#866A1C] text-xs font-mono font-bold tracking-widest uppercase">
-              <Sparkles size={13} className="text-[#c9a227]" /> EDITORIAL MAGAZINE COLLECTION
+              <Sparkles size={13} className="text-[#c9a227]" /> INSIDE YES HOTELS
             </div>
             <h2 className="font-serif text-3xl sm:text-5xl text-slate-800 font-normal leading-tight">
-              Curated <span className="text-[#c9a227] italic font-serif">Curations &amp; Spaces</span>.
+              Stays &amp; <span className="text-[#c9a227] italic font-serif">Spaces</span>.
             </h2>
           </div>
 
@@ -173,7 +173,7 @@ export default function HorizontalStory() {
                       to={SCENES[currentIndex].link}
                       className="inline-flex items-center gap-3 px-6 py-3 rounded-full bg-[#c9a227] hover:bg-[#b8911f] text-black font-semibold text-xs font-mono uppercase tracking-widest transition-all duration-300 shadow-xl"
                     >
-                      Explore Collection <ArrowRight size={15} />
+                      Learn More <ArrowRight size={15} />
                     </Link>
                   </div>
                 </div>

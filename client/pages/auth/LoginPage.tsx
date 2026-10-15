@@ -111,12 +111,12 @@ export default function LoginPage() {
               <span className="font-serif text-2xl font-bold tracking-wider text-slate-900 uppercase block leading-none">
                 YES <span className="text-amber-600">HOTELS</span>
               </span>
-              <span className="text-[10px] tracking-[0.25em] text-amber-700/80 font-medium uppercase">Luxurious Sanctuaries</span>
+              <span className="text-[10px] tracking-[0.25em] text-amber-700/80 font-medium uppercase">Boutique Hotel · Bengaluru</span>
             </div>
           </Link>
           <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/80 backdrop-blur border border-amber-200/60 shadow-sm text-xs font-medium text-amber-800">
             <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-500" />
-            <span>5-Star Premium Hospitality</span>
+            <span>Rated 4.8 / 5 on Google</span>
           </div>
         </div>
 
@@ -131,13 +131,13 @@ export default function LoginPage() {
             <Hotel className="w-3.5 h-3.5 text-amber-600" /> Welcome Back
           </div>
           <h1 className="font-serif text-4xl lg:text-5xl font-bold text-slate-900 leading-tight tracking-tight">
-            Elevated stays, <br />
+            Clean stays, <br />
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-600 via-amber-700 to-amber-900">
-              unmatched luxury.
+              easy to reach.
             </span>
           </h1>
           <p className="mt-4 text-base text-slate-600 leading-relaxed font-light">
-            Sign in to access your reservation itinerary, room service requests, concierge preferences, and staff operations management.
+            Sign in to see your bookings, pay your balance, request changes and manage your stay.
           </p>
 
           <div className="mt-10 grid grid-cols-2 gap-4 border-t border-amber-200/60 pt-8">
@@ -147,7 +147,7 @@ export default function LoginPage() {
               </div>
               <div>
                 <p className="text-xs font-bold text-slate-900">Instant Check-in</p>
-                <p className="text-xs text-slate-500">Contactless digital key access</p>
+                <p className="text-xs text-slate-500">From 12 noon, 24-hour front desk</p>
               </div>
             </div>
             <div className="flex items-start gap-3">
@@ -156,7 +156,7 @@ export default function LoginPage() {
               </div>
               <div>
                 <p className="text-xs font-bold text-slate-900">Unified Portal</p>
-                <p className="text-xs text-slate-500">Guests & staff operations sync</p>
+                <p className="text-xs text-slate-500">Bookings, bills and requests in one place</p>
               </div>
             </div>
           </div>

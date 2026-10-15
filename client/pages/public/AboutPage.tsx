@@ -3,20 +3,19 @@ import { GoldButton } from "@/components/hotel/HotelButtons";
 import { Link } from "react-router-dom";
 import { useContent } from "@/hooks/usePublicData";
 import { usePageMeta } from "@/hooks/usePageMeta";
+import { HOTEL, hotelAddressOneLine } from "@shared/hotel-info";
+import { Check, Star, MapPin, Clock } from "lucide-react";
 
 const FALLBACK = {
   title: "Our Story",
-  subtitle: "Redefining luxury hospitality since 2010.",
+  subtitle: "A contemporary boutique hotel at Hosa Road Junction, Bengaluru",
   description:
-    "At YES Hotels, we believe that true luxury lies in the details. From the moment you step into our grand lobby, you are enveloped in an atmosphere of refined elegance and warm hospitality. Our spaces are crafted with a meticulous attention to design, blending contemporary aesthetics with timeless comfort.\n\nOur mission is to create moments that linger long after checkout. Whether you are here for business, leisure, or a special celebration, our dedicated team is committed to ensuring every aspect of your stay is flawless. We don't just provide rooms; we curate experiences.",
-  images: [
-    "/gallery/hotel-54.jpg",
-    "/gallery/hotel-55.jpg",
-  ],
+    "YES HOTELS is a contemporary 3-star boutique hotel on Hosur Road, right at Hosa Road Junction in the Begur / Electronic City corridor. We built it for travellers who want a spotless, comfortable room, a team that genuinely helps, and a fair price.\n\nOur rooms are air-conditioned, with plush beds, a work desk, a flat-screen TV, tea and coffee, and free high-speed Wi-Fi. Our front desk is open 24 hours, parking is free, and Hosa Road Metro Station is a short walk away. Whether you are here for work, family or a quick overnight stop, we make your stay easy.",
+  images: ["/gallery/hotel-11.jpg", "/gallery/hotel-24.jpg"],
 };
 
 export default function AboutPage() {
-  usePageMeta("About Us", "Discover the story behind YES Hotels and our commitment to refined, warm hospitality.");
+  usePageMeta("About Us", "YES HOTELS — a contemporary boutique hotel at Hosa Road Junction, Electronic City, Bengaluru. Clean rooms, 24-hour front desk, free Wi-Fi and parking.");
   const { data } = useContent("about");
   const content = data ?? FALLBACK;
   const [heroImage, lobbyImage] = content.images?.length ? content.images : FALLBACK.images;
@@ -29,7 +28,7 @@ export default function AboutPage() {
       {/* Hero */}
       <div className="relative h-[60vh] flex items-center justify-center">
         <div className="absolute inset-0">
-          <img src={heroImage} alt="Hotel exterior" className="w-full h-full object-cover" />
+          <img src={heroImage} alt="Reception and lobby at YES HOTELS" className="w-full h-full object-cover" />
           <div className="absolute inset-0 bg-hotel-black/40" />
         </div>
         <div className="relative z-10 text-center px-6">
@@ -42,7 +41,7 @@ export default function AboutPage() {
 
       <div className="max-w-4xl mx-auto px-6 py-24 text-center">
         <h2 className="font-serif text-3xl md:text-4xl text-hotel-black mb-8 leading-tight">
-          {content.metadata?.tagline ?? "A sanctuary of elegance designed for the modern traveler."}
+          {content.metadata?.tagline ?? "Clean, comfortable and easy to reach."}
         </h2>
         {paragraphs.map((p: string, i: number) => (
           <p key={i} className="text-hotel-black/60 leading-relaxed mb-6 text-lg">
@@ -50,11 +49,42 @@ export default function AboutPage() {
           </p>
         ))}
         {lobbyImage && (
-          <img src={lobbyImage} alt="Lobby" className="w-full h-[220px] sm:h-[300px] md:h-[400px] object-cover mb-12 mt-6" />
+          <img src={lobbyImage} alt="Guest room at YES HOTELS" className="w-full h-[220px] sm:h-[300px] md:h-[400px] object-cover mb-12 mt-6" />
         )}
 
+        {/* What guests say */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-14">
+          {HOTEL.ratings.map((r) => (
+            <div key={r.source} className="bg-hotel-white border border-hotel-black/10 p-4">
+              <div className="flex items-center justify-center gap-1 text-hotel-gold"><Star size={14} fill="currentColor" /><span className="font-serif text-xl text-hotel-black">{r.score}</span></div>
+              <p className="text-xs uppercase tracking-widest text-hotel-black/50 mt-1">{r.source}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* What we offer — only what the hotel has */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 text-left mb-14">
+          <div>
+            <h3 className="font-serif text-2xl text-hotel-black mb-4">In every room</h3>
+            <ul className="space-y-2">
+              {HOTEL.inRoom.map((a) => <li key={a} className="flex gap-2 text-hotel-black/70"><Check size={16} className="text-hotel-gold mt-1 shrink-0" />{a}</li>)}
+            </ul>
+          </div>
+          <div>
+            <h3 className="font-serif text-2xl text-hotel-black mb-4">At the hotel</h3>
+            <ul className="space-y-2">
+              {HOTEL.property.map((a) => <li key={a} className="flex gap-2 text-hotel-black/70"><Check size={16} className="text-hotel-gold mt-1 shrink-0" />{a}</li>)}
+            </ul>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-left mb-14 text-hotel-black/70">
+          <p className="flex gap-2"><MapPin size={18} className="text-hotel-gold shrink-0 mt-0.5" /><span>{hotelAddressOneLine()}<br /><span className="text-sm text-hotel-black/50">{HOTEL.landmark}</span></span></p>
+          <p className="flex gap-2"><Clock size={18} className="text-hotel-gold shrink-0 mt-0.5" /><span>Check-in {HOTEL.checkInWindow}<br />Check-out {HOTEL.checkOut} · {HOTEL.frontDesk}</span></p>
+        </div>
+
         <Link to="/search" className="block sm:inline-block">
-          <GoldButton className="w-full px-6 py-3 text-base sm:w-auto sm:px-10 sm:py-4 sm:text-lg">Experience YES Hotels</GoldButton>
+          <GoldButton className="w-full px-6 py-3 text-base sm:w-auto sm:px-10 sm:py-4 sm:text-lg">Book Your Stay</GoldButton>
         </Link>
       </div>
     </div>

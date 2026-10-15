@@ -25,7 +25,7 @@ export default function FAQPage() {
           Frequently Asked Questions
         </motion.h1>
         <p className="text-center text-hotel-black/60 mb-16 max-w-2xl mx-auto">
-          Find answers to common questions about our services, policies, and amenities.
+          Check-in from 12 noon, check-out at 11 AM, 24-hour front desk. For anything else, call +91 87698 28787.
         </p>
 
         {isLoading && (

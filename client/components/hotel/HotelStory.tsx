@@ -13,7 +13,7 @@ export default function HotelStory() {
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-slate-200 pb-8">
           <div className="space-y-3">
             <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#c9a227]/10 border border-[#c9a227]/30 text-[#866A1C] text-xs font-mono font-bold tracking-widest uppercase">
-              <Sparkles size={13} className="text-[#c9a227]" /> EDITORIAL ARCHITECTURE &amp; PHILOSOPHY
+              <Sparkles size={13} className="text-[#c9a227]" /> OUR STORY
             </div>
             <h2 className="font-serif text-4xl sm:text-6xl text-slate-800 font-normal leading-tight">
               A Place to <span className="text-[#c9a227] italic font-serif">Pause</span> &amp; <span className="font-bold">Reconnect</span>.
@@ -21,7 +21,7 @@ export default function HotelStory() {
           </div>
 
           <p className="max-w-md text-xs sm:text-sm text-slate-500 font-light leading-relaxed">
-            YES HOTELS is designed as a sanctuary where time moves at your pace. Every line of marble, light axis, and custom amenity is tailored for your calm.
+            YES HOTELS is a contemporary boutique hotel at Hosa Road Junction, Electronic City — spotless rooms, a warm team on hand round the clock, and fair prices.
           </p>
         </div>
 
@@ -31,8 +31,8 @@ export default function HotelStory() {
           <div className="lg:col-span-7 relative group">
             <div className="relative rounded-3xl overflow-hidden border border-slate-200 shadow-xl aspect-[16/10]">
               <img
-                src="/gallery/hotel-51.jpg"
-                alt="YES HOTELS Architectural Pool at Dusk"
+                src="/gallery/hotel-11.jpg"
+                alt="Reception and lobby lounge at YES HOTELS"
                 className="w-full h-full object-cover filter brightness-95 group-hover:scale-105 transition-transform duration-700"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent" />
@@ -41,8 +41,8 @@ export default function HotelStory() {
             {/* Overlapping Circular Crop Detail Card */}
             <div className="absolute -bottom-8 -right-4 sm:-right-8 w-44 sm:w-56 h-44 sm:h-56 rounded-full border-4 border-white shadow-2xl overflow-hidden hidden sm:block group-hover:scale-110 transition-transform duration-500">
               <img
-                src="/gallery/hotel-52.jpg"
-                alt="Luxury Suite Balcony Detail"
+                src="/gallery/hotel-23.jpg"
+                alt="Guest room bed with YES HOTELS cushions"
                 className="w-full h-full object-cover"
               />
             </div>
@@ -55,21 +55,21 @@ export default function HotelStory() {
             </span>
 
             <h3 className="font-serif text-3xl sm:text-4xl text-slate-800 font-normal leading-tight">
-              Spaces Built Around <span className="italic text-[#c9a227]">Natural Light</span> &amp; Serenity.
+              Comfort, Cleanliness &amp; a <span className="italic text-[#c9a227]">Warm Welcome</span>.
             </h3>
 
             <p className="text-xs sm:text-sm text-slate-500 font-light leading-relaxed">
-              From open floor plans that seamlessly transition into coastal gardens to floor-to-ceiling glass suites, our environments foster a deep feeling of openness.
+              Guests rate us 4.8 on Google and MakeMyTrip for clean rooms, helpful staff and a quiet stay — right beside Hosa Road Metro Station on Hosur Road.
             </p>
 
             <div className="pt-4 grid grid-cols-2 gap-4 border-t border-slate-200 font-mono text-xs">
               <div>
-                <span className="text-[#c9a227] font-bold block text-lg">100%</span>
-                <span className="text-slate-500">Custom Architectural Design</span>
+                <span className="text-[#c9a227] font-bold block text-lg">4.8 / 5</span>
+                <span className="text-slate-500">Google &amp; MakeMyTrip rating</span>
               </div>
               <div>
                 <span className="text-[#c9a227] font-bold block text-lg">24 / 7</span>
-                <span className="text-slate-500">Concierge &amp; Butler Service</span>
+                <span className="text-slate-500">Front desk &amp; guest assistance</span>
               </div>
             </div>
 

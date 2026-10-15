@@ -47,12 +47,12 @@ export default function Gallery() {
               <Sparkles size={13} className="text-[#c9a227]" /> VISUAL ARCHIVE &amp; ATMOSPHERE
             </div>
             <h2 className="font-serif text-3xl sm:text-4xl md:text-5xl lg:text-6xl text-slate-800 font-normal leading-tight">
-              A Glimpse of <span className="text-[#c9a227] italic font-serif">Your Sanctuary</span>.
+              Inside <span className="text-[#c9a227] italic font-serif">YES HOTELS</span>.
             </h2>
           </div>
 
           <p className="max-w-md text-xs sm:text-sm text-slate-500 font-light leading-relaxed">
-            Moments captured across our coastal suites, private infinity pools, and Michelin-inspired dining salons.
+            Our reception, rooms and guest stays at Hosa Road Junction, Bengaluru.
           </p>
         </div>
 

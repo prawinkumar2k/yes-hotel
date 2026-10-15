@@ -148,11 +148,11 @@ export default function BookingBar() {
         )}
       </Field>
 
-      <Field icon={<BedDouble size={18} />} label="Room Suite" divider={false}>
+      <Field icon={<BedDouble size={18} />} label="Room Type" divider={false}>
         <div className="relative">
           <select
             value={room}
-            aria-label="Room suite"
+            aria-label="Room type"
             onChange={(e) => setRoom(e.target.value)}
             className="w-full cursor-pointer appearance-none bg-transparent text-xs font-mono font-bold text-white outline-none"
           >
