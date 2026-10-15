@@ -29,7 +29,8 @@ app.use(express.static(distPath, { index: false, redirect: false }));
 // executes in the actual compiled production entrypoint, which crashed on
 // boot before ever reaching app.listen(). Found via an isolated
 // `pnpm install --prod` + real `node dist/server/node-build.mjs` boot test.
-app.get("/*splat", async (req, res) => {
+// "/*splat" needs at least one path segment, so "/" (the home page) is listed separately.
+app.get(["/", "/*splat"], async (req, res) => {
   // Don't serve index.html for API routes
   if (req.path.startsWith("/api/") || req.path.startsWith("/health")) {
     return res.status(404).json({ error: "API endpoint not found" });
