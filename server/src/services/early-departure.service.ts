@@ -39,9 +39,15 @@ export async function applyEarlyDeparture(bookingId: string, opts: { req?: any; 
 
   const unused = new Set(nightsBetween(newOut, bookedOut));
   const lines: any[] = await FolioLine.find({ folio: folio._id }).lean();
+  const reversals = lines.filter((l) => l.lineType === FolioLineType.REVERSAL);
   // Nights already credited by an earlier early-departure adjustment.
-  const credited = new Set(lines.filter((l) => l.lineType === FolioLineType.REVERSAL && l.coversNights?.length).flatMap((l) => l.coversNights));
-  const fullyVoided = new Set(lines.filter((l) => l.lineType === FolioLineType.REVERSAL && !l.coversNights?.length && l.reversedLineId).map((l) => String(l.reversedLineId)));
+  const credited = new Set(reversals.filter((l) => l.coversNights?.length && String(l.description).startsWith("Early departure")).flatMap((l) => l.coversNights));
+  const fullyVoided = new Set(reversals.filter((l) => !l.coversNights?.length && l.reversedLineId).map((l) => String(l.reversedLineId)));
+  // Part-credits of a line for given nights (e.g. a room move to a cheaper room), per night.
+  const reductionFor = (lineId: string, night: string) =>
+    reversals
+      .filter((r) => String(r.reversedLineId) === lineId && r.coversNights?.includes(night) && !String(r.description).startsWith("Early departure"))
+      .reduce((t, r) => t + r.amount / r.coversNights.length, 0);
   const rate = Number(booking.ratePerNight) || 0;
 
   const credits: { line: any; nights: string[]; amount: number; perNight: number }[] = [];
@@ -55,7 +61,8 @@ export async function applyEarlyDeparture(bookingId: string, opts: { req?: any; 
     }
     const perNight = l.amount / covers.length;
     const nights = covers.filter((d) => unused.has(d) && !credited.has(d));
-    if (nights.length) credits.push({ line: l, nights, perNight, amount: r2(perNight * nights.length) });
+    const amount = r2(nights.reduce((t, d) => t + Math.max(0, perNight - reductionFor(String(l._id), d)), 0));
+    if (nights.length && amount > 0) credits.push({ line: l, nights, perNight, amount });
   }
 
   const roomCredit = r2(credits.reduce((t, c) => t + c.amount, 0));

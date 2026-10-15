@@ -60,6 +60,9 @@ export default function AdminFrontDesk() {
   
   const [roomMoveModal, setRoomMoveModal] = useState<{ open: boolean; booking: any | null }>({ open: false, booking: null });
   const [moveReason, setMoveReason] = useState("");
+  // Room move: keep the agreed rate, or switch to the new room's rate (bill adjusted for nights already charged)
+  const [moveRateMode, setMoveRateMode] = useState<"KEEP" | "NEW">("KEEP");
+  const [moveNewRate, setMoveNewRate] = useState("");
   
   const [extendModal, setExtendModal] = useState<{ open: boolean; booking: any | null }>({ open: false, booking: null });
   const [newCheckOutDate, setNewCheckOutDate] = useState("");
@@ -244,20 +247,24 @@ export default function AdminFrontDesk() {
     setSubmittingAction(true);
     try {
       const token = getStoredAuthToken();
-      const res = await fetch(`/api/room-rack/${selectedRoomId}/assign-booking`, {
+      const res = await fetch(`/api/front-desk/bookings/${roomMoveModal.booking._id}/move-room`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         body: JSON.stringify({
-          bookingId: roomMoveModal.booking._id,
+          roomId: selectedRoomId,
+          rateMode: moveRateMode,
+          newRatePerNight: moveRateMode === "NEW" && moveNewRate ? Number(moveNewRate) : undefined,
           reason: moveReason || "Guest Request / Room Upgrade",
         }),
       });
       const json = await res.json();
       if (json.success) {
-        toast({ title: "Room Move Complete", description: `Reassigned to new room.` });
+        toast({ title: "Room Move Complete", description: json.message });
+        setMoveRateMode("KEEP");
+        setMoveNewRate("");
         setRoomMoveModal({ open: false, booking: null });
         queryClient.invalidateQueries();
       } else {
@@ -1556,6 +1563,19 @@ export default function AdminFrontDesk() {
                   </option>
                 ))}
               </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 mb-1">Room Rate</label>
+              <div className="grid grid-cols-2 gap-2">
+                {([["KEEP", `Keep ₹${Number(roomMoveModal.booking.ratePerNight || 0).toLocaleString("en-IN")}/night`], ["NEW", "Use new room's rate"]] as const).map(([v, label]) => (
+                  <button key={v} type="button" onClick={() => setMoveRateMode(v)} className={`min-h-[40px] rounded-xl border text-xs font-bold ${moveRateMode === v ? "bg-amber-100 border-amber-400 text-amber-900" : "bg-white border-gray-200 text-gray-600"}`}>{label}</button>
+                ))}
+              </div>
+              {moveRateMode === "NEW" && (
+                <input type="number" min="1" placeholder={`New rate per night (default ₹${Number(availableRooms.find((r: any) => r._id === selectedRoomId)?.category?.basePrice || 0).toLocaleString("en-IN")})`} value={moveNewRate} onChange={(e) => setMoveNewRate(e.target.value)} className="mt-2 w-full bg-gray-100 border border-gray-200 text-sm text-gray-800 rounded-xl p-2.5" />
+              )}
+              <p className="mt-1 text-[11px] text-gray-500">The old room goes to housekeeping. With a new rate, nights already charged are adjusted on the bill (with GST); later nights are charged at the new rate.</p>
             </div>
 
             <div>
