@@ -3,9 +3,10 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { usePermissions } from "../../context/PermissionContext";
 import { useStaffRealtime } from "@/hooks/useStaffRealtime";
+import ChangePasswordDialog from "./ChangePasswordDialog";
 import { queryClient } from "@/lib/queryClient";
 import {
-  LayoutDashboard, CalendarDays, CalendarClock, MessagesSquare, BedDouble, Users, CreditCard,
+  LayoutDashboard, CalendarDays, CalendarClock, MessagesSquare, KeyRound, BedDouble, Users, CreditCard,
   BarChart3, Settings, Home, Wrench, LogIn, LogOut, MenuIcon, X,
   Image, HelpCircle, MessageSquare, FileText, Star, Ticket, RotateCcw,
   ScrollText, Moon, DollarSign, Tag, Building2, UtensilsCrossed,
@@ -47,6 +48,7 @@ export default function AdminLayout({ children, title, hidePadding }: { children
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [notificationOpen, setNotificationOpen] = useState(false);
   const [quickActionOpen, setQuickActionOpen] = useState(false);
+  const [passwordOpen, setPasswordOpen] = useState(false);
 
   // Expanded sections state (default all open)
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({
@@ -355,6 +357,15 @@ export default function AdminLayout({ children, title, hidePadding }: { children
               </div>
             )}
           </div>
+          <div className="flex items-center gap-1 shrink-0">
+          <button
+            onClick={() => setPasswordOpen(true)}
+            title="Change password"
+            aria-label="Change password"
+            className="min-h-[36px] min-w-[36px] p-1.5 text-slate-500 hover:text-amber-700 hover:bg-amber-50 rounded transition"
+          >
+            <KeyRound size={15} className="mx-auto" />
+          </button>
           <button
             onClick={() => {
               logout();
@@ -365,8 +376,10 @@ export default function AdminLayout({ children, title, hidePadding }: { children
           >
             <LogOut size={15} />
           </button>
+          </div>
         </div>
       </aside>
+      <ChangePasswordDialog open={passwordOpen} onClose={() => setPasswordOpen(false)} />
 
       {/* Mobile Drawer Overlay */}
       {sidebarOpen && (
