@@ -105,9 +105,10 @@ const HotelSettingsSchema = new Schema<IHotelSettings>(
     tagline: { type: String },
     description: { type: String },
 
-    phone: { type: String, required: true, default: "+91 9876543210" },
-    email: { type: String, required: true, default: "contact@yeshotels.com" },
-    address: { type: String, required: true, default: "123 Hotel Avenue, City" },
+    phone: { type: String, required: true, default: "+91 87698 28787" },
+    // Optional: shown on the website only when the hotel saves a real address.
+    email: { type: String, default: "" },
+    address: { type: String, required: true, default: "2nd Floor, Building No. 51 / A51, Khata No. 749, Hosur Main Road, Hosa Road Junction, Parappana Agrahara, Begur, Electronic City, Bengaluru, Karnataka 560100" },
     googleMapsUrl: { type: String },
     whatsappNumber: { type: String },
 
