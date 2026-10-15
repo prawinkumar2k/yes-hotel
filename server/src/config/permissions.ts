@@ -265,9 +265,20 @@ grant(base, [UserRole.RECEPTIONIST, UserRole.SUPERVISOR, UserRole.MANAGER], "CAP
 
 export const DEFAULT_ROLE_PERMISSIONS: Record<RoleKey, PermissionMap> = base;
 
-/** All page keys that appear in the map (full-access roles receive each of them). */
+/**
+ * Pages no ordinary role is granted — full-access roles (Admin) only. They must still be listed,
+ * or Admin's effective permissions would leave them out and the screens would say "Access
+ * Denied" (the server already allows full-access roles). Website content, reviews, audit log,
+ * roles and permissions, multi-property, pricing rules, complaints, contact messages.
+ */
+const FULL_ACCESS_ONLY_PAGE_KEYS = [
+  "AUDIT_LOGS", "COMPLAINTS", "CONTACT_MESSAGES", "CONTENT_MANAGEMENT", "DASHBOARD.COMMAND_CENTER",
+  "FOLIOS", "MULTI_PROPERTY", "PERMISSIONS", "PRICING", "REVIEWS", "ROLES",
+];
+
+/** All page keys (full-access roles receive each of them). */
 export const ALL_PAGE_KEYS: string[] = [
-  ...new Set(Object.values(DEFAULT_ROLE_PERMISSIONS).flatMap((p) => Object.keys(p))),
+  ...new Set([...Object.values(DEFAULT_ROLE_PERMISSIONS).flatMap((p) => Object.keys(p)), ...FULL_ACCESS_ONLY_PAGE_KEYS]),
 ];
 
 export function isFullAccessRole(role: string | undefined): boolean {

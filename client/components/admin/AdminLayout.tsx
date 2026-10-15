@@ -25,6 +25,8 @@ interface NavItem {
   icon: any;
   pageKey: string;
   badge?: string | number;
+  /** Manager screens a role should not be sent to from the menu (its own screen covers the job). */
+  hideForRoles?: string[];
 }
 
 interface NavSection {
@@ -178,9 +180,10 @@ export default function AdminLayout({ children, title, hidePadding }: { children
     {
       title: "HOUSEKEEPING & MAINTENANCE",
       items: [
-        { label: "Housekeeping", to: "/admin/housekeeping", icon: Sparkles, pageKey: "HOUSEKEEPING", badge: dirtyCount > 0 ? dirtyCount : undefined },
+        { label: "My Rooms to Clean", to: "/housekeeping/dashboard", icon: Sparkles, pageKey: "DASHBOARD.HOUSEKEEPING", hideForRoles: ["ADMIN", "SUPER_ADMIN", "MANAGER", "RECEPTIONIST"] },
+        { label: "Housekeeping", to: "/admin/housekeeping", icon: Sparkles, pageKey: "HOUSEKEEPING", badge: dirtyCount > 0 ? dirtyCount : undefined, hideForRoles: ["HOUSEKEEPING"] },
         { label: "Maintenance", to: "/admin/maintenance", icon: Wrench, pageKey: "MAINTENANCE" },
-        { label: "Rooms Management", to: "/admin/rooms", icon: BedDouble, pageKey: "ROOMS" },
+        { label: "Rooms Management", to: "/admin/rooms", icon: BedDouble, pageKey: "ROOMS", hideForRoles: ["HOUSEKEEPING"] },
       ],
     },
     {
@@ -212,7 +215,7 @@ export default function AdminLayout({ children, title, hidePadding }: { children
   // Filter sections and items based on effective permissions
   const filteredSections = NAV_SECTIONS.map((section) => ({
     ...section,
-    items: section.items.filter((item) => hasPageAccess(item.pageKey)),
+    items: section.items.filter((item) => hasPageAccess(item.pageKey) && !item.hideForRoles?.includes(user?.role ?? "")),
   })).filter((section) => section.items.length > 0);
 
   const totalBadgeCount = (arrivalsCount > 0 ? 1 : 0) + (departuresCount > 0 ? 1 : 0) + (dirtyCount > 0 ? 1 : 0);
@@ -477,41 +480,30 @@ export default function AdminLayout({ children, title, hidePadding }: { children
 
       {/* ── Mobile Bottom Navigation Bar (phones & tablets only) ── */}
       <nav className="mobile-bottom-nav items-center justify-around px-2 py-1 safe-area-pb print:hidden">
-        <Link
-          to="/admin/dashboard"
-          onClick={() => setSidebarOpen(false)}
-          className={`flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl text-[10px] font-bold transition ${location.pathname === "/admin/dashboard" ? "text-amber-700 bg-amber-50" : "text-slate-600"}`}
-        >
-          <LayoutDashboard size={20} />
-          <span>Dashboard</span>
-        </Link>
-        <Link
-          to="/admin/front-desk"
-          onClick={() => setSidebarOpen(false)}
-          className={`flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl text-[10px] font-bold transition ${location.pathname === "/admin/front-desk" ? "text-amber-700 bg-amber-50" : "text-slate-600"}`}
-        >
-          <Home size={20} />
-          <span>Front Desk</span>
-        </Link>
-        <Link
-          to="/admin/room-rack"
-          onClick={() => setSidebarOpen(false)}
-          className={`flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl text-[10px] font-bold transition ${location.pathname === "/admin/room-rack" ? "text-amber-700 bg-amber-50" : "text-slate-600"}`}
-        >
-          <BedDouble size={20} />
-          <span>Rooms</span>
-        </Link>
-        <Link
-          to="/admin/housekeeping"
-          onClick={() => setSidebarOpen(false)}
-          className={`flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl text-[10px] font-bold transition ${location.pathname === "/admin/housekeeping" ? "text-amber-700 bg-amber-50" : "text-slate-600"}`}
-        >
-          <Sparkles size={20} />
-          <span>Cleaning</span>
-        </Link>
+        {[
+          { to: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard, pageKey: "DASHBOARD.ADMIN" },
+          { to: "/housekeeping/dashboard", label: "My Rooms", icon: Sparkles, pageKey: "DASHBOARD.HOUSEKEEPING", only: ["HOUSEKEEPING"] },
+          { to: "/admin/front-desk", label: "Front Desk", icon: Home, pageKey: "FRONT_DESK" },
+          { to: "/admin/live-chat", label: "Chat", icon: MessagesSquare, pageKey: "ENQUIRIES" },
+          { to: "/admin/room-rack", label: "Rooms", icon: BedDouble, pageKey: "ROOM_RACK" },
+          { to: "/admin/housekeeping", label: "Cleaning", icon: Sparkles, pageKey: "HOUSEKEEPING", hide: ["HOUSEKEEPING"] },
+        ]
+          .filter((i: any) => hasPageAccess(i.pageKey) && (!i.only || i.only.includes(user?.role)) && !(i.hide ?? []).includes(user?.role))
+          .slice(0, 4)
+          .map(({ to, label, icon: Icon }) => (
+            <Link
+              key={to}
+              to={to}
+              onClick={() => setSidebarOpen(false)}
+              className={`flex min-h-[44px] flex-col items-center gap-0.5 px-3 py-2 rounded-xl text-[10px] font-bold transition ${location.pathname === to ? "text-amber-700 bg-amber-50" : "text-slate-600"}`}
+            >
+              <Icon size={20} />
+              <span>{label}</span>
+            </Link>
+          ))}
         <button
           onClick={() => setSidebarOpen(true)}
-          className="flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl text-[10px] font-bold text-slate-600 transition"
+          className="flex min-h-[44px] flex-col items-center gap-0.5 px-3 py-2 rounded-xl text-[10px] font-bold text-slate-600 transition"
         >
           <MenuIcon size={20} />
           <span>More</span>
