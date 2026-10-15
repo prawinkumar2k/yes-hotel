@@ -1,6 +1,7 @@
 import "dotenv/config";
 import express from "express"; // Force reload
 import cors from "cors";
+import { allowedOrigins } from "./src/config/origins";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 import cookieParser from "cookie-parser";
@@ -183,7 +184,7 @@ export function createServer() {
   }));
   app.use(
     cors({
-      origin: process.env.CLIENT_URL || "http://localhost:8080",
+      origin: allowedOrigins(),
       credentials: true,
     })
   );

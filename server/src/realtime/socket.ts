@@ -12,6 +12,7 @@ import crypto from "node:crypto";
 import jwt from "jsonwebtoken";
 import { Server } from "socket.io";
 import { getJwtSecret } from "../config/jwt";
+import { allowedOrigins } from "../config/origins";
 import { logger } from "../services/logger.service";
 
 let io: Server | null = null;
@@ -27,7 +28,7 @@ export function attachRealtime(httpServer: HttpServer) {
   if ((httpServer as any).__yesRealtime) return (httpServer as any).__yesRealtime as Server;
   const server = new Server(httpServer, {
     path: "/socket.io",
-    cors: { origin: process.env.CLIENT_URL ? [process.env.CLIENT_URL] : true, credentials: true },
+    cors: { origin: process.env.CLIENT_URL ? allowedOrigins() : true, credentials: true },
     pingInterval: 20000,
     pingTimeout: 20000,
   });
