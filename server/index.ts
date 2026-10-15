@@ -259,8 +259,9 @@ export function createServer() {
   app.use("/api/webhooks/razorpay", express.raw({ type: "*/*", limit: "1mb" }));
 
   // Body parsers
-  app.use(express.json({ limit: "50mb" }));
-  app.use(express.urlencoded({ extended: true, limit: "50mb" }));
+  // Photos are resized on the device (~150-400 KB each), so 10 MB covers several ID images.
+  app.use(express.json({ limit: "10mb" }));
+  app.use(express.urlencoded({ extended: true, limit: "10mb" }));
   app.use(cookieParser());
 
   // Dynamic sitemap — registered before the SPA static-file middleware

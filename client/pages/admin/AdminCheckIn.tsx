@@ -5,6 +5,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { Link } from "react-router-dom";
 import { format } from "date-fns";
 import { LogIn, LogOut, Search, User, Calendar, Home, Loader2, ArrowLeft } from "lucide-react";
+import { imageFileToDataUrl } from "@/lib/imageFile";
 
 async function apiFetch(url: string, token?: string, method = "GET", body?: any) {
   const res = await fetch(url, {
@@ -53,11 +54,7 @@ export default function AdminCheckIn() {
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setIdProofPhoto(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+      imageFileToDataUrl(file, 1600).then(setIdProofPhoto).catch(() => undefined);
     }
   };
 

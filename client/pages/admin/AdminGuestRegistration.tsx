@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { getStoredAuthToken } from "../../lib/authStorage";
 import { cn } from "@/lib/utils";
 import { addDays, todayBusinessDate, toBusinessDate } from "@shared/dates";
+import { imageFileToDataUrl } from "@/lib/imageFile";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // TYPES
@@ -204,14 +205,7 @@ export default function AdminGuestRegistration() {
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     files.forEach(file => {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setGuestDetails(prev => ({
-          ...prev,
-          idProofImages: [...prev.idProofImages, reader.result as string]
-        }));
-      };
-      reader.readAsDataURL(file);
+      imageFileToDataUrl(file, 1600).then((img) => setGuestDetails(prev => ({ ...prev, idProofImages: [...prev.idProofImages, img] }))).catch(() => undefined);
     });
   };
 

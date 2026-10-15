@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Loader2, RefreshCw, CheckCircle2, ShieldCheck, User } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
+import { imageFileToDataUrl } from "@/lib/imageFile";
 
 const STATUS_BAR: Record<string, string> = {
   DIRTY: "bg-red-500",
@@ -58,11 +59,7 @@ export default function MobileHousekeeping() {
   const handleMobilePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setProofPhoto(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+      imageFileToDataUrl(file, 1280, 0.72).then(setProofPhoto).catch(() => undefined);
     }
   };
 

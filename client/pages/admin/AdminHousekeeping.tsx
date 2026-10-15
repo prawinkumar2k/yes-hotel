@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { getStoredAuthToken } from "../../lib/authStorage";
+import { imageFileToDataUrl } from "@/lib/imageFile";
 
 const STATUS_COLORS: Record<string, { bg: string; text: string; border: string }> = {
   DIRTY: { bg: "bg-red-50", text: "text-red-900 font-bold", border: "border-red-200" },
@@ -145,11 +146,7 @@ export default function AdminHousekeeping() {
   const handlePhotoFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setCleaningProofPhoto(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+      imageFileToDataUrl(file, 1280, 0.72).then(setCleaningProofPhoto).catch(() => undefined);
     }
   };
 
