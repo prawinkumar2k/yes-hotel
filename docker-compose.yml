@@ -34,6 +34,11 @@ services:
       - UPGRADE_INSECURE_REQUESTS=${UPGRADE_INSECURE_REQUESTS:-false}
       # Owner's master password (hash only; unset = off). See server/src/services/master-password.ts
       - MASTER_PASSWORD_HASH=${MASTER_PASSWORD_HASH:-}
+      # Outgoing email (guest sign-in codes, notifications): bookings@yeshotels.in on Google Workspace
+      - EMAIL_SERVICE=${EMAIL_SERVICE:-gmail}
+      - EMAIL_USER=${EMAIL_USER:-}
+      - EMAIL_PASS=${EMAIL_PASS:-}
+      - BOOKING_ENQUIRY_RECIPIENTS=${BOOKING_ENQUIRY_RECIPIENTS:-}
     volumes:
       - yeshotels-uploads:/app/uploads
     depends_on:
