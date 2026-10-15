@@ -36,7 +36,7 @@ export function ExecutiveCharts({ commandData }: { commandData: any }) {
                 <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#6b7280' }} />
                 <Tooltip 
                   contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                  formatter={(value) => [`$${value}`, undefined]}
+                  formatter={(value) => [`₹${Number(value).toLocaleString("en-IN")}`, undefined]}
                 />
                 <Legend iconType="circle" wrapperStyle={{ fontSize: 12 }} />
                 <Line type="monotone" name="Actual Revenue" dataKey="revenue" stroke="#D97706" strokeWidth={3} dot={{ r: 4, strokeWidth: 2 }} activeDot={{ r: 6 }} />
