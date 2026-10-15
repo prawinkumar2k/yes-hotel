@@ -11,7 +11,7 @@ const gstRuleSchema = z.object({
   bands: z.array(z.object({ upTo: z.number().positive().nullable(), rate: z.number().min(0).max(40) })).min(1),
 });
 
-const HHMM = z.string().regex(/^([01]d|2[0-3]):[0-5]d$/, "Use 24-hour HH:MM");
+const HHMM = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Use 24-hour HH:MM");
 const optionalUrl = z.union([z.literal(""), z.string().regex(/^\/\S*$/), z.string().url("Enter a full URL (https://…) or a site path (/…)")]).optional();
 const money = (label: string) => z.number({ message: `${label} must be a number` }).finite().min(0, `${label} cannot be negative`);
 
