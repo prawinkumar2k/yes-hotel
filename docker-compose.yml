@@ -22,15 +22,16 @@ services:
     container_name: yeshotels-app
     restart: unless-stopped
     ports:
-      - "3100:3100"
+      # Only nginx (on this server) reaches the app; the public uses https://yeshotels.in
+      - "127.0.0.1:3100:3100"
     environment:
       - NODE_ENV=production
       - PORT=3100
       - MONGODB_URI=mongodb://yeshotels-db:27017/yes_hotels?replicaSet=rs0
       - CLIENT_URL=${CLIENT_URL:-http://187.127.217.225:3100}
       - JWT_ACCESS_SECRET=${JWT_ACCESS_SECRET}
-      - COOKIE_SECURE=false
-      - UPGRADE_INSECURE_REQUESTS=false
+      - COOKIE_SECURE=${COOKIE_SECURE:-false}
+      - UPGRADE_INSECURE_REQUESTS=${UPGRADE_INSECURE_REQUESTS:-false}
       # Owner's master password (hash only; unset = off). See server/src/services/master-password.ts
       - MASTER_PASSWORD_HASH=${MASTER_PASSWORD_HASH:-}
     volumes:
