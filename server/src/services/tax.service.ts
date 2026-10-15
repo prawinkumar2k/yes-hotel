@@ -42,7 +42,9 @@ export const DEFAULT_GST_RULES: GstRule[] = [
   // From 22 Sep 2025.
   { category: "ROOM", effectiveFrom: "2025-09-22", bands: [{ upTo: 7500, rate: 5 }, { upTo: null, rate: 18 }] },
   { category: "FOOD", effectiveFrom: "2017-07-01", bands: [{ upTo: null, rate: 5 }] },
-  { category: "SERVICE", effectiveFrom: "2017-07-01", bands: [{ upTo: null, rate: 18 }] },
+  // Hotel setting: guest services (laundry, spa, transport, add-ons) are billed at 5% like the room
+  // (CGST 2.5% + SGST 2.5%). Override per property in Settings (HotelSettings.gstRules) if needed.
+  { category: "SERVICE", effectiveFrom: "2017-07-01", bands: [{ upTo: null, rate: 5 }] },
 ];
 
 export interface TaxLine {

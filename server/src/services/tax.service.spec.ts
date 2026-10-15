@@ -48,9 +48,11 @@ describe("room GST slabs (from 22 Sep 2025)", () => {
 });
 
 describe("other supplies", () => {
-  it("restaurant food is 5% and services are 18%", () => {
+  it("restaurant food and guest services are 5% (CGST 2.5% + SGST 2.5%)", () => {
     expect(computeSupplyTax(R, "FOOD", "2026-10-12", 1000).tax).toBe(50);
-    expect(computeSupplyTax(R, "SERVICE", "2026-10-12", 1000).tax).toBe(180);
+    const service = computeSupplyTax(R, "SERVICE", "2026-10-12", 1000);
+    expect(service.tax).toBe(50);
+    expect([service.cgst, service.sgst]).toEqual([25, 25]);
   });
 });
 

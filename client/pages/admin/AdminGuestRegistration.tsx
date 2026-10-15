@@ -1289,8 +1289,8 @@ export default function AdminGuestRegistration() {
                               <th className="p-2.5 text-right border-r border-gray-200">Tariff</th>
                               <th className="p-2.5 text-right border-r border-gray-200">Extra Bed</th>
                               <th className="p-2.5 text-right border-r border-gray-200">Taxable</th>
-                              <th className="p-2.5 text-right border-r border-gray-200">CGST (6%)</th>
-                              <th className="p-2.5 text-right border-r border-gray-200">SGST (6%)</th>
+                              <th className="p-2.5 text-right border-r border-gray-200">CGST (2.5%)</th>
+                              <th className="p-2.5 text-right border-r border-gray-200">SGST (2.5%)</th>
                               <th className="p-2.5 text-right">Day Total</th>
                             </tr>
                           </thead>
@@ -1342,7 +1342,7 @@ export default function AdminGuestRegistration() {
 
                     {/* Statutory GST Note */}
                     <div className="text-[10px] text-gray-500 bg-gray-50 p-2.5 rounded-lg border border-gray-200 leading-relaxed">
-                      *GST calculated at 12% standard hospitality rate (6% CGST + 6% SGST) under SAC Code 996311. All disputes subject to Bengaluru jurisdiction.
+                      *GST at 5% (CGST 2.5% + SGST 2.5%) under SAC Code 996311. All disputes subject to Bengaluru jurisdiction.
                     </div>
 
                   </div>

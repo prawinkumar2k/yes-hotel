@@ -3,6 +3,14 @@
 All changes, fixes, hardened services, and architectural migrations are documented chronologically in this file.
 
 ---
+## [GST 2.5% + 2.5% everywhere] - 2026-10-15
+
+- **Guest services** (laundry, spa, transport, add-ons) are now billed at GST 5% = CGST 2.5% + SGST 2.5%, like rooms, extras and food (they were 18% = 9% + 9%). Room nights above ₹7,500 keep the statutory 18% slab. Rates can be overridden per property in settings (`gstRules`).
+- **Folio / GST invoice print and bulk documents:** the day-by-day fallback rows used 6% + 6% (12%) worked out in the browser; they now show the tax actually charged on the booking.
+- **Labels:** extra-charge tax lines name the real rate (were always "9%"); checkout, registration preview, booking details and Front Desk bill screens say CGST 2.5% + SGST 2.5%.
+- Lines already posted keep the amounts they were posted with.
+
+---
 ## [Extend stay for the whole group; no bill number before checkout on the GRC] - 2026-10-14
 
 - **Extend Stay (Front Desk):** for a multi-room registration, choose **All N rooms** (default) or **Only room X**. Each room gets its own server quote (agreed rate + GST at the right slab) and its own bill update; rooms already staying until that date are skipped, and an unavailable room is named. Previously only the one room clicked was extended, so the other rooms' registration cards and bills kept the old date.

@@ -293,16 +293,16 @@ export default function AdminCheckOut() {
                           <span>-₹{(preview?.summary?.totalDiscounts || 0).toLocaleString("en-IN")}</span>
                         </div>
                         <div className="flex justify-between text-xs text-gray-500">
-                          <span>CGST (9%):</span>
+                          <span>CGST (2.5%):</span>
                           <span>₹{(preview?.summary?.cgst || 0).toLocaleString("en-IN")}</span>
                         </div>
                         <div className="flex justify-between text-xs text-gray-500">
-                          <span>SGST (9%):</span>
+                          <span>SGST (2.5%):</span>
                           <span>₹{(preview?.summary?.sgst || 0).toLocaleString("en-IN")}</span>
                         </div>
                         {preview?.summary?.igst > 0 && (
                           <div className="flex justify-between text-xs text-gray-500">
-                            <span>IGST (18%):</span>
+                            <span>IGST:</span>
                             <span>₹{preview.summary.igst.toLocaleString("en-IN")}</span>
                           </div>
                         )}

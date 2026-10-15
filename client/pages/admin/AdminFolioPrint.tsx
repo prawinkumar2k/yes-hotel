@@ -135,8 +135,9 @@ export default function AdminFolioPrint() {
     const dailyTariff = booking.ratePerNight ?? Math.round((booking.totalAmount - (booking.taxAmount || 0)) / nights);
     const dailyExtBed = booking.extraPersonsWithBed ? 1200 : 0;
     const dailyTaxable = dailyTariff + dailyExtBed;
-    const dailyCgst = Math.round(dailyTaxable * 0.06 * 100) / 100;
-    const dailySgst = Math.round(dailyTaxable * 0.06 * 100) / 100;
+    // Tax actually charged on the booking, spread per night (never a guessed rate).
+    const dailyCgst = Math.round(((booking.cgstAmount ?? (booking.taxAmount || 0) / 2) / Math.max(1, nights)) * 100) / 100;
+    const dailySgst = Math.round(((booking.sgstAmount ?? (booking.taxAmount || 0) / 2) / Math.max(1, nights)) * 100) / 100;
 
     for (let i = 0; i < nights; i++) {
       const curr = new Date(checkIn);

@@ -149,8 +149,9 @@ function BookingDocCard({
     const dailyTariff = b.ratePerNight ?? Math.round((b.totalAmount - (b.taxAmount || 0)) / nights);
     const dailyExtBed = b.extraPersonsWithBed ? 1200 : 0;
     const dailyTaxable = dailyTariff + dailyExtBed;
-    const dailyCgst = Math.round(dailyTaxable * 0.06 * 100) / 100;
-    const dailySgst = Math.round(dailyTaxable * 0.06 * 100) / 100;
+    // Tax actually charged on the booking, spread per night (never a guessed rate).
+    const dailyCgst = Math.round(((b.cgstAmount ?? (b.taxAmount || 0) / 2) / Math.max(1, nights)) * 100) / 100;
+    const dailySgst = Math.round(((b.sgstAmount ?? (b.taxAmount || 0) / 2) / Math.max(1, nights)) * 100) / 100;
 
     for (let i = 0; i < nights; i++) {
       const curr = new Date(checkIn);

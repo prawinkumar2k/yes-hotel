@@ -1639,7 +1639,7 @@ export default function AdminFrontDesk() {
                   <span className="font-mono font-black text-sm text-purple-950">₹{extensionCost.toLocaleString()}</span>
                 </div>
                 <p className="text-[11px] text-purple-700">
-                  Posted to each room's bill at the agreed room rate, with GST at the applicable slab (5% up to ₹7,500 a night, 18% above). The registration card, folio and invoice show the new check-out date.
+                  Posted to each room's bill at the agreed room rate, with GST 5% (CGST 2.5% + SGST 2.5%). The registration card, folio and invoice show the new check-out date.
                 </p>
               </div>
             )}
@@ -1853,7 +1853,7 @@ export default function AdminFrontDesk() {
                         <Edit2 size={15} className="text-amber-700" /> Live Bill & Tariff Modifier
                       </h4>
                       <p className="text-[11px] text-amber-800 mt-0.5">
-                        Change base tariff, extra bed, ancillary charges, discounts or advances. All ledger entries and GST (5% up to ₹7,500 a night, 18% above) recalculate automatically.
+                        Change base tariff, extra bed, ancillary charges, discounts or advances. All ledger entries and GST (CGST 2.5% + SGST 2.5%) recalculate automatically.
                       </p>
                     </div>
                     <span className="text-[10px] font-mono font-bold bg-amber-200 text-amber-900 px-2 py-0.5 rounded">
@@ -1940,7 +1940,7 @@ export default function AdminFrontDesk() {
                         onChange={(e) => setEditBillForm({ ...editBillForm, applyTax: e.target.checked })}
                         className="w-4 h-4 rounded text-amber-600 focus:ring-amber-500"
                       />
-                      <span>Apply GST (CGST + SGST at the room-rate slab, SAC 996311)</span>
+                      <span>Apply GST (CGST 2.5% + SGST 2.5%, SAC 996311)</span>
                     </label>
 
                     <div className="flex items-center gap-2">
@@ -2107,7 +2107,7 @@ export default function AdminFrontDesk() {
                   </span>
                 </div>
                 <div className="p-3 bg-white rounded-xl border border-gray-200 shadow-2xs">
-                  <span className="text-[10px] text-gray-500 block uppercase font-sans">GST Taxes (CGST + SGST)</span>
+                  <span className="text-[10px] text-gray-500 block uppercase font-sans">GST (CGST 2.5% + SGST 2.5%)</span>
                   <span className="text-sm font-bold text-gray-900">
                     ₹{(folioDrawer.folio?.totalTax || 0).toLocaleString()}
                   </span>

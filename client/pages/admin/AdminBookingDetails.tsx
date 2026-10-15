@@ -579,7 +579,7 @@ function FolioSection({ bookingId, userToken }: { bookingId: string; userToken?:
                 onChange={(e) => setApplyTax(e.target.checked)}
                 className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
               />
-              <label htmlFor="taxChk" className="text-xs text-gray-700">Auto-calculate CGST + SGST (9% + 9%) split</label>
+              <label htmlFor="taxChk" className="text-xs text-gray-700">Add GST (CGST 2.5% + SGST 2.5%)</label>
             </div>
 
             <div className="flex gap-2 pt-2">
