@@ -38,17 +38,15 @@ playwright/.cache/
 .env.local
 .env.*.local
 
-# Local AI-coding-tool scaffolding/state — machine-local, not part of the
-# application, and in .jetro's case contains an actual credentials.json.
-# None of this belongs in the project repository.
-.jetro/
-.cursor/
-.agents/
-.builder/
-.windsurfrules
+# Local editor / tool folders and machine-local files (never part of the project)
+/.*/
+!/.github/
+!/.github/**
 .mcp.json
-AGENT.md
-CLAUDE.md
+*.local.md
 
 # local database backups (db:backup)
 backups/
+
+# scratch work
+scratch/

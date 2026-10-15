@@ -278,7 +278,7 @@ Branch `hardening/phase-1`. After every step: full test suite, the GET sweep, an
 | `npm run db:backup` / `npm run db:restore -- <dir> --yes` | Added: mongodump/mongorestore with gzip. Restore refuses without `--yes` and checks the database name. |
 | Backup taken | `backups/2026-10-12T16-41-50-793`. Restored into a scratch DB: 59 collections, 842 docs, **0 count mismatches**. |
 | Replica set | Dev Mongo is replica set `rs0` (PRIMARY on :27027), and a transaction probe succeeded. No `docker-compose.yml` exists yet; when it's created, it must start Mongo with `--replSet`. |
-| Test baseline | 1 pre-existing failure (`night-audit-concurrency.spec.ts`, caused by H8). Vitest was also collecting a stale git worktree under `.claude/worktrees/hardening` (branch `fix/hardening-work`), which double-counted the tests; it is now excluded. |
+| Test baseline | 1 pre-existing failure (`night-audit-concurrency.spec.ts`, caused by H8). Vitest was also collecting a stale git worktree (`worktrees/hardening`) (branch `fix/hardening-work`), which double-counted the tests; it is now excluded. |
 
 ### Step 1 — Security
 
@@ -401,7 +401,7 @@ Generated diff: `docs/rbac/n1-n5-access-diff.txt` (and in the commit message).
 `docs/verification/role-sweep-n1-n5.md` (`scripts/audit/role-sweep.ts`):
 - **API sweep:** every GET route as each of RECEPTIONIST, CASHIER, HOUSEKEEPING, MAINTENANCE, SUPERVISOR, MANAGER, FINANCE and RESTAURANT. A 403 counts as expected only when the permission map denies the route to that role.
 - **Page sweep:** all 64 permission-guarded pages loaded in Chromium as each role.
-- The sweep ran on a second dev server (:8095) with `RATE_LIMIT_API_MAX` raised, so the limiter stayed on without causing false 429s. Port 8090 is held by the stale `.claude/worktrees/hardening` dev server, which was left untouched.
+- The sweep ran on a second dev server (:8095) with `RATE_LIMIT_API_MAX` raised, so the limiter stayed on without causing false 429s. Port 8090 is held by a stale worktree dev server, which was left untouched.
 
 **Result** (8 roles × 64 pages = 512 page loads): 390 🔒 · 118 ✅ · 4 ❌; every other page either loaded (✅) or was denied exactly where the map denies it (🔒). The 4 ❌ are all known or fixed:
 - `/admin/night-audit` (MANAGER, FINANCE): H8 night-audit 500. This is the known defect, scheduled for the night-audit step.

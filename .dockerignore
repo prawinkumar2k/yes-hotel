@@ -12,9 +12,5 @@ coverage
 *.xlsx
 *.log
 .DS_Store
-.vscode
-.idea
-.cursor
-.agents
-.claude
-.jetro
+# local editor / tool folders
+.*/

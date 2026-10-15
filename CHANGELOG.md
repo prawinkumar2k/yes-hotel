@@ -245,7 +245,7 @@ All changes, fixes, hardened services, and architectural migrations are document
 - SUPER_ADMIN no longer gets 403 on Settings, Staff, Gallery, Payment Channels, Group Bookings or Complaints.
 - Cashier shifts can be opened and closed by cashiers (action-name mismatch).
 - `/api/permissions/users/:id/effective` now uses the target user's role.
-- Vitest no longer collects specs from `.claude/worktrees`.
+- Vitest no longer collects specs from temporary worktrees in hidden folders.
 
 ---
 

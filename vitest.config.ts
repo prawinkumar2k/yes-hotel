@@ -30,7 +30,7 @@ export default defineConfig({
     globals: false,
     testTimeout: 15000,
     hookTimeout: 15000,
-    exclude: ["**/node_modules/**", "**/dist/**", "e2e/**", ".claude/**"],
+    exclude: ["**/node_modules/**", "**/dist/**", "e2e/**", ".*/**"],
     setupFiles: ["./server/src/config/vitest.setup.ts"],
     // Test files run in separate module registries (each gets its own
     // in-memory job-handler Map, folio "current business date" state, etc.)
