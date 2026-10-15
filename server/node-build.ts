@@ -17,7 +17,8 @@ const distPath = path.join(__dirname, "../spa");
 
 // Serve static files
 // redirect:false — the photo folder public/gallery must not turn the /gallery page into /gallery/
-app.use(express.static(distPath, { redirect: false }));
+// index:false — allows app.get("/*splat") to enrich index.html with Schema.org JSON-LD and meta tags on the root URL
+app.use(express.static(distPath, { index: false, redirect: false }));
 
 // Handle React Router - serve index.html for all non-API routes
 //

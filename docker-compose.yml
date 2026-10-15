@@ -2,6 +2,7 @@ services:
   yeshotels-db:
     image: mongo:8
     container_name: yeshotels-db
+    hostname: yeshotels-db
     restart: unless-stopped
     command: ["--replSet", "rs0", "--bind_ip_all"]
     volumes:

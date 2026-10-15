@@ -28,7 +28,7 @@ export async function injectSeoTagsIntoHtml(
     name: HOTEL.name,
     legalName: "YES HOTELS",
     url: baseUrl,
-    logo: `${baseUrl}/brand/yes-mark.png`,
+    logo: `${baseUrl}/brand/icon-512.png`,
     image: `${baseUrl}/brand/icon-512.png`,
     description: description,
     telephone: HOTEL.phones[0],
@@ -65,6 +65,24 @@ export async function injectSeoTagsIntoHtml(
       { "@type": "LocationFeatureSpecification", name: "Daily Housekeeping", value: true },
     ],
   };
+
+  const organizationSchema: any = {
+    "@type": "Organization",
+    "@id": `${baseUrl}/#organization`,
+    name: HOTEL.name,
+    legalName: "YES HOTELS",
+    url: baseUrl,
+    logo: {
+      "@type": "ImageObject",
+      url: `${baseUrl}/brand/icon-512.png`,
+      width: 512,
+      height: 512,
+    },
+    image: `${baseUrl}/brand/icon-512.png`,
+    telephone: HOTEL.phones[0],
+    email: "stay@yeshotels.in",
+  };
+  structuredDataGraphs.push(organizationSchema);
 
   // Check if pathname matches /hotels-near/:slug
   const seoMatch = pathname.match(/^\/hotels-near\/([a-z0-9-]+)/i);
