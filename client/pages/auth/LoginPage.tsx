@@ -37,7 +37,46 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
-  const [mode, setMode] = useState<"password" | "booking">("password");
+  const [mode, setMode] = useState<"password" | "otp" | "booking">("password");
+  // Guest sign-in with a 6-digit code emailed to them
+  const [otpEmail, setOtpEmail] = useState("");
+  const [otpCode, setOtpCode] = useState("");
+  const [otpSent, setOtpSent] = useState(false);
+  const [otpBusy, setOtpBusy] = useState(false);
+
+  const requestCode = async () => {
+    setOtpBusy(true);
+    try {
+      const res = await fetch("/api/auth/otp/request", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: otpEmail }) });
+      const data = await res.json().catch(() => ({ success: false, message: res.status === 429 ? "Too many attempts. Please wait a few minutes." : `Server error (${res.status})` }));
+      if (data.success) { setOtpSent(true); toast({ title: "Check your email", description: data.message }); }
+      else toast({ title: "Code not sent", description: data.message, variant: "destructive" });
+    } catch {
+      toast({ title: "Error", description: "Network connection error.", variant: "destructive" });
+    } finally {
+      setOtpBusy(false);
+    }
+  };
+
+  const verifyCode = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setOtpBusy(true);
+    try {
+      const res = await fetch("/api/auth/otp/verify", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: otpEmail, code: otpCode }) });
+      const data = await res.json().catch(() => ({ success: false, message: res.status === 429 ? "Too many attempts. Please wait a few minutes." : `Server error (${res.status})` }));
+      if (data.success) {
+        login(data.data);
+        toast({ title: "Welcome", description: `Signed in as ${data.data.email}` });
+        navigate("/customer/dashboard");
+      } else {
+        toast({ title: "Sign-in failed", description: data.message, variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "Error", description: "Network connection error.", variant: "destructive" });
+    } finally {
+      setOtpBusy(false);
+    }
+  };
   const [bookingReference, setBookingReference] = useState("");
   const [mobile, setMobile] = useState("");
   const reducedMotion = useReducedMotion();
@@ -201,8 +240,8 @@ export default function LoginPage() {
             </div>
 
             {/* Sign-in method */}
-            <div role="tablist" aria-label="Sign-in method" className="grid grid-cols-2 gap-1 p-1 mb-6 rounded-xl bg-stone-100 border border-stone-200">
-              {([["password", "Email & password"], ["booking", "Booking no. + mobile"]] as const).map(([key, label]) => (
+            <div role="tablist" aria-label="Sign-in method" className="grid grid-cols-3 gap-1 p-1 mb-6 rounded-xl bg-stone-100 border border-stone-200">
+              {([["password", "Password"], ["otp", "Email code"], ["booking", "Booking no."]] as const).map(([key, label]) => (
                 <button
                   key={key}
                   type="button"
@@ -216,7 +255,33 @@ export default function LoginPage() {
               ))}
             </div>
 
-            {mode === "booking" ? (
+            {mode === "otp" ? (
+              <form onSubmit={verifyCode} className="space-y-5">
+                <p className="text-xs text-slate-500 -mt-2">Guests: enter the email you booked with. We'll email you a 6-digit code — no password needed.</p>
+                <div>
+                  <label htmlFor="otp-email" className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-2">Email Address</label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400"><Mail className="w-4 h-4" /></div>
+                    <input id="otp-email" type="email" autoComplete="email" required placeholder="you@example.com" value={otpEmail} onChange={(e) => { setOtpEmail(e.target.value); setOtpSent(false); setOtpCode(""); }} className="w-full pl-10 pr-4 py-3 bg-stone-50 border border-stone-200 rounded-xl text-slate-900 placeholder:text-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500 focus:bg-white transition-all" />
+                  </div>
+                </div>
+                {otpSent && (
+                  <div>
+                    <label htmlFor="otp-code" className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-2">6-digit code</label>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400"><Key className="w-4 h-4" /></div>
+                      <input id="otp-code" inputMode="numeric" autoComplete="one-time-code" maxLength={6} required placeholder="123456" value={otpCode} onChange={(e) => setOtpCode(e.target.value.replace(/[^0-9]/g, ""))} className="w-full pl-10 pr-4 py-3 bg-stone-50 border border-stone-200 rounded-xl text-slate-900 placeholder:text-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500 focus:bg-white transition-all font-mono tracking-[0.4em] text-lg" />
+                    </div>
+                    <button type="button" onClick={requestCode} disabled={otpBusy} className="mt-2 text-xs font-medium text-amber-700 hover:text-amber-900 hover:underline min-h-[44px]">Didn't get it? Send a new code</button>
+                  </div>
+                )}
+                {otpSent ? (
+                  <button type="submit" disabled={otpBusy || otpCode.length !== 6} className="w-full min-h-[48px] py-3.5 px-6 rounded-xl bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800 text-white font-semibold text-sm shadow-lg shadow-amber-600/25 active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2">{otpBusy ? "Checking..." : <><span>Sign In</span><ArrowRight className="w-4 h-4" /></>}</button>
+                ) : (
+                  <button type="button" onClick={requestCode} disabled={otpBusy || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(otpEmail)} className="w-full min-h-[48px] py-3.5 px-6 rounded-xl bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800 text-white font-semibold text-sm shadow-lg shadow-amber-600/25 active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2">{otpBusy ? "Sending..." : <><span>Email Me a Code</span><ArrowRight className="w-4 h-4" /></>}</button>
+                )}
+              </form>
+            ) : mode === "booking" ? (
               <form onSubmit={handleSubmit} className="space-y-5">
                 <p className="text-xs text-slate-500 -mt-2">
                   Guests: no password needed. Use the booking number from your confirmation and the mobile number you booked with.

@@ -84,6 +84,98 @@ export async function linkStayToCustomer(booking: any, customerId: unknown) {
   return ids.map(String);
 }
 
+// ─────────────────────────────────────────────── email one-time code sign-in
+const OTP_TTL_MS = 10 * 60 * 1000;
+const OTP_MAX_ATTEMPTS = 5;
+const OTP_RESEND_GAP_MS = 45 * 1000;
+
+const otpHash = (email: string, code: string) =>
+  crypto.createHmac("sha256", process.env.JWT_ACCESS_SECRET || "dev-otp-secret").update(`${email}:${code}`).digest("hex");
+
+/** A guest the email belongs to: a customer account, or any booking made with that email. Never staff. */
+async function guestKnownByEmail(email: string) {
+  const user = await User.findOne({ email }).select("role isActive").lean();
+  if (user) return user.role === UserRole.CUSTOMER && user.isActive !== false;
+  return Boolean(await Booking.exists({ "guestDetails.email": email }));
+}
+
+/**
+ * Emails a 6-digit sign-in code when the address belongs to a guest. The caller always shows the
+ * same reply, so the form can't be used to discover who has stayed at the hotel.
+ * Returns how delivery went: SENT, DEV_LOGGED (no mail server, development), UNKNOWN (no guest),
+ * TOO_SOON (a code was sent seconds ago), or UNAVAILABLE (no mail server in production).
+ */
+export async function requestLoginOtp(rawEmail: string, ip?: string): Promise<"SENT" | "DEV_LOGGED" | "UNKNOWN" | "TOO_SOON" | "UNAVAILABLE"> {
+  const email = String(rawEmail || "").trim().toLowerCase();
+  if (!(await guestKnownByEmail(email))) return "UNKNOWN";
+  const { LoginOtp } = await import("../models/LoginOtp");
+  const recent = await LoginOtp.findOne({ email, consumedAt: { $exists: false } }).sort({ createdAt: -1 }).lean();
+  if (recent && Date.now() - new Date(recent.createdAt).getTime() < OTP_RESEND_GAP_MS) return "TOO_SOON";
+
+  const { getTransporter } = await import("./notification.service");
+  const transporter = getTransporter();
+  if (!transporter && process.env.NODE_ENV === "production") return "UNAVAILABLE";
+
+  const code = String(crypto.randomInt(100000, 1000000));
+  // Older unused codes stop working once a new one is issued.
+  await LoginOtp.updateMany({ email, consumedAt: { $exists: false } }, { $set: { consumedAt: new Date() } });
+  await LoginOtp.create({ email, codeHash: otpHash(email, code), expiresAt: new Date(Date.now() + OTP_TTL_MS), ip });
+
+  const subject = `${code} is your YES HOTELS sign-in code`;
+  const text = `Your YES HOTELS sign-in code is ${code}.\n\nIt expires in 10 minutes. If you didn't ask for it, you can ignore this email.\n\nYES HOTELS, Hosa Road Junction, Bengaluru · +91 87698 28787`;
+  if (!transporter) {
+    console.log(`\n🔐 [DEV ONLY — no mail server] sign-in code for ${email}: ${code}\n`);
+    return "DEV_LOGGED";
+  }
+  await transporter.sendMail({
+    from: `"YES HOTELS" <${process.env.EMAIL_USER}>`,
+    to: email,
+    subject,
+    text,
+    html: `<div style="font-family:Arial,sans-serif;max-width:420px"><img src="${(process.env.CLIENT_URL || "").replace(/\/$/, "")}/brand/yes-hotels-logo-sm.png" alt="YES HOTELS" style="height:72px"><p>Your sign-in code is</p><p style="font-size:32px;font-weight:bold;letter-spacing:6px;margin:8px 0">${code}</p><p style="color:#555">It expires in 10 minutes. If you didn't ask for it, ignore this email.</p><p style="color:#888;font-size:12px">YES HOTELS · Hosa Road Junction, Bengaluru · +91 87698 28787</p></div>`,
+  });
+  return "SENT";
+}
+
+/** Checks a code; on success returns the guest's customer account (created if needed) with their bookings linked. */
+export async function verifyLoginOtp(rawEmail: string, rawCode: string) {
+  const email = String(rawEmail || "").trim().toLowerCase();
+  const code = String(rawCode || "").trim();
+  const { LoginOtp } = await import("../models/LoginOtp");
+  const otp = await LoginOtp.findOne({ email, consumedAt: { $exists: false }, expiresAt: { $gt: new Date() } }).sort({ createdAt: -1 });
+  if (!otp) throw new CustomerRuleError("This code has expired. Ask for a new one.", 401);
+  if (otp.attempts >= OTP_MAX_ATTEMPTS) throw new CustomerRuleError("Too many wrong codes. Ask for a new one.", 429);
+  const expected = Buffer.from(otp.codeHash, "hex");
+  const given = Buffer.from(otpHash(email, code), "hex");
+  if (!/^\d{6}$/.test(code) || expected.length !== given.length || !crypto.timingSafeEqual(expected, given)) {
+    await LoginOtp.updateOne({ _id: otp._id }, { $inc: { attempts: 1 } });
+    throw new CustomerRuleError("That code is not right. Check the email and try again.", 401);
+  }
+  // Single use, even under concurrent submits.
+  const claimed = await LoginOtp.updateOne({ _id: otp._id, consumedAt: { $exists: false } }, { $set: { consumedAt: new Date() } });
+  if (!claimed.modifiedCount) throw new CustomerRuleError("This code was already used. Ask for a new one.", 401);
+
+  let user: any = await User.findOne({ email });
+  if (user && user.role !== UserRole.CUSTOMER) throw new CustomerRuleError("Staff sign in with their password", 403);
+  if (user && user.isActive === false) throw new CustomerRuleError("This guest account is disabled", 403);
+  if (!user) {
+    const b: any = await Booking.findOne({ "guestDetails.email": email }).sort({ createdAt: -1 }).lean();
+    if (!b) throw new CustomerRuleError("No guest account or booking uses this email", 404);
+    user = await User.create({
+      firstName: b.guestDetails?.firstName || "Guest",
+      lastName: b.guestDetails?.lastName && b.guestDetails.lastName !== "." ? b.guestDetails.lastName : "Guest",
+      email,
+      phone: b.guestDetails?.phone,
+      passwordHash: await hashPassword(crypto.randomBytes(24).toString("hex")),
+      role: UserRole.CUSTOMER,
+      isActive: true,
+    } as any);
+  }
+  // The email is now proven: its unlinked bookings belong to this guest.
+  const linked = await Booking.updateMany({ "guestDetails.email": email, customer: { $exists: false } }, { $set: { customer: user._id } });
+  return { user, linkedBookings: linked.modifiedCount };
+}
+
 /** What the guest still owes on a booking. */
 export async function amountDueForBooking(booking: any) {
   if ([BookingStatus.CANCELLED, BookingStatus.NO_SHOW].includes(booking.status)) return { amountDue: 0, basis: "CLOSED" as const };

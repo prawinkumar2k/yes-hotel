@@ -304,6 +304,60 @@ export const changePassword = async (req: Request, res: Response) => {
   }
 };
 
+const otpRequestSchema = z.object({ email: z.string().trim().email("Enter a valid email address") });
+const otpVerifySchema = z.object({ email: z.string().trim().email(), code: z.string().trim().regex(/^\d{6}$/, "Enter the 6-digit code") });
+const OTP_GENERIC = "If this email is registered with YES HOTELS, a 6-digit code is on its way. It expires in 10 minutes.";
+
+// POST /api/auth/otp/request — emails a sign-in code to a guest. Same reply whether or not the
+// email is known (no account discovery). 503 only when no mail server is set up in production.
+export const requestOtp = async (req: Request, res: Response) => {
+  try {
+    const parsed = otpRequestSchema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ success: false, message: parsed.error.issues[0]?.message ?? "Validation error" });
+    const { requestLoginOtp } = await import("../services/customer.service");
+    const outcome = await requestLoginOtp(parsed.data.email, req.ip);
+    await createAuditLog({ req, action: "auth.otp_requested", resourceType: "User", actorType: AuditActorType.GUEST, actorRole: "ANONYMOUS", metadata: { email: parsed.data.email.toLowerCase(), outcome } });
+    if (outcome === "UNAVAILABLE") {
+      return res.status(503).json({ success: false, message: "Email sign-in isn't available right now. Please use your booking number and mobile, or call +91 87698 28787." });
+    }
+    if (outcome === "TOO_SOON") return res.status(429).json({ success: false, message: "A code was just sent. Please wait a minute before asking again." });
+    return res.json({ success: true, message: OTP_GENERIC });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, message: "Could not send the code. Please try again." });
+  }
+};
+
+// POST /api/auth/otp/verify — signs the guest in with the emailed code.
+export const verifyOtp = async (req: Request, res: Response) => {
+  try {
+    const parsed = otpVerifySchema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ success: false, message: parsed.error.issues[0]?.message ?? "Validation error" });
+    const { verifyLoginOtp, CustomerRuleError } = await import("../services/customer.service");
+    let result: any;
+    try {
+      result = await verifyLoginOtp(parsed.data.email, parsed.data.code);
+    } catch (e: any) {
+      if (e instanceof CustomerRuleError) {
+        await createAuditLog({ req, action: "auth.otp_failed", resourceType: "User", actorType: AuditActorType.GUEST, actorRole: "ANONYMOUS", metadata: { email: parsed.data.email.toLowerCase(), reason: e.message } });
+        return res.status(e.status).json({ success: false, message: e.message });
+      }
+      throw e;
+    }
+    const user = result.user;
+    const now = new Date();
+    await User.updateOne({ _id: user._id }, { $set: { lastLogin: now, lastActiveAt: now } });
+    await createAuditLog({ req, action: "auth.otp_login", resourceType: "User", resourceId: user._id.toString(), actorId: user._id.toString(), actorRole: user.role, actorType: AuditActorType.USER, metadata: { linkedBookings: result.linkedBookings } });
+    setRefreshCookie(res, await issueRefreshToken(user._id.toString()));
+    return res.json({
+      success: true,
+      message: "Signed in",
+      data: { _id: user._id, firstName: user.firstName, lastName: user.lastName, email: user.email, role: user.role, token: generateToken(user._id.toString(), user.role) },
+    });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 const bookingLoginSchema = z.object({
   bookingReference: z.string().trim().min(3, "Enter your booking number").max(40),
   mobile: z.string().trim().min(10, "Enter the mobile number used for the booking").max(20),

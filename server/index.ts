@@ -234,6 +234,7 @@ export function createServer() {
   app.use("/api", generalLimiter);
   app.use("/api/auth/login", strictLimiter);
   app.use("/api/auth/booking-login", strictLimiter);
+  app.use("/api/auth/otp", strictLimiter);
   app.use("/api/auth/change-password", strictLimiter);
   app.use("/api/customer/bookings/link", strictLimiter);
   app.use("/api/customer/payments/verify", strictLimiter);
