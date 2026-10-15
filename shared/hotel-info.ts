@@ -56,7 +56,7 @@ export const HOTEL = {
     "Laundry service",
     "Breakfast (paid or with your plan; vegetarian and halal options)",
     "Accessible layout",
-    "CCTV and fire safety",
+    "Fire safety equipment on every floor",
   ],
   stayOptions: ["Nightly stays", "Hourly / day-use stays", "Weekly and monthly stays"],
   bookingChannels: ["YES Hotels website", "MakeMyTrip", "Booking.com", "Agoda", "Trip.com", "Expedia", "Bag2Bag"],

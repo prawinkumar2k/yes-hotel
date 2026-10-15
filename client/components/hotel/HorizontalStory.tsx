@@ -40,7 +40,7 @@ const SCENES = [
     num: "05",
     title: "CLEAN & SAFE",
     category: "OUR PROMISE",
-    description: "Spotless rooms, CCTV and fire safety on every floor, and a lift to all floors.",
+    description: "Spotless rooms, fire safety equipment on every floor, and a lift to all floors.",
     image: "/gallery/hotel-50.jpg",
     link: "/about",
   },
