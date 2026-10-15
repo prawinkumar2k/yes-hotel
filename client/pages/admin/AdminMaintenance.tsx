@@ -169,7 +169,7 @@ export default function AdminMaintenance() {
               const isResolved = ticket.status === "RESOLVED" || ticket.status === "CLOSED";
 
               return (
-                <div key={ticket._id} className="bg-white rounded shadow-sm p-5 flex items-start justify-between border-l-4 border-l-amber-500">
+                <div key={ticket._id} className="bg-white rounded shadow-sm p-4 md:p-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between border-l-4 border-l-amber-500">
                   <div className="flex gap-3">
                     <AlertTriangle size={18} className={ticket.priority === "CRITICAL" ? "text-red-500 mt-1" : "text-amber-500 mt-1"} />
                     <div>
@@ -189,7 +189,7 @@ export default function AdminMaintenance() {
                       )}
                     </div>
                   </div>
-                  <div className="flex items-center gap-2 ml-4 flex-shrink-0">
+                  <div className="flex flex-wrap items-center gap-2 sm:ml-4 sm:flex-shrink-0">
                     <span className={`text-xs px-2 py-1 rounded-full font-medium ${PRIORITY_COLORS[ticket.priority]}`}>{ticket.priority}</span>
                     <span className={`text-xs px-2 py-1 rounded-full font-medium ${TICKET_STATUS_COLORS[ticket.status]}`}>{ticket.status}</span>
                     {!isResolved && (

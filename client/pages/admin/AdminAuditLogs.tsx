@@ -54,22 +54,22 @@ export default function AdminAuditLogs() {
         <p className="text-hotel-black/60">Detailed record of changes and staff actions across the system</p>
       </div>
 
-      <div className="flex gap-4 mb-6">
+      <div className="grid grid-cols-1 gap-3 mb-6 sm:grid-cols-2 lg:flex lg:flex-wrap lg:gap-4">
         <Input
           placeholder="Action, or prefix with a dot (e.g. folio.)"
           value={action}
           onChange={(e) => { setAction(e.target.value); setPage(1); }}
-          className="max-w-xs"
+          className="w-full lg:max-w-xs"
         />
         <Input
           placeholder="Search by item type (e.g. Coupon)"
           value={resourceType}
           onChange={(e) => { setResourceType(e.target.value); setPage(1); }}
-          className="max-w-xs"
+          className="w-full lg:max-w-xs"
         />
-        <Input placeholder="Role (e.g. CASHIER)" value={actorRole} onChange={(e) => { setActorRole(e.target.value.toUpperCase()); setPage(1); }} className="max-w-[160px]" />
-        <Input type="date" value={dateFrom} onChange={(e) => { setDateFrom(e.target.value); setPage(1); }} className="max-w-[160px]" aria-label="From date" />
-        <Input type="date" value={dateTo} onChange={(e) => { setDateTo(e.target.value); setPage(1); }} className="max-w-[160px]" aria-label="To date" />
+        <Input placeholder="Role (e.g. CASHIER)" value={actorRole} onChange={(e) => { setActorRole(e.target.value.toUpperCase()); setPage(1); }} className="w-full lg:max-w-[160px]" />
+        <Input type="date" value={dateFrom} onChange={(e) => { setDateFrom(e.target.value); setPage(1); }} className="w-full lg:max-w-[160px]" aria-label="From date" />
+        <Input type="date" value={dateTo} onChange={(e) => { setDateTo(e.target.value); setPage(1); }} className="w-full lg:max-w-[160px]" aria-label="To date" />
         <Button variant="outline" onClick={exportCsv}>Export CSV</Button>
       </div>
 

@@ -110,13 +110,13 @@ export default function AdminVerificationQueue() {
             {t.label}
           </button>
         ))}
-        <div className="ml-auto flex items-center gap-2">
+        <div className="flex w-full flex-wrap items-center gap-2 sm:ml-auto sm:w-auto">
           <select value={type} onChange={(e) => setType(e.target.value)} className="px-2 py-1.5 border border-slate-200 rounded-lg text-xs bg-white">
             {TYPES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
           </select>
           <div className="relative">
             <Search size={13} className="absolute left-2 top-2 text-slate-400" />
-            <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Guest, room, reservation…" className="pl-7 pr-2 py-1.5 border border-slate-200 rounded-lg text-xs bg-white w-56" />
+            <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Guest, room, reservation…" className="min-h-[40px] pl-7 pr-2 py-1.5 border border-slate-200 rounded-lg text-xs bg-white w-full sm:w-56" />
           </div>
         </div>
       </div>

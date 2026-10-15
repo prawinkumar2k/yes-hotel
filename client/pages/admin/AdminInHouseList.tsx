@@ -255,7 +255,7 @@ export default function AdminInHouseList() {
           </div>
 
           {/* SIGNATURES SECTION */}
-          <div className="flex justify-between items-end mt-8 pt-4 border-t-2 border-black text-xs font-semibold">
+          <div className="flex flex-wrap justify-between items-end gap-4 mt-8 pt-4 border-t-2 border-black text-xs font-semibold">
             <div>
               <div className="border-b border-black w-48 mb-2"></div>
               <div>Manager</div>

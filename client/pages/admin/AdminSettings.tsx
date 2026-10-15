@@ -76,7 +76,7 @@ export default function AdminSettings() {
 
       <form key={settings?.updatedAt ?? "new"} onSubmit={handleSubmit} className="bg-white rounded-lg shadow-md border border-gray-300 p-6 text-black">
         <Tabs defaultValue="general">
-          <TabsList className="mb-6 bg-gray-200 border border-gray-300 p-1">
+          <TabsList className="mb-6 bg-gray-200 border border-gray-300 p-1 w-full justify-start overflow-x-auto md:w-auto">
             <TabsTrigger value="general" className="font-bold data-[state=active]:bg-hotel-gold data-[state=active]:text-black">General Info</TabsTrigger>
             <TabsTrigger value="contact" className="font-bold data-[state=active]:bg-hotel-gold data-[state=active]:text-black">Contact & Location</TabsTrigger>
             <TabsTrigger value="booking" className="font-bold data-[state=active]:bg-hotel-gold data-[state=active]:text-black">Booking Policies</TabsTrigger>

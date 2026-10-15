@@ -104,16 +104,23 @@ export default function AdminFrontDesk() {
     }
   });
 
+  // Rooms free for the stay being checked in / moved (Reception's own registration endpoint —
+  // /api/rooms is not readable by Reception). Clean and sellable rooms only.
+  const roomPickBooking = (checkInModal.open && checkInModal.booking) || (roomMoveModal.open && roomMoveModal.booking) || null;
   const { data: availableRooms = [] } = useQuery({
-    queryKey: ["available-rooms"],
+    queryKey: ["available-rooms", roomPickBooking?._id],
+    enabled: Boolean(roomPickBooking?.checkInDate && roomPickBooking?.checkOutDate),
     queryFn: async () => {
       const token = getStoredAuthToken();
-      const res = await fetch("/api/rooms", {
+      const today = toBusinessDate(new Date());
+      const from = toBusinessDate(roomPickBooking.checkInDate) < today ? today : toBusinessDate(roomPickBooking.checkInDate);
+      const to = toBusinessDate(roomPickBooking.checkOutDate) > from ? toBusinessDate(roomPickBooking.checkOutDate) : addDays(from, 1);
+      const res = await fetch(`/api/front-desk/registration/available-rooms?checkIn=${from}&checkOut=${to}`, {
         headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
       });
       const json = await res.json();
       if (!json.success) throw new Error(json.message);
-      return (json.data || []).filter((r: any) => r.status === "AVAILABLE");
+      return (json.data || []).filter((r: any) => r.housekeepingStatus === "CLEAN" && r.sellStatus !== "OUT_OF_ORDER");
     }
   });
   // Removed fetchSummary, fetchAvailableRooms, and useEffect

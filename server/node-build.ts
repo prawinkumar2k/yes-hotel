@@ -14,7 +14,8 @@ const __dirname = import.meta.dirname;
 const distPath = path.join(__dirname, "../spa");
 
 // Serve static files
-app.use(express.static(distPath));
+// redirect:false — the photo folder public/gallery must not turn the /gallery page into /gallery/
+app.use(express.static(distPath, { redirect: false }));
 
 // Handle React Router - serve index.html for all non-API routes
 //
