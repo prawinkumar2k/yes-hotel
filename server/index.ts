@@ -14,7 +14,6 @@ import { errorHandler } from "./src/middleware/errorHandler.middleware";
 import { logger } from "./src/services/logger.service";
 import { ensureJobWorkerStarted } from "./src/services/job-queue.service";
 import { registerNotificationJobHandlers } from "./src/jobs/notificationRetry.job";
-import { handleDemo } from "./routes/demo";
 import authRoutes from "./src/routes/auth.routes";
 import roomRoutes from "./src/routes/room.routes";
 import bookingRoutes from "./src/routes/booking.routes";
@@ -339,14 +338,6 @@ export function createServer() {
   app.use("/api/menu", menuRoutes);
   app.use("/api/seo", seoRoutes);
 
-
-  // Example API routes
-  app.get("/api/ping", (_req, res) => {
-    const ping = process.env.PING_MESSAGE ?? "ping";
-    res.json({ message: ping });
-  });
-
-  app.get("/api/demo", handleDemo);
 
   // Must be registered LAST — Express only routes to a 4-arg middleware as
   // an error handler, and only for errors from routes registered before it.
