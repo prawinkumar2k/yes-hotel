@@ -14,7 +14,7 @@ const VERIFIED_LANDING_PAGES = [
     distanceRouteDetails: "YES HOTELS is located right at Hosa Road Junction on Hosur Main Road. The Hosa Road Metro Station (Yellow Line) is directly adjacent to the property, only a 2-minute walk (100 meters).",
     travelTimeMinutes: { car: 1, metro: 1, walking: 2 },
     coordinates: { latitude: 12.8715, longitude: 77.6534 },
-    metaTitle: "Hotels at Hosa Road Junction Bengaluru | YES HOTELS from ₹1,400",
+    metaTitle: "Hotels at Hosa Road Junction Bengaluru | YES HOTELS",
     metaDescription: "Stay at YES HOTELS right at Hosa Road Junction, Hosur Road. Spotless AC rooms, 2-min walk to Hosa Road Metro, 24-hr front desk, free Wi-Fi & parking. Call +91 87698 28787.",
     h1: "Boutique Hotel at Hosa Road Junction, Hosur Road Bengaluru",
     h2Subheading: "Modern, Comfortable AC Accommodation Right Beside Hosa Road Metro",
@@ -33,7 +33,7 @@ Enjoy 24-hour front desk reception, swift elevator access to all floors, complim
       "2-minute walk (100m) to Hosa Road Metro Station",
       "24-Hour Front Desk with seamless express check-in",
       "Free high-speed Wi-Fi and complimentary on-site parking",
-      "Transparent pricing: AC rooms from ₹1,400/night with no hidden fees",
+      "Transparent pricing with no hidden fees",
     ],
     nearbyAttractions: [
       { name: "Hosa Road Metro Station", distanceKm: 0.1, category: "Transit" },
@@ -69,10 +69,10 @@ Enjoy 24-hour front desk reception, swift elevator access to all floors, complim
     destinationName: "Electronic City (Phase 1 & Phase 2)",
     pageType: SeoPageType.IT_PARK,
     distanceKm: 2.8,
-    distanceRouteDetails: "Drive straight south on Hosur Main Road or take the Yellow Line metro from Hosa Road Metro directly to Electronic City Metro Station (1 stop, 4 minutes).",
+    distanceRouteDetails: "Drive straight south on Hosur Main Road or take the Yellow Line metro from Hosa Road Metro directly to Electronic City Metro Station (a short ride).",
     travelTimeMinutes: { car: 8, metro: 4, walking: 30 },
     coordinates: { latitude: 12.8452, longitude: 77.6602 },
-    metaTitle: "Hotels Near Electronic City Bengaluru | YES HOTELS from ₹1,400",
+    metaTitle: "Hotels Near Electronic City Bengaluru | YES HOTELS",
     metaDescription: "Looking for hotels near Electronic City? YES HOTELS is 8 mins away at Hosa Road Junction. Clean AC rooms, fast Wi-Fi, work desks, 24h desk & free parking. Book direct!",
     h1: "Premium Boutique Hotel Near Electronic City, Bengaluru",
     h2Subheading: "Convenient Corporate Accommodation for Electronic City Phase 1 & Phase 2",
@@ -83,12 +83,12 @@ Enjoy 24-hour front desk reception, swift elevator access to all floors, complim
       "business hotel near electronic city",
       "budget stay near infosys electronic city",
     ],
-    overviewContent: `Positioned just 2.8 km north of Electronic City, YES HOTELS offers corporate executives, tech professionals, and business travelers an unbeatable blend of tranquility and rapid access. Skip the heavy congestion inside the tech hub while remaining only an 8-minute drive or a single metro stop away from major campuses including Infosys, Wipro, Tech Mahindra, Siemens, and Velankani Tech Park.
+    overviewContent: `Positioned just 2.8 km north of Electronic City, YES HOTELS offers corporate executives, tech professionals, and business travelers an unbeatable blend of tranquility and rapid access. Skip the heavy congestion inside the tech hub while remaining only an 8-minute drive or a short metro ride away from major campuses including Infosys, Wipro, Tech Mahindra, Siemens, and Velankani Tech Park.
 
 Every room at YES HOTELS is designed for productivity and relaxation: comfortable king or queen mattresses, ergonomic work desks, dedicated tea/coffee supplies, premium air conditioning, spotless bathrooms with 24-hour hot water, and uninterrupted high-speed Wi-Fi.`,
     stayHighlights: [
       "Only 2.8 km (8 minutes drive) to Electronic City Phase 1 & 2 gates",
-      "1 metro stop via Yellow Line from Hosa Road Station to Electronic City",
+      "A short Yellow Line metro ride from Hosa Road Station to Electronic City",
       "Quiet residential comfort after busy workdays in the tech hub",
       "High-speed Wi-Fi and in-room work desks for business productivity",
       "GST invoices and corporate billing support available on direct checkout",
@@ -131,7 +131,7 @@ Every room at YES HOTELS is designed for productivity and relaxation: comfortabl
     distanceRouteDetails: "Direct access via Hosur Main Road or via the Yellow Line metro from Hosa Road Metro Station straight to Bommasandra Metro Terminal in approx 10 minutes.",
     travelTimeMinutes: { car: 14, metro: 10 },
     coordinates: { latitude: 12.8184, longitude: 77.6833 },
-    metaTitle: "Hotels Near Bommasandra Bengaluru | YES HOTELS from ₹1,400",
+    metaTitle: "Hotels Near Bommasandra Bengaluru | YES HOTELS",
     metaDescription: "Comfortable hotel accommodation near Bommasandra Industrial Area & Metro. Clean AC rooms, 24-hour reception, free Wi-Fi, lift & parking. Direct booking discounts.",
     h1: "Comfortable Hotel Near Bommasandra, South Bengaluru",
     h2Subheading: "Ideal Stay for Industrial Visits, Healthcare Trips, and Metro Commuters",
@@ -239,7 +239,7 @@ We understand the demands of medical travel: our front desk is staffed 24 hours 
     distanceRouteDetails: "Direct 10-minute drive north on Hosur Main Road or take the Yellow Line metro north to Bommanahalli.",
     travelTimeMinutes: { car: 10, metro: 8 },
     coordinates: { latitude: 12.9023, longitude: 77.6245 },
-    metaTitle: "Hotels Near Bommanahalli Bengaluru | YES HOTELS from ₹1,400",
+    metaTitle: "Hotels Near Bommanahalli Bengaluru | YES HOTELS",
     metaDescription: "Affordable boutique hotel near Bommanahalli & Silk Board. Clean AC rooms, fast Wi-Fi, 24h desk, free parking. 10 mins down Hosur Road at Hosa Road Junction. Book now!",
     h1: "Boutique Hotel Accommodation Near Bommanahalli, Bengaluru",
     h2Subheading: "Spotless AC Rooms with Rapid Access to Bommanahalli, Silk Board & Hosur Road",
@@ -252,7 +252,7 @@ We understand the demands of medical travel: our front desk is staffed 24 hours 
     ],
     overviewContent: `Looking for clean, reliable hotel rooms near Bommanahalli? YES HOTELS is conveniently situated 4.8 km south along Hosur Main Road at Hosa Road Junction. Avoid the crowded, congested streets of Bommanahalli while enjoying a modern boutique room equipped with premium amenities, zero noise disturbances, and swift transportation links.
 
-Whether visiting educational institutions like Oxford College, business establishments in Bommanahalli industrial areas, or commuting toward Central Silk Board, our property delivers top-tier hospitality, secure parking, and exceptional value from ₹1,400 per night.`,
+Whether visiting educational institutions like Oxford College, business establishments in Bommanahalli industrial areas, or commuting toward Central Silk Board, our property delivers top-tier hospitality, secure parking, and good value.`,
     stayHighlights: [
       "4.8 km (10-minute drive) straight down Hosur Main Road to Bommanahalli",
       "Quick access to Central Silk Board and BTM Layout connections",
@@ -272,7 +272,7 @@ Whether visiting educational institutions like Oxford College, business establis
       },
       {
         question: "Are families and solo travelers welcome at YES HOTELS?",
-        answer: "Yes, YES HOTELS is a 100% family-friendly and safe boutique hotel with 24/7 security, CCTV monitoring, and strict professional policies.",
+        answer: "Yes, YES HOTELS is a 100% family-friendly and safe boutique hotel with a 24-hour front desk and strict professional policies.",
       },
       {
         question: "What amenities are provided in the rooms?",
@@ -293,8 +293,8 @@ Whether visiting educational institutions like Oxford College, business establis
     distanceRouteDetails: "Just 1.2 km north on Hosur Main Road. Accessible in 3 minutes by car or 15 minutes walking.",
     travelTimeMinutes: { car: 3, metro: 2, walking: 15 },
     coordinates: { latitude: 12.8804, longitude: 77.6482 },
-    metaTitle: "Hotels Near Singasandra Bengaluru | YES HOTELS from ₹1,400",
-    metaDescription: "Stay at YES HOTELS, just 1.2 km from Singasandra on Hosur Road. Spotless AC rooms, 24-hr front desk, free Wi-Fi, lift & parking. Direct booking best rates.",
+    metaTitle: "Hotels Near Singasandra Bengaluru | YES HOTELS",
+    metaDescription: "Stay at YES HOTELS, just 1.2 km from Singasandra on Hosur Road. Spotless AC rooms, 24-hr front desk, free Wi-Fi, lift & parking. Book direct.",
     h1: "Quality Hotel Accommodation Near Singasandra, Bengaluru",
     h2Subheading: "Only 3 Minutes from Singasandra with Modern Boutique Comfort",
     targetKeywords: [
@@ -311,8 +311,7 @@ At just 1.2 km distance, you are only a 3-minute drive or a short walk away from
       "Just 1.2 km (3 minutes) from Singasandra on Hosur Main Road",
       "Walking distance to restaurants, pharmacies, and local shopping",
       "Free high-speed Wi-Fi and complimentary parking",
-      "Elevator to all floors and 24-hour security",
-      "Transparent room rates starting at ₹1,400 per night",
+      "Elevator to all floors and a 24-hour front desk",
     ],
     nearbyAttractions: [
       { name: "Singasandra Metro Station", distanceKm: 1.1, category: "Transit" },
@@ -343,7 +342,7 @@ At just 1.2 km distance, you are only a 3-minute drive or a short walk away from
     distanceRouteDetails: "Drive north along Hosur Main Road for 2.8 km (approx 6 minutes) to Kudlu Gate junction and tech parks.",
     travelTimeMinutes: { car: 6, metro: 4 },
     coordinates: { latitude: 12.8912, longitude: 77.6401 },
-    metaTitle: "Hotels Near Kudlu Gate Bengaluru | YES HOTELS from ₹1,400",
+    metaTitle: "Hotels Near Kudlu Gate Bengaluru | YES HOTELS",
     metaDescription: "Boutique hotel accommodation near Kudlu Gate & Gold Hill Supreme Park. Clean AC rooms, fast Wi-Fi, work desk, 24h front desk & free parking. Book direct!",
     h1: "Comfortable Hotel Near Kudlu Gate, Hosur Road Bengaluru",
     h2Subheading: "Convenient Stay for Gold Hill Supreme Park, Novel Tech Park & Kudlu Techies",
@@ -443,7 +442,7 @@ Whether you are arriving from Silk Board, Electronic City, or Bommasandra, our t
     distanceRouteDetails: "Head northwest from Hosa Road Junction along Begur Road for 3.0 km (approx 7 minutes by car or auto).",
     travelTimeMinutes: { car: 7 },
     coordinates: { latitude: 12.8791, longitude: 77.6322 },
-    metaTitle: "Hotels Near Begur Bengaluru | YES HOTELS from ₹1,400",
+    metaTitle: "Hotels Near Begur Bengaluru | YES HOTELS",
     metaDescription: "Affordable boutique accommodation near Begur Fort & Lake. Spotless AC rooms, 24-hour reception, free Wi-Fi & parking. Located at Hosa Road Junction. Book now!",
     h1: "Boutique Hotel Accommodation Near Begur, Bengaluru",
     h2Subheading: "Close to Begur Lake, Ancient Panchalingeshwara Temple & Begur Road",
@@ -462,7 +461,6 @@ Take advantage of our spacious air-conditioned rooms, elevator access, 24-hour h
       "Ideal accommodation for families attending local family functions and weddings",
       "Air-conditioned rooms with plush mattresses and fresh linens",
       "24-Hour Front Desk and secure on-site parking",
-      "Affordable rates starting at ₹1,400 per night",
     ],
     nearbyAttractions: [
       { name: "Panchalingeshwara Temple", distanceKm: 2.9, category: "Heritage Temple" },
@@ -493,7 +491,7 @@ Take advantage of our spacious air-conditioned rooms, elevator access, 24-hour h
     distanceRouteDetails: "Direct southern drive along Hosur Main Road or Yellow Line metro to Hebbagodi Metro Station (approx 8 minutes).",
     travelTimeMinutes: { car: 10, metro: 6 },
     coordinates: { latitude: 12.8312, longitude: 77.6711 },
-    metaTitle: "Hotels Near Hebbagodi Bengaluru | YES HOTELS from ₹1,400",
+    metaTitle: "Hotels Near Hebbagodi Bengaluru | YES HOTELS",
     metaDescription: "Clean, comfortable hotel accommodation near Hebbagodi & Biocon Park. AC rooms, 24-hour reception, free Wi-Fi, lift & parking. Direct booking discounts.",
     h1: "Comfortable Boutique Hotel Near Hebbagodi, Bengaluru",
     h2Subheading: "Convenient Stay for Biocon Park, Hebbagodi Metro & Industrial Visitors",
@@ -512,7 +510,7 @@ Commute effortlessly via the Yellow Line metro in 6 minutes or via Hosur Road in
       "6-minute direct metro commute to Hebbagodi Metro Station",
       "Elevator access, 24-hour front desk, and secure on-site parking",
       "Work desks and fast Wi-Fi in all rooms",
-      "Starting at ₹1,400/night with transparent pricing and GST billing",
+      "Transparent pricing and GST billing",
     ],
     nearbyAttractions: [
       { name: "Biocon Park Hebbagodi", distanceKm: 5.0, category: "Pharma Hub" },

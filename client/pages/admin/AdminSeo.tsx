@@ -843,7 +843,7 @@ export default function AdminSeo() {
                 <input
                   type="text"
                   required
-                  placeholder="e.g. Hotels Near Electronic City Bengaluru | YES HOTELS from ₹1,400"
+                  placeholder="e.g. Hotels Near Electronic City Bengaluru | YES HOTELS"
                   value={formData.metaTitle}
                   onChange={(e) => setFormData({ ...formData, metaTitle: e.target.value })}
                   className="w-full p-2.5 rounded-lg border border-slate-300 focus:outline-none focus:border-hotel-gold"
