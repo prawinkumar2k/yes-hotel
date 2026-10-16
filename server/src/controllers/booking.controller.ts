@@ -352,7 +352,7 @@ export const createBooking = async (req: Request, res: Response) => {
           session,
         });
 
-        const bookingReference = await generateBookingReference("OTA");
+        const bookingReference = await generateBookingReference("WEB"); // direct website booking (OTA bookings are entered by Reception)
         const defaultProp = await Property.findOne().lean();
         const propertyId = (req as any).propertyId || (req.user as any)?.propertyId || defaultProp?._id || new mongoose.Types.ObjectId();
         
@@ -1379,6 +1379,10 @@ export const extendStay = async (req: Request, res: Response) => {
       }
     }
     booking.checkOutDate = targetCheckOut;
+    (booking as any).stayExtensions = [
+      ...(((booking as any).stayExtensions as any[]) ?? []),
+      { fromCheckOut: currentCheckOut, toCheckOut: targetCheckOut, nights: additionalNights, amount: additionalTotal, at: new Date(), ...(actorId && mongoose.isValidObjectId(String(actorId)) ? { by: actorId } : {}) },
+    ];
     booking.totalAmount += additionalTotal;
     booking.taxAmount += additionalTax;
     if (tax.cgst > 0) booking.cgstAmount = (booking.cgstAmount || 0) + tax.cgst;
