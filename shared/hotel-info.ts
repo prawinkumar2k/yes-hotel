@@ -28,7 +28,6 @@ export const HOTEL = {
   checkInWindow: "12:00 PM to 11:30 PM",
   checkOut: "11:00 AM",
   frontDesk: "24-hour front desk",
-  priceFrom: 1400, // ₹ per night before tax, typical lowest rate
   inRoom: [
     "Air-conditioning",
     "Private bathroom with hot and cold shower",
