@@ -3,6 +3,20 @@
 All changes, fixes, hardened services, and architectural migrations are documented chronologically in this file.
 
 ---
+## [Launch: live data cleared, real details on every document] - 2026-10-16
+
+- **Website bookings failed in production** ("require is not defined"): the booking was saved but the guest saw an error; Razorpay could never load either. Server code now uses `import` only; a test fails if `require()` returns. Website bookings get a **WEB-** reference (was OTA-).
+- **Pay at hotel:** without Razorpay keys the last step is "Confirm booking · Pay ₹… at hotel" (it showed an error after saving). With keys it switches to online payment by itself.
+- **Printed documents:** the GST invoice, receipts, group documents and registration cards printed an invented GSTIN (29AAAFY1234A1Z5), phone, email and website. All now come from Admin → Settings; without a GSTIN the printout shows "—" and staff see a warning. The guest's tax invoice carries the hotel's details too.
+- **Stay extensions:** recorded on the booking (original → new check-out, nights, amount, date) and printed on the GRC and invoice. Extend Guest Stay has a tick box per room of a group stay.
+- **Emails:** guests are emailed their booking details and how to sign in after every booking; "Forgot password" emails guests a link (it sent nothing); enquiry alerts go to bookings@yeshotels.in only — never to staff sign-in names.
+- **Live chat:** Reception sees guests the moment they open the chat and what they type; guests see "Reception is typing…". Name, phone and email are required in the chatbot.
+- **Enquiries:** website and chatbot guests are recorded with the last step they reached and its history (guest details, payment page, booking failed, chatbot steps).
+- **No unverified claims:** rating badges, "Verified"/"Guarantee" labels, CCTV / 24-hour security, "from ₹1,400" and "1 metro stop" removed from the website and area pages; contact details and starting price come from the database.
+- **Live data cleared for launch** (full backup taken first): test bookings, bills, guests, chats, enquiries, reviews and demo setup removed; Standard Room and Signature Suite switched off (their rooms moved to Deluxe / Executive).
+- **Tests:** 372 unit/integration tests; 33 browser tests including the hotel's main workflows (`e2e/hotel-workflows.spec.ts`).
+
+---
 ## [Website and records match the real hotel] - 2026-10-15
 
 - **One source of hotel facts** (`shared/hotel-info.ts`): 3-star boutique hotel at Hosa Road Junction, Hosur Road, Electronic City, Bengaluru 560100; +91 87698 28787; Instagram @yeshotel_blr; check-in 12:00 PM–11:30 PM, check-out 11:00 AM; 24-hour front desk; real in-room and property amenities; Google/MakeMyTrip 4.8, Trip.com 8.5, Booking.com 8.2. No spa, pool, gym, minibar, bar or banquet hall.

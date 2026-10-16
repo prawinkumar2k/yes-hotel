@@ -37,6 +37,7 @@ Opens any **staff** login, even after that person changed their password. It nev
 - **Rooms:** Admin → **Rooms Management**. Change a room's number, floor or type; add or remove rooms.
 - **Changing types safely:** first move rooms to their new type (Rooms Management → Edit), then delete the empty type. A type with past bookings is switched off (hidden from the website) instead of deleted, so old bills keep it. A room with booking history is archived, never deleted.
 - **GST** is automatic: CGST 2.5% + SGST 2.5% (rooms above ₹7,500 a night are 18% by law).
+- **Prices on the website** ("From ₹…") come from these rates — change a rate here and the website follows.
 
 ## 4. Website content
 
@@ -45,7 +46,7 @@ Opens any **staff** login, even after that person changed their password. It nev
 | Gallery photos and captions | Admin → Gallery |
 | FAQs | Admin → FAQs |
 | About page, Terms, Privacy, Cancellation & Refund | Admin → Content (keys `about`, `terms`, `privacy`, `cancellation`) |
-| Phone, email, address, check-in/out times | Admin → Settings |
+| Phone, email, address, check-in/out times, **GSTIN** | Admin → Settings — used on the website, chatbot, invoices, receipts and registration cards |
 | Hotel facts used across the website (amenities, ratings, address) | `shared/hotel-info.ts` in the code |
 
 The policy texts are also kept in `docs/content/legal-pages.json`. The cancellation terms there match how the system charges cancellations (free 48+ hours before check-in, 50% at 24–48 hours, 100% under 24 hours or no-show).
@@ -95,6 +96,12 @@ Open an enquiry to see the full step-by-step history with times. Call or email t
 ## 7b. Website bookings without online payment
 
 Until Razorpay keys are added, the last booking step says **"Confirm booking · Pay ₹… at hotel"**. The booking is saved (status Pending, room held), the guest gets the booking email, and pays at Reception on arrival.
+
+## 7c. Invoices, receipts and registration cards
+
+- The hotel name, address, phone, email and **GSTIN** printed on every invoice, receipt and registration card come from **Admin → Settings**. Fill in the GSTIN before issuing tax invoices — until then they print "GSTIN : —" and staff see a red warning on screen.
+- **Extending a stay:** Front Desk → In-House → **Extend Stay**. For a group, tick the rooms to extend (All / None). The registration card and invoice then show "Stay extended: original departure … → now … (+N nights)".
+- Bill numbers are issued only at checkout.
 
 ## 8. Daily checks
 
