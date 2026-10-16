@@ -131,9 +131,24 @@ export async function requestStaff(conversationId: string) {
   return setStatus(conversationId, ChatStatus.WAITING);
 }
 
-/** Marks unattended conversations ABANDONED (no guest message for 24 h, not resolved). */
+/**
+ * Marks unattended conversations ABANDONED (no guest message for 24 h, not resolved), and removes
+ * chats that were only opened (no guest message, no contact details) more than 24 h ago.
+ */
 export async function sweepAbandoned() {
   const cutoff = new Date(Date.now() - ABANDON_AFTER_MS);
+  const empty = await ChatConversation.find({
+    createdAt: { $lt: cutoff },
+    lastGuestMessageAt: { $exists: false },
+    "guest.phone": { $in: [null, ""] },
+    "guest.email": { $in: [null, ""] },
+    "guest.name": { $in: [null, ""] },
+  }).select("_id").limit(500).lean();
+  if (empty.length) {
+    const ids = empty.map((c) => c._id);
+    await ChatMessage.deleteMany({ conversation: { $in: ids } });
+    await ChatConversation.deleteMany({ _id: { $in: ids } });
+  }
   await ChatConversation.updateMany(
     { status: { $in: [ChatStatus.BOT, ChatStatus.WAITING] }, lastMessageAt: { $lt: cutoff } },
     { $set: { status: ChatStatus.ABANDONED } },

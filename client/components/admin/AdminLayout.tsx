@@ -5,6 +5,7 @@ import { usePermissions } from "../../context/PermissionContext";
 import { useStaffRealtime } from "@/hooks/useStaffRealtime";
 import ChangePasswordDialog from "./ChangePasswordDialog";
 import { queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 import {
   LayoutDashboard, CalendarDays, CalendarClock, MessagesSquare, KeyRound, BedDouble, Users, CreditCard,
   BarChart3, Settings, Home, Wrench, LogIn, LogOut, MenuIcon, X,
@@ -153,10 +154,21 @@ export default function AdminLayout({ children, title, hidePadding }: { children
     enabled: canChat,
     refetchInterval: 120000,
   });
-  useStaffRealtime((event) => {
+  const { toast } = useToast();
+  useStaffRealtime((event, payload) => {
+    if (event === "chat:activity") return; // keystrokes: only the Live Chat page uses them
     if (event.startsWith("chat:")) queryClient.invalidateQueries({ queryKey: ["live-chat-counts"] });
+    if (event === "enquiry:updated") queryClient.invalidateQueries({ queryKey: ["sidebarNewEnquiries"] });
+    // A guest just opened the website chat — tell Reception wherever they are.
+    if (event === "chat:presence" && payload?.online && !location.pathname.startsWith("/admin/live-chat")) {
+      toast({
+        title: "A guest opened the website chat",
+        description: <button className="underline" onClick={() => navigate("/admin/live-chat")}>Open Live Chat to see them typing</button>,
+      });
+    }
   }, () => queryClient.invalidateQueries({ queryKey: ["live-chat-counts"] }), canChat);
   const chatBadge = (chatCounts?.unread || 0) + (chatCounts?.waiting || 0);
+  const chatOnline = chatCounts?.online || 0;
 
   const NAV_SECTIONS: NavSection[] = [
     {
@@ -175,7 +187,7 @@ export default function AdminLayout({ children, title, hidePadding }: { children
         { label: "Enquiries", to: "/admin/enquiries", icon: MessageSquare, pageKey: "ENQUIRIES", badge: newEnquiriesCount > 0 ? newEnquiriesCount : undefined },
         { label: "All Reservations", to: "/admin/bookings", icon: CalendarDays, pageKey: "BOOKINGS" },
         { label: "Guest Change Requests", to: "/admin/change-requests", icon: CalendarClock, pageKey: "BOOKINGS", badge: pendingChangeRequests > 0 ? pendingChangeRequests : undefined },
-        { label: "Live Chat", to: "/admin/live-chat", icon: MessagesSquare, pageKey: "ENQUIRIES", badge: chatBadge > 0 ? chatBadge : undefined },
+        { label: "Live Chat", to: "/admin/live-chat", icon: MessagesSquare, pageKey: "ENQUIRIES", badge: chatBadge > 0 ? (chatOnline ? `${chatBadge} · ${chatOnline} online` : chatBadge) : chatOnline ? `${chatOnline} online` : undefined },
         { label: "OTA Bookings", to: "/admin/ota-bookings", icon: Globe, pageKey: "BOOKINGS" },
       ],
     },

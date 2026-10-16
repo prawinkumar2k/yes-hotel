@@ -2,6 +2,9 @@
  * Connects the website chatbot to the hotel: the conversation (guest + bot lines) is saved on the
  * server, Reception / Admin see it live, and their replies come back here in real time.
  * The server is the source of truth — after any (re)connect we fetch what we missed.
+ *
+ * While the chat window is open, Reception sees the guest "online", the chatbot step they are on
+ * and what they are typing (activity(), sent a few times a second at most, never stored).
  */
 import { useCallback, useEffect, useRef, useState } from "react";
 import { io, type Socket } from "socket.io-client";
@@ -38,6 +41,11 @@ export function useLiveChat(opts: { onIncoming: (messages: ChatMessage[]) => voi
   const [session, setSession] = useState<Session | null>(() => readSession());
   const [status, setStatus] = useState<LiveStatus>("BOT");
   const [connected, setConnected] = useState(false);
+  const [staffTyping, setStaffTyping] = useState(false);
+  const socketRef = useRef<Socket | null>(null);
+  const pendingActivity = useRef<Record<string, string> | null>(null);
+  const activityTimer = useRef<number | null>(null);
+  const staffTypingTimer = useRef<number | null>(null);
   const synced = useRef<Set<string>>(new Set());
   const lastSeen = useRef<string | null>(null);
   const creating = useRef<Promise<Session> | null>(null);
@@ -72,11 +80,22 @@ export function useLiveChat(opts: { onIncoming: (messages: ChatMessage[]) => voi
   // Live connection for this conversation.
   useEffect(() => {
     if (!session) return;
-    const socket: Socket = io("/guest", { path: "/socket.io", auth: { conversationId: session.conversationId, token: session.token }, transports: ["websocket", "polling"] });
-    socket.on("connect", () => { setConnected(true); catchUp(session).catch(() => undefined); });
+    const socket: Socket = io("/guest", { path: "/socket.io", auth: { conversationId: session.conversationId, token: session.token, page: window.location.pathname }, transports: ["websocket", "polling"] });
+    socketRef.current = socket;
+    socket.on("connect", () => {
+      setConnected(true);
+      catchUp(session).catch(() => undefined);
+      if (pendingActivity.current) { socket.emit("guest:activity", pendingActivity.current); pendingActivity.current = null; }
+    });
+    socket.on("chat:staff-typing", (p: { typing: boolean }) => {
+      setStaffTyping(Boolean(p?.typing));
+      if (staffTypingTimer.current) window.clearTimeout(staffTypingTimer.current);
+      if (p?.typing) staffTypingTimer.current = window.setTimeout(() => setStaffTyping(false), 6000);
+    });
     socket.on("disconnect", () => setConnected(false));
     socket.on("chat:message", (p: { message: ServerMessage; status: LiveStatus }) => {
       setStatus(p.status);
+      if (p.message.sender === "STAFF") setStaffTyping(false);
       lastSeen.current = p.message.createdAt;
       if (synced.current.has(p.message.clientMessageId)) return; // our own echo / duplicate
       synced.current.add(p.message.clientMessageId);
@@ -84,8 +103,19 @@ export function useLiveChat(opts: { onIncoming: (messages: ChatMessage[]) => voi
       fetch(`/api/chat/conversations/${session.conversationId}/read`, { method: "POST", headers: headers(session) }).catch(() => undefined);
     });
     socket.on("chat:status", (p: { status: LiveStatus }) => setStatus(p.status));
-    return () => { socket.close(); };
+    return () => { socket.close(); socketRef.current = null; };
   }, [session, catchUp]);
+
+  /** Tells Reception what the guest is doing right now (step, field, text). Batched to ~4 per second. */
+  const activity = useCallback((p: { step?: string; field?: string; text?: string }) => {
+    pendingActivity.current = { ...(pendingActivity.current ?? {}), ...p, page: window.location.pathname } as Record<string, string>;
+    if (activityTimer.current) return;
+    activityTimer.current = window.setTimeout(() => {
+      activityTimer.current = null;
+      const socket = socketRef.current;
+      if (socket?.connected && pendingActivity.current) { socket.emit("guest:activity", pendingActivity.current); pendingActivity.current = null; }
+    }, 250);
+  }, []);
 
   const ensureSession = useCallback(async (): Promise<Session> => {
     if (session) return session;
@@ -146,6 +176,9 @@ export function useLiveChat(opts: { onIncoming: (messages: ChatMessage[]) => voi
     lastSeen.current = null;
   }, []);
 
+  /** Opening the chat window starts (or resumes) the conversation so Reception sees the guest online. */
+  const open = useCallback(() => ensureSession().then(() => undefined), [ensureSession]);
+
   const withStaff = status === "WAITING" || status === "ASSIGNED";
-  return { status, withStaff, connected, hasSession: Boolean(session), sync, requestStaff, setDetails, reset };
+  return { status, withStaff, connected, staffTyping, hasSession: Boolean(session), sync, requestStaff, setDetails, reset, open, activity };
 }

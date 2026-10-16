@@ -75,6 +75,10 @@ export interface IBookingEnquiry extends Document {
   
   // Booking progress & funnel stage
   bookingStage?: string;
+  /** Every stage the guest reached on the website / chatbot, oldest first. */
+  stageHistory: { stage: string; at: Date; reason?: string }[];
+  /** Last time the guest did something on the website / chatbot for this enquiry. */
+  lastActivityAt?: Date;
   
   // Event/group fields
   enquiryType: EnquiryType;
@@ -155,6 +159,11 @@ const BookingEnquirySchema = new Schema<IBookingEnquiry>(
       default: "CHATBOT_STARTED",
       trim: true,
     },
+    stageHistory: {
+      type: [{ _id: false, stage: { type: String, required: true }, at: { type: Date, required: true }, reason: { type: String, maxlength: 300 } }],
+      default: [],
+    },
+    lastActivityAt: { type: Date },
     
     // Event/Group
     enquiryType: { type: String, enum: Object.values(EnquiryType), default: EnquiryType.INDIVIDUAL },

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { format, formatDistanceToNowStrict } from "date-fns";
-import { Loader2, Send, CheckCircle2, RotateCcw, UserCheck, Search, ArrowLeft, Wifi, WifiOff, Phone, Mail } from "lucide-react";
+import { Loader2, Send, CheckCircle2, RotateCcw, UserCheck, Search, ArrowLeft, Wifi, WifiOff, Phone, Mail, Keyboard } from "lucide-react";
 import { api } from "@/lib/api";
 import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -27,6 +27,9 @@ const STATUS_STYLE: Record<string, string> = {
 const STATUS_LABEL: Record<string, string> = { BOT: "With chatbot", WAITING: "Waiting for staff", ASSIGNED: "Assigned", RESOLVED: "Resolved", ABANDONED: "Abandoned" };
 const guestName = (c: any) => c?.guest?.name || c?.guest?.phone || c?.guest?.email || "Website guest";
 const newId = () => `s-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+/** A guest with the chat window open right now (from the live connection; never stored). */
+type Live = { since?: string; page?: string; step?: string; field?: string; text?: string; at?: string };
+const OnlineDot = () => <span className="relative inline-flex h-2.5 w-2.5 shrink-0"><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60" /><span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500" /></span>;
 
 export default function AdminLiveChat() {
   const { toast } = useToast();
@@ -42,6 +45,18 @@ export default function AdminLiveChat() {
     queryKey: ["live-chats", tab, search],
     queryFn: async () => (await api.get(`/chat/staff/conversations?status=${tab}${search.trim() ? `&search=${encodeURIComponent(search.trim())}` : ""}`)).data.data as any[],
   });
+  // Guests online now: seeded from the server, then kept current by live events.
+  const [live, setLive] = useState<Record<string, Live>>({});
+  const presence = useQuery({
+    queryKey: ["live-chat-presence"],
+    queryFn: async () => (await api.get("/chat/staff/presence")).data.data as (Live & { conversationId: string; conversation: any })[],
+  });
+  useEffect(() => {
+    if (!presence.data) return;
+    setLive(Object.fromEntries(presence.data.map(({ conversationId, conversation: _c, ...l }) => [conversationId, l])));
+  }, [presence.data]);
+  const onlineRows = useMemo(() => (presence.data ?? []).filter((p) => live[p.conversationId]), [presence.data, live]);
+
   const thread = useQuery({
     queryKey: ["live-chat", selected],
     queryFn: async () => (await api.get(`/chat/staff/conversations/${selected}`)).data.data as { conversation: any; messages: any[] },
@@ -55,7 +70,25 @@ export default function AdminLiveChat() {
   };
 
   // Live: new chats, messages and status changes; full re-sync after a reconnect.
-  const { connected } = useStaffRealtime((event, payload) => {
+  const { connected, emit } = useStaffRealtime((event, payload) => {
+    if (event === "chat:activity") {
+      const { conversationId, ...rest } = payload ?? {};
+      if (conversationId) setLive((cur) => ({ ...cur, [conversationId]: { ...(cur[conversationId] ?? {}), ...rest } }));
+      return;
+    }
+    if (event === "chat:presence") {
+      const { conversationId, online, ...rest } = payload ?? {};
+      if (!conversationId) return;
+      setLive((cur) => {
+        const next = { ...cur };
+        if (online) next[conversationId] = { ...(cur[conversationId] ?? {}), ...rest };
+        else delete next[conversationId];
+        return next;
+      });
+      queryClient.invalidateQueries({ queryKey: ["live-chat-presence"] });
+      queryClient.invalidateQueries({ queryKey: ["live-chats"] });
+      return;
+    }
     if (event === "chat:message") {
       const convId = payload?.conversation?._id;
       if (convId && convId === selected) {
@@ -73,9 +106,22 @@ export default function AdminLiveChat() {
       queryClient.invalidateQueries({ queryKey: ["live-chat-counts"] });
       if (payload?._id === selected) queryClient.invalidateQueries({ queryKey: ["live-chat", selected] });
     }
-  }, refreshAll);
+  }, () => { refreshAll(); queryClient.invalidateQueries({ queryKey: ["live-chat-presence"] }); });
 
-  useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [thread.data?.messages?.length]);
+  // "Reception is typing…" for the guest while a reply is being written.
+  const typingSent = useRef<{ id: string | null; at: number }>({ id: null, at: 0 });
+  useEffect(() => {
+    if (!selected) return;
+    const typing = draft.trim().length > 0;
+    const now = Date.now();
+    if (typing && typingSent.current.id === selected && now - typingSent.current.at < 2500) return;
+    if (!typing && typingSent.current.id !== selected) return;
+    emit("staff:typing", { conversationId: selected, typing });
+    typingSent.current = typing ? { id: selected, at: now } : { id: null, at: 0 };
+  }, [draft, selected, emit]);
+  useEffect(() => { setDraft(""); }, [selected]);
+
+  useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [thread.data?.messages?.length, selected ? Boolean(live[selected]?.text) : false]);
 
   const reply = useMutation({
     mutationFn: async (text: string) => (await api.post(`/chat/staff/conversations/${selected}/reply`, { text, clientMessageId: newId() })).data,
@@ -97,7 +143,7 @@ export default function AdminLiveChat() {
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1 className="text-xl md:text-2xl font-serif font-bold text-slate-900">Live Chat</h1>
-          <p className="text-sm text-slate-500">Website chats with guests. New messages appear instantly; reply here and the guest sees it in their chat.</p>
+          <p className="text-sm text-slate-500">Website chats with guests. You see who has the chat open and what they are typing, live; reply here and the guest sees it instantly.</p>
         </div>
         <span className={`inline-flex items-center gap-1.5 self-start rounded-full border px-3 py-1 text-xs font-semibold ${connected ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-amber-200 bg-amber-50 text-amber-700"}`}>
           {connected ? <Wifi size={13} /> : <WifiOff size={13} />} {connected ? "Live" : "Reconnecting…"}
@@ -118,6 +164,25 @@ export default function AdminLiveChat() {
               <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Name, phone, email, message…" className="min-h-[40px] w-full rounded-lg border border-slate-200 pl-8 pr-2 text-sm" />
             </div>
           </div>
+          {onlineRows.length > 0 && (
+            <div className="border-b border-emerald-100 bg-emerald-50/50 p-2">
+              <p className="px-1 pb-1 text-[11px] font-bold uppercase tracking-wide text-emerald-800">Online now · {onlineRows.length}</p>
+              <ul className="space-y-1">
+                {onlineRows.map(({ conversationId, conversation }) => {
+                  const l = live[conversationId] ?? {};
+                  return (
+                    <li key={conversationId}>
+                      <button onClick={() => setSelected(conversationId)} className={`w-full rounded-lg border px-2.5 py-2 text-left ${selected === conversationId ? "border-emerald-300 bg-white" : "border-transparent hover:bg-white"}`}>
+                        <span className="flex items-center gap-2"><OnlineDot /><span className="truncate text-sm font-semibold text-slate-900">{guestName(conversation)}</span></span>
+                        <span className="mt-0.5 block truncate text-[11px] text-slate-500">{l.step || "Chat open"}{l.page ? ` · ${l.page}` : ""}</span>
+                        {l.text ? <span className="mt-0.5 block truncate text-xs italic text-emerald-800">typing: {l.text}</span> : null}
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          )}
           {list.isLoading ? (
             <div className="flex justify-center p-8"><Loader2 className="animate-spin text-amber-600" /></div>
           ) : list.isError ? (
@@ -130,11 +195,11 @@ export default function AdminLiveChat() {
                 <li key={c._id}>
                   <button onClick={() => setSelected(c._id)} className={`w-full px-3 py-3 text-left hover:bg-slate-50 ${selected === c._id ? "bg-amber-50/60" : ""}`}>
                     <div className="flex items-center justify-between gap-2">
-                      <span className="truncate font-semibold text-slate-900">{guestName(c)}</span>
+                      <span className="flex min-w-0 items-center gap-1.5">{live[c._id] && <OnlineDot />}<span className="truncate font-semibold text-slate-900">{guestName(c)}</span></span>
                       <span className="shrink-0 text-[11px] text-slate-400">{formatDistanceToNowStrict(new Date(c.lastMessageAt), { addSuffix: true })}</span>
                     </div>
                     <div className="mt-1 flex items-center justify-between gap-2">
-                      <span className="truncate text-xs text-slate-500">{c.lastMessagePreview || "—"}</span>
+                      {live[c._id]?.text ? <span className="truncate text-xs italic text-emerald-700">typing: {live[c._id].text}</span> : <span className="truncate text-xs text-slate-500">{c.lastMessagePreview || (live[c._id] ? "Chat open — nothing sent yet" : "—")}</span>}
                       {c.unreadForStaff > 0 && <span className="shrink-0 rounded-full bg-red-600 px-1.5 text-[10px] font-bold text-white">{c.unreadForStaff}</span>}
                     </div>
                     <span className={`mt-1.5 inline-block rounded border px-1.5 py-0.5 text-[10px] font-bold ${STATUS_STYLE[c.status]}`}>{STATUS_LABEL[c.status]}</span>
@@ -166,6 +231,13 @@ export default function AdminLiveChat() {
                       <span>Started {format(new Date(conv.createdAt), "dd MMM, HH:mm")}</span>
                     </p>
                     <span className={`mt-1 inline-block rounded border px-1.5 py-0.5 text-[10px] font-bold ${STATUS_STYLE[conv.status]}`}>{STATUS_LABEL[conv.status]}</span>
+                    {live[conv._id] ? (
+                      <span className="ml-1.5 mt-1 inline-flex items-center gap-1.5 rounded border border-emerald-200 bg-emerald-50 px-1.5 py-0.5 text-[10px] font-bold text-emerald-800">
+                        <OnlineDot /> Online now{live[conv._id].step ? ` · ${live[conv._id].step}` : ""}{live[conv._id].page ? ` · ${live[conv._id].page}` : ""}
+                      </span>
+                    ) : (
+                      <span className="ml-1.5 mt-1 inline-block rounded border border-slate-200 px-1.5 py-0.5 text-[10px] font-bold text-slate-500">Offline</span>
+                    )}
                   </div>
                 </div>
                 {canReply && (
@@ -188,6 +260,15 @@ export default function AdminLiveChat() {
                     </p>
                   </div>
                 ))}
+                {thread.data!.messages.length === 0 && !live[conv._id]?.text && (
+                  <p className="py-6 text-center text-xs text-slate-400">The guest has the chat open but hasn't sent anything yet.</p>
+                )}
+                {live[conv._id]?.text ? (
+                  <div className="max-w-[85%]">
+                    <div className="whitespace-pre-line rounded-2xl border border-dashed border-emerald-300 bg-emerald-50 px-3 py-2 text-sm italic text-emerald-900">{live[conv._id].text}</div>
+                    <p className="mt-0.5 inline-flex items-center gap-1 text-[10px] text-emerald-700"><Keyboard size={11} /> Typing now{live[conv._id].field ? ` · ${live[conv._id].field}` : ""} (not sent yet)</p>
+                  </div>
+                ) : null}
                 <div ref={endRef} />
               </div>
               {canReply && (

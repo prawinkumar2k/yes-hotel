@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Loader2, ArrowLeft, Calendar, User, Phone, Mail, Clock, MessageSquare, Plus, FileText, CheckCircle, XCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
+import { enquiryStageInfo } from "@shared/enquiry-stages";
 import { useRoomCategories } from "@/hooks/use-room-categories";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 
@@ -80,7 +81,7 @@ export default function AdminEnquiryDetails() {
               </Badge>
               {enquiry.bookingStage && (
                 <Badge variant="outline" className="font-semibold bg-amber-50 text-amber-800 border-amber-300">
-                  Stage: {enquiry.bookingStage.replace(/_/g, " ")}
+                  Stage: {enquiryStageInfo(enquiry.bookingStage).label}
                 </Badge>
               )}
             </div>
@@ -156,6 +157,28 @@ export default function AdminEnquiryDetails() {
               </div>
             </div>
           </div>
+
+          {enquiry.stageHistory?.length > 0 && (
+            <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+              <div className="border-b border-gray-100 bg-gray-50/50 p-4">
+                <h2 className="font-medium text-hotel-black flex items-center gap-2">
+                  <Clock className="h-4 w-4 text-gray-400" /> Where the guest got to
+                </h2>
+                <p className="text-xs text-gray-500 mt-1">{enquiryStageInfo(enquiry.bookingStage).desc}</p>
+              </div>
+              <ol className="p-5 space-y-3">
+                {enquiry.stageHistory.map((h: any, i: number) => (
+                  <li key={i} className="flex items-start gap-3 text-sm">
+                    <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${i === enquiry.stageHistory.length - 1 ? "bg-amber-500" : "bg-gray-300"}`} />
+                    <div>
+                      <p className="font-medium text-hotel-black">{enquiryStageInfo(h.stage).label}</p>
+                      <p className="text-xs text-gray-500">{format(new Date(h.at), "dd MMM yyyy, HH:mm")}{h.reason ? ` · ${h.reason}` : ""}</p>
+                    </div>
+                  </li>
+                ))}
+              </ol>
+            </div>
+          )}
 
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
             <div className="border-b border-gray-100 bg-gray-50/50 p-4">

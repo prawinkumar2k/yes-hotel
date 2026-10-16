@@ -455,7 +455,9 @@ export const createBooking = async (req: Request, res: Response) => {
               bookingStage: "BOOKING_COMPLETED",
               convertedToBookingId: booking._id,
               convertedAt: new Date(),
+              lastActivityAt: new Date(),
             },
+            $push: { stageHistory: { stage: "BOOKING_COMPLETED", at: new Date() } },
           }
         );
       }

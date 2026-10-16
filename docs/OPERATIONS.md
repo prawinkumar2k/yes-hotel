@@ -60,11 +60,36 @@ Guest sign-in codes and notifications are sent from **bookings@yeshotels.in** (G
 
 ## 6. Online payments
 
-Not switched on yet. When the hotel has Razorpay keys, add `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET` and `RAZORPAY_WEBHOOK_SECRET` to `/opt/yeshotels/.env` and redeploy. Until then guests are asked to pay at Reception.
+Not switched on yet. When the hotel has Razorpay keys, add `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET` and `RAZORPAY_WEBHOOK_SECRET` to `/opt/yeshotels/.env` and redeploy — the payment step then switches to online payment by itself. Until then guests confirm and pay at Reception (see 7b).
 
 ## 7. Live chat
 
-Guests chat on the website. When they tap **Talk to Reception**, the chat appears instantly in **Live Chat** (Reception and Admin) with a red count. Reply there; the guest sees it immediately. Mark chats **Resolved** when done.
+- **The moment a guest opens the website chat**, Reception and Admin get a pop-up ("A guest opened the website chat") on any staff page, and the Live Chat menu shows "N online".
+- **Live Chat → Online now** lists everyone with the chat open: which page they are on, which chatbot step they are at (e.g. "Entering email"), and **what they are typing before they send it**. The chat window tells guests the front desk can see it live.
+- Guests give their name, phone and **email (required)** before checking rooms or talking to Reception, so every chat has contact details.
+- When they tap **Talk to Reception**, the chat is marked *Waiting* with a red count. Reply there; the guest sees it immediately, and sees "Reception is typing…" while you write. Mark chats **Resolved** when done.
+
+## 7a. Enquiries — where guests stopped
+
+Every website or chatbot guest who has given their name, phone and email appears on **Enquiries** (live, no refresh needed), with the **last step they reached** and when they were last active:
+
+| Stage | Means the guest… |
+|---|---|
+| Chatbot: contact shared | gave their details in the chatbot, then stopped |
+| Chatbot: checked rooms | checked availability, didn't pick a room |
+| Chatbot: room selected | picked a room, didn't send the enquiry |
+| Enquiry sent | sent the enquiry from the chatbot |
+| Chatbot → booking page | went to the booking page, didn't finish |
+| Website: guest details | filled in their details, didn't continue to payment |
+| Website: payment page | reached the last step, didn't confirm |
+| Website: booking failed | tried to confirm, it didn't go through (the reason is shown) |
+| Booking completed | booked — the enquiry is marked Converted automatically |
+
+Open an enquiry to see the full step-by-step history with times. Call or email the guests who stopped.
+
+## 7b. Website bookings without online payment
+
+Until Razorpay keys are added, the last booking step says **"Confirm booking · Pay ₹… at hotel"**. The booking is saved (status Pending, room held), the guest gets the booking email, and pays at Reception on arrival.
 
 ## 8. Daily checks
 

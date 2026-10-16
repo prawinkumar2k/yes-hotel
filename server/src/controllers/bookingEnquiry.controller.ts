@@ -12,11 +12,14 @@ import { createAuditLog } from "../services/audit.service";
 import mongoose from "mongoose";
 import { nights as countNights, toBusinessDate, todayBusinessDate, businessDayRange } from "../../../shared/dates";
 import { queueBookingCreatedEmail } from "../services/booking-email.service";
+import { PUBLIC_ENQUIRY_STAGES } from "../../../shared/enquiry-stages";
+import { RoomCategory } from "../models/RoomCategory";
+import { emitToStaff } from "../realtime/socket";
 
 // ─── Chatbot enquiry schema (public — strict, minimal) ─────────────────────
 const publicEnquirySchema = z.object({
   guestName: z.string().trim().min(2).max(120),
-  email: z.string().trim().email().max(254).optional().or(z.literal("")),
+  email: z.string().trim().toLowerCase().email("A valid email address is required").max(254),
   phone: z.string().trim().min(1).max(30).refine((v) => v.replace(/\D/g, "").length >= 7, "Phone must contain at least 7 digits"),
   checkIn: z.coerce.date(),
   checkOut: z.coerce.date(),
@@ -29,8 +32,10 @@ const publicEnquirySchema = z.object({
   roomCategoryId: z.string().trim().optional(),
   pricePerNight: z.coerce.number().nonnegative().optional(),
   roomSubtotal: z.coerce.number().nonnegative().optional(),
-  bookingStage: z.string().trim().optional().default("CHATBOT_CONTACT_COLLECTED"),
-  source: z.nativeEnum(EnquirySource).optional().default(EnquirySource.CHATBOT),
+  bookingStage: z.enum(PUBLIC_ENQUIRY_STAGES).default("CHATBOT_CONTACT_COLLECTED"),
+  /** Why the step failed (e.g. the booking error message), kept in the stage history. */
+  reason: z.string().trim().max(300).optional(),
+  source: z.enum([EnquirySource.CHATBOT, EnquirySource.WEBSITE]).optional().default(EnquirySource.CHATBOT),
 }).superRefine((v, ctx) => {
   if (v.checkOut <= v.checkIn) ctx.addIssue({ code: "custom", path: ["checkOut"], message: "Check-out must be after check-in" });
 });
@@ -91,38 +96,47 @@ export const submitBookingEnquiry = async (req: Request, res: Response) => {
   try {
     const calculatedNights = Math.max(1, countNights(parsed.data.checkIn, parsed.data.checkOut));
     const nights = parsed.data.nights || calculatedNights;
+    const { reason, ...data } = parsed.data;
+    const now = new Date();
+    // The booking page only knows the room type id — use its real name on the enquiry.
+    if (data.roomCategoryId && mongoose.Types.ObjectId.isValid(data.roomCategoryId)) {
+      const cat = await RoomCategory.findById(data.roomCategoryId).select("name").lean();
+      if (cat?.name) data.roomType = cat.name;
+    }
 
     // Check for an existing open enquiry for this guest in the last 48 hours to update rather than flood duplicates
     const oneDayAgo = new Date(Date.now() - 48 * 60 * 60 * 1000);
     const existingFilter: any = {
       createdAt: { $gte: oneDayAgo },
       status: { $in: [BookingEnquiryStatus.NEW, BookingEnquiryStatus.CONTACTED, BookingEnquiryStatus.FOLLOW_UP, BookingEnquiryStatus.AWAITING_RESPONSE] },
-      $or: [
-        { phone: parsed.data.phone },
-        ...(parsed.data.email ? [{ email: parsed.data.email }] : [])
-      ]
+      $or: [{ phone: data.phone }, { email: data.email }],
     };
     const existing = await BookingEnquiry.findOne(existingFilter).sort({ createdAt: -1 });
 
     if (existing) {
-      existing.guestName = parsed.data.guestName;
-      if (parsed.data.email) existing.email = parsed.data.email;
-      existing.checkIn = parsed.data.checkIn;
-      existing.checkOut = parsed.data.checkOut;
+      existing.guestName = data.guestName;
+      existing.email = data.email;
+      existing.phone = data.phone;
+      existing.checkIn = data.checkIn;
+      existing.checkOut = data.checkOut;
       existing.nights = nights;
-      existing.adults = parsed.data.adults;
-      existing.children = parsed.data.children;
-      existing.childAges = parsed.data.childAges;
-      existing.rooms = parsed.data.rooms;
-      existing.roomType = parsed.data.roomType;
-      if (parsed.data.roomCategoryId && mongoose.Types.ObjectId.isValid(parsed.data.roomCategoryId)) {
-        existing.roomCategoryId = new mongoose.Types.ObjectId(parsed.data.roomCategoryId);
+      existing.adults = data.adults;
+      existing.children = data.children;
+      existing.childAges = data.childAges;
+      existing.rooms = data.rooms;
+      existing.roomType = data.roomType;
+      if (data.roomCategoryId && mongoose.Types.ObjectId.isValid(data.roomCategoryId)) {
+        existing.roomCategoryId = new mongoose.Types.ObjectId(data.roomCategoryId);
       }
-      if (parsed.data.pricePerNight) existing.pricePerNight = parsed.data.pricePerNight;
-      if (parsed.data.roomSubtotal) existing.roomSubtotal = parsed.data.roomSubtotal;
-      existing.bookingStage = parsed.data.bookingStage || existing.bookingStage;
-      if (parsed.data.source) existing.source = parsed.data.source;
+      if (data.pricePerNight) existing.pricePerNight = data.pricePerNight;
+      if (data.roomSubtotal) existing.roomSubtotal = data.roomSubtotal;
+      const last = existing.stageHistory?.[existing.stageHistory.length - 1];
+      if (!last || last.stage !== data.bookingStage || reason) existing.stageHistory.push({ stage: data.bookingStage, at: now, ...(reason ? { reason } : {}) });
+      existing.bookingStage = data.bookingStage;
+      existing.lastActivityAt = now;
+      if (data.source) existing.source = data.source;
       await existing.save();
+      emitToStaff("enquiry:updated", { _id: String(existing._id), bookingStage: existing.bookingStage }, existing.propertyId);
 
       return res.status(200).json({
         success: true,
@@ -133,12 +147,15 @@ export const submitBookingEnquiry = async (req: Request, res: Response) => {
 
     const enquiryNumber = await generateEnquiryNumber();
     const enquiry = await BookingEnquiry.create({
-      ...parsed.data,
+      ...data,
       nights,
       enquiryNumber,
-      source: parsed.data.source || EnquirySource.CHATBOT,
-      bookingStage: parsed.data.bookingStage || "CHATBOT_CONTACT_COLLECTED",
+      source: data.source || EnquirySource.CHATBOT,
+      bookingStage: data.bookingStage,
+      stageHistory: [{ stage: data.bookingStage, at: now, ...(reason ? { reason } : {}) }],
+      lastActivityAt: now,
     });
+    emitToStaff("enquiry:updated", { _id: String(enquiry._id), bookingStage: enquiry.bookingStage, created: true }, enquiry.propertyId);
 
     const staff = await User.find({
       role: { $in: [UserRole.ADMIN, UserRole.MANAGER, UserRole.RECEPTIONIST] },

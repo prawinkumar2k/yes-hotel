@@ -6,15 +6,18 @@ import { CheckCircle2 } from "lucide-react";
 export default function ConfirmationPage() {
   const [searchParams] = useSearchParams();
   const reference = searchParams.get("ref");
+  const payAtHotel = searchParams.get("pay") === "hotel";
 
   return (
     <div className="min-h-screen bg-hotel-ivory pt-24">
       <Navbar transparent={false} />
       <div className="max-w-2xl mx-auto px-4 sm:px-6 py-12 md:py-20 text-center">
         <CheckCircle2 size={64} className="text-hotel-gold mx-auto mb-6" />
-        <h1 className="font-serif text-3xl sm:text-4xl text-hotel-black mb-4">Booking Confirmed</h1>
+        <h1 className="font-serif text-3xl sm:text-4xl text-hotel-black mb-4">{payAtHotel ? "Booking Received" : "Booking Confirmed"}</h1>
         <p className="text-hotel-black/60 mb-8">
-          Thank you for choosing YES Hotels. We have sent the confirmation details to your email address.
+          {payAtHotel
+            ? "Thank you for choosing YES Hotels. Your room is held — please pay at Reception when you arrive. We have emailed your booking details and how to sign in to your guest account."
+            : "Thank you for choosing YES Hotels. We have sent the confirmation details to your email address."}
         </p>
 
         {reference && (

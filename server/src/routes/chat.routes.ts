@@ -11,6 +11,7 @@
  *
  * Staff (ENQUIRIES permission; Admin, Manager and Reception):
  *   GET  /api/chat/staff/conversations?status=&search=   GET /api/chat/staff/counts
+ *   GET  /api/chat/staff/presence                         guests with the chat open right now
  *   GET  /api/chat/staff/conversations/:id                (marks read)
  *   POST /api/chat/staff/conversations/:id/reply          { text, clientMessageId }
  *   POST /api/chat/staff/conversations/:id/assign | resolve | reopen
@@ -18,6 +19,7 @@
 import { Router, Request, Response } from "express";
 import rateLimit from "express-rate-limit";
 import { z } from "zod";
+import mongoose from "mongoose";
 import jwt from "jsonwebtoken";
 import { protect } from "../middleware/auth.middleware";
 import { requirePropertyAccess } from "../middleware/propertyAuth";
@@ -29,6 +31,7 @@ import { createAuditLog } from "../services/audit.service";
 import {
   ChatRuleError, addMessage, assertGuestToken, conversationView, markRead, messageView, requestStaff, setStatus, startConversation, sweepAbandoned,
 } from "../services/chat.service";
+import { onlineGuests } from "../realtime/socket";
 import "../models/User";
 
 const fail = (res: Response, e: any) =>
@@ -151,6 +154,17 @@ staffRouter.use(protect, requirePropertyAccess);
 const scopeOf = (req: Request) =>
   (req as any).propertyId ? { $or: [{ propertyId: (req as any).propertyId }, { propertyId: { $exists: false } }] } : {};
 
+/** A chat only appears in the inbox once the guest wrote, left contact details, or while they are online. */
+const hasSomethingFilter = (onlineIds: string[]) => ({
+  $or: [
+    { lastGuestMessageAt: { $exists: true } },
+    { "guest.phone": { $nin: [null, ""] } },
+    { "guest.email": { $nin: [null, ""] } },
+    { "guest.name": { $nin: [null, ""] } },
+    ...(onlineIds.length ? [{ _id: { $in: onlineIds.map((id) => new mongoose.Types.ObjectId(id)) } }] : []),
+  ],
+});
+
 async function staffConversation(req: Request) {
   const id = String(req.params.id);
   if (!/^[a-f0-9]{24}$/i.test(id)) throw new ChatRuleError("Conversation not found", 404);
@@ -167,9 +181,10 @@ staffRouter.get("/conversations", requirePermission("ENQUIRIES", "VIEW"), async 
     if (status === "OPEN") filter.status = { $in: [ChatStatus.WAITING, ChatStatus.ASSIGNED, ChatStatus.BOT] };
     else if (status !== "ALL") filter.status = status;
     const search = String(req.query.search ?? "").trim();
+    filter.$and = [hasSomethingFilter(onlineGuests().map((g) => g.conversationId))];
     if (search) {
       const rx = { $regex: search.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), $options: "i" };
-      filter.$and = [{ $or: [{ "guest.name": rx }, { "guest.phone": rx }, { "guest.email": rx }, { lastMessagePreview: rx }] }];
+      filter.$and.push({ $or: [{ "guest.name": rx }, { "guest.phone": rx }, { "guest.email": rx }, { lastMessagePreview: rx }] });
     }
     const rows = await ChatConversation.find(filter).sort({ lastMessageAt: -1 }).limit(200).populate("assignedTo", "firstName lastName").lean();
     return res.json({ success: true, data: rows.map((c) => ({ ...conversationView(c), assignedTo: c.assignedTo ?? null })) });
@@ -185,7 +200,25 @@ staffRouter.get("/counts", requirePermission("ENQUIRIES", "VIEW"), async (req, r
       ChatConversation.countDocuments({ ...scope, status: ChatStatus.WAITING }),
       ChatConversation.aggregate([{ $match: { ...(scope as any), status: { $nin: [ChatStatus.RESOLVED] } } }, { $group: { _id: null, n: { $sum: "$unreadForStaff" } } }]),
     ]);
-    return res.json({ success: true, data: { waiting, unread: unread[0]?.n ?? 0 } });
+    const online = (await onlineInScope(req)).length;
+    return res.json({ success: true, data: { waiting, unread: unread[0]?.n ?? 0, online } });
+  } catch (e) {
+    return fail(res, e);
+  }
+});
+
+/** Online guests this staff member may see, with their conversation. */
+async function onlineInScope(req: Request) {
+  const live = onlineGuests();
+  if (!live.length) return [];
+  const convs = await ChatConversation.find({ _id: { $in: live.map((g) => g.conversationId) }, ...scopeOf(req) }).lean();
+  const byId = new Map(convs.map((c) => [String(c._id), c]));
+  return live.filter((g) => byId.has(g.conversationId)).map((g) => ({ ...g, conversation: conversationView(byId.get(g.conversationId)) }));
+}
+
+staffRouter.get("/presence", requirePermission("ENQUIRIES", "VIEW"), async (req, res) => {
+  try {
+    return res.json({ success: true, data: await onlineInScope(req) });
   } catch (e) {
     return fail(res, e);
   }

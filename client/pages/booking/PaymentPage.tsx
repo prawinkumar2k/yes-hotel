@@ -7,6 +7,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { format } from "date-fns";
 import { ChevronRight, ShieldCheck, Loader2, AlertCircle } from "lucide-react";
 import { nights as countNights } from "@shared/dates";
+import { trackWebsiteBookingStage } from "@/services/bookingEnquiryService";
 
 // Declare Razorpay global type
 declare global {
@@ -36,6 +37,11 @@ export default function PaymentPage() {
   const [bookingId, setBookingId] = useState<string | null>(null);
   const [bookingRef, setBookingRef] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // Online payment is on only when the hotel has Razorpay keys; otherwise the guest pays at the hotel.
+  const [onlinePay, setOnlinePay] = useState<boolean | null>(null);
+  useEffect(() => {
+    fetch("/api/payments/config").then((r) => r.json()).then((j) => setOnlinePay(Boolean(j?.data?.online))).catch(() => setOnlinePay(false));
+  }, []);
 
   const [couponInput, setCouponInput] = useState("");
   const [couponState, setCouponState] = useState<"idle" | "checking" | "applied" | "error">("idle");
@@ -121,6 +127,7 @@ export default function PaymentPage() {
     if (!data) { navigate("/search"); return; }
     const parsed = JSON.parse(data);
     setBookingData(parsed);
+    trackWebsiteBookingStage("WEBSITE_PAYMENT_PAGE", parsed);
 
     fetch("/api/rooms/categories")
       .then(r => r.json())
@@ -181,6 +188,14 @@ export default function PaymentPage() {
         setBookingRef(currentBookingRef!);
       }
 
+      // Online payment off (or unavailable right now): the booking is saved — the guest pays at the hotel.
+      const payAtHotel = () => {
+        sessionStorage.removeItem("bookingDetails");
+        sessionStorage.removeItem("bookingIdempotencyKey");
+        navigate(`/booking/confirmation?ref=${encodeURIComponent(currentBookingRef ?? "")}&pay=hotel`);
+      };
+      if (!onlinePay) { payAtHotel(); return; }
+
       // Second: create a Razorpay order
       const orderRes = await fetch("/api/payments/create-order", {
         method: "POST",
@@ -188,19 +203,7 @@ export default function PaymentPage() {
         body: JSON.stringify({ bookingId: currentBookingId }),
       });
       const orderJson = await orderRes.json();
-
-      // If Razorpay is not configured, fall back to demo mode
-      if (!orderJson.success) {
-        const confirmRes = await fetch(`/api/bookings/${currentBookingId}/confirm-demo`, { method: "POST" });
-        const confirmJson = await confirmRes.json();
-        if (!confirmJson.success) {
-          throw new Error(confirmJson.message || "Unable to confirm booking");
-        }
-        sessionStorage.removeItem("bookingDetails");
-        sessionStorage.removeItem("bookingIdempotencyKey");
-        navigate(`/booking/confirmation?ref=${confirmJson.data.bookingReference}`);
-        return;
-      }
+      if (!orderJson.success) { payAtHotel(); return; }
 
       // Load Razorpay script
       const loaded = await loadRazorpayScript();
@@ -254,6 +257,7 @@ export default function PaymentPage() {
     } catch (err: any) {
       setError(err.message);
       setIsProcessing(false);
+      trackWebsiteBookingStage("WEBSITE_BOOKING_FAILED", bookingData, err?.message);
     }
   };
 
@@ -293,6 +297,12 @@ export default function PaymentPage() {
                 </div>
               )}
 
+              {onlinePay === false ? (
+              <div className="mb-8 space-y-2 text-sm text-hotel-black/70">
+                <p className="font-medium text-hotel-black">Pay at the hotel</p>
+                <p>Confirm your booking now and pay at Reception when you arrive (cash, card or UPI). We'll email your booking details right away.</p>
+              </div>
+              ) : (
               <div className="mb-8 space-y-3 text-sm text-hotel-black/70">
                 <p className="font-medium text-hotel-black">Payment via Razorpay</p>
                 <p>Accepted: Credit/Debit Card, UPI, Net Banking, Wallets</p>
@@ -302,15 +312,18 @@ export default function PaymentPage() {
                   ))}
                 </div>
               </div>
+              )}
 
-              <GoldButton onClick={handlePayNow} disabled={isProcessing} className="w-full min-h-[44px] py-4 text-base">
+              <GoldButton onClick={handlePayNow} disabled={isProcessing || onlinePay === null} className="w-full min-h-[44px] py-4 text-base">
                 {isProcessing
                   ? <span className="flex items-center justify-center gap-2"><Loader2 className="animate-spin" size={18} /> Processing...</span>
-                  : `Pay ₹${totalAmount.toLocaleString("en-IN")}`}
+                  : onlinePay === false
+                    ? `Confirm booking · Pay ₹${totalAmount.toLocaleString("en-IN")} at hotel`
+                    : `Pay ₹${totalAmount.toLocaleString("en-IN")}`}
               </GoldButton>
 
               <p className="text-center text-xs text-hotel-black/60 mt-4">
-                By completing payment, you agree to our cancellation policy.
+                By confirming, you agree to our cancellation policy.
               </p>
             </div>
           </div>

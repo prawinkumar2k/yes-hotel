@@ -6,7 +6,7 @@ import { useAuth } from "../../context/AuthContext";
 import { format } from "date-fns";
 import { ChevronRight } from "lucide-react";
 import { getStoredBookingDetails, hasCompleteGuestContact, saveBookingDetails } from "@/lib/bookingSession";
-import { submitBookingEnquiry } from "@/services/bookingEnquiryService";
+import { trackWebsiteBookingStage } from "@/services/bookingEnquiryService";
 
 export default function GuestDetailsPage() {
   const [searchParams] = useSearchParams();
@@ -59,6 +59,17 @@ export default function GuestDetailsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Once the guest has typed valid contact details, Reception sees them on the Enquiries page
+  // ("Website: guest details") even if they leave before continuing.
+  useEffect(() => {
+    const t = window.setTimeout(() => trackWebsiteBookingStage("WEBSITE_GUEST_DETAILS", {
+      category, checkIn, checkOut, adults, children,
+      guestDetails: { firstName: form.firstName, lastName: form.lastName, email: form.email, phone: form.phone },
+    }), 1500);
+    return () => window.clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.firstName, form.lastName, form.email, form.phone]);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const idempotencyKey = stored?.idempotencyKey || window.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -69,24 +80,7 @@ export default function GuestDetailsPage() {
       idempotencyKey,
     });
 
-    // Capture website booking process stage: guest details entered & payment pending
-    if (form.firstName && form.phone && checkIn && checkOut) {
-      submitBookingEnquiry({
-        guestName: `${form.firstName} ${form.lastName}`.trim(),
-        email: form.email,
-        phone: form.phone,
-        checkIn,
-        checkOut,
-        adults: Number(adults) || 1,
-        children: Number(children) || 0,
-        rooms: 1,
-        roomType: "Selected Room",
-        roomCategoryId: category || undefined,
-        bookingStage: "PAYMENT_PENDING",
-        source: "WEBSITE",
-      }).catch(() => undefined);
-    }
-
+    // The payment page records the next stage (WEBSITE_PAYMENT_PAGE) when it opens.
     navigate("/booking/payment");
   };
 

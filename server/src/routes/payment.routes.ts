@@ -6,6 +6,11 @@ import { createOrder, verifyPayment, getPaymentByBooking, getPayments, getPaymen
 
 const router = Router();
 
+// Public: is online payment switched on? (no Razorpay keys = guests pay at the hotel)
+router.get("/config", (_req, res) => {
+  res.json({ success: true, data: { online: Boolean(process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET) } });
+});
+
 // Create Razorpay order (public — guest can pay without account)
 router.post("/create-order", createOrder);
 

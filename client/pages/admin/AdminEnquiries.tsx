@@ -8,7 +8,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Loader2, Plus, Search, Filter, MessageSquare, Briefcase, Phone, Mail, Calendar, Eye, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { format } from "date-fns";
+import { format, formatDistanceToNowStrict } from "date-fns";
+import { enquiryStageInfo } from "@shared/enquiry-stages";
+import { useStaffRealtime } from "@/hooks/useStaffRealtime";
 import { Link, useNavigate } from "react-router-dom";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 
@@ -24,15 +26,15 @@ const STATUS_COLORS: Record<string, string> = {
   CANCELLED: "bg-gray-50 text-gray-700 border-gray-200",
 };
 
-const BOOKING_STAGE_MAP: Record<string, { label: string; color: string; desc: string }> = {
-  PAYMENT_PENDING: { label: "Payment Pending", color: "bg-amber-100 text-amber-800 border-amber-300 font-semibold", desc: "Booking process started, payment not completed" },
-  GUEST_DETAILS_ENTERED: { label: "Guest Details Entered", color: "bg-blue-100 text-blue-800 border-blue-300", desc: "Form filled on booking site" },
-  CHATBOT_ROOM_SELECTED: { label: "Room Selected", color: "bg-indigo-100 text-indigo-800 border-indigo-300", desc: "Room chosen in chatbot concierge" },
-  CHATBOT_CONTACT_COLLECTED: { label: "Chatbot Lead", color: "bg-purple-100 text-purple-800 border-purple-300", desc: "Contact captured via chatbot" },
-  CHATBOT_STARTED: { label: "Chatbot Started", color: "bg-gray-100 text-gray-700 border-gray-300", desc: "Initiated concierge interaction" },
-  ENQUIRY_CONFIRMED: { label: "Enquiry Confirmed", color: "bg-cyan-100 text-cyan-800 border-cyan-300", desc: "Manual enquiry submitted" },
-  BOOKING_COMPLETED: { label: "Booking Completed", color: "bg-emerald-100 text-emerald-800 border-emerald-300 font-semibold", desc: "Reservation finalized" },
-  ABANDONED_CHECKOUT: { label: "Abandoned Checkout", color: "bg-rose-100 text-rose-800 border-rose-300", desc: "Dropped off at checkout" },
+const STAGE_TONE: Record<string, string> = {
+  gray: "bg-gray-100 text-gray-700 border-gray-300",
+  purple: "bg-purple-100 text-purple-800 border-purple-300",
+  indigo: "bg-indigo-100 text-indigo-800 border-indigo-300",
+  blue: "bg-blue-100 text-blue-800 border-blue-300",
+  amber: "bg-amber-100 text-amber-800 border-amber-300 font-semibold",
+  rose: "bg-rose-100 text-rose-800 border-rose-300 font-semibold",
+  cyan: "bg-cyan-100 text-cyan-800 border-cyan-300",
+  emerald: "bg-emerald-100 text-emerald-800 border-emerald-300 font-semibold",
 };
 
 export default function AdminEnquiries() {
@@ -55,6 +57,11 @@ export default function AdminEnquiries() {
       const res = await api.get(`/admin/booking-enquiries?${params}`);
       return res.data.data;
     },
+  });
+
+  // New website / chatbot leads and stage changes appear without refreshing.
+  useStaffRealtime((event) => {
+    if (event === "enquiry:updated") queryClient.invalidateQueries({ queryKey: ["booking-enquiries"] });
   });
 
   const deleteMutation = useMutation({
@@ -172,11 +179,8 @@ export default function AdminEnquiries() {
                 </tr>
               ) : (
                 data?.enquiries?.map((enq: any) => {
-                  const stage = BOOKING_STAGE_MAP[enq.bookingStage] || {
-                    label: enq.bookingStage ? enq.bookingStage.replace(/_/g, " ") : "Lead Captured",
-                    color: "bg-gray-100 text-gray-700 border-gray-300",
-                    desc: "In progress",
-                  };
+                  const info = enquiryStageInfo(enq.bookingStage);
+                  const stage = { label: info.label, desc: info.desc, color: STAGE_TONE[info.tone] };
                   return (
                     <tr key={enq._id} className="hover:bg-gray-50/80 transition-colors group cursor-pointer" onClick={(e) => {
                       // Prevent navigation if clicking actions
@@ -224,6 +228,9 @@ export default function AdminEnquiries() {
                           {stage.label}
                         </Badge>
                         <p className="text-[11px] text-gray-500 mt-1 max-w-[180px] leading-tight">{stage.desc}</p>
+                        {enq.lastActivityAt && enq.status !== "CONVERTED" && (
+                          <p className="text-[11px] text-gray-400 mt-0.5">Last active {formatDistanceToNowStrict(new Date(enq.lastActivityAt), { addSuffix: true })}</p>
+                        )}
                       </td>
                       <td className="px-6 py-4">
                         <Badge variant="outline" className={`font-medium ${STATUS_COLORS[enq.status] || STATUS_COLORS.NEW}`}>
