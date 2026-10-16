@@ -104,7 +104,7 @@ export async function injectSeoTagsIntoHtml(
     },
     image: `${baseUrl}/brand/icon-512.png`,
     telephone: facts.phone,
-    email: "stay@yeshotels.in",
+    ...(facts.email ? { email: facts.email } : {}),
   };
   structuredDataGraphs.push(organizationSchema);
 
