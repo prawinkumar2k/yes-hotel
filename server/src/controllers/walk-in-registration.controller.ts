@@ -1355,7 +1355,14 @@ export const printRegistrationCard = async (req: Request, res: Response) => {
         <div><div class="rg-label">Date of Arr &amp; Time</div><div class="rg-val" style="font-size:11px">${new Date(booking.checkInDate).toLocaleDateString("en-IN")} &bull; ${esc((booking as any).arrivalTime || "12:00 PM")}</div></div>
         <div><div class="rg-label">Date of Dep &amp; Time</div><div class="rg-val" style="font-size:11px">${new Date(booking.checkOutDate).toLocaleDateString("en-IN")} &bull; ${esc((booking as any).departureTime || "11:00 AM")}</div></div>
       </div>
-
+${(() => {
+  // Extended stays: original departure and each extension.
+  const ext: any[] = (booking as any).stayExtensions ?? [];
+  if (!ext.length) return "";
+  const d = (v: any) => new Date(v).toLocaleDateString("en-IN");
+  const total = ext.reduce((t, e) => t + (Number(e.nights) || 0), 0);
+  return `      <div class="rg-row" style="font-size:10px"><b>Stay extended:</b> original departure ${d(ext[0].fromCheckOut)} &rarr; now ${d(ext[ext.length - 1].toCheckOut)} (+${total} night${total === 1 ? "" : "s"})${ext.map((e) => ` &middot; ${d(e.fromCheckOut)} &rarr; ${d(e.toCheckOut)} (on ${d(e.at)})`).join("")}</div>\n`;
+})()}
       <div class="rg-row grid-2" style="border:none">
         <div><div class="rg-label">Purpose of Visit</div><div class="rg-val" style="font-size:11px">${esc(guest.purposeOfVisit || "Personal / Business")}</div></div>
         <div><div class="rg-label">Proceeding To</div><div class="rg-val" style="font-size:11px">${esc(guest.proceedingTo || "—")}</div></div>

@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
+import StayExtensionNote from "@/components/admin/StayExtensionNote";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { format, differenceInDays } from "date-fns";
@@ -506,6 +507,7 @@ function BookingDocCard({
                     <span className="font-bold">{format(checkOutDate, "dd/MM/yyyy")} &bull; {b.departureTime || "11:00 AM"}</span>
                   </div>
                 </div>
+                <StayExtensionNote booking={b} className="-mt-1" />
 
                 <div className="grid grid-cols-2 gap-2">
                   <div>
@@ -670,6 +672,7 @@ function BookingDocCard({
                 <div>Dept Time</div><div>: {b.departureTime || "11:00"}</div><div className="col-span-2"></div>
                 <div>Stay Days</div><div>: {nights}</div><div className="col-span-2"></div>
                 <div className="col-span-4 mt-1 font-bold">M {b.adults || 1} F 0 C {b.children || 0}</div>
+                <StayExtensionNote booking={b} className="col-span-4" />
               </div>
             </div>
 

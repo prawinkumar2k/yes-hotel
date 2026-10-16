@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import StayExtensionNote from "@/components/admin/StayExtensionNote";
 import { useParams, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
@@ -363,6 +364,7 @@ export default function AdminGRCPrint() {
                 <span className="font-bold">{format(checkOutDate, "dd/MM/yyyy")} &bull; {booking.departureTime || "11:00 AM"}</span>
               </div>
             </div>
+            <StayExtensionNote booking={booking} className="-mt-1" />
 
             <div className="grid grid-cols-2 gap-2">
               <div>

@@ -71,7 +71,8 @@ export default function AdminFrontDesk() {
   const [extensionConflict, setExtensionConflict] = useState<string | null>(null);
   const [extensionCost, setExtensionCost] = useState<number>(0);
   // Group stays: extend every room together (default) or only the chosen room. Per-room quote from the server.
-  const [extendScope, setExtendScope] = useState<"GROUP" | "ROOM">("GROUP");
+  // Rooms (booking ids) of the stay chosen for extension — any subset of a group booking.
+  const [extendSelected, setExtendSelected] = useState<string[]>([]);
   const [extensionQuotes, setExtensionQuotes] = useState<Array<{ booking: any; room: string; cost: number; error?: string; skip?: boolean }>>([]);
 
   const [folioDrawer, setFolioDrawer] = useState<{ 
@@ -290,29 +291,47 @@ export default function AdminFrontDesk() {
 
   const openExtendStay = (booking: any, groupList?: any[]) => {
     const group = extensionGroupOf(booking, groupList);
-    const scope = group.length > 1 ? "GROUP" : "ROOM";
+    const selected = group.map((g: any) => String(g._id));
     // Default new date: one night after the latest check-out in the stay.
     const latest = group.map((g: any) => (g.checkOutDate ? toBusinessDate(g.checkOutDate) : "")).sort().pop() || "";
     const nextDateStr = latest ? addDays(latest, 1) : "";
-    setExtendScope(scope);
+    setExtendSelected(selected);
     setNewCheckOutDate(nextDateStr);
     setExtensionConflict(null);
     setExtensionCost(0);
     setExtensionQuotes([]);
     setExtendModal({ open: true, booking: { ...booking, groupBookings: group } });
-    if (nextDateStr) handleCheckExtension(nextDateStr, { ...booking, groupBookings: group }, scope);
+    if (nextDateStr) handleCheckExtension(nextDateStr, { ...booking, groupBookings: group }, selected);
   };
 
-  const extensionTargets = (b: any, scope: "GROUP" | "ROOM") => (scope === "GROUP" ? b?.groupBookings || [b] : [b]);
+  /** Total and conflicts for the ticked rooms only. */
+  const applyExtensionSelection = (quotes: any[], selected: string[]) => {
+    const chosen = quotes.filter((q) => selected.includes(String(q.booking._id)));
+    setExtensionCost(chosen.reduce((t, q) => t + (q.error || q.skip ? 0 : q.cost), 0));
+    const errs = chosen.filter((q) => q.error);
+    const todo = chosen.filter((q) => !q.skip && !q.error);
+    setExtensionConflict(
+      chosen.length === 0 ? "Tick at least one room to extend"
+        : errs.length ? errs.map((q) => `Room ${q.room}: ${q.error}`).join(" · ")
+        : todo.length === 0 ? "Already staying until this date — pick a later check-out" : null,
+    );
+  };
 
-  const handleCheckExtension = async (dateVal: string, targetBooking?: any, scopeArg?: "GROUP" | "ROOM") => {
+  const toggleExtendRoom = (id: string) => {
+    const next = extendSelected.includes(id) ? extendSelected.filter((x) => x !== id) : [...extendSelected, id];
+    setExtendSelected(next);
+    applyExtensionSelection(extensionQuotes, next);
+  };
+
+  const handleCheckExtension = async (dateVal: string, targetBooking?: any, selectedArg?: string[]) => {
     setNewCheckOutDate(dateVal);
     const b = targetBooking || extendModal.booking;
-    const scope = scopeArg || extendScope;
+    const selected = selectedArg || extendSelected;
     if (!b || !dateVal) return;
     const token = getStoredAuthToken();
+    // Price every room of the stay so the list shows them all; only ticked rooms are extended.
     const quotes = await Promise.all(
-      extensionTargets(b, scope).map(async (t: any) => {
+      (b?.groupBookings || [b]).map(async (t: any) => {
         const room = roomOf(t);
         // A room already staying until (or past) the new date needs no extension.
         if (t.checkOutDate && toBusinessDate(t.checkOutDate) >= dateVal) return { booking: t, room, cost: 0, skip: true };
@@ -331,10 +350,7 @@ export default function AdminFrontDesk() {
       }),
     );
     setExtensionQuotes(quotes);
-    setExtensionCost(quotes.reduce((t, q) => t + (q.error || q.skip ? 0 : q.cost), 0));
-    const errs = quotes.filter((q) => q.error);
-    const todo = quotes.filter((q) => !q.skip && !q.error);
-    setExtensionConflict(errs.length ? errs.map((q) => `Room ${q.room}: ${q.error}`).join(" · ") : todo.length === 0 ? "Already staying until this date — pick a later check-out" : null);
+    applyExtensionSelection(quotes, selected);
   };
 
   const handleProcessExtend = async () => {
@@ -344,7 +360,7 @@ export default function AdminFrontDesk() {
     const done: string[] = [];
     const failed: string[] = [];
     try {
-      for (const q of extensionQuotes.filter((x) => !x.skip && !x.error)) {
+      for (const q of extensionQuotes.filter((x) => extendSelected.includes(String(x.booking._id)) && !x.skip && !x.error)) {
         const res = await fetch(`/api/bookings/${q.booking._id}/extend`, {
           method: "POST",
           headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
@@ -1638,28 +1654,37 @@ export default function AdminFrontDesk() {
               </div>
             )}
 
-            {(extendModal.booking.groupBookings?.length ?? 0) > 1 && (
-              <div className="grid grid-cols-2 gap-2">
-                {([["GROUP", `All ${extendModal.booking.groupBookings.length} rooms`], ["ROOM", `Only room ${roomOf(extendModal.booking)}`]] as const).map(([v, label]) => (
-                  <button key={v} type="button" onClick={() => { setExtendScope(v); handleCheckExtension(newCheckOutDate, extendModal.booking, v); }}
-                    className={`py-2 rounded-xl text-xs font-bold border transition ${extendScope === v ? "bg-purple-100 border-purple-400 text-purple-900" : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"}`}>
-                    {label}
-                  </button>
-                ))}
-              </div>
-            )}
-
             {newCheckOutDate && extensionQuotes.length > 0 && (
-              <ul className="text-xs divide-y divide-gray-100 border border-gray-200 rounded-xl">
-                {extensionQuotes.map((q) => (
-                  <li key={q.booking._id} className="flex items-center justify-between px-3 py-2">
-                    <span className="font-semibold">Room {q.room}</span>
-                    <span className={q.error ? "text-red-600" : q.skip ? "text-gray-400" : "font-mono font-bold"}>
-                      {q.error ? "Unavailable" : q.skip ? "Already until this date" : `₹${q.cost.toLocaleString("en-IN")}`}
+              <div className="space-y-1.5">
+                {extensionQuotes.length > 1 && (
+                  <div className="flex items-center justify-between text-[11px] text-gray-500">
+                    <span>Tick the rooms to extend</span>
+                    <span className="flex gap-3">
+                      <button type="button" className="font-semibold text-purple-700 hover:underline" onClick={() => { const all = extensionQuotes.map((q) => String(q.booking._id)); setExtendSelected(all); applyExtensionSelection(extensionQuotes, all); }}>All</button>
+                      <button type="button" className="font-semibold text-purple-700 hover:underline" onClick={() => { setExtendSelected([]); applyExtensionSelection(extensionQuotes, []); }}>None</button>
                     </span>
-                  </li>
-                ))}
-              </ul>
+                  </div>
+                )}
+                <ul className="text-xs divide-y divide-gray-100 border border-gray-200 rounded-xl">
+                  {extensionQuotes.map((q) => {
+                    const id = String(q.booking._id);
+                    const on = extendSelected.includes(id);
+                    return (
+                      <li key={id}>
+                        <label className={`flex min-h-[40px] cursor-pointer items-center justify-between gap-3 px-3 py-2 ${on ? "bg-purple-50/60" : ""}`}>
+                          <span className="flex items-center gap-2 font-semibold">
+                            {extensionQuotes.length > 1 && <input type="checkbox" checked={on} onChange={() => toggleExtendRoom(id)} className="h-4 w-4 accent-purple-600" />}
+                            Room {q.room}
+                          </span>
+                          <span className={q.error ? "text-red-600" : q.skip ? "text-gray-400" : on ? "font-mono font-bold" : "font-mono text-gray-400 line-through"}>
+                            {q.error ? "Unavailable" : q.skip ? "Already until this date" : `₹${q.cost.toLocaleString("en-IN")}`}
+                          </span>
+                        </label>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
             )}
 
             {newCheckOutDate && !extensionConflict && (
@@ -1669,7 +1694,7 @@ export default function AdminFrontDesk() {
                   <span className="font-mono font-black text-sm text-purple-950">₹{extensionCost.toLocaleString()}</span>
                 </div>
                 <p className="text-[11px] text-purple-700">
-                  Posted to each room's bill at the agreed room rate, with GST 5% (CGST 2.5% + SGST 2.5%). The registration card, folio and invoice show the new check-out date.
+                  Posted to each ticked room's bill at the agreed room rate, with GST (CGST + SGST). The registration card, folio and invoice show the extension: original and new check-out.
                 </p>
               </div>
             )}

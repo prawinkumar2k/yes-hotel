@@ -85,6 +85,11 @@ describe("Bills follow the stay; numbers only at checkout", () => {
     expect(ext).toMatchObject({ amount: 2500, coversNights: [today] });
     const b = await db().collection("bookings").findOne({ _id: ids.booking });
     expect(b!.totalAmount).toBe(5250);
+    // Recorded on the booking for the registration card and invoice: original → new check-out.
+    expect(b!.stayExtensions).toHaveLength(1);
+    expect(b!.stayExtensions[0]).toMatchObject({ nights: 1, amount: 2625 });
+    expect(b!.stayExtensions[0].toCheckOut.getTime()).toBe(new Date(b!.checkOutDate).getTime());
+    expect(b!.stayExtensions[0].fromCheckOut.getTime()).toBeLessThan(b!.stayExtensions[0].toCheckOut.getTime());
   });
 
   it("has no bill number or invoice number while the guest is in-house", async () => {

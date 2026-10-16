@@ -183,6 +183,8 @@ export interface IBooking extends Document {
   assignedRoom?: mongoose.Types.ObjectId;
   checkInDate: Date;
   checkOutDate: Date;
+  /** Every stay extension, oldest first: shown on the registration card and invoice. */
+  stayExtensions?: { fromCheckOut: Date; toCheckOut: Date; nights: number; amount: number; at: Date; by?: mongoose.Types.ObjectId }[];
   adults: number;
   children: number;
   status: BookingStatus;
@@ -357,6 +359,18 @@ const BookingSchema = new Schema<IBooking>(
     assignedRoom: { type: Schema.Types.ObjectId, ref: "Room" },
     checkInDate: { type: Date, required: true },
     checkOutDate: { type: Date, required: true },
+    stayExtensions: {
+      type: [{
+        _id: false,
+        fromCheckOut: { type: Date, required: true },
+        toCheckOut: { type: Date, required: true },
+        nights: { type: Number, required: true },
+        amount: { type: Number, default: 0 },
+        at: { type: Date, default: Date.now },
+        by: { type: Schema.Types.ObjectId, ref: "User" },
+      }],
+      default: undefined,
+    },
     adults: { type: Number, required: true, default: 1 },
     children: { type: Number, required: true, default: 0 },
     status: { type: String, enum: Object.values(BookingStatus), default: BookingStatus.PENDING },

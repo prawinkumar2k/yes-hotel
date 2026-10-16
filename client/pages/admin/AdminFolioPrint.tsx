@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import StayExtensionNote from "@/components/admin/StayExtensionNote";
 import { useParams, Link, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
@@ -355,6 +356,7 @@ export default function AdminFolioPrint() {
                <div>Dept Time</div><div>: {booking.departureTime || "11:00"}</div><div className="col-span-2"></div>
                <div>Stay Days</div><div>: {nights}</div><div className="col-span-2"></div>
                <div className="col-span-4 mt-1 font-bold">M {booking.adults || 1} F 0 C {booking.children || 0}</div>
+               <StayExtensionNote booking={booking} className="col-span-4" />
             </div>
           </div>
 
