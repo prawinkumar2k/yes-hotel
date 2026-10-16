@@ -37,9 +37,11 @@ export async function sendNotification(params: {
   recipientEmail: string;
   subject: string;
   body: string;
+  /** Optional formatted version; `body` stays the plain-text version (and what retries send). */
+  html?: string;
   bookingId?: string;
 }) {
-  const { type, recipientEmail, subject, body, bookingId } = params;
+  const { type, recipientEmail, subject, body, html, bookingId } = params;
   const transporter = getTransporter();
 
   if (!transporter) {
@@ -61,10 +63,11 @@ export async function sendNotification(params: {
 
   try {
     await transporter.sendMail({
-      from: process.env.EMAIL_USER,
+      from: { name: process.env.EMAIL_FROM_NAME || "YES Hotels", address: process.env.EMAIL_USER! },
       to: recipientEmail,
       subject,
       text: body,
+      ...(html ? { html } : {}),
     });
     await NotificationLog.create({
       type,

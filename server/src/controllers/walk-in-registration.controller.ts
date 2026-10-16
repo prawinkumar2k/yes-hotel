@@ -84,6 +84,7 @@ import { createAuditLog } from "../services/audit.service";
 import { generateBookingReference } from "../utils/booking-reference";
 import crypto from "crypto";
 import { nights as countNights, todayBusinessDate } from "../../../shared/dates";
+import { queueBookingCreatedEmail } from "../services/booking-email.service";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // STEP 1 — GUEST SEARCH
@@ -840,6 +841,8 @@ export const walkInArrivalRegistration = async (req: Request, res: Response) => 
         advanceAmount: advance?.amount,
       },
     }).catch(() => undefined);
+
+    queueBookingCreatedEmail((createdBookings?.length ? createdBookings : [booking]).map((b: any) => b._id));
 
     return res.status(201).json({
       success: true,

@@ -30,6 +30,7 @@ import { BookingInventoryDay } from "../models/BookingInventoryDay";
 import { BookingEnquiry, BookingEnquiryStatus } from "../models/BookingEnquiry";
 import { nights as countNights, toBusinessDate, todayBusinessDate, addDays as addBusinessDays } from "../../../shared/dates";
 import { SeoLandingPage } from "../models/SeoLandingPage";
+import { queueBookingCreatedEmail } from "../services/booking-email.service";
 
 const guestDetailsSchema = z.object({
   firstName: z.string().trim().min(1, "Guest first name is required"),
@@ -495,6 +496,8 @@ export const createBooking = async (req: Request, res: Response) => {
         idempotencyKey,
       },
     });
+
+    queueBookingCreatedEmail([booking._id]);
 
     return res.status(201).json({ success: true, message: "Booking created", data: booking });
   } catch (error: any) {

@@ -52,6 +52,9 @@ The policy texts are also kept in `docs/content/legal-pages.json`. The cancellat
 
 Guest sign-in codes and notifications are sent from **bookings@yeshotels.in** (Google Workspace) using an **app password** stored on the server.
 
+- **After every booking** (website, enquiry converted to a booking, walk-in) the guest is emailed the booking number, room, dates, guests, amount, paid and balance, check-in/out times, and how to sign in to their guest account (email code, or booking number + mobile — no password is sent). Bookings without a real guest email are skipped.
+- Every email sent (or failed, then retried automatically) is recorded in the notification log.
+
 - If the Google account password changes, the app password stops working: create a new one at https://myaccount.google.com/apppasswords (2-Step Verification must be on) and put it in `EMAIL_PASS` in `/opt/yeshotels/.env`, then redeploy.
 - Revoke an app password at the same page if it was ever shared.
 

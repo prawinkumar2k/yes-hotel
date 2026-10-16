@@ -11,6 +11,7 @@ import { sendNotification } from "../services/notification.service";
 import { createAuditLog } from "../services/audit.service";
 import mongoose from "mongoose";
 import { nights as countNights, toBusinessDate, todayBusinessDate, businessDayRange } from "../../../shared/dates";
+import { queueBookingCreatedEmail } from "../services/booking-email.service";
 
 // ─── Chatbot enquiry schema (public — strict, minimal) ─────────────────────
 const publicEnquirySchema = z.object({
@@ -560,6 +561,8 @@ export const convertEnquiryToBooking = async (req: Request, res: Response) => {
       resourceId: String(req.params.id),
       metadata: { bookings: bookings.map((x) => x.bookingReference), roomCategoryId: categoryId },
     });
+
+    queueBookingCreatedEmail(bookings.map((x) => x._id));
 
     const label = bookings.length > 1 ? `${bookings.length} bookings` : `Booking ${bookings[0].bookingReference}`;
     return res.status(201).json({
