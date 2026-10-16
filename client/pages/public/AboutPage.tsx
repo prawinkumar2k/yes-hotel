@@ -3,7 +3,8 @@ import { GoldButton } from "@/components/hotel/HotelButtons";
 import { Link } from "react-router-dom";
 import { useContent } from "@/hooks/usePublicData";
 import { usePageMeta } from "@/hooks/usePageMeta";
-import { HOTEL, hotelAddressOneLine } from "@shared/hotel-info";
+import { HOTEL } from "@shared/hotel-info";
+import { useHotelContact } from "@/hooks/usePublicData";
 import { Check, Star, MapPin, Clock } from "lucide-react";
 
 const FALLBACK = {
@@ -18,6 +19,7 @@ export default function AboutPage() {
   usePageMeta("About Us", "YES HOTELS — a contemporary boutique hotel at Hosa Road Junction, Electronic City, Bengaluru. Clean rooms, 24-hour front desk, free Wi-Fi and parking.");
   const { data } = useContent("about");
   const content = data ?? FALLBACK;
+  const contact = useHotelContact();
   const [heroImage, lobbyImage] = content.images?.length ? content.images : FALLBACK.images;
   const paragraphs = (content.description ?? FALLBACK.description).split("\n\n");
 
@@ -79,8 +81,8 @@ export default function AboutPage() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-left mb-14 text-hotel-black/70">
-          <p className="flex gap-2"><MapPin size={18} className="text-hotel-gold shrink-0 mt-0.5" /><span>{hotelAddressOneLine()}<br /><span className="text-sm text-hotel-black/50">{HOTEL.landmark}</span></span></p>
-          <p className="flex gap-2"><Clock size={18} className="text-hotel-gold shrink-0 mt-0.5" /><span>Check-in {HOTEL.checkInWindow}<br />Check-out {HOTEL.checkOut} · {HOTEL.frontDesk}</span></p>
+          <p className="flex gap-2"><MapPin size={18} className="text-hotel-gold shrink-0 mt-0.5" /><span>{contact.address}<br /><span className="text-sm text-hotel-black/50">{HOTEL.landmark}</span></span></p>
+          <p className="flex gap-2"><Clock size={18} className="text-hotel-gold shrink-0 mt-0.5" /><span>Check-in from {contact.checkIn}<br />Check-out {contact.checkOut} · {HOTEL.frontDesk}</span></p>
         </div>
 
         <Link to="/search" className="block sm:inline-block">

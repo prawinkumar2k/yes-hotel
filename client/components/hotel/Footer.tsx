@@ -1,7 +1,7 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import { useHotelSettings } from "@/hooks/usePublicData";
-import { HOTEL, hotelAddressOneLine } from "@shared/hotel-info";
+import { useHotelContact } from "@/hooks/usePublicData";
+import { HOTEL } from "@shared/hotel-info";
 import { Sparkles, ArrowRight, BedDouble } from "lucide-react";
 import BrandLogo from "@/components/hotel/BrandLogo";
 
@@ -9,9 +9,9 @@ const DESCRIPTION =
   "A contemporary 3-star boutique hotel at Hosa Road Junction, Electronic City — clean, comfortable rooms beside Hosa Road Metro, with a 24-hour front desk.";
 
 export default function Footer() {
-  const { data } = useHotelSettings();
-  // Contact details come from the hotel's own facts; an email shows only when one is saved in settings.
-  const email: string | undefined = (data as any)?.email || undefined;
+  // Phone, email, address and times come from Admin → Settings.
+  const contact = useHotelContact();
+  const email = contact.email || undefined;
 
   return (
     <footer className="bg-[#0b0b0b] text-white border-t border-[#262930] pt-16 md:pt-20 lg:pt-24 pb-8 md:pb-10 lg:pb-12 relative overflow-hidden">
@@ -68,11 +68,11 @@ export default function Footer() {
           <div className="space-y-4">
             <span className="text-[#c9a227] font-bold uppercase tracking-widest block">Front Desk · 24 Hours</span>
             <ul className="space-y-2 text-gray-300 font-sans text-sm">
-              <li><a href={HOTEL.phoneHref} className="hover:text-[#c9a227] transition">{HOTEL.phones[0]}</a></li>
+              <li><a href={contact.phoneHref} className="hover:text-[#c9a227] transition">{contact.phone}</a></li>
               {email && <li><a href={`mailto:${email}`} className="hover:text-[#c9a227] transition">{email}</a></li>}
-              <li><a href={HOTEL.instagramUrl} target="_blank" rel="noreferrer" className="hover:text-[#c9a227] transition">Instagram @{HOTEL.instagram}</a></li>
-              <li className="text-gray-400 text-xs">{hotelAddressOneLine()}</li>
-              <li className="text-gray-400 text-xs">Check-in {HOTEL.checkIn} · Check-out {HOTEL.checkOut}</li>
+              <li><a href={contact.instagramUrl} target="_blank" rel="noreferrer" className="hover:text-[#c9a227] transition">Instagram @{HOTEL.instagram}</a></li>
+              <li className="text-gray-400 text-xs">{contact.address}</li>
+              <li className="text-gray-400 text-xs">Check-in {contact.checkIn} · Check-out {contact.checkOut}</li>
             </ul>
           </div>
         </div>

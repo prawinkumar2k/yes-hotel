@@ -1,7 +1,7 @@
 import { motion } from "framer-motion";
 import Navbar from "@/components/hotel/Navbar";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { useFAQs } from "@/hooks/usePublicData";
+import { useFAQs, useHotelContact } from "@/hooks/usePublicData";
 import { usePageMeta } from "@/hooks/usePageMeta";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 import { Loader2 } from "lucide-react";
@@ -9,6 +9,7 @@ import { Loader2 } from "lucide-react";
 export default function FAQPage() {
   usePageMeta("Frequently Asked Questions", "Answers to common questions about booking, check-in, cancellations, and more at YES Hotels.");
   const { data: faqs, isLoading, isError } = useFAQs();
+  const contact = useHotelContact();
   const reducedMotion = useReducedMotion();
 
   return (
@@ -25,7 +26,7 @@ export default function FAQPage() {
           Frequently Asked Questions
         </motion.h1>
         <p className="text-center text-hotel-black/60 mb-16 max-w-2xl mx-auto">
-          Check-in from 12 noon, check-out at 11 AM, 24-hour front desk. For anything else, call +91 87698 28787.
+          Check-in from {contact.checkIn}, check-out {contact.checkOut}, 24-hour front desk. For anything else, call {contact.phone}.
         </p>
 
         {isLoading && (

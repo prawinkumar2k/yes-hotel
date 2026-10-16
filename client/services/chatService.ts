@@ -1,21 +1,26 @@
-import { HOTEL, hotelAddressOneLine } from "@shared/hotel-info";
+import { HOTEL } from "@shared/hotel-info";
+import { hotelContactFrom } from "@/hooks/usePublicData";
 
-export const hotelContact = {
-  phone: import.meta.env.VITE_HOTEL_PHONE || HOTEL.phones[0],
-  whatsapp: import.meta.env.VITE_HOTEL_WHATSAPP || "",
-  email: import.meta.env.VITE_HOTEL_EMAIL || "",
-  address: import.meta.env.VITE_HOTEL_ADDRESS || hotelAddressOneLine(),
-  bookingUrl: import.meta.env.VITE_BOOKING_URL || "/search",
-};
+export type HotelContact = ReturnType<typeof hotelContactFrom>;
 
-/** Only published, real facts about the hotel (shared/hotel-info.ts). Nothing is guessed. */
-export function getHotelInformation() {
+/** Contact lines for the chatbot, from Admin → Settings (passed in by the chat window). */
+export function contactDetails(c: HotelContact) {
   return [
-    `${HOTEL.name} is a ${HOTEL.category.toLowerCase()} at ${hotelAddressOneLine()} (${HOTEL.landmark.toLowerCase()}).`,
-    `Check-in ${HOTEL.checkInWindow}, check-out ${HOTEL.checkOut}. ${HOTEL.frontDesk}.`,
+    `Phone: ${c.phone}`,
+    `WhatsApp: ${c.whatsappHref}`,
+    c.email && `Email: ${c.email}`,
+    `Address: ${c.address}`,
+  ].filter(Boolean).join("\n");
+}
+
+/** Only published, real facts about the hotel: contact and times from settings, the rest from shared/hotel-info.ts. */
+export function getHotelInformation(c: HotelContact) {
+  return [
+    `${c.name} is a ${HOTEL.category.toLowerCase()} at ${c.address} (${HOTEL.landmark.toLowerCase()}).`,
+    `Check-in from ${c.checkIn}, check-out ${c.checkOut}. ${HOTEL.frontDesk}.`,
     `In every room: ${HOTEL.inRoom.join(", ")}.`,
     `At the hotel: ${HOTEL.property.join(", ")}.`,
     `Stays: ${HOTEL.stayOptions.join(", ")}.`,
-    `Call us on ${HOTEL.phones[0]} for anything else.`,
+    `Call us on ${c.phone} for anything else.`,
   ].join("\n");
 }

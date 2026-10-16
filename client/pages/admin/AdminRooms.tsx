@@ -52,7 +52,10 @@ export default function AdminRooms() {
   const { data: categories } = useQuery({
     queryKey: ["adminRoomCategories"],
     queryFn: async () => {
-      const res = await fetch("/api/admin/room-categories", { headers: { Authorization: `Bearer ${user?.token}` } });
+      // Staff who can't manage room types (e.g. Housekeeping) get the public list of active types.
+      const res = hasPermission("ROOM_CATEGORIES", "VIEW")
+        ? await fetch("/api/admin/room-categories", { headers: { Authorization: `Bearer ${user?.token}` } })
+        : await fetch("/api/rooms/categories");
       const json = await res.json();
       return json.success ? json.data : [];
     },

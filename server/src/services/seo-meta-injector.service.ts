@@ -1,5 +1,28 @@
 import { SeoLandingPage } from "../models/SeoLandingPage";
 import { HOTEL, hotelAddressOneLine } from "../../../shared/hotel-info";
+import { HotelSettings } from "../models/HotelSettings";
+import { RoomCategory } from "../models/RoomCategory";
+
+/** Phone, email, times (Admin → Settings) and the active room-rate range, cached for 5 minutes. */
+let factsCache: { at: number; facts: { phone: string; email: string; checkIn: string; checkOut: string; priceRange?: string } } | null = null;
+async function liveHotelFacts() {
+  if (factsCache && Date.now() - factsCache.at < 5 * 60 * 1000) return factsCache.facts;
+  const [settings, cats]: [any, any[]] = await Promise.all([
+    HotelSettings.findOne().select("phone email checkInTime checkOutTime").lean().catch(() => null),
+    RoomCategory.find({ isActive: { $ne: false } }).select("basePrice").lean().catch(() => []),
+  ]);
+  const prices = cats.map((c) => Number(c.basePrice)).filter((n) => n > 0);
+  const hhmmss = (v: unknown, d: string) => (/^\d{2}:\d{2}$/.test(String(v ?? "")) ? `${v}:00` : d);
+  const facts = {
+    phone: settings?.phone || HOTEL.phones[0],
+    email: settings?.email || "",
+    checkIn: hhmmss(settings?.checkInTime, "12:00:00"),
+    checkOut: hhmmss(settings?.checkOutTime, "11:00:00"),
+    priceRange: prices.length ? `₹${Math.min(...prices).toLocaleString("en-IN")} - ₹${Math.max(...prices).toLocaleString("en-IN")}` : undefined,
+  };
+  factsCache = { at: Date.now(), facts };
+  return facts;
+}
 
 /**
  * Injects dynamic, database-backed Meta Tags, Canonical URL, Open Graph,
@@ -14,9 +37,10 @@ export async function injectSeoTagsIntoHtml(
   pathname: string
 ): Promise<string> {
   const baseUrl = (process.env.CLIENT_URL || "https://yeshotels.in").replace(/\/$/, "");
+  const facts = await liveHotelFacts();
   let title = "YES HOTELS, Bengaluru — Boutique Hotel at Hosa Road Junction";
   let description =
-    "YES HOTELS — a contemporary boutique hotel at Hosa Road Junction, Hosur Road, Electronic City, Bengaluru. Clean AC rooms near Hosa Road Metro, free Wi-Fi and parking, 24-hour front desk. Call +91 87698 28787.";
+    `YES HOTELS — a contemporary boutique hotel at Hosa Road Junction, Hosur Road, Electronic City, Bengaluru. Clean AC rooms near Hosa Road Metro, free Wi-Fi and parking, 24-hour front desk. Call ${facts.phone}.`;
   let canonicalUrl = `${baseUrl}${pathname === "/" ? "" : pathname}`;
   let ogImage = `${baseUrl}/brand/icon-512.png`;
   let structuredDataGraphs: any[] = [];
@@ -31,11 +55,11 @@ export async function injectSeoTagsIntoHtml(
     logo: `${baseUrl}/brand/icon-512.png`,
     image: `${baseUrl}/brand/icon-512.png`,
     description: description,
-    telephone: HOTEL.phones[0],
-    email: "stay@yeshotels.in",
-    priceRange: `₹${HOTEL.priceFrom} - ₹9,500`,
-    checkinTime: "12:00:00",
-    checkoutTime: "11:00:00",
+    telephone: facts.phone,
+    ...(facts.email ? { email: facts.email } : {}),
+    ...(facts.priceRange ? { priceRange: facts.priceRange } : {}),
+    checkinTime: facts.checkIn,
+    checkoutTime: facts.checkOut,
     address: {
       "@type": "PostalAddress",
       streetAddress: `${HOTEL.address.line1}, ${HOTEL.address.line2}`,
@@ -79,7 +103,7 @@ export async function injectSeoTagsIntoHtml(
       height: 512,
     },
     image: `${baseUrl}/brand/icon-512.png`,
-    telephone: HOTEL.phones[0],
+    telephone: facts.phone,
     email: "stay@yeshotels.in",
   };
   structuredDataGraphs.push(organizationSchema);

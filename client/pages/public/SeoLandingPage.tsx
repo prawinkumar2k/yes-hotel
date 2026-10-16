@@ -26,10 +26,15 @@ import {
   HelpCircle,
 } from "lucide-react";
 import { format, addDays } from "date-fns";
+import { useHotelContact, useStartingPrice } from "@/hooks/usePublicData";
 
 export default function SeoLandingPage() {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
+  // Phone from Admin → Settings; "From ₹…" is the lowest active room rate.
+  const contact = useHotelContact();
+  const fromPrice = useStartingPrice();
+  const fromLabel = fromPrice ? `From ₹${fromPrice.toLocaleString("en-IN")}` : "Best direct rate";
 
   const today = format(new Date(), "yyyy-MM-dd");
   const tomorrow = format(addDays(new Date(), 1), "yyyy-MM-dd");
@@ -216,11 +221,11 @@ export default function SeoLandingPage() {
               {/* Quick Contact & WhatsApp Pill */}
               <div className="flex flex-wrap items-center gap-4 text-xs text-hotel-black/70">
                 <a
-                  href="tel:+918769828787"
+                  href={contact.phoneHref}
                   className="inline-flex items-center gap-1.5 font-medium text-hotel-black hover:text-hotel-gold transition"
                 >
                   <Phone size={14} className="text-hotel-gold" />
-                  <span>Front Desk: +91 87698 28787</span>
+                  <span>Front Desk: {contact.phone}</span>
                 </a>
                 <span>•</span>
                 <span className="inline-flex items-center gap-1 text-emerald-700 font-medium">
@@ -238,7 +243,7 @@ export default function SeoLandingPage() {
                 <div className="flex items-center justify-between mb-5">
                   <div>
                     <span className="text-[11px] font-bold uppercase tracking-wider text-hotel-black/50 block">Direct Website Price</span>
-                    <span className="text-2xl font-serif font-bold text-hotel-black">From ₹1,400 <span className="text-xs font-sans font-normal text-hotel-black/60">/ night</span></span>
+                    <span className="text-2xl font-serif font-bold text-hotel-black">{fromLabel} <span className="text-xs font-sans font-normal text-hotel-black/60">/ night</span></span>
                   </div>
                   <span className="px-2.5 py-1 rounded bg-amber-50 text-amber-800 text-[11px] font-bold tracking-wide border border-amber-200">
                     Best Rate Guarantee
@@ -550,11 +555,11 @@ export default function SeoLandingPage() {
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-hotel-black/10 p-3 sm:hidden z-40 shadow-lg flex items-center justify-between">
         <div>
           <span className="text-[10px] text-hotel-black/50 block font-bold uppercase">Direct Rate</span>
-          <span className="font-serif text-base font-bold text-hotel-black">From ₹1,400</span>
+          <span className="font-serif text-base font-bold text-hotel-black">{fromLabel}</span>
         </div>
         <div className="flex gap-2">
           <a
-            href="tel:+918769828787"
+            href={contact.phoneHref}
             className="p-2.5 rounded-lg border border-hotel-black/20 text-hotel-black"
           >
             <Phone size={16} />

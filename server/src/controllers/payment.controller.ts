@@ -300,6 +300,7 @@ export const confirmDemoBooking = async (req: Request, res: Response) => {
 // GET /api/payments/:bookingId — Admin: get payment record for a booking
 export const getPaymentByBooking = async (req: Request, res: Response) => {
   try {
+    if (!mongoose.Types.ObjectId.isValid(String(req.params.bookingId))) return res.status(400).json({ success: false, message: "Invalid booking id" });
     const payment = await Payment.findOne({ booking: req.params.bookingId })
       .populate("booking", "bookingReference totalAmount guestDetails");
     if (!payment) return res.status(404).json({ success: false, message: "No payment record found" });

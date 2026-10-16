@@ -6,14 +6,15 @@ import { HotelSettings } from "../models/HotelSettings";
 import { WebsiteContent } from "../models/WebsiteContent";
 import { RoomCategory } from "../models/RoomCategory";
 import { Room } from "../models/Room";
+import { publicSettingsView } from "../controllers/settings.controller";
 
 const router = Router();
 
 // GET /api/public/settings
 router.get("/settings", async (req, res) => {
   try {
-    const settings = await HotelSettings.findOne();
-    return res.status(200).json({ success: true, data: settings });
+    const settings = await HotelSettings.findOne().lean();
+    return res.status(200).json({ success: true, data: publicSettingsView(settings) });
   } catch (e: any) {
     return res.status(500).json({ success: false, message: e.message });
   }

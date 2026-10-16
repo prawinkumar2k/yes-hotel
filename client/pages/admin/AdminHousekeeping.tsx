@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { getStoredAuthToken } from "../../lib/authStorage";
+import { usePermissions } from "../../context/PermissionContext";
 import { imageFileToDataUrl } from "@/lib/imageFile";
 
 const STATUS_COLORS: Record<string, { bg: string; text: string; border: string }> = {
@@ -61,6 +62,7 @@ const LEGAL_NEXT_STATUSES: Record<string, { label: string; status: string; color
 
 export default function AdminHousekeeping() {
   const { toast } = useToast();
+  const { hasPermission } = usePermissions();
   const [loading, setLoading] = useState(true);
   const [tasks, setTasks] = useState<any[]>([]);
   const [rooms, setRooms] = useState<any[]>([]);
@@ -88,17 +90,20 @@ export default function AdminHousekeeping() {
         setTasks(jsonTasks.data || []);
       }
 
-      // Fetch room rack to get complete room list
-      const resRooms = await fetch("/api/room-rack", {
-        headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-      });
-      const jsonRooms = await resRooms.json();
-      if (jsonRooms.success) {
-        const floors = jsonRooms.data?.floors || [];
-        setRooms(floors.flatMap((f: any) => f.rooms || []));
+      // Room list and staff list are only for those who may see them (supervisors assigning work).
+      if (hasPermission("ROOM_RACK", "VIEW")) {
+        const resRooms = await fetch("/api/room-rack", {
+          headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        });
+        const jsonRooms = await resRooms.json();
+        if (jsonRooms.success) {
+          const floors = jsonRooms.data?.floors || [];
+          setRooms(floors.flatMap((f: any) => f.rooms || []));
+        }
       }
 
       // Fetch housekeeping staff
+      if (!hasPermission("STAFF", "VIEW")) return;
       const resStaff = await fetch("/api/staff?role=HOUSEKEEPING&limit=100", {
         headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
       });

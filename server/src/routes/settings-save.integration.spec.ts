@@ -51,6 +51,16 @@ describe("Admin settings save", () => {
     expect(pub.json.data.email).toBe("bookings@yeshotels.in");
   });
 
+  it("public settings show guest-facing details only", async () => {
+    for (const path of ["/api/settings/public", "/api/public/settings"]) {
+      const pub = (await call("GET", path)).json.data;
+      expect(pub.phone).toBeTruthy();
+      for (const internal of ["panNumber", "cashVarianceThreshold", "invoicePrefix", "advancePrefix", "allowBackdatedCorrections", "updatedBy", "gstRules"]) {
+        expect(pub).not.toHaveProperty(internal);
+      }
+    }
+  });
+
   it("refuses a time that isn't 24-hour HH:MM", async () => {
     const body = { ...original, checkInTime: "12 PM" };
     for (const k of ["_id", "__v", "createdAt", "updatedAt"]) delete body[k];

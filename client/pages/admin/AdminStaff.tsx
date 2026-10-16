@@ -18,6 +18,7 @@ export default function AdminStaff() {
   const { hasPermission } = usePermissions();
   const canCreate = hasPermission("STAFF", "CREATE");
   const canEdit = hasPermission("STAFF", "EDIT");
+  const canSeeRoles = hasPermission("ROLES", "VIEW") && hasPermission("PERMISSIONS", "VIEW");
   
   const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState("");
@@ -124,7 +125,7 @@ export default function AdminStaff() {
       <Tabs defaultValue="directory" className="w-full">
         <TabsList className="mb-6 bg-white border border-gray-200">
           <TabsTrigger value="directory" className="data-[state=active]:bg-hotel-gold data-[state=active]:text-black">Staff Directory</TabsTrigger>
-          <TabsTrigger value="permissions" className="data-[state=active]:bg-hotel-gold data-[state=active]:text-black">Roles & Permissions</TabsTrigger>
+          {canSeeRoles && <TabsTrigger value="permissions" className="data-[state=active]:bg-hotel-gold data-[state=active]:text-black">Roles & Permissions</TabsTrigger>}
         </TabsList>
 
         <TabsContent value="directory" className="mt-0">
@@ -233,9 +234,11 @@ export default function AdminStaff() {
         )}
       </div>
       </TabsContent>
+      {canSeeRoles && (
       <TabsContent value="permissions" className="mt-0">
         <AccessMatrix />
       </TabsContent>
+      )}
       </Tabs>
 
       <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>

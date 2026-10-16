@@ -5,7 +5,8 @@ import { format, parseISO } from "date-fns";
 import { nights as countNights, addDays, todayBusinessDate } from "@shared/dates";
 import { checkRoomAvailability, type AvailableRoom } from "@/services/availabilityService";
 import { submitBookingEnquiry } from "@/services/bookingEnquiryService";
-import { getHotelInformation, hotelContact } from "@/services/chatService";
+import { contactDetails, getHotelInformation } from "@/services/chatService";
+import { useHotelContact } from "@/hooks/usePublicData";
 import { saveBookingDetails, splitFullName } from "@/lib/bookingSession";
 import BookingFlow from "./BookingFlow";
 import BookingSummary from "./BookingSummary";
@@ -29,6 +30,8 @@ const newMessage = (sender: ChatMessage["sender"], text: string, extra: Partial<
 
 export default function ChatWindow({ onMinimize, onClose }: { onMinimize: () => void; onClose: () => void }) {
   const navigate = useNavigate();
+  // Phone, email, address and times from Admin → Settings.
+  const contact = useHotelContact();
   const [messages, setMessages] = useState<ChatMessage[]>([newMessage("assistant", "Welcome to YES Hotels. How can I help you today?")]);
   const [booking, setBooking] = useState<BookingState>(initialBooking);
   const [step, setStep] = useState<Step>("idle");
@@ -84,7 +87,7 @@ export default function ChatWindow({ onMinimize, onClose }: { onMinimize: () => 
     setPendingAction(null);
     if (action === "Talk to Reception") {
       say("I've let our front desk know. A team member will reply right here — you can keep typing your question below.");
-      live.requestStaff().catch(() => say("Sorry, I couldn't reach the front desk. Please call +91 87698 28787."));
+      live.requestStaff().catch(() => say(`Sorry, I couldn't reach the front desk. Please call ${contact.phone}.`));
       setStep("idle");
       return;
     }
@@ -94,13 +97,12 @@ export default function ChatWindow({ onMinimize, onClose }: { onMinimize: () => 
       return;
     }
     if (action === "Hotel Information") {
-      say(getHotelInformation());
+      say(getHotelInformation(contact));
       setStep("idle");
       return;
     }
     if (action === "Contact YES Hotels") {
-      const details = [hotelContact.phone && `Phone: ${hotelContact.phone}`, hotelContact.whatsapp && `WhatsApp: ${hotelContact.whatsapp}`, hotelContact.email && `Email: ${hotelContact.email}`, hotelContact.address && `Address: ${hotelContact.address}`].filter(Boolean);
-      say(details.length ? details.join("\n") : "YES Hotels contact details have not been configured yet. Please use the Contact page on this website.");
+      say(contactDetails(contact));
       setStep("idle");
     }
   }
@@ -111,12 +113,6 @@ export default function ChatWindow({ onMinimize, onClose }: { onMinimize: () => 
     }
     if (action === "Check Room Availability" || action === "Hotel Information" || action === "Contact YES Hotels") {
       return beginActionWithContact(action);
-    }
-    if (action === "Contact YES Hotels") {
-      userSays(action);
-      const details = [hotelContact.phone && `Phone: ${hotelContact.phone}`, hotelContact.whatsapp && `WhatsApp: ${hotelContact.whatsapp}`, hotelContact.email && `Email: ${hotelContact.email}`, hotelContact.address && `Address: ${hotelContact.address}`].filter(Boolean);
-      say(details.length ? details.join("\n") : "YES Hotels contact details have not been configured yet. Please use the Contact page on this website.");
-      return;
     }
     if (action === "Book on Website" || action === "Continue to Booking & Payment") { goToPayment(); return; }
     if (action === "Change Dates") { say("Let’s start again. Please select your check-in date."); setStep("checkin"); return; }

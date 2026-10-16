@@ -54,6 +54,20 @@ const settingsSchema = z.object({
   cashVarianceThreshold: money("Cash variance threshold").optional(),
 });
 
+/** What anyone may see (website, chatbot, booking pages): guest-facing details only, no internal settings. */
+const PUBLIC_SETTING_FIELDS = [
+  "hotelName", "logoUrl", "tagline", "description", "phone", "email", "address", "googleMapsUrl", "whatsappNumber",
+  "checkInTime", "checkOutTime", "earlyCheckInFee", "lateCheckOutFee", "extraPersonRate", "extraBedRate",
+  "childRateNoBed", "childRateWithBed", "mealPlanRates", "currency", "currencySymbol", "cgstPercentage", "sgstPercentage",
+  "igstPercentage", "taxInclusiveRates", "gstNumber", "cancellationPolicy", "cancellationFreeHours",
+  "cancellationPenaltyPercentage", "instagramUrl", "facebookUrl", "youtubeUrl", "metaTitle", "metaDescription", "ogImageUrl",
+] as const;
+
+export function publicSettingsView(settings: any) {
+  const s = settings?.toObject ? settings.toObject() : settings ?? {};
+  return Object.fromEntries(PUBLIC_SETTING_FIELDS.filter((k) => s[k] !== undefined).map((k) => [k, s[k]]));
+}
+
 export const getSettings = async (req: Request, res: Response) => {
   try {
     let settings = await HotelSettings.findOne();
@@ -64,6 +78,7 @@ export const getSettings = async (req: Request, res: Response) => {
         await settings.save();
       }
     }
+    if (req.path.includes("/public")) return res.status(200).json({ success: true, data: publicSettingsView(settings) });
     // effectiveGstRules: what taxService is applying right now (custom rules, or the defaults).
     const custom = (settings as any).gstRules?.length ? (settings as any).toObject().gstRules : null;
     return res.status(200).json({

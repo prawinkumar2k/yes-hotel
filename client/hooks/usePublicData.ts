@@ -5,6 +5,7 @@
  */
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
+import { HOTEL, hotelAddressOneLine } from "@shared/hotel-info";
 
 // ── Settings ──────────────────────────────────────────────
 export function useHotelSettings() {
@@ -89,4 +90,50 @@ export function usePublicRooms() {
     staleTime: 1000 * 60 * 2,
     retry: 1,
   });
+}
+
+// ── Hotel contact details ──────────────────────────────────
+const time12 = (hhmm?: string) => {
+  const m = /^(\d{1,2}):(\d{2})$/.exec(String(hhmm ?? ""));
+  if (!m) return "";
+  const h = Number(m[1]);
+  return `${h % 12 || 12}:${m[2]} ${h < 12 ? "AM" : "PM"}`;
+};
+
+/**
+ * The hotel's name, phone, email, address and check-in / check-out times as set in
+ * Admin → Settings (the database). The built-in facts are only a fallback while loading or offline.
+ */
+export function useHotelContact() {
+  const { data } = useHotelSettings();
+  return hotelContactFrom(data);
+}
+
+export function hotelContactFrom(s: any) {
+  const phone = (s?.phone || HOTEL.phones[0]) as string;
+  const whatsapp = String(s?.whatsappNumber || phone).replace(/\D/g, "");
+  return {
+    name: (s?.hotelName || HOTEL.name) as string,
+    phone,
+    phoneHref: `tel:${phone.replace(/[^\d+]/g, "")}`,
+    whatsappHref: `https://wa.me/${whatsapp.length === 10 ? `91${whatsapp}` : whatsapp}`,
+    email: (s?.email || "") as string,
+    address: (s?.address || hotelAddressOneLine()) as string,
+    mapsUrl: (s?.googleMapsUrl || HOTEL.mapsUrl) as string,
+    instagramUrl: (s?.instagramUrl || HOTEL.instagramUrl) as string,
+    checkIn: time12(s?.checkInTime) || HOTEL.checkIn,
+    checkOut: time12(s?.checkOutTime) || HOTEL.checkOut,
+  };
+}
+
+/** Lowest nightly rate among the active room types (Admin → Room Categories), for "From ₹…" labels. */
+export function useStartingPrice() {
+  const { data } = useQuery({
+    queryKey: ["public-room-categories"],
+    queryFn: async () => (await api.get("/rooms/categories")).data.data as { basePrice?: number; isActive?: boolean }[],
+    staleTime: 1000 * 60 * 5,
+    retry: 1,
+  });
+  const prices = (data ?? []).filter((c) => c.isActive !== false && Number(c.basePrice) > 0).map((c) => Number(c.basePrice));
+  return prices.length ? Math.min(...prices) : null;
 }
