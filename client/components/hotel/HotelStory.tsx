@@ -59,13 +59,13 @@ export default function HotelStory() {
             </h3>
 
             <p className="text-xs sm:text-sm text-slate-500 font-light leading-relaxed">
-              Guests rate us 4.8 on Google and MakeMyTrip for clean rooms, helpful staff and a quiet stay — right beside Hosa Road Metro Station on Hosur Road.
+              Clean rooms, helpful staff and a quiet stay — right beside Hosa Road Metro Station on Hosur Road.
             </p>
 
             <div className="pt-4 grid grid-cols-2 gap-4 border-t border-slate-200 font-mono text-xs">
               <div>
-                <span className="text-[#c9a227] font-bold block text-lg">4.8 / 5</span>
-                <span className="text-slate-500">Google &amp; MakeMyTrip rating</span>
+                <span className="text-[#c9a227] font-bold block text-lg">Free</span>
+                <span className="text-slate-500">Wi-Fi &amp; on-site parking</span>
               </div>
               <div>
                 <span className="text-[#c9a227] font-bold block text-lg">24 / 7</span>

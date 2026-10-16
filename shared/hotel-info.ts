@@ -28,12 +28,6 @@ export const HOTEL = {
   checkInWindow: "12:00 PM to 11:30 PM",
   checkOut: "11:00 AM",
   frontDesk: "24-hour front desk",
-  ratings: [
-    { source: "Google", score: "4.8 / 5" },
-    { source: "MakeMyTrip", score: "4.8 / 5" },
-    { source: "Trip.com", score: "8.5 / 10" },
-    { source: "Booking.com", score: "8.2 / 10" },
-  ],
   priceFrom: 1400, // ₹ per night before tax, typical lowest rate
   inRoom: [
     "Air-conditioning",

@@ -154,7 +154,7 @@ export default function LoginPage() {
           </Link>
           <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/80 backdrop-blur border border-amber-200/60 shadow-sm text-xs font-medium text-amber-800">
             <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-500" />
-            <span>Rated 4.8 / 5 on Google</span>
+            <span>24-hour front desk</span>
           </div>
         </div>
 

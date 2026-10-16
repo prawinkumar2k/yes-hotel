@@ -98,7 +98,7 @@ export default function Hero() {
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-2 text-xs font-mono text-gray-400 pt-2">
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-[#c9a227] animate-ping" />
-            <span>RATED 4.8 / 5 ON GOOGLE &amp; MAKEMYTRIP</span>
+            <span>24-HOUR FRONT DESK · NEAR HOSA ROAD METRO</span>
           </div>
 
           <a href="#about" className="flex items-center gap-2 min-h-[44px] hover:text-[#c9a227] transition">

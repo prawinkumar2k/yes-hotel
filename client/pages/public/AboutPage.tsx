@@ -54,16 +54,6 @@ export default function AboutPage() {
           <img src={lobbyImage} alt="Guest room at YES HOTELS" className="w-full h-[220px] sm:h-[300px] md:h-[400px] object-cover mb-12 mt-6" />
         )}
 
-        {/* What guests say */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-14">
-          {HOTEL.ratings.map((r) => (
-            <div key={r.source} className="bg-hotel-white border border-hotel-black/10 p-4">
-              <div className="flex items-center justify-center gap-1 text-hotel-gold"><Star size={14} fill="currentColor" /><span className="font-serif text-xl text-hotel-black">{r.score}</span></div>
-              <p className="text-xs uppercase tracking-widest text-hotel-black/50 mt-1">{r.source}</p>
-            </div>
-          ))}
-        </div>
-
         {/* What we offer — only what the hotel has */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 text-left mb-14">
           <div>

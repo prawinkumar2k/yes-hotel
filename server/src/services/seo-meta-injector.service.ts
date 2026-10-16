@@ -73,13 +73,6 @@ export async function injectSeoTagsIntoHtml(
       latitude: 12.8715,
       longitude: 77.6534,
     },
-    aggregateRating: {
-      "@type": "AggregateRating",
-      ratingValue: "4.8",
-      reviewCount: "142",
-      bestRating: "5",
-      worstRating: "1",
-    },
     amenityFeature: [
       { "@type": "LocationFeatureSpecification", name: "Free High-Speed Wi-Fi", value: true },
       { "@type": "LocationFeatureSpecification", name: "Air Conditioning", value: true },
