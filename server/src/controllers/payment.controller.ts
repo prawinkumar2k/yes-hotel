@@ -1,3 +1,4 @@
+import Razorpay from "razorpay";
 import { Request, Response } from "express";
 import mongoose from "mongoose";
 import crypto from "crypto";
@@ -45,8 +46,6 @@ function bookingConfirmationNotification(booking: { bookingReference: string; gu
 // Dynamically require Razorpay so the app doesn't crash if package not installed yet
 function getRazorpay() {
   try {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const Razorpay = require("razorpay");
     const keyId = process.env.RAZORPAY_KEY_ID;
     const keySecret = process.env.RAZORPAY_KEY_SECRET;
     if (!keyId || !keySecret) throw new Error("Razorpay credentials not configured");

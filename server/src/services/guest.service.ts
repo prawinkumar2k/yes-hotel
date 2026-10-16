@@ -1,4 +1,5 @@
 import { Guest } from "../models/Guest";
+import { Property } from "../models/Property";
 
 export class GuestBlockedError extends Error {
   constructor(message = "This guest is blocked from making new bookings") {
@@ -27,8 +28,7 @@ export async function syncGuestOnBookingCreated(params: {
   phone: string;
 }) {
   const email = params.email.trim().toLowerCase();
-  const mongoose = require("mongoose");
-  const defaultProp = await mongoose.model("Property").findOne();
+  const defaultProp = await Property.findOne().select("_id").lean();
   await Guest.findOneAndUpdate(
     { email },
     {

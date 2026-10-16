@@ -17,6 +17,7 @@
  */
 import { Router, Request, Response, NextFunction } from "express";
 import crypto from "node:crypto";
+import Razorpay from "razorpay";
 import { z } from "zod";
 import { protect } from "../middleware/auth.middleware";
 import { requirePropertyAccess } from "../middleware/propertyAuth";
@@ -54,8 +55,6 @@ function getRazorpay() {
   const keyId = process.env.RAZORPAY_KEY_ID;
   const keySecret = process.env.RAZORPAY_KEY_SECRET;
   if (!keyId || !keySecret) return null;
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const Razorpay = require("razorpay");
   return { client: new Razorpay({ key_id: keyId, key_secret: keySecret }), keyId, keySecret };
 }
 

@@ -1,3 +1,4 @@
+import Razorpay from "razorpay";
 import { queueForVerification } from "../services/reception-verification";
 import { VerificationType } from "../models/VerificationRequest";
 import { Request, Response } from "express";
@@ -60,7 +61,6 @@ async function closeBookingAfterFullRefund(req: Request, booking: InstanceType<t
 
 function getRazorpay() {
   try {
-    const Razorpay = require("razorpay");
     const keyId = process.env.RAZORPAY_KEY_ID;
     const keySecret = process.env.RAZORPAY_KEY_SECRET;
     if (!keyId || !keySecret) throw new Error("Razorpay credentials not configured");
