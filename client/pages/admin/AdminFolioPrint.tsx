@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import HotelDocAddress from "@/components/admin/HotelDocAddress";
 import StayExtensionNote from "@/components/admin/StayExtensionNote";
 import { useParams, Link, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -301,14 +302,7 @@ export default function AdminFolioPrint() {
                </div>
             </div>
             <div className="w-2/3 p-2 text-right">
-               <h2 className="font-bold text-sm uppercase">YES HOTELS</h2>
-               <p>No. 51, Khata No. 749, Singasandra, Hosa Road Junction,</p>
-               <p>Parappana Agrahara, Electronic City Ph-2,</p>
-               <p>Bengaluru, Karnataka - 560100</p>
-               <p>Phone : 080-28522333 / 9902391178,</p>
-               <p>Email : SALES@YESHOTELS.COM,</p>
-               <p>Web : WWW.YESHOTELS.COM</p>
-               <p>GST : 29AAAFY1234A1Z5</p>
+               <HotelDocAddress />
             </div>
           </div>
 

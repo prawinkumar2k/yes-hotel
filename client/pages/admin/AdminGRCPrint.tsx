@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { hotelContactFrom, useHotelSettings } from "@/hooks/usePublicData";
 import StayExtensionNote from "@/components/admin/StayExtensionNote";
 import { useParams, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -8,6 +9,8 @@ import { nights as countNights } from "@shared/dates";
 import { Loader2, Printer, ArrowLeft, ShieldCheck, FileCheck2, Eye, X } from "lucide-react";
 
 export default function AdminGRCPrint() {
+  const { data: hotelSettings } = useHotelSettings();
+  const hotelContact = hotelContactFrom(hotelSettings);
   // Shown inside the registration pop-up: hide this page's own toolbar.
   const embedded = typeof window !== "undefined" && window.self !== window.top;
   const { id } = useParams();
@@ -128,8 +131,8 @@ export default function AdminGRCPrint() {
                 YES HOTELS
               </h1>
               <p className="text-[10px] text-gray-800 font-medium mt-0.5 leading-snug">
-                No. 51, Khata No. 749, Singasandra, Hosa Road Junction, Parappana Agrahara,<br />
-                Electronic City Ph-2, Bengaluru-560100.
+                {hotelContact.address}<br />
+                Phone : {hotelContact.phone}{hotelSettings?.gstNumber ? ` · GSTIN : ${hotelSettings.gstNumber}` : ""}
               </p>
             </div>
             <div className="text-right w-1/3 border-l border-black pl-3 py-1">

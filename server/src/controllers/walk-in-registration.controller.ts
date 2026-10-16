@@ -17,6 +17,7 @@
  *   Advance becomes revenue only when adjustAdvance() creates a
  *   CREDIT line on the folio at checkout.
  */
+import { HOTEL, hotelAddressOneLine } from "../../../shared/hotel-info";
 
 import { Request, Response } from "express";
 import mongoose from "mongoose";
@@ -1143,9 +1144,9 @@ export const printRegistrationCard = async (req: Request, res: Response) => {
     const advance = await AdvancePayment.findOne({ booking: booking._id }).lean();
 
     const hotelName = "YES HOTELS";
-    const hotelAddress = "No. 51, Khata No. 749, Singasandra, Hosa Road Junction, Parappana Agrahara, Electronic City Ph-2, Bengaluru-560100.";
-    const hotelPhone = settings?.phone ?? "080-28522333 / 9902391178";
-    const hotelGST = settings?.gstNumber ?? "29AAAFY1234A1Z5";
+    const hotelAddress = settings?.address || hotelAddressOneLine();
+    const hotelPhone = settings?.phone || HOTEL.phones[0];
+    const hotelGST = settings?.gstNumber || "—";
 
     const room = booking.assignedRoom as any;
     const category = booking.roomCategory as any;

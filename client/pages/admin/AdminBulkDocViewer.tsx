@@ -1,4 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
+import HotelDocAddress from "@/components/admin/HotelDocAddress";
+import { hotelContactFrom, useHotelSettings } from "@/hooks/usePublicData";
 import StayExtensionNote from "@/components/admin/StayExtensionNote";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
@@ -33,6 +35,8 @@ function BookingDocCard({
 }) {
   const [isGroupFolio, setIsGroupFolio] = useState(true);
   const [activeBookingId, setActiveBookingId] = useState<string>(booking._id);
+  const { data: hotelSettings } = useHotelSettings();
+  const hotelContact = hotelContactFrom(hotelSettings);
 
   useEffect(() => {
     setActiveBookingId(booking._id);
@@ -275,8 +279,8 @@ function BookingDocCard({
                     YES HOTELS
                   </h1>
                   <p className="text-[10px] text-gray-800 font-medium mt-0.5 leading-snug">
-                    No. 51, Khata No. 749, Singasandra, Hosa Road Junction, Parappana Agrahara,<br />
-                    Electronic City Ph-2, Bengaluru-560100.
+                    {hotelContact.address}<br />
+                    Phone : {hotelContact.phone}{hotelSettings?.gstNumber ? ` · GSTIN : ${hotelSettings.gstNumber}` : ""}
                   </p>
                 </div>
                 <div className="text-right w-1/3 border-l border-black pl-3 py-1">
@@ -617,14 +621,7 @@ function BookingDocCard({
                 </div>
               </div>
               <div className="w-2/3 p-2 text-right">
-                <h2 className="font-bold text-sm uppercase">YES HOTELS</h2>
-                <p>No. 51, Khata No. 749, Singasandra, Hosa Road Junction,</p>
-                <p>Parappana Agrahara, Electronic City Ph-2,</p>
-                <p>Bengaluru, Karnataka - 560100</p>
-                <p>Phone : 080-28522333 / 9902391178,</p>
-                <p>Email : SALES@YESHOTELS.COM,</p>
-                <p>Web : WWW.YESHOTELS.COM</p>
-                <p>GST : 29AAAFY1234A1Z5</p>
+                <HotelDocAddress />
               </div>
             </div>
 

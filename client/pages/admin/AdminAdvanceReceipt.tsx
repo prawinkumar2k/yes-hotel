@@ -1,4 +1,5 @@
 import { useParams, Link } from "react-router-dom";
+import HotelDocAddress from "@/components/admin/HotelDocAddress";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { Loader2, Printer, ArrowLeft } from "lucide-react";
@@ -56,14 +57,7 @@ export default function AdminAdvanceReceipt() {
             <h1 className="font-serif text-3xl font-black italic tracking-widest uppercase">YES HOTELS</h1>
           </div>
           <div className="w-2/3 p-2 text-right">
-            <p className="font-bold text-sm">YES HOTELS</p>
-            <p>No. 51, Khata No. 749, Singasandra, Hosa Road Junction,</p>
-            <p>Parappana Agrahara, Electronic City Ph-2,</p>
-            <p>Bengaluru, Karnataka - 560100</p>
-            <p>Phone : 080-28522333 / 9902391178,</p>
-            <p>Email : SALES@YESHOTELS.COM,</p>
-            <p>Web : WWW.YESHOTELS.COM</p>
-            <p>GST : 29AAAFY1234A1Z5</p>
+            <HotelDocAddress />
           </div>
         </div>
 

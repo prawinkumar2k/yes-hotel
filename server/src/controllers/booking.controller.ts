@@ -577,6 +577,14 @@ export const getMyBookingInvoice = async (req: Request, res: Response) => {
     const roomCharges = booking.totalAmount - booking.taxAmount + (booking.discountAmount || 0);
 
     const esc = (s: any) => String(s ?? "").replace(/[<>&]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;" }[c] as string));
+    // The hotel's own details from Admin → Settings (a tax invoice carries the hotel's GSTIN).
+    const { HotelSettings } = await import("../models/HotelSettings");
+    const hotel: any = (await HotelSettings.findOne().select("hotelName address phone email gstNumber").lean()) ?? {};
+    const ext: any[] = (booking as any).stayExtensions ?? [];
+    const extNights = ext.reduce((t, e) => t + (Number(e.nights) || 0), 0);
+    const extLine = ext.length
+      ? `<tr><th>Stay extended</th><td class="right">original check-out ${esc(new Date(ext[0].fromCheckOut).toLocaleDateString())} → ${esc(new Date(ext[ext.length - 1].toCheckOut).toLocaleDateString())} (+${extNights} night${extNights === 1 ? "" : "s"})</td></tr>`
+      : "";
 
     const html = `<!DOCTYPE html>
 <html><head><link rel="icon" href="/favicon-32.png" type="image/png" /><meta charset="utf-8"><title>Invoice ${esc(booking.bookingReference)}</title>
@@ -594,7 +602,8 @@ export const getMyBookingInvoice = async (req: Request, res: Response) => {
 </style></head>
 <body>
   <div class="header">
-    <div><img src="/brand/yes-hotels-logo-sm.png" alt="YES HOTELS" style="height:64px;width:auto;display:block" /><h1>YES HOTELS</h1><div class="muted">Tax Invoice</div></div>
+    <div><img src="/brand/yes-hotels-logo-sm.png" alt="YES HOTELS" style="height:64px;width:auto;display:block" /><h1>${esc(hotel.hotelName || "YES HOTELS")}</h1><div class="muted">Tax Invoice</div>
+      <div class="muted" style="font-size:12px;max-width:340px">${esc(hotel.address)}<br />Phone ${esc(hotel.phone)}${hotel.email ? ` · ${esc(hotel.email)}` : ""}${hotel.gstNumber ? `<br />GSTIN ${esc(hotel.gstNumber)}` : ""}</div></div>
     <div class="right">
       <div><strong>${esc(booking.bookingReference)}</strong></div>
       <div class="muted">${esc(booking._id.getTimestamp().toLocaleDateString())}</div>
@@ -604,6 +613,7 @@ export const getMyBookingInvoice = async (req: Request, res: Response) => {
     <tr><th>Guest</th><td class="right">${esc(booking.guestDetails.firstName)} ${esc(booking.guestDetails.lastName)}</td></tr>
     <tr><th>Email</th><td class="right">${esc(booking.guestDetails.email)}</td></tr>
     <tr><th>Check-in</th><td class="right">${esc(new Date(booking.checkInDate).toLocaleDateString())}</td></tr>
+    ${extLine}
     <tr><th>Check-out</th><td class="right">${esc(new Date(booking.checkOutDate).toLocaleDateString())}</td></tr>
     ${payment ? `<tr><th>Payment Ref</th><td class="right">${esc(payment.razorpayPaymentId || payment.transactionId || payment._id)}</td></tr>` : ""}
   </table>
