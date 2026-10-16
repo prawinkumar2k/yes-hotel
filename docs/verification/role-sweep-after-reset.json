@@ -1,0 +1,5264 @@
+{
+ "api": {
+  "ADMIN": [
+   {
+    "path": "/api/auth/me",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/rooms/categories",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/rooms/categories/:slug",
+    "status": 404,
+    "expected": true,
+    "verdict": "param",
+    "msg": "Category not found"
+   },
+   {
+    "path": "/api/rooms",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/bookings/availability",
+    "status": 400,
+    "expected": true,
+    "verdict": "param",
+    "msg": "checkIn and checkOut dates are required"
+   },
+   {
+    "path": "/api/bookings/my",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/bookings/my/:id",
+    "status": 404,
+    "expected": true,
+    "verdict": "param",
+    "msg": "Booking not found"
+   },
+   {
+    "path": "/api/bookings/my/:id/invoice",
+    "status": 404,
+    "expected": true,
+    "verdict": "param",
+    "msg": "Booking not found"
+   },
+   {
+    "path": "/api/bookings/:id/checkout-preview",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/admin/stats",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/admin/reports/overview",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/admin/bookings",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/admin/bookings/:id",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/admin/calendar",
+    "status": 400,
+    "expected": true,
+    "verdict": "param",
+    "msg": "Start and end dates are required"
+   },
+   {
+    "path": "/api/admin/housekeeping",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/admin/maintenance",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/admin/contact-messages",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/admin/booking-enquiries",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/admin/booking-enquiries/:id",
+    "status": 404,
+    "expected": true,
+    "verdict": "param",
+    "msg": "Enquiry not found"
+   },
+   {
+    "path": "/api/admin/reviews",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/admin/room-categories",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/admin/room-categories/:id",
+    "status": 404,
+    "expected": true,
+    "verdict": "param",
+    "msg": "Category not found"
+   },
+   {
+    "path": "/api/admin/pricing",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/admin/master-data/floors",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/admin/master-data/amenities",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/admin/master-data/bed-types",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/admin/master-data/room-views",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/payments/config",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/payments",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/payments/detail/:id",
+    "status": 404,
+    "expected": true,
+    "verdict": "param",
+    "msg": "Payment not found"
+   },
+   {
+    "path": "/api/payments/:bookingId",
+    "status": 404,
+    "expected": true,
+    "verdict": "param",
+    "msg": "No payment record found"
+   },
+   {
+    "path": "/api/reviews",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/reviews/my",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/faqs",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/testimonials",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/content",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/content/:key",
+    "status": 404,
+    "expected": true,
+    "verdict": "param",
+    "msg": "Content not found"
+   },
+   {
+    "path": "/api/guests/my/profile",
+    "status": 403,
+    "expected": true,
+    "verdict": "error",
+    "msg": "Guest profiles are available to guest accounts only"
+   },
+   {
+    "path": "/api/guests",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/refunds",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/coupons",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/staff",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/gallery/public",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/gallery",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/settings/public",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/settings",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/public/settings",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/public/gallery",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/public/faqs",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/public/testimonials",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/public/content/:key",
+    "status": 404,
+    "expected": true,
+    "verdict": "param",
+    "msg": "Content not found"
+   },
+   {
+    "path": "/api/public/rooms",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/audit-logs",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/audit-logs/export",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/room-rack",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/room-rack/availability",
+    "status": 400,
+    "expected": true,
+    "verdict": "param",
+    "msg": "checkIn and checkOut are required"
+   },
+   {
+    "path": "/api/front-desk/summary",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/front-desk/arrivals",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/front-desk/departures",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/front-desk/registration/guest-search",
+    "status": 400,
+    "expected": true,
+    "verdict": "param",
+    "msg": "Search query must be at least 2 characters"
+   },
+   {
+    "path": "/api/front-desk/registration/available-rooms",
+    "status": 400,
+    "expected": true,
+    "verdict": "param",
+    "msg": "checkIn and checkOut are required"
+   },
+   {
+    "path": "/api/front-desk/registration/:bookingId/print",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/front-desk/registration/report",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/advances",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/advances/reconciliation",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/advances/:id/receipt",
+    "status": 404,
+    "expected": true,
+    "verdict": "param",
+    "msg": "Advance not found"
+   },
+   {
+    "path": "/api/advances/summary/:bookingId",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/verifications",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/verifications/counts",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/reception/billing-queue",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/reception/payments/:id/receipt",
+    "status": 404,
+    "expected": true,
+    "verdict": "param",
+    "msg": "Payment not found"
+   },
+   {
+    "path": "/api/folios/booking/:bookingId",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/night-audit/status",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/night-audit/preview",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/night-audit/history",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/reports/revenue-trend",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/reports/department-pl",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/reports/occupancy-heatmap",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/reports/executive-summary",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/reports/in-house-list",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/reports/day-summary",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/reports/monthly-mis",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/reports/ops/check-ins",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/reports/ops/check-outs",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/reports/ops/day-use-sales",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/reports/ops/advances",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/reports/:reportId",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/cashier-shifts/cashiers",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/cashier-shifts/current",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/cashier-shifts",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/cashier-shifts/:id/details",
+    "status": 404,
+    "expected": true,
+    "verdict": "param",
+    "msg": "Shift not found"
+   },
+   {
+    "path": "/api/rate-plans",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/corporate-accounts",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/corporate-accounts/:id",
+    "status": 404,
+    "expected": true,
+    "verdict": "param",
+    "msg": "Corporate account not found"
+   },
+   {
+    "path": "/api/group-bookings",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/group-bookings/:id",
+    "status": 404,
+    "expected": true,
+    "verdict": "param",
+    "msg": "Group booking not found"
+   },
+   {
+    "path": "/api/group-bookings/:id/rooming-list",
+    "status": 404,
+    "expected": true,
+    "verdict": "param",
+    "msg": "Group booking not found"
+   },
+   {
+    "path": "/api/inspections/templates",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/inspections/room/:roomId",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/accounting/summary",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/accounting/aging",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/banquets",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/ancillary",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/complaints/my",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/complaints",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/properties",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/properties/channels",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/housekeeping/dashboard",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/dashboard/command-center",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/payment-channels",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/payment-channels/:id",
+    "status": 404,
+    "expected": true,
+    "verdict": "param",
+    "msg": "Not found"
+   },
+   {
+    "path": "/api/task-approvals",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/task-approvals/stats",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/permissions/pages",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/permissions/roles",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/permissions/roles/:roleId/permissions",
+    "status": 404,
+    "expected": true,
+    "verdict": "param",
+    "msg": "Role not found"
+   },
+   {
+    "path": "/api/permissions/users/:userId/overrides",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/permissions/users/:userId/effective",
+    "status": 401,
+    "expected": true,
+    "verdict": "error",
+    "msg": "User session expired or user not found. Please log in again."
+   },
+   {
+    "path": "/api/pos/orders",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/menu",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/seo/pages",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/seo/pages/:slug",
+    "status": 404,
+    "expected": true,
+    "verdict": "param",
+    "msg": "Destination landing page not found"
+   },
+   {
+    "path": "/api/seo/admin/pages",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/seo/admin/audit",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/seo/admin/analytics",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   }
+  ],
+  "MANAGER": [
+   {
+    "path": "/api/auth/me",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/rooms/categories",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/rooms/categories/:slug",
+    "status": 404,
+    "expected": true,
+    "verdict": "param",
+    "msg": "Category not found"
+   },
+   {
+    "path": "/api/rooms",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/bookings/availability",
+    "status": 400,
+    "expected": true,
+    "verdict": "param",
+    "msg": "checkIn and checkOut dates are required"
+   },
+   {
+    "path": "/api/bookings/my",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/bookings/my/:id",
+    "status": 404,
+    "expected": true,
+    "verdict": "param",
+    "msg": "Booking not found"
+   },
+   {
+    "path": "/api/bookings/my/:id/invoice",
+    "status": 404,
+    "expected": true,
+    "verdict": "param",
+    "msg": "Booking not found"
+   },
+   {
+    "path": "/api/bookings/:id/checkout-preview",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/admin/stats",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/admin/reports/overview",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/admin/bookings",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/admin/bookings/:id",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/admin/calendar",
+    "status": 400,
+    "expected": true,
+    "verdict": "param",
+    "msg": "Start and end dates are required"
+   },
+   {
+    "path": "/api/admin/housekeeping",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/admin/maintenance",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/admin/contact-messages",
+    "status": 403,
+    "expected": false,
+    "verdict": "403-expected",
+    "msg": "Forbidden: You lack VIEW permission for COMPLAINTS"
+   },
+   {
+    "path": "/api/admin/booking-enquiries",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/admin/booking-enquiries/:id",
+    "status": 404,
+    "expected": true,
+    "verdict": "param",
+    "msg": "Enquiry not found"
+   },
+   {
+    "path": "/api/admin/reviews",
+    "status": 403,
+    "expected": false,
+    "verdict": "403-expected",
+    "msg": "Forbidden: You lack VIEW permission for COMPLAINTS"
+   },
+   {
+    "path": "/api/admin/room-categories",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/admin/room-categories/:id",
+    "status": 404,
+    "expected": true,
+    "verdict": "param",
+    "msg": "Category not found"
+   },
+   {
+    "path": "/api/admin/pricing",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/admin/master-data/floors",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/admin/master-data/amenities",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/admin/master-data/bed-types",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/admin/master-data/room-views",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/payments/config",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/payments",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/payments/detail/:id",
+    "status": 404,
+    "expected": true,
+    "verdict": "param",
+    "msg": "Payment not found"
+   },
+   {
+    "path": "/api/payments/:bookingId",
+    "status": 404,
+    "expected": true,
+    "verdict": "param",
+    "msg": "No payment record found"
+   },
+   {
+    "path": "/api/reviews",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/reviews/my",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/faqs",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/testimonials",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/content",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/content/:key",
+    "status": 404,
+    "expected": true,
+    "verdict": "param",
+    "msg": "Content not found"
+   },
+   {
+    "path": "/api/guests/my/profile",
+    "status": 403,
+    "expected": true,
+    "verdict": "error",
+    "msg": "Guest profiles are available to guest accounts only"
+   },
+   {
+    "path": "/api/guests",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/refunds",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/coupons",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/staff",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/gallery/public",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/gallery",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/settings/public",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/settings",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/public/settings",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/public/gallery",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/public/faqs",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/public/testimonials",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/public/content/:key",
+    "status": 404,
+    "expected": true,
+    "verdict": "param",
+    "msg": "Content not found"
+   },
+   {
+    "path": "/api/public/rooms",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/audit-logs",
+    "status": 403,
+    "expected": false,
+    "verdict": "403-expected",
+    "msg": "Forbidden: You lack VIEW permission for AUDIT_LOGS"
+   },
+   {
+    "path": "/api/audit-logs/export",
+    "status": 403,
+    "expected": false,
+    "verdict": "403-expected",
+    "msg": "Forbidden: You lack EXPORT permission for AUDIT_LOGS"
+   },
+   {
+    "path": "/api/room-rack",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/room-rack/availability",
+    "status": 400,
+    "expected": true,
+    "verdict": "param",
+    "msg": "checkIn and checkOut are required"
+   },
+   {
+    "path": "/api/front-desk/summary",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/front-desk/arrivals",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/front-desk/departures",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/front-desk/registration/guest-search",
+    "status": 400,
+    "expected": true,
+    "verdict": "param",
+    "msg": "Search query must be at least 2 characters"
+   },
+   {
+    "path": "/api/front-desk/registration/available-rooms",
+    "status": 400,
+    "expected": true,
+    "verdict": "param",
+    "msg": "checkIn and checkOut are required"
+   },
+   {
+    "path": "/api/front-desk/registration/:bookingId/print",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/front-desk/registration/report",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/advances",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/advances/reconciliation",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/advances/:id/receipt",
+    "status": 404,
+    "expected": true,
+    "verdict": "param",
+    "msg": "Advance not found"
+   },
+   {
+    "path": "/api/advances/summary/:bookingId",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/verifications",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/verifications/counts",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/reception/billing-queue",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/reception/payments/:id/receipt",
+    "status": 404,
+    "expected": true,
+    "verdict": "param",
+    "msg": "Payment not found"
+   },
+   {
+    "path": "/api/folios/booking/:bookingId",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/night-audit/status",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/night-audit/preview",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/night-audit/history",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/reports/revenue-trend",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/reports/department-pl",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/reports/occupancy-heatmap",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/reports/executive-summary",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/reports/in-house-list",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/reports/day-summary",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/reports/monthly-mis",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/reports/ops/check-ins",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/reports/ops/check-outs",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/reports/ops/day-use-sales",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/reports/ops/advances",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/reports/:reportId",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/cashier-shifts/cashiers",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/cashier-shifts/current",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/cashier-shifts",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/cashier-shifts/:id/details",
+    "status": 404,
+    "expected": true,
+    "verdict": "param",
+    "msg": "Shift not found"
+   },
+   {
+    "path": "/api/rate-plans",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/corporate-accounts",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/corporate-accounts/:id",
+    "status": 404,
+    "expected": true,
+    "verdict": "param",
+    "msg": "Corporate account not found"
+   },
+   {
+    "path": "/api/group-bookings",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/group-bookings/:id",
+    "status": 404,
+    "expected": true,
+    "verdict": "param",
+    "msg": "Group booking not found"
+   },
+   {
+    "path": "/api/group-bookings/:id/rooming-list",
+    "status": 404,
+    "expected": true,
+    "verdict": "param",
+    "msg": "Group booking not found"
+   },
+   {
+    "path": "/api/inspections/templates",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/inspections/room/:roomId",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/accounting/summary",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/accounting/aging",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/banquets",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/ancillary",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/complaints/my",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/complaints",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/properties",
+    "status": 403,
+    "expected": false,
+    "verdict": "403-expected",
+    "msg": "Forbidden: You lack VIEW permission for MULTI_PROPERTY"
+   },
+   {
+    "path": "/api/properties/channels",
+    "status": 403,
+    "expected": false,
+    "verdict": "403-expected",
+    "msg": "Forbidden: You lack VIEW permission for MULTI_PROPERTY"
+   },
+   {
+    "path": "/api/housekeeping/dashboard",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/dashboard/command-center",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/payment-channels",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/payment-channels/:id",
+    "status": 404,
+    "expected": true,
+    "verdict": "param",
+    "msg": "Not found"
+   },
+   {
+    "path": "/api/task-approvals",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/task-approvals/stats",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/permissions/pages",
+    "status": 403,
+    "expected": false,
+    "verdict": "403-expected",
+    "msg": "Forbidden: You lack VIEW permission for PERMISSIONS"
+   },
+   {
+    "path": "/api/permissions/roles",
+    "status": 403,
+    "expected": false,
+    "verdict": "403-expected",
+    "msg": "Forbidden: You lack VIEW permission for ROLES"
+   },
+   {
+    "path": "/api/permissions/roles/:roleId/permissions",
+    "status": 403,
+    "expected": false,
+    "verdict": "403-expected",
+    "msg": "Forbidden: You lack VIEW permission for PERMISSIONS"
+   },
+   {
+    "path": "/api/permissions/users/:userId/overrides",
+    "status": 403,
+    "expected": false,
+    "verdict": "403-expected",
+    "msg": "Forbidden: You lack VIEW permission for PERMISSIONS"
+   },
+   {
+    "path": "/api/permissions/users/:userId/effective",
+    "status": 403,
+    "expected": true,
+    "verdict": "error",
+    "msg": "Forbidden: Cannot fetch permissions for another user"
+   },
+   {
+    "path": "/api/pos/orders",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/menu",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/seo/pages",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/seo/pages/:slug",
+    "status": 404,
+    "expected": true,
+    "verdict": "param",
+    "msg": "Destination landing page not found"
+   },
+   {
+    "path": "/api/seo/admin/pages",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/seo/admin/audit",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/seo/admin/analytics",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   }
+  ],
+  "RECEPTIONIST": [
+   {
+    "path": "/api/auth/me",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/rooms/categories",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/rooms/categories/:slug",
+    "status": 404,
+    "expected": true,
+    "verdict": "param",
+    "msg": "Category not found"
+   },
+   {
+    "path": "/api/rooms",
+    "status": 403,
+    "expected": false,
+    "verdict": "403-expected",
+    "msg": "Forbidden: You lack VIEW permission for ROOMS"
+   },
+   {
+    "path": "/api/bookings/availability",
+    "status": 400,
+    "expected": true,
+    "verdict": "param",
+    "msg": "checkIn and checkOut dates are required"
+   },
+   {
+    "path": "/api/bookings/my",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/bookings/my/:id",
+    "status": 404,
+    "expected": true,
+    "verdict": "param",
+    "msg": "Booking not found"
+   },
+   {
+    "path": "/api/bookings/my/:id/invoice",
+    "status": 404,
+    "expected": true,
+    "verdict": "param",
+    "msg": "Booking not found"
+   },
+   {
+    "path": "/api/bookings/:id/checkout-preview",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/admin/stats",
+    "status": 403,
+    "expected": false,
+    "verdict": "403-expected",
+    "msg": "Forbidden: You lack VIEW permission for DASHBOARD.ADMIN"
+   },
+   {
+    "path": "/api/admin/reports/overview",
+    "status": 403,
+    "expected": false,
+    "verdict": "403-expected",
+    "msg": "Forbidden: You lack VIEW permission for DASHBOARD.ADMIN"
+   },
+   {
+    "path": "/api/admin/bookings",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/admin/bookings/:id",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/admin/calendar",
+    "status": 400,
+    "expected": true,
+    "verdict": "param",
+    "msg": "Start and end dates are required"
+   },
+   {
+    "path": "/api/admin/housekeeping",
+    "status": 403,
+    "expected": false,
+    "verdict": "403-expected",
+    "msg": "Forbidden: You lack VIEW permission for HOUSEKEEPING"
+   },
+   {
+    "path": "/api/admin/maintenance",
+    "status": 403,
+    "expected": false,
+    "verdict": "403-expected",
+    "msg": "Forbidden: You lack VIEW permission for MAINTENANCE"
+   },
+   {
+    "path": "/api/admin/contact-messages",
+    "status": 403,
+    "expected": false,
+    "verdict": "403-expected",
+    "msg": "Forbidden: You lack VIEW permission for COMPLAINTS"
+   },
+   {
+    "path": "/api/admin/booking-enquiries",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/admin/booking-enquiries/:id",
+    "status": 404,
+    "expected": true,
+    "verdict": "param",
+    "msg": "Enquiry not found"
+   },
+   {
+    "path": "/api/admin/reviews",
+    "status": 403,
+    "expected": false,
+    "verdict": "403-expected",
+    "msg": "Forbidden: You lack VIEW permission for COMPLAINTS"
+   },
+   {
+    "path": "/api/admin/room-categories",
+    "status": 403,
+    "expected": false,
+    "verdict": "403-expected",
+    "msg": "Forbidden: You lack VIEW permission for ROOM_CATEGORIES"
+   },
+   {
+    "path": "/api/admin/room-categories/:id",
+    "status": 403,
+    "expected": false,
+    "verdict": "403-expected",
+    "msg": "Forbidden: You lack VIEW permission for ROOM_CATEGORIES"
+   },
+   {
+    "path": "/api/admin/pricing",
+    "status": 403,
+    "expected": false,
+    "verdict": "403-expected",
+    "msg": "Forbidden: You lack VIEW permission for ROOM_CATEGORIES"
+   },
+   {
+    "path": "/api/admin/master-data/floors",
+    "status": 403,
+    "expected": false,
+    "verdict": "403-expected",
+    "msg": "Forbidden: You lack VIEW permission for SETTINGS"
+   },
+   {
+    "path": "/api/admin/master-data/amenities",
+    "status": 403,
+    "expected": false,
+    "verdict": "403-expected",
+    "msg": "Forbidden: You lack VIEW permission for SETTINGS"
+   },
+   {
+    "path": "/api/admin/master-data/bed-types",
+    "status": 403,
+    "expected": false,
+    "verdict": "403-expected",
+    "msg": "Forbidden: You lack VIEW permission for SETTINGS"
+   },
+   {
+    "path": "/api/admin/master-data/room-views",
+    "status": 403,
+    "expected": false,
+    "verdict": "403-expected",
+    "msg": "Forbidden: You lack VIEW permission for SETTINGS"
+   },
+   {
+    "path": "/api/payments/config",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/payments",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/payments/detail/:id",
+    "status": 404,
+    "expected": true,
+    "verdict": "param",
+    "msg": "Payment not found"
+   },
+   {
+    "path": "/api/payments/:bookingId",
+    "status": 404,
+    "expected": true,
+    "verdict": "param",
+    "msg": "No payment record found"
+   },
+   {
+    "path": "/api/reviews",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/reviews/my",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/faqs",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/testimonials",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/content",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/content/:key",
+    "status": 404,
+    "expected": true,
+    "verdict": "param",
+    "msg": "Content not found"
+   },
+   {
+    "path": "/api/guests/my/profile",
+    "status": 403,
+    "expected": true,
+    "verdict": "error",
+    "msg": "Guest profiles are available to guest accounts only"
+   },
+   {
+    "path": "/api/guests",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/refunds",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/coupons",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/staff",
+    "status": 403,
+    "expected": false,
+    "verdict": "403-expected",
+    "msg": "Forbidden: You lack VIEW permission for STAFF"
+   },
+   {
+    "path": "/api/gallery/public",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/gallery",
+    "status": 403,
+    "expected": false,
+    "verdict": "403-expected",
+    "msg": "Forbidden: You lack VIEW permission for GALLERY"
+   },
+   {
+    "path": "/api/settings/public",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/settings",
+    "status": 403,
+    "expected": false,
+    "verdict": "403-expected",
+    "msg": "Forbidden: You lack VIEW permission for SETTINGS"
+   },
+   {
+    "path": "/api/public/settings",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/public/gallery",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/public/faqs",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/public/testimonials",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/public/content/:key",
+    "status": 404,
+    "expected": true,
+    "verdict": "param",
+    "msg": "Content not found"
+   },
+   {
+    "path": "/api/public/rooms",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/audit-logs",
+    "status": 403,
+    "expected": false,
+    "verdict": "403-expected",
+    "msg": "Forbidden: You lack VIEW permission for AUDIT_LOGS"
+   },
+   {
+    "path": "/api/audit-logs/export",
+    "status": 403,
+    "expected": false,
+    "verdict": "403-expected",
+    "msg": "Forbidden: You lack EXPORT permission for AUDIT_LOGS"
+   },
+   {
+    "path": "/api/room-rack",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/room-rack/availability",
+    "status": 400,
+    "expected": true,
+    "verdict": "param",
+    "msg": "checkIn and checkOut are required"
+   },
+   {
+    "path": "/api/front-desk/summary",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/front-desk/arrivals",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/front-desk/departures",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/front-desk/registration/guest-search",
+    "status": 400,
+    "expected": true,
+    "verdict": "param",
+    "msg": "Search query must be at least 2 characters"
+   },
+   {
+    "path": "/api/front-desk/registration/available-rooms",
+    "status": 400,
+    "expected": true,
+    "verdict": "param",
+    "msg": "checkIn and checkOut are required"
+   },
+   {
+    "path": "/api/front-desk/registration/:bookingId/print",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/front-desk/registration/report",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/advances",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/advances/reconciliation",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/advances/:id/receipt",
+    "status": 404,
+    "expected": true,
+    "verdict": "param",
+    "msg": "Advance not found"
+   },
+   {
+    "path": "/api/advances/summary/:bookingId",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/verifications",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/verifications/counts",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/reception/billing-queue",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/reception/payments/:id/receipt",
+    "status": 404,
+    "expected": true,
+    "verdict": "param",
+    "msg": "Payment not found"
+   },
+   {
+    "path": "/api/folios/booking/:bookingId",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/night-audit/status",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/night-audit/preview",
+    "status": 403,
+    "expected": false,
+    "verdict": "403-expected",
+    "msg": "Forbidden: You lack VIEW permission for NIGHT_AUDIT"
+   },
+   {
+    "path": "/api/night-audit/history",
+    "status": 403,
+    "expected": false,
+    "verdict": "403-expected",
+    "msg": "Forbidden: You lack VIEW permission for NIGHT_AUDIT"
+   },
+   {
+    "path": "/api/reports/revenue-trend",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/reports/department-pl",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/reports/occupancy-heatmap",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/reports/executive-summary",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/reports/in-house-list",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/reports/day-summary",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/reports/monthly-mis",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/reports/ops/check-ins",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/reports/ops/check-outs",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/reports/ops/day-use-sales",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/reports/ops/advances",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/reports/:reportId",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/cashier-shifts/cashiers",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/cashier-shifts/current",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/cashier-shifts",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/cashier-shifts/:id/details",
+    "status": 404,
+    "expected": true,
+    "verdict": "param",
+    "msg": "Shift not found"
+   },
+   {
+    "path": "/api/rate-plans",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/corporate-accounts",
+    "status": 403,
+    "expected": false,
+    "verdict": "403-expected",
+    "msg": "Forbidden: You lack VIEW permission for CORPORATE_ACCOUNTS"
+   },
+   {
+    "path": "/api/corporate-accounts/:id",
+    "status": 403,
+    "expected": false,
+    "verdict": "403-expected",
+    "msg": "Forbidden: You lack VIEW permission for CORPORATE_ACCOUNTS"
+   },
+   {
+    "path": "/api/group-bookings",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/group-bookings/:id",
+    "status": 404,
+    "expected": true,
+    "verdict": "param",
+    "msg": "Group booking not found"
+   },
+   {
+    "path": "/api/group-bookings/:id/rooming-list",
+    "status": 404,
+    "expected": true,
+    "verdict": "param",
+    "msg": "Group booking not found"
+   },
+   {
+    "path": "/api/inspections/templates",
+    "status": 403,
+    "expected": false,
+    "verdict": "403-expected",
+    "msg": "Forbidden: You lack VIEW permission for HOUSEKEEPING"
+   },
+   {
+    "path": "/api/inspections/room/:roomId",
+    "status": 403,
+    "expected": false,
+    "verdict": "403-expected",
+    "msg": "Forbidden: You lack VIEW permission for HOUSEKEEPING"
+   },
+   {
+    "path": "/api/accounting/summary",
+    "status": 403,
+    "expected": false,
+    "verdict": "403-expected",
+    "msg": "Forbidden: You lack VIEW permission for ACCOUNTING"
+   },
+   {
+    "path": "/api/accounting/aging",
+    "status": 403,
+    "expected": false,
+    "verdict": "403-expected",
+    "msg": "Forbidden: You lack VIEW permission for ACCOUNTING"
+   },
+   {
+    "path": "/api/banquets",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/ancillary",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/complaints/my",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/complaints",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/properties",
+    "status": 403,
+    "expected": false,
+    "verdict": "403-expected",
+    "msg": "Forbidden: You lack VIEW permission for MULTI_PROPERTY"
+   },
+   {
+    "path": "/api/properties/channels",
+    "status": 403,
+    "expected": false,
+    "verdict": "403-expected",
+    "msg": "Forbidden: You lack VIEW permission for MULTI_PROPERTY"
+   },
+   {
+    "path": "/api/housekeeping/dashboard",
+    "status": 403,
+    "expected": false,
+    "verdict": "403-expected",
+    "msg": "Forbidden: You lack VIEW permission for HOUSEKEEPING"
+   },
+   {
+    "path": "/api/dashboard/command-center",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/payment-channels",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/payment-channels/:id",
+    "status": 404,
+    "expected": true,
+    "verdict": "param",
+    "msg": "Not found"
+   },
+   {
+    "path": "/api/task-approvals",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/task-approvals/stats",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/permissions/pages",
+    "status": 403,
+    "expected": false,
+    "verdict": "403-expected",
+    "msg": "Forbidden: You lack VIEW permission for PERMISSIONS"
+   },
+   {
+    "path": "/api/permissions/roles",
+    "status": 403,
+    "expected": false,
+    "verdict": "403-expected",
+    "msg": "Forbidden: You lack VIEW permission for ROLES"
+   },
+   {
+    "path": "/api/permissions/roles/:roleId/permissions",
+    "status": 403,
+    "expected": false,
+    "verdict": "403-expected",
+    "msg": "Forbidden: You lack VIEW permission for PERMISSIONS"
+   },
+   {
+    "path": "/api/permissions/users/:userId/overrides",
+    "status": 403,
+    "expected": false,
+    "verdict": "403-expected",
+    "msg": "Forbidden: You lack VIEW permission for PERMISSIONS"
+   },
+   {
+    "path": "/api/permissions/users/:userId/effective",
+    "status": 403,
+    "expected": true,
+    "verdict": "error",
+    "msg": "Forbidden: Cannot fetch permissions for another user"
+   },
+   {
+    "path": "/api/pos/orders",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/menu",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/seo/pages",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/seo/pages/:slug",
+    "status": 404,
+    "expected": true,
+    "verdict": "param",
+    "msg": "Destination landing page not found"
+   },
+   {
+    "path": "/api/seo/admin/pages",
+    "status": 403,
+    "expected": false,
+    "verdict": "403-expected",
+    "msg": "Forbidden: You lack VIEW permission for SETTINGS"
+   },
+   {
+    "path": "/api/seo/admin/audit",
+    "status": 403,
+    "expected": false,
+    "verdict": "403-expected",
+    "msg": "Forbidden: You lack VIEW permission for SETTINGS"
+   },
+   {
+    "path": "/api/seo/admin/analytics",
+    "status": 403,
+    "expected": false,
+    "verdict": "403-expected",
+    "msg": "Forbidden: You lack VIEW permission for SETTINGS"
+   }
+  ],
+  "HOUSEKEEPING": [
+   {
+    "path": "/api/auth/me",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/rooms/categories",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/rooms/categories/:slug",
+    "status": 404,
+    "expected": true,
+    "verdict": "param",
+    "msg": "Category not found"
+   },
+   {
+    "path": "/api/rooms",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/bookings/availability",
+    "status": 400,
+    "expected": true,
+    "verdict": "param",
+    "msg": "checkIn and checkOut dates are required"
+   },
+   {
+    "path": "/api/bookings/my",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/bookings/my/:id",
+    "status": 404,
+    "expected": true,
+    "verdict": "param",
+    "msg": "Booking not found"
+   },
+   {
+    "path": "/api/bookings/my/:id/invoice",
+    "status": 404,
+    "expected": true,
+    "verdict": "param",
+    "msg": "Booking not found"
+   },
+   {
+    "path": "/api/bookings/:id/checkout-preview",
+    "status": 403,
+    "expected": false,
+    "verdict": "403-expected",
+    "msg": "Forbidden: You lack VIEW permission for BOOKINGS"
+   },
+   {
+    "path": "/api/admin/stats",
+    "status": 403,
+    "expected": false,
+    "verdict": "403-expected",
+    "msg": "Forbidden: You lack VIEW permission for DASHBOARD.ADMIN"
+   },
+   {
+    "path": "/api/admin/reports/overview",
+    "status": 403,
+    "expected": false,
+    "verdict": "403-expected",
+    "msg": "Forbidden: You lack VIEW permission for DASHBOARD.ADMIN"
+   },
+   {
+    "path": "/api/admin/bookings",
+    "status": 403,
+    "expected": false,
+    "verdict": "403-expected",
+    "msg": "Forbidden: You lack VIEW permission for BOOKINGS"
+   },
+   {
+    "path": "/api/admin/bookings/:id",
+    "status": 403,
+    "expected": false,
+    "verdict": "403-expected",
+    "msg": "Forbidden: You lack VIEW permission for BOOKINGS"
+   },
+   {
+    "path": "/api/admin/calendar",
+    "status": 403,
+    "expected": false,
+    "verdict": "403-expected",
+    "msg": "Forbidden: You lack VIEW permission for CALENDAR"
+   },
+   {
+    "path": "/api/admin/housekeeping",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/admin/maintenance",
+    "status": 403,
+    "expected": false,
+    "verdict": "403-expected",
+    "msg": "Forbidden: You lack VIEW permission for MAINTENANCE"
+   },
+   {
+    "path": "/api/admin/contact-messages",
+    "status": 403,
+    "expected": false,
+    "verdict": "403-expected",
+    "msg": "Forbidden: You lack VIEW permission for COMPLAINTS"
+   },
+   {
+    "path": "/api/admin/booking-enquiries",
+    "status": 403,
+    "expected": false,
+    "verdict": "403-expected",
+    "msg": "Forbidden: You lack VIEW permission for ENQUIRIES"
+   },
+   {
+    "path": "/api/admin/booking-enquiries/:id",
+    "status": 403,
+    "expected": false,
+    "verdict": "403-expected",
+    "msg": "Forbidden: You lack VIEW permission for ENQUIRIES"
+   },
+   {
+    "path": "/api/admin/reviews",
+    "status": 403,
+    "expected": false,
+    "verdict": "403-expected",
+    "msg": "Forbidden: You lack VIEW permission for COMPLAINTS"
+   },
+   {
+    "path": "/api/admin/room-categories",
+    "status": 403,
+    "expected": false,
+    "verdict": "403-expected",
+    "msg": "Forbidden: You lack VIEW permission for ROOM_CATEGORIES"
+   },
+   {
+    "path": "/api/admin/room-categories/:id",
+    "status": 403,
+    "expected": false,
+    "verdict": "403-expected",
+    "msg": "Forbidden: You lack VIEW permission for ROOM_CATEGORIES"
+   },
+   {
+    "path": "/api/admin/pricing",
+    "status": 403,
+    "expected": false,
+    "verdict": "403-expected",
+    "msg": "Forbidden: You lack VIEW permission for ROOM_CATEGORIES"
+   },
+   {
+    "path": "/api/admin/master-data/floors",
+    "status": 403,
+    "expected": false,
+    "verdict": "403-expected",
+    "msg": "Forbidden: You lack VIEW permission for SETTINGS"
+   },
+   {
+    "path": "/api/admin/master-data/amenities",
+    "status": 403,
+    "expected": false,
+    "verdict": "403-expected",
+    "msg": "Forbidden: You lack VIEW permission for SETTINGS"
+   },
+   {
+    "path": "/api/admin/master-data/bed-types",
+    "status": 403,
+    "expected": false,
+    "verdict": "403-expected",
+    "msg": "Forbidden: You lack VIEW permission for SETTINGS"
+   },
+   {
+    "path": "/api/admin/master-data/room-views",
+    "status": 403,
+    "expected": false,
+    "verdict": "403-expected",
+    "msg": "Forbidden: You lack VIEW permission for SETTINGS"
+   },
+   {
+    "path": "/api/payments/config",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/payments",
+    "status": 403,
+    "expected": false,
+    "verdict": "403-expected",
+    "msg": "Forbidden: You lack VIEW permission for PAYMENTS"
+   },
+   {
+    "path": "/api/payments/detail/:id",
+    "status": 403,
+    "expected": false,
+    "verdict": "403-expected",
+    "msg": "Forbidden: You lack VIEW permission for PAYMENTS"
+   },
+   {
+    "path": "/api/payments/:bookingId",
+    "status": 403,
+    "expected": false,
+    "verdict": "403-expected",
+    "msg": "Forbidden: You lack VIEW permission for PAYMENTS"
+   },
+   {
+    "path": "/api/reviews",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/reviews/my",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/faqs",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/testimonials",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/content",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/content/:key",
+    "status": 404,
+    "expected": true,
+    "verdict": "param",
+    "msg": "Content not found"
+   },
+   {
+    "path": "/api/guests/my/profile",
+    "status": 403,
+    "expected": true,
+    "verdict": "error",
+    "msg": "Guest profiles are available to guest accounts only"
+   },
+   {
+    "path": "/api/guests",
+    "status": 403,
+    "expected": false,
+    "verdict": "403-expected",
+    "msg": "Forbidden: You lack VIEW permission for GUESTS"
+   },
+   {
+    "path": "/api/refunds",
+    "status": 403,
+    "expected": false,
+    "verdict": "403-expected",
+    "msg": "Forbidden: You lack VIEW permission for REFUNDS"
+   },
+   {
+    "path": "/api/coupons",
+    "status": 403,
+    "expected": false,
+    "verdict": "403-expected",
+    "msg": "Forbidden: You lack VIEW permission for COUPONS"
+   },
+   {
+    "path": "/api/staff",
+    "status": 403,
+    "expected": false,
+    "verdict": "403-expected",
+    "msg": "Forbidden: You lack VIEW permission for STAFF"
+   },
+   {
+    "path": "/api/gallery/public",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/gallery",
+    "status": 403,
+    "expected": false,
+    "verdict": "403-expected",
+    "msg": "Forbidden: You lack VIEW permission for GALLERY"
+   },
+   {
+    "path": "/api/settings/public",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/settings",
+    "status": 403,
+    "expected": false,
+    "verdict": "403-expected",
+    "msg": "Forbidden: You lack VIEW permission for SETTINGS"
+   },
+   {
+    "path": "/api/public/settings",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/public/gallery",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/public/faqs",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/public/testimonials",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/public/content/:key",
+    "status": 404,
+    "expected": true,
+    "verdict": "param",
+    "msg": "Content not found"
+   },
+   {
+    "path": "/api/public/rooms",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/audit-logs",
+    "status": 403,
+    "expected": false,
+    "verdict": "403-expected",
+    "msg": "Forbidden: You lack VIEW permission for AUDIT_LOGS"
+   },
+   {
+    "path": "/api/audit-logs/export",
+    "status": 403,
+    "expected": false,
+    "verdict": "403-expected",
+    "msg": "Forbidden: You lack EXPORT permission for AUDIT_LOGS"
+   },
+   {
+    "path": "/api/room-rack",
+    "status": 403,
+    "expected": false,
+    "verdict": "403-expected",
+    "msg": "Forbidden: You lack VIEW permission for ROOM_RACK"
+   },
+   {
+    "path": "/api/room-rack/availability",
+    "status": 403,
+    "expected": false,
+    "verdict": "403-expected",
+    "msg": "Forbidden: You lack VIEW permission for ROOM_RACK"
+   },
+   {
+    "path": "/api/front-desk/summary",
+    "status": 403,
+    "expected": false,
+    "verdict": "403-expected",
+    "msg": "Forbidden: You lack VIEW permission for FRONT_DESK"
+   },
+   {
+    "path": "/api/front-desk/arrivals",
+    "status": 403,
+    "expected": false,
+    "verdict": "403-expected",
+    "msg": "Forbidden: You lack VIEW permission for FRONT_DESK"
+   },
+   {
+    "path": "/api/front-desk/departures",
+    "status": 403,
+    "expected": false,
+    "verdict": "403-expected",
+    "msg": "Forbidden: You lack VIEW permission for FRONT_DESK"
+   },
+   {
+    "path": "/api/front-desk/registration/guest-search",
+    "status": 403,
+    "expected": false,
+    "verdict": "403-expected",
+    "msg": "Forbidden: You lack VIEW permission for GUEST_REGISTRATION"
+   },
+   {
+    "path": "/api/front-desk/registration/available-rooms",
+    "status": 403,
+    "expected": false,
+    "verdict": "403-expected",
+    "msg": "Forbidden: You lack VIEW permission for GUEST_REGISTRATION"
+   },
+   {
+    "path": "/api/front-desk/registration/:bookingId/print",
+    "status": 403,
+    "expected": false,
+    "verdict": "403-expected",
+    "msg": "Forbidden: You lack VIEW permission for GUEST_REGISTRATION"
+   },
+   {
+    "path": "/api/front-desk/registration/report",
+    "status": 403,
+    "expected": false,
+    "verdict": "403-expected",
+    "msg": "Forbidden: You lack VIEW permission for GUEST_REGISTRATION"
+   },
+   {
+    "path": "/api/advances",
+    "status": 403,
+    "expected": false,
+    "verdict": "403-expected",
+    "msg": "Forbidden: You lack VIEW permission for ADVANCES"
+   },
+   {
+    "path": "/api/advances/reconciliation",
+    "status": 403,
+    "expected": false,
+    "verdict": "403-expected",
+    "msg": "Forbidden: You lack VIEW permission for ADVANCES"
+   },
+   {
+    "path": "/api/advances/:id/receipt",
+    "status": 403,
+    "expected": false,
+    "verdict": "403-expected",
+    "msg": "Forbidden: You lack VIEW permission for ADVANCES"
+   },
+   {
+    "path": "/api/advances/summary/:bookingId",
+    "status": 403,
+    "expected": false,
+    "verdict": "403-expected",
+    "msg": "Forbidden: You lack VIEW permission for ADVANCES"
+   },
+   {
+    "path": "/api/verifications",
+    "status": 403,
+    "expected": false,
+    "verdict": "403-expected",
+    "msg": "Forbidden: You lack VIEW permission for VERIFICATIONS"
+   },
+   {
+    "path": "/api/verifications/counts",
+    "status": 403,
+    "expected": false,
+    "verdict": "403-expected",
+    "msg": "Forbidden: You lack VIEW permission for VERIFICATIONS"
+   },
+   {
+    "path": "/api/reception/billing-queue",
+    "status": 403,
+    "expected": false,
+    "verdict": "403-expected",
+    "msg": "Forbidden: You lack VIEW permission for CASHIER_DESK"
+   },
+   {
+    "path": "/api/reception/payments/:id/receipt",
+    "status": 403,
+    "expected": false,
+    "verdict": "403-expected",
+    "msg": "Forbidden: You lack VIEW permission for PAYMENTS"
+   },
+   {
+    "path": "/api/folios/booking/:bookingId",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/night-audit/status",
+    "status": 403,
+    "expected": false,
+    "verdict": "403-expected",
+    "msg": "Forbidden: You lack VIEW_STATUS permission for NIGHT_AUDIT"
+   },
+   {
+    "path": "/api/night-audit/preview",
+    "status": 403,
+    "expected": false,
+    "verdict": "403-expected",
+    "msg": "Forbidden: You lack VIEW permission for NIGHT_AUDIT"
+   },
+   {
+    "path": "/api/night-audit/history",
+    "status": 403,
+    "expected": false,
+    "verdict": "403-expected",
+    "msg": "Forbidden: You lack VIEW permission for NIGHT_AUDIT"
+   },
+   {
+    "path": "/api/reports/revenue-trend",
+    "status": 403,
+    "expected": false,
+    "verdict": "403-expected",
+    "msg": "Forbidden: You lack VIEW permission for REPORTS_LAYOUT"
+   },
+   {
+    "path": "/api/reports/department-pl",
+    "status": 403,
+    "expected": false,
+    "verdict": "403-expected",
+    "msg": "Forbidden: You lack VIEW permission for REPORTS_LAYOUT"
+   },
+   {
+    "path": "/api/reports/occupancy-heatmap",
+    "status": 403,
+    "expected": false,
+    "verdict": "403-expected",
+    "msg": "Forbidden: You lack VIEW permission for REPORTS_LAYOUT"
+   },
+   {
+    "path": "/api/reports/executive-summary",
+    "status": 403,
+    "expected": false,
+    "verdict": "403-expected",
+    "msg": "Forbidden: You lack VIEW permission for REPORTS_LAYOUT"
+   },
+   {
+    "path": "/api/reports/in-house-list",
+    "status": 403,
+    "expected": false,
+    "verdict": "403-expected",
+    "msg": "Forbidden: You lack VIEW permission for REPORTS_LAYOUT"
+   },
+   {
+    "path": "/api/reports/day-summary",
+    "status": 403,
+    "expected": false,
+    "verdict": "403-expected",
+    "msg": "Forbidden: You lack VIEW permission for REPORTS_LAYOUT"
+   },
+   {
+    "path": "/api/reports/monthly-mis",
+    "status": 403,
+    "expected": false,
+    "verdict": "403-expected",
+    "msg": "Forbidden: You lack VIEW permission for REPORTS_LAYOUT"
+   },
+   {
+    "path": "/api/reports/ops/check-ins",
+    "status": 403,
+    "expected": false,
+    "verdict": "403-expected",
+    "msg": "Forbidden: You lack VIEW permission for REPORTS_LAYOUT"
+   },
+   {
+    "path": "/api/reports/ops/check-outs",
+    "status": 403,
+    "expected": false,
+    "verdict": "403-expected",
+    "msg": "Forbidden: You lack VIEW permission for REPORTS_LAYOUT"
+   },
+   {
+    "path": "/api/reports/ops/day-use-sales",
+    "status": 403,
+    "expected": false,
+    "verdict": "403-expected",
+    "msg": "Forbidden: You lack VIEW permission for REPORTS_LAYOUT"
+   },
+   {
+    "path": "/api/reports/ops/advances",
+    "status": 403,
+    "expected": false,
+    "verdict": "403-expected",
+    "msg": "Forbidden: You lack VIEW permission for REPORTS_LAYOUT"
+   },
+   {
+    "path": "/api/reports/:reportId",
+    "status": 403,
+    "expected": false,
+    "verdict": "403-expected",
+    "msg": "Forbidden: You lack VIEW permission for REPORTS_LAYOUT"
+   },
+   {
+    "path": "/api/cashier-shifts/cashiers",
+    "status": 403,
+    "expected": false,
+    "verdict": "403-expected",
+    "msg": "Forbidden: You lack VIEW permission for CASHIER_SHIFTS"
+   },
+   {
+    "path": "/api/cashier-shifts/current",
+    "status": 403,
+    "expected": false,
+    "verdict": "403-expected",
+    "msg": "Forbidden: You lack VIEW permission for CASHIER_SHIFTS"
+   },
+   {
+    "path": "/api/cashier-shifts",
+    "status": 403,
+    "expected": false,
+    "verdict": "403-expected",
+    "msg": "Forbidden: You lack VIEW permission for CASHIER_SHIFTS"
+   },
+   {
+    "path": "/api/cashier-shifts/:id/details",
+    "status": 403,
+    "expected": false,
+    "verdict": "403-expected",
+    "msg": "Forbidden: You lack VIEW permission for CASHIER_SHIFTS"
+   },
+   {
+    "path": "/api/rate-plans",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/corporate-accounts",
+    "status": 403,
+    "expected": false,
+    "verdict": "403-expected",
+    "msg": "Forbidden: You lack VIEW permission for CORPORATE_ACCOUNTS"
+   },
+   {
+    "path": "/api/corporate-accounts/:id",
+    "status": 403,
+    "expected": false,
+    "verdict": "403-expected",
+    "msg": "Forbidden: You lack VIEW permission for CORPORATE_ACCOUNTS"
+   },
+   {
+    "path": "/api/group-bookings",
+    "status": 403,
+    "expected": false,
+    "verdict": "403-expected",
+    "msg": "Forbidden: You lack VIEW permission for GROUP_BOOKINGS"
+   },
+   {
+    "path": "/api/group-bookings/:id",
+    "status": 403,
+    "expected": false,
+    "verdict": "403-expected",
+    "msg": "Forbidden: You lack VIEW permission for GROUP_BOOKINGS"
+   },
+   {
+    "path": "/api/group-bookings/:id/rooming-list",
+    "status": 403,
+    "expected": false,
+    "verdict": "403-expected",
+    "msg": "Forbidden: You lack VIEW permission for GROUP_BOOKINGS"
+   },
+   {
+    "path": "/api/inspections/templates",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/inspections/room/:roomId",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/accounting/summary",
+    "status": 403,
+    "expected": false,
+    "verdict": "403-expected",
+    "msg": "Forbidden: You lack VIEW permission for ACCOUNTING"
+   },
+   {
+    "path": "/api/accounting/aging",
+    "status": 403,
+    "expected": false,
+    "verdict": "403-expected",
+    "msg": "Forbidden: You lack VIEW permission for ACCOUNTING"
+   },
+   {
+    "path": "/api/banquets",
+    "status": 403,
+    "expected": false,
+    "verdict": "403-expected",
+    "msg": "Forbidden: You lack VIEW permission for BANQUETS"
+   },
+   {
+    "path": "/api/ancillary",
+    "status": 403,
+    "expected": false,
+    "verdict": "403-expected",
+    "msg": "Forbidden: You lack VIEW permission for FRONT_DESK"
+   },
+   {
+    "path": "/api/complaints/my",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/complaints",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/properties",
+    "status": 403,
+    "expected": false,
+    "verdict": "403-expected",
+    "msg": "Forbidden: You lack VIEW permission for MULTI_PROPERTY"
+   },
+   {
+    "path": "/api/properties/channels",
+    "status": 403,
+    "expected": false,
+    "verdict": "403-expected",
+    "msg": "Forbidden: You lack VIEW permission for MULTI_PROPERTY"
+   },
+   {
+    "path": "/api/housekeeping/dashboard",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/dashboard/command-center",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/payment-channels",
+    "status": 403,
+    "expected": false,
+    "verdict": "403-expected",
+    "msg": "Forbidden: You lack VIEW permission for PAYMENT_CHANNELS"
+   },
+   {
+    "path": "/api/payment-channels/:id",
+    "status": 403,
+    "expected": false,
+    "verdict": "403-expected",
+    "msg": "Forbidden: You lack VIEW permission for PAYMENT_CHANNELS"
+   },
+   {
+    "path": "/api/task-approvals",
+    "status": 403,
+    "expected": false,
+    "verdict": "403-expected",
+    "msg": "Forbidden: You lack VIEW permission for TASK_APPROVALS"
+   },
+   {
+    "path": "/api/task-approvals/stats",
+    "status": 403,
+    "expected": false,
+    "verdict": "403-expected",
+    "msg": "Forbidden: You lack VIEW permission for TASK_APPROVALS"
+   },
+   {
+    "path": "/api/permissions/pages",
+    "status": 403,
+    "expected": false,
+    "verdict": "403-expected",
+    "msg": "Forbidden: You lack VIEW permission for PERMISSIONS"
+   },
+   {
+    "path": "/api/permissions/roles",
+    "status": 403,
+    "expected": false,
+    "verdict": "403-expected",
+    "msg": "Forbidden: You lack VIEW permission for ROLES"
+   },
+   {
+    "path": "/api/permissions/roles/:roleId/permissions",
+    "status": 403,
+    "expected": false,
+    "verdict": "403-expected",
+    "msg": "Forbidden: You lack VIEW permission for PERMISSIONS"
+   },
+   {
+    "path": "/api/permissions/users/:userId/overrides",
+    "status": 403,
+    "expected": false,
+    "verdict": "403-expected",
+    "msg": "Forbidden: You lack VIEW permission for PERMISSIONS"
+   },
+   {
+    "path": "/api/permissions/users/:userId/effective",
+    "status": 403,
+    "expected": true,
+    "verdict": "error",
+    "msg": "Forbidden: Cannot fetch permissions for another user"
+   },
+   {
+    "path": "/api/pos/orders",
+    "status": 403,
+    "expected": false,
+    "verdict": "403-expected",
+    "msg": "Forbidden: You lack VIEW permission for RESTAURANT_POS"
+   },
+   {
+    "path": "/api/menu",
+    "status": 403,
+    "expected": false,
+    "verdict": "403-expected",
+    "msg": "Forbidden: You lack VIEW permission for MENU_MANAGEMENT"
+   },
+   {
+    "path": "/api/seo/pages",
+    "status": 200,
+    "expected": true,
+    "verdict": "ok",
+    "msg": ""
+   },
+   {
+    "path": "/api/seo/pages/:slug",
+    "status": 404,
+    "expected": true,
+    "verdict": "param",
+    "msg": "Destination landing page not found"
+   },
+   {
+    "path": "/api/seo/admin/pages",
+    "status": 403,
+    "expected": false,
+    "verdict": "403-expected",
+    "msg": "Forbidden: You lack VIEW permission for SETTINGS"
+   },
+   {
+    "path": "/api/seo/admin/audit",
+    "status": 403,
+    "expected": false,
+    "verdict": "403-expected",
+    "msg": "Forbidden: You lack VIEW permission for SETTINGS"
+   },
+   {
+    "path": "/api/seo/admin/analytics",
+    "status": 403,
+    "expected": false,
+    "verdict": "403-expected",
+    "msg": "Forbidden: You lack VIEW permission for SETTINGS"
+   }
+  ]
+ },
+ "pages": {
+  "ADMIN": [
+   {
+    "route": "/admin/dashboard",
+    "pageKey": "DASHBOARD.ADMIN",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/front-desk",
+    "pageKey": "FRONT_DESK",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/guest-registration",
+    "pageKey": "GUEST_REGISTRATION",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/room-rack",
+    "pageKey": "ROOM_RACK",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/bookings",
+    "pageKey": "BOOKINGS",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/ota-bookings",
+    "pageKey": "BOOKINGS",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/bookings/:id",
+    "pageKey": "BOOKINGS",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/bookings/:id/folio-print",
+    "pageKey": "BOOKINGS",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/bookings/:id/grc-print",
+    "pageKey": "BOOKINGS",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/calendar",
+    "pageKey": "CALENDAR",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/check-in",
+    "pageKey": "CHECK_IN",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/check-out",
+    "pageKey": "CHECK_OUT",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/master-data",
+    "pageKey": "SETTINGS",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/master-data/amenities",
+    "pageKey": "SETTINGS",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/master-data/floors",
+    "pageKey": "SETTINGS",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/master-data/bed-types",
+    "pageKey": "SETTINGS",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/master-data/room-views",
+    "pageKey": "SETTINGS",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/rooms",
+    "pageKey": "ROOMS",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/room-categories",
+    "pageKey": "ROOM_CATEGORIES",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/rate-plans",
+    "pageKey": "RATE_PLANS",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/pricing",
+    "pageKey": "PRICING",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/guests",
+    "pageKey": "GUESTS",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/payments",
+    "pageKey": "PAYMENTS",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/advances",
+    "pageKey": "ADVANCES",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/verifications",
+    "pageKey": "VERIFICATIONS",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/change-requests",
+    "pageKey": "BOOKINGS",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/live-chat",
+    "pageKey": "ENQUIRIES",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/billing",
+    "pageKey": "CASHIER_DESK",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/payments/:id/receipt",
+    "pageKey": "PAYMENTS",
+    "verdict": "error",
+    "notes": [
+     "404 GET /api/reception/payments/6ad223cc10cb99a404bf139f/receipt"
+    ]
+   },
+   {
+    "route": "/admin/advances/:id/receipt",
+    "pageKey": "ADVANCES",
+    "verdict": "error",
+    "notes": [
+     "404 GET /api/advances/6ad223cc10cb99a404bf139f/receipt"
+    ]
+   },
+   {
+    "route": "/admin/cashier-shifts",
+    "pageKey": "CASHIER_SHIFTS",
+    "verdict": "error",
+    "notes": [
+     "404 GET /api/advances/6ad223cc10cb99a404bf139f/receipt"
+    ]
+   },
+   {
+    "route": "/admin/refunds",
+    "pageKey": "REFUNDS",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/coupons",
+    "pageKey": "COUPONS",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/housekeeping",
+    "pageKey": "HOUSEKEEPING",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/task-approvals",
+    "pageKey": "TASK_APPROVALS",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/maintenance",
+    "pageKey": "MAINTENANCE",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/staff",
+    "pageKey": "STAFF",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/gallery",
+    "pageKey": "CONTENT_MANAGEMENT",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/content",
+    "pageKey": "CONTENT_MANAGEMENT",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/faqs",
+    "pageKey": "CONTENT_MANAGEMENT",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/testimonials",
+    "pageKey": "CONTENT_MANAGEMENT",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/reviews",
+    "pageKey": "REVIEWS",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/contact-messages",
+    "pageKey": "CONTACT_MESSAGES",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/complaints",
+    "pageKey": "COMPLAINTS",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/reports/*",
+    "pageKey": "REPORTS_LAYOUT",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/in-house-list",
+    "pageKey": "IN_HOUSE_GUESTS",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/day-sales-summary",
+    "pageKey": "REPORTS_LAYOUT",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/monthly-mis",
+    "pageKey": "REPORTS_LAYOUT",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/enquiries",
+    "pageKey": "ENQUIRIES",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/enquiries/:id",
+    "pageKey": "ENQUIRIES",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/executive",
+    "pageKey": "DASHBOARD.EXECUTIVE",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/multi-property",
+    "pageKey": "MULTI_PROPERTY",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/night-audit",
+    "pageKey": "NIGHT_AUDIT",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/staff/mobile-housekeeping",
+    "pageKey": "HOUSEKEEPING",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/seo",
+    "pageKey": "SETTINGS",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/settings",
+    "pageKey": "SETTINGS",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/settings/payment-channels",
+    "pageKey": "PAYMENT_CHANNELS",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/audit-logs",
+    "pageKey": "AUDIT_LOGS",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/corporate-accounts",
+    "pageKey": "CORPORATE_ACCOUNTS",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/banquets",
+    "pageKey": "BANQUETS",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/pos",
+    "pageKey": "RESTAURANT_POS",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/menu",
+    "pageKey": "RESTAURANT_POS",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/ancillary",
+    "pageKey": "FRONT_DESK",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/group-bookings",
+    "pageKey": "GROUP_BOOKINGS",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/front-desk/dashboard",
+    "pageKey": "DASHBOARD.FRONT_DESK",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/housekeeping/dashboard",
+    "pageKey": "DASHBOARD.HOUSEKEEPING",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/maintenance/dashboard",
+    "pageKey": "DASHBOARD.MAINTENANCE",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/cashier/dashboard",
+    "pageKey": "DASHBOARD.CASHIER",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/finance/dashboard",
+    "pageKey": "DASHBOARD.FINANCE",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/events/dashboard",
+    "pageKey": "BANQUETS",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/staff/housekeeping",
+    "pageKey": "HOUSEKEEPING",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/staff/maintenance",
+    "pageKey": "MAINTENANCE",
+    "verdict": "ok",
+    "notes": []
+   }
+  ],
+  "MANAGER": [
+   {
+    "route": "/admin/dashboard",
+    "pageKey": "DASHBOARD.ADMIN",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/front-desk",
+    "pageKey": "FRONT_DESK",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/guest-registration",
+    "pageKey": "GUEST_REGISTRATION",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/room-rack",
+    "pageKey": "ROOM_RACK",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/bookings",
+    "pageKey": "BOOKINGS",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/ota-bookings",
+    "pageKey": "BOOKINGS",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/bookings/:id",
+    "pageKey": "BOOKINGS",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/bookings/:id/folio-print",
+    "pageKey": "BOOKINGS",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/bookings/:id/grc-print",
+    "pageKey": "BOOKINGS",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/calendar",
+    "pageKey": "CALENDAR",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/check-in",
+    "pageKey": "CHECK_IN",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/check-out",
+    "pageKey": "CHECK_OUT",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/master-data",
+    "pageKey": "SETTINGS",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/master-data/amenities",
+    "pageKey": "SETTINGS",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/master-data/floors",
+    "pageKey": "SETTINGS",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/master-data/bed-types",
+    "pageKey": "SETTINGS",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/master-data/room-views",
+    "pageKey": "SETTINGS",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/rooms",
+    "pageKey": "ROOMS",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/room-categories",
+    "pageKey": "ROOM_CATEGORIES",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/rate-plans",
+    "pageKey": "RATE_PLANS",
+    "verdict": "denied-expected",
+    "notes": []
+   },
+   {
+    "route": "/admin/pricing",
+    "pageKey": "PRICING",
+    "verdict": "denied-expected",
+    "notes": []
+   },
+   {
+    "route": "/admin/guests",
+    "pageKey": "GUESTS",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/payments",
+    "pageKey": "PAYMENTS",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/advances",
+    "pageKey": "ADVANCES",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/verifications",
+    "pageKey": "VERIFICATIONS",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/change-requests",
+    "pageKey": "BOOKINGS",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/live-chat",
+    "pageKey": "ENQUIRIES",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/billing",
+    "pageKey": "CASHIER_DESK",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/payments/:id/receipt",
+    "pageKey": "PAYMENTS",
+    "verdict": "error",
+    "notes": [
+     "404 GET /api/reception/payments/6ad223cc10cb99a404bf139f/receipt"
+    ]
+   },
+   {
+    "route": "/admin/advances/:id/receipt",
+    "pageKey": "ADVANCES",
+    "verdict": "error",
+    "notes": [
+     "404 GET /api/advances/6ad223cc10cb99a404bf139f/receipt"
+    ]
+   },
+   {
+    "route": "/admin/cashier-shifts",
+    "pageKey": "CASHIER_SHIFTS",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/refunds",
+    "pageKey": "REFUNDS",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/coupons",
+    "pageKey": "COUPONS",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/housekeeping",
+    "pageKey": "HOUSEKEEPING",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/task-approvals",
+    "pageKey": "TASK_APPROVALS",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/maintenance",
+    "pageKey": "MAINTENANCE",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/staff",
+    "pageKey": "STAFF",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/gallery",
+    "pageKey": "CONTENT_MANAGEMENT",
+    "verdict": "denied-expected",
+    "notes": []
+   },
+   {
+    "route": "/admin/content",
+    "pageKey": "CONTENT_MANAGEMENT",
+    "verdict": "denied-expected",
+    "notes": []
+   },
+   {
+    "route": "/admin/faqs",
+    "pageKey": "CONTENT_MANAGEMENT",
+    "verdict": "denied-expected",
+    "notes": []
+   },
+   {
+    "route": "/admin/testimonials",
+    "pageKey": "CONTENT_MANAGEMENT",
+    "verdict": "denied-expected",
+    "notes": []
+   },
+   {
+    "route": "/admin/reviews",
+    "pageKey": "REVIEWS",
+    "verdict": "denied-expected",
+    "notes": []
+   },
+   {
+    "route": "/admin/contact-messages",
+    "pageKey": "CONTACT_MESSAGES",
+    "verdict": "denied-expected",
+    "notes": []
+   },
+   {
+    "route": "/admin/complaints",
+    "pageKey": "COMPLAINTS",
+    "verdict": "denied-expected",
+    "notes": []
+   },
+   {
+    "route": "/admin/reports/*",
+    "pageKey": "REPORTS_LAYOUT",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/in-house-list",
+    "pageKey": "IN_HOUSE_GUESTS",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/day-sales-summary",
+    "pageKey": "REPORTS_LAYOUT",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/monthly-mis",
+    "pageKey": "REPORTS_LAYOUT",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/enquiries",
+    "pageKey": "ENQUIRIES",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/enquiries/:id",
+    "pageKey": "ENQUIRIES",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/executive",
+    "pageKey": "DASHBOARD.EXECUTIVE",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/multi-property",
+    "pageKey": "MULTI_PROPERTY",
+    "verdict": "denied-expected",
+    "notes": []
+   },
+   {
+    "route": "/admin/night-audit",
+    "pageKey": "NIGHT_AUDIT",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/staff/mobile-housekeeping",
+    "pageKey": "HOUSEKEEPING",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/seo",
+    "pageKey": "SETTINGS",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/settings",
+    "pageKey": "SETTINGS",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/settings/payment-channels",
+    "pageKey": "PAYMENT_CHANNELS",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/audit-logs",
+    "pageKey": "AUDIT_LOGS",
+    "verdict": "denied-expected",
+    "notes": []
+   },
+   {
+    "route": "/admin/corporate-accounts",
+    "pageKey": "CORPORATE_ACCOUNTS",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/banquets",
+    "pageKey": "BANQUETS",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/pos",
+    "pageKey": "RESTAURANT_POS",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/menu",
+    "pageKey": "RESTAURANT_POS",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/ancillary",
+    "pageKey": "FRONT_DESK",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/group-bookings",
+    "pageKey": "GROUP_BOOKINGS",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/front-desk/dashboard",
+    "pageKey": "DASHBOARD.FRONT_DESK",
+    "verdict": "denied-expected",
+    "notes": []
+   },
+   {
+    "route": "/housekeeping/dashboard",
+    "pageKey": "DASHBOARD.HOUSEKEEPING",
+    "verdict": "denied-expected",
+    "notes": []
+   },
+   {
+    "route": "/maintenance/dashboard",
+    "pageKey": "DASHBOARD.MAINTENANCE",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/cashier/dashboard",
+    "pageKey": "DASHBOARD.CASHIER",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/finance/dashboard",
+    "pageKey": "DASHBOARD.FINANCE",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/events/dashboard",
+    "pageKey": "BANQUETS",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/staff/housekeeping",
+    "pageKey": "HOUSEKEEPING",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/staff/maintenance",
+    "pageKey": "MAINTENANCE",
+    "verdict": "ok",
+    "notes": []
+   }
+  ],
+  "RECEPTIONIST": [
+   {
+    "route": "/admin/dashboard",
+    "pageKey": "DASHBOARD.ADMIN",
+    "verdict": "denied-expected",
+    "notes": []
+   },
+   {
+    "route": "/admin/front-desk",
+    "pageKey": "FRONT_DESK",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/guest-registration",
+    "pageKey": "GUEST_REGISTRATION",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/room-rack",
+    "pageKey": "ROOM_RACK",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/bookings",
+    "pageKey": "BOOKINGS",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/ota-bookings",
+    "pageKey": "BOOKINGS",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/bookings/:id",
+    "pageKey": "BOOKINGS",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/bookings/:id/folio-print",
+    "pageKey": "BOOKINGS",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/bookings/:id/grc-print",
+    "pageKey": "BOOKINGS",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/calendar",
+    "pageKey": "CALENDAR",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/check-in",
+    "pageKey": "CHECK_IN",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/check-out",
+    "pageKey": "CHECK_OUT",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/master-data",
+    "pageKey": "SETTINGS",
+    "verdict": "denied-expected",
+    "notes": []
+   },
+   {
+    "route": "/admin/master-data/amenities",
+    "pageKey": "SETTINGS",
+    "verdict": "denied-expected",
+    "notes": []
+   },
+   {
+    "route": "/admin/master-data/floors",
+    "pageKey": "SETTINGS",
+    "verdict": "denied-expected",
+    "notes": []
+   },
+   {
+    "route": "/admin/master-data/bed-types",
+    "pageKey": "SETTINGS",
+    "verdict": "denied-expected",
+    "notes": []
+   },
+   {
+    "route": "/admin/master-data/room-views",
+    "pageKey": "SETTINGS",
+    "verdict": "denied-expected",
+    "notes": []
+   },
+   {
+    "route": "/admin/rooms",
+    "pageKey": "ROOMS",
+    "verdict": "denied-expected",
+    "notes": []
+   },
+   {
+    "route": "/admin/room-categories",
+    "pageKey": "ROOM_CATEGORIES",
+    "verdict": "denied-expected",
+    "notes": []
+   },
+   {
+    "route": "/admin/rate-plans",
+    "pageKey": "RATE_PLANS",
+    "verdict": "denied-expected",
+    "notes": []
+   },
+   {
+    "route": "/admin/pricing",
+    "pageKey": "PRICING",
+    "verdict": "denied-expected",
+    "notes": []
+   },
+   {
+    "route": "/admin/guests",
+    "pageKey": "GUESTS",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/payments",
+    "pageKey": "PAYMENTS",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/advances",
+    "pageKey": "ADVANCES",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/verifications",
+    "pageKey": "VERIFICATIONS",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/change-requests",
+    "pageKey": "BOOKINGS",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/live-chat",
+    "pageKey": "ENQUIRIES",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/billing",
+    "pageKey": "CASHIER_DESK",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/payments/:id/receipt",
+    "pageKey": "PAYMENTS",
+    "verdict": "error",
+    "notes": [
+     "404 GET /api/reception/payments/6ad223cc10cb99a404bf139f/receipt"
+    ]
+   },
+   {
+    "route": "/admin/advances/:id/receipt",
+    "pageKey": "ADVANCES",
+    "verdict": "error",
+    "notes": [
+     "404 GET /api/advances/6ad223cc10cb99a404bf139f/receipt"
+    ]
+   },
+   {
+    "route": "/admin/cashier-shifts",
+    "pageKey": "CASHIER_SHIFTS",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/refunds",
+    "pageKey": "REFUNDS",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/coupons",
+    "pageKey": "COUPONS",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/housekeeping",
+    "pageKey": "HOUSEKEEPING",
+    "verdict": "denied-expected",
+    "notes": []
+   },
+   {
+    "route": "/admin/task-approvals",
+    "pageKey": "TASK_APPROVALS",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/maintenance",
+    "pageKey": "MAINTENANCE",
+    "verdict": "denied-expected",
+    "notes": []
+   },
+   {
+    "route": "/admin/staff",
+    "pageKey": "STAFF",
+    "verdict": "denied-expected",
+    "notes": []
+   },
+   {
+    "route": "/admin/gallery",
+    "pageKey": "CONTENT_MANAGEMENT",
+    "verdict": "denied-expected",
+    "notes": []
+   },
+   {
+    "route": "/admin/content",
+    "pageKey": "CONTENT_MANAGEMENT",
+    "verdict": "denied-expected",
+    "notes": []
+   },
+   {
+    "route": "/admin/faqs",
+    "pageKey": "CONTENT_MANAGEMENT",
+    "verdict": "denied-expected",
+    "notes": []
+   },
+   {
+    "route": "/admin/testimonials",
+    "pageKey": "CONTENT_MANAGEMENT",
+    "verdict": "denied-expected",
+    "notes": []
+   },
+   {
+    "route": "/admin/reviews",
+    "pageKey": "REVIEWS",
+    "verdict": "denied-expected",
+    "notes": []
+   },
+   {
+    "route": "/admin/contact-messages",
+    "pageKey": "CONTACT_MESSAGES",
+    "verdict": "denied-expected",
+    "notes": []
+   },
+   {
+    "route": "/admin/complaints",
+    "pageKey": "COMPLAINTS",
+    "verdict": "denied-expected",
+    "notes": []
+   },
+   {
+    "route": "/admin/reports/*",
+    "pageKey": "REPORTS_LAYOUT",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/in-house-list",
+    "pageKey": "IN_HOUSE_GUESTS",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/day-sales-summary",
+    "pageKey": "REPORTS_LAYOUT",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/monthly-mis",
+    "pageKey": "REPORTS_LAYOUT",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/enquiries",
+    "pageKey": "ENQUIRIES",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/enquiries/:id",
+    "pageKey": "ENQUIRIES",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/executive",
+    "pageKey": "DASHBOARD.EXECUTIVE",
+    "verdict": "denied-expected",
+    "notes": []
+   },
+   {
+    "route": "/admin/multi-property",
+    "pageKey": "MULTI_PROPERTY",
+    "verdict": "denied-expected",
+    "notes": []
+   },
+   {
+    "route": "/admin/night-audit",
+    "pageKey": "NIGHT_AUDIT",
+    "verdict": "denied-expected",
+    "notes": []
+   },
+   {
+    "route": "/staff/mobile-housekeeping",
+    "pageKey": "HOUSEKEEPING",
+    "verdict": "denied-expected",
+    "notes": []
+   },
+   {
+    "route": "/admin/seo",
+    "pageKey": "SETTINGS",
+    "verdict": "denied-expected",
+    "notes": []
+   },
+   {
+    "route": "/admin/settings",
+    "pageKey": "SETTINGS",
+    "verdict": "denied-expected",
+    "notes": []
+   },
+   {
+    "route": "/admin/settings/payment-channels",
+    "pageKey": "PAYMENT_CHANNELS",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/audit-logs",
+    "pageKey": "AUDIT_LOGS",
+    "verdict": "denied-expected",
+    "notes": []
+   },
+   {
+    "route": "/admin/corporate-accounts",
+    "pageKey": "CORPORATE_ACCOUNTS",
+    "verdict": "denied-expected",
+    "notes": []
+   },
+   {
+    "route": "/admin/banquets",
+    "pageKey": "BANQUETS",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/pos",
+    "pageKey": "RESTAURANT_POS",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/menu",
+    "pageKey": "RESTAURANT_POS",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/ancillary",
+    "pageKey": "FRONT_DESK",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/group-bookings",
+    "pageKey": "GROUP_BOOKINGS",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/front-desk/dashboard",
+    "pageKey": "DASHBOARD.FRONT_DESK",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/housekeeping/dashboard",
+    "pageKey": "DASHBOARD.HOUSEKEEPING",
+    "verdict": "denied-expected",
+    "notes": []
+   },
+   {
+    "route": "/maintenance/dashboard",
+    "pageKey": "DASHBOARD.MAINTENANCE",
+    "verdict": "denied-expected",
+    "notes": []
+   },
+   {
+    "route": "/cashier/dashboard",
+    "pageKey": "DASHBOARD.CASHIER",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/finance/dashboard",
+    "pageKey": "DASHBOARD.FINANCE",
+    "verdict": "denied-expected",
+    "notes": []
+   },
+   {
+    "route": "/events/dashboard",
+    "pageKey": "BANQUETS",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/staff/housekeeping",
+    "pageKey": "HOUSEKEEPING",
+    "verdict": "denied-expected",
+    "notes": []
+   },
+   {
+    "route": "/staff/maintenance",
+    "pageKey": "MAINTENANCE",
+    "verdict": "denied-expected",
+    "notes": []
+   }
+  ],
+  "HOUSEKEEPING": [
+   {
+    "route": "/admin/dashboard",
+    "pageKey": "DASHBOARD.ADMIN",
+    "verdict": "denied-expected",
+    "notes": []
+   },
+   {
+    "route": "/admin/front-desk",
+    "pageKey": "FRONT_DESK",
+    "verdict": "denied-expected",
+    "notes": []
+   },
+   {
+    "route": "/admin/guest-registration",
+    "pageKey": "GUEST_REGISTRATION",
+    "verdict": "denied-expected",
+    "notes": []
+   },
+   {
+    "route": "/admin/room-rack",
+    "pageKey": "ROOM_RACK",
+    "verdict": "denied-expected",
+    "notes": []
+   },
+   {
+    "route": "/admin/bookings",
+    "pageKey": "BOOKINGS",
+    "verdict": "denied-expected",
+    "notes": []
+   },
+   {
+    "route": "/admin/ota-bookings",
+    "pageKey": "BOOKINGS",
+    "verdict": "denied-expected",
+    "notes": []
+   },
+   {
+    "route": "/admin/bookings/:id",
+    "pageKey": "BOOKINGS",
+    "verdict": "denied-expected",
+    "notes": []
+   },
+   {
+    "route": "/admin/bookings/:id/folio-print",
+    "pageKey": "BOOKINGS",
+    "verdict": "denied-expected",
+    "notes": []
+   },
+   {
+    "route": "/admin/bookings/:id/grc-print",
+    "pageKey": "BOOKINGS",
+    "verdict": "denied-expected",
+    "notes": []
+   },
+   {
+    "route": "/admin/calendar",
+    "pageKey": "CALENDAR",
+    "verdict": "denied-expected",
+    "notes": []
+   },
+   {
+    "route": "/admin/check-in",
+    "pageKey": "CHECK_IN",
+    "verdict": "denied-expected",
+    "notes": []
+   },
+   {
+    "route": "/admin/check-out",
+    "pageKey": "CHECK_OUT",
+    "verdict": "denied-expected",
+    "notes": []
+   },
+   {
+    "route": "/admin/master-data",
+    "pageKey": "SETTINGS",
+    "verdict": "denied-expected",
+    "notes": []
+   },
+   {
+    "route": "/admin/master-data/amenities",
+    "pageKey": "SETTINGS",
+    "verdict": "denied-expected",
+    "notes": []
+   },
+   {
+    "route": "/admin/master-data/floors",
+    "pageKey": "SETTINGS",
+    "verdict": "denied-expected",
+    "notes": []
+   },
+   {
+    "route": "/admin/master-data/bed-types",
+    "pageKey": "SETTINGS",
+    "verdict": "denied-expected",
+    "notes": []
+   },
+   {
+    "route": "/admin/master-data/room-views",
+    "pageKey": "SETTINGS",
+    "verdict": "denied-expected",
+    "notes": []
+   },
+   {
+    "route": "/admin/rooms",
+    "pageKey": "ROOMS",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/room-categories",
+    "pageKey": "ROOM_CATEGORIES",
+    "verdict": "denied-expected",
+    "notes": []
+   },
+   {
+    "route": "/admin/rate-plans",
+    "pageKey": "RATE_PLANS",
+    "verdict": "denied-expected",
+    "notes": []
+   },
+   {
+    "route": "/admin/pricing",
+    "pageKey": "PRICING",
+    "verdict": "denied-expected",
+    "notes": []
+   },
+   {
+    "route": "/admin/guests",
+    "pageKey": "GUESTS",
+    "verdict": "denied-expected",
+    "notes": []
+   },
+   {
+    "route": "/admin/payments",
+    "pageKey": "PAYMENTS",
+    "verdict": "denied-expected",
+    "notes": []
+   },
+   {
+    "route": "/admin/advances",
+    "pageKey": "ADVANCES",
+    "verdict": "denied-expected",
+    "notes": []
+   },
+   {
+    "route": "/admin/verifications",
+    "pageKey": "VERIFICATIONS",
+    "verdict": "denied-expected",
+    "notes": []
+   },
+   {
+    "route": "/admin/change-requests",
+    "pageKey": "BOOKINGS",
+    "verdict": "denied-expected",
+    "notes": []
+   },
+   {
+    "route": "/admin/live-chat",
+    "pageKey": "ENQUIRIES",
+    "verdict": "denied-expected",
+    "notes": []
+   },
+   {
+    "route": "/admin/billing",
+    "pageKey": "CASHIER_DESK",
+    "verdict": "denied-expected",
+    "notes": []
+   },
+   {
+    "route": "/admin/payments/:id/receipt",
+    "pageKey": "PAYMENTS",
+    "verdict": "denied-expected",
+    "notes": []
+   },
+   {
+    "route": "/admin/advances/:id/receipt",
+    "pageKey": "ADVANCES",
+    "verdict": "denied-expected",
+    "notes": []
+   },
+   {
+    "route": "/admin/cashier-shifts",
+    "pageKey": "CASHIER_SHIFTS",
+    "verdict": "denied-expected",
+    "notes": []
+   },
+   {
+    "route": "/admin/refunds",
+    "pageKey": "REFUNDS",
+    "verdict": "denied-expected",
+    "notes": []
+   },
+   {
+    "route": "/admin/coupons",
+    "pageKey": "COUPONS",
+    "verdict": "denied-expected",
+    "notes": []
+   },
+   {
+    "route": "/admin/housekeeping",
+    "pageKey": "HOUSEKEEPING",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/task-approvals",
+    "pageKey": "TASK_APPROVALS",
+    "verdict": "denied-expected",
+    "notes": []
+   },
+   {
+    "route": "/admin/maintenance",
+    "pageKey": "MAINTENANCE",
+    "verdict": "denied-expected",
+    "notes": []
+   },
+   {
+    "route": "/admin/staff",
+    "pageKey": "STAFF",
+    "verdict": "denied-expected",
+    "notes": []
+   },
+   {
+    "route": "/admin/gallery",
+    "pageKey": "CONTENT_MANAGEMENT",
+    "verdict": "denied-expected",
+    "notes": []
+   },
+   {
+    "route": "/admin/content",
+    "pageKey": "CONTENT_MANAGEMENT",
+    "verdict": "denied-expected",
+    "notes": []
+   },
+   {
+    "route": "/admin/faqs",
+    "pageKey": "CONTENT_MANAGEMENT",
+    "verdict": "denied-expected",
+    "notes": []
+   },
+   {
+    "route": "/admin/testimonials",
+    "pageKey": "CONTENT_MANAGEMENT",
+    "verdict": "denied-expected",
+    "notes": []
+   },
+   {
+    "route": "/admin/reviews",
+    "pageKey": "REVIEWS",
+    "verdict": "denied-expected",
+    "notes": []
+   },
+   {
+    "route": "/admin/contact-messages",
+    "pageKey": "CONTACT_MESSAGES",
+    "verdict": "denied-expected",
+    "notes": []
+   },
+   {
+    "route": "/admin/complaints",
+    "pageKey": "COMPLAINTS",
+    "verdict": "denied-expected",
+    "notes": []
+   },
+   {
+    "route": "/admin/reports/*",
+    "pageKey": "REPORTS_LAYOUT",
+    "verdict": "denied-expected",
+    "notes": []
+   },
+   {
+    "route": "/admin/in-house-list",
+    "pageKey": "IN_HOUSE_GUESTS",
+    "verdict": "denied-expected",
+    "notes": []
+   },
+   {
+    "route": "/admin/day-sales-summary",
+    "pageKey": "REPORTS_LAYOUT",
+    "verdict": "denied-expected",
+    "notes": []
+   },
+   {
+    "route": "/admin/monthly-mis",
+    "pageKey": "REPORTS_LAYOUT",
+    "verdict": "denied-expected",
+    "notes": []
+   },
+   {
+    "route": "/admin/enquiries",
+    "pageKey": "ENQUIRIES",
+    "verdict": "denied-expected",
+    "notes": []
+   },
+   {
+    "route": "/admin/enquiries/:id",
+    "pageKey": "ENQUIRIES",
+    "verdict": "denied-expected",
+    "notes": []
+   },
+   {
+    "route": "/admin/executive",
+    "pageKey": "DASHBOARD.EXECUTIVE",
+    "verdict": "denied-expected",
+    "notes": []
+   },
+   {
+    "route": "/admin/multi-property",
+    "pageKey": "MULTI_PROPERTY",
+    "verdict": "denied-expected",
+    "notes": []
+   },
+   {
+    "route": "/admin/night-audit",
+    "pageKey": "NIGHT_AUDIT",
+    "verdict": "denied-expected",
+    "notes": []
+   },
+   {
+    "route": "/staff/mobile-housekeeping",
+    "pageKey": "HOUSEKEEPING",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/admin/seo",
+    "pageKey": "SETTINGS",
+    "verdict": "denied-expected",
+    "notes": []
+   },
+   {
+    "route": "/admin/settings",
+    "pageKey": "SETTINGS",
+    "verdict": "denied-expected",
+    "notes": []
+   },
+   {
+    "route": "/admin/settings/payment-channels",
+    "pageKey": "PAYMENT_CHANNELS",
+    "verdict": "denied-expected",
+    "notes": []
+   },
+   {
+    "route": "/admin/audit-logs",
+    "pageKey": "AUDIT_LOGS",
+    "verdict": "denied-expected",
+    "notes": []
+   },
+   {
+    "route": "/admin/corporate-accounts",
+    "pageKey": "CORPORATE_ACCOUNTS",
+    "verdict": "denied-expected",
+    "notes": []
+   },
+   {
+    "route": "/admin/banquets",
+    "pageKey": "BANQUETS",
+    "verdict": "denied-expected",
+    "notes": []
+   },
+   {
+    "route": "/admin/pos",
+    "pageKey": "RESTAURANT_POS",
+    "verdict": "denied-expected",
+    "notes": []
+   },
+   {
+    "route": "/admin/menu",
+    "pageKey": "RESTAURANT_POS",
+    "verdict": "denied-expected",
+    "notes": []
+   },
+   {
+    "route": "/admin/ancillary",
+    "pageKey": "FRONT_DESK",
+    "verdict": "denied-expected",
+    "notes": []
+   },
+   {
+    "route": "/admin/group-bookings",
+    "pageKey": "GROUP_BOOKINGS",
+    "verdict": "denied-expected",
+    "notes": []
+   },
+   {
+    "route": "/front-desk/dashboard",
+    "pageKey": "DASHBOARD.FRONT_DESK",
+    "verdict": "denied-expected",
+    "notes": []
+   },
+   {
+    "route": "/housekeeping/dashboard",
+    "pageKey": "DASHBOARD.HOUSEKEEPING",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/maintenance/dashboard",
+    "pageKey": "DASHBOARD.MAINTENANCE",
+    "verdict": "denied-expected",
+    "notes": []
+   },
+   {
+    "route": "/cashier/dashboard",
+    "pageKey": "DASHBOARD.CASHIER",
+    "verdict": "denied-expected",
+    "notes": []
+   },
+   {
+    "route": "/finance/dashboard",
+    "pageKey": "DASHBOARD.FINANCE",
+    "verdict": "denied-expected",
+    "notes": []
+   },
+   {
+    "route": "/events/dashboard",
+    "pageKey": "BANQUETS",
+    "verdict": "denied-expected",
+    "notes": []
+   },
+   {
+    "route": "/staff/housekeeping",
+    "pageKey": "HOUSEKEEPING",
+    "verdict": "ok",
+    "notes": []
+   },
+   {
+    "route": "/staff/maintenance",
+    "pageKey": "MAINTENANCE",
+    "verdict": "denied-expected",
+    "notes": []
+   }
+  ]
+ }
+}

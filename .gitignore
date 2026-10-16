@@ -50,3 +50,11 @@ backups/
 
 # scratch work
 scratch/
+
+# Editor / assistant tool files — generated locally by IDE extensions, never part of the project
+/CLAUDE.md
+/AGENT.md
+/AGENTS.md
+/.windsurfrules
+/.cursorrules
+/.github/copilot-instructions.md
