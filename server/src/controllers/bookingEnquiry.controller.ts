@@ -3,7 +3,6 @@ import { z } from "zod";
 import {
   BookingEnquiry, BookingEnquiryStatus, EnquirySource, EnquiryType, EnquiryPriority
 } from "../models/BookingEnquiry";
-import { User, UserRole } from "../models/User";
 import { Booking, BookingStatus } from "../models/Booking";
 import { Guest } from "../models/Guest";
 import { NotificationType } from "../models/NotificationLog";
@@ -287,6 +286,7 @@ export const getBookingEnquiries = async (req: Request, res: Response) => {
 // ─── ADMIN: GET /api/admin/booking-enquiries/:id ──────────────────────────
 export const getBookingEnquiryById = async (req: Request, res: Response) => {
   try {
+    if (!mongoose.Types.ObjectId.isValid(String(req.params.id))) return res.status(404).json({ success: false, message: "Enquiry not found" });
     const enquiry = await BookingEnquiry.findById(req.params.id)
       .populate("assignedTo", "firstName lastName role email")
       .populate("convertedToBookingId", "bookingReference status checkInDate checkOutDate")

@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useInView } from "framer-motion";
 import { Sparkles, ArrowRight, ChevronLeft, ChevronRight, Pause, Play } from "lucide-react";
 import { Link } from "react-router-dom";
 
@@ -10,6 +10,7 @@ const SCENES = [
     category: "ROOMS",
     description: "Plush beds, soft lighting, city-view windows in select rooms and daily housekeeping.",
     image: "/videos/yes-04.mp4",
+    poster: "/gallery/hotel-24.jpg",
     link: "/rooms",
   },
   {
@@ -18,6 +19,7 @@ const SCENES = [
     category: "WELCOME",
     description: "Our team helps with your luggage and gets you settled quickly, any time of day or night.",
     image: "/videos/yes-02.mp4",
+    poster: "/gallery/hotel-01.jpg",
     link: "/rooms",
   },
   {
@@ -26,6 +28,7 @@ const SCENES = [
     category: "BUSINESS & LONG STAYS",
     description: "Free high-speed Wi-Fi and a work desk in every room. Stay by the night, by the hour, or weekly and monthly.",
     image: "/videos/yes-03.mp4",
+    poster: "/gallery/hotel-38.jpg",
     link: "/contact",
   },
   {
@@ -34,6 +37,7 @@ const SCENES = [
     category: "LOCATION",
     description: "On Hosur Road beside Hosa Road Metro Station, on the Electronic City corridor — with free on-site parking.",
     image: "/videos/yes-hotel-01.mp4",
+    poster: "/gallery/hotel-53.jpg",
     link: "/contact",
   },
   {
@@ -50,6 +54,9 @@ export default function HorizontalStory() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(true);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  // The videos are large: load them (and turn the slides) only while this section is on screen.
+  const sectionRef = useRef<HTMLElement>(null);
+  const inView = useInView(sectionRef, { margin: "200px 0px" });
 
   const nextSlide = () => {
     setCurrentIndex((prev) => (prev + 1) % SCENES.length);
@@ -60,7 +67,7 @@ export default function HorizontalStory() {
   };
 
   useEffect(() => {
-    if (isPlaying) {
+    if (isPlaying && inView) {
       timerRef.current = setInterval(() => {
         nextSlide();
       }, 4500);
@@ -68,10 +75,10 @@ export default function HorizontalStory() {
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, [isPlaying, currentIndex]);
+  }, [isPlaying, inView, currentIndex]);
 
   return (
-    <section className="relative w-full bg-white text-slate-800 py-12 md:py-16 lg:py-24 border-t border-b border-slate-200 overflow-hidden">
+    <section ref={sectionRef} className="relative w-full bg-white text-slate-800 py-12 md:py-16 lg:py-24 border-t border-b border-slate-200 overflow-hidden">
       <div className="container mx-auto px-4 md:px-8 max-w-[1400px] space-y-6 md:space-y-8">
         
         {/* Top Header Controls */}
@@ -81,7 +88,7 @@ export default function HorizontalStory() {
               <Sparkles size={13} className="text-[#c9a227]" /> INSIDE YES HOTELS
             </div>
             <h2 className="font-serif text-3xl sm:text-5xl text-slate-800 font-normal leading-tight">
-              Stays &amp; <span className="text-[#c9a227] italic font-serif">Spaces</span>.
+              Stays &amp; <span className="text-[#866A1C] italic font-serif">Spaces</span>.
             </h2>
           </div>
 
@@ -130,9 +137,11 @@ export default function HorizontalStory() {
               transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
               className="absolute inset-0 w-full h-full"
             >
-              {SCENES[currentIndex].image.endsWith(".mp4") ? (
+              {SCENES[currentIndex].image.endsWith(".mp4") && inView ? (
                 <video
                   src={SCENES[currentIndex].image}
+                  poster={(SCENES[currentIndex] as any).poster}
+                  preload="metadata"
                   autoPlay
                   muted
                   loop
@@ -141,7 +150,7 @@ export default function HorizontalStory() {
                 />
               ) : (
                 <img
-                  src={SCENES[currentIndex].image}
+                  src={(SCENES[currentIndex] as any).poster ?? SCENES[currentIndex].image}
                   alt={SCENES[currentIndex].title}
                   className="w-full h-full object-cover filter brightness-[0.82] contrast-[1.05]"
                 />

@@ -134,6 +134,7 @@ const AdminMonthlyMIS = lazy(() => import("./pages/admin/AdminMonthlyMIS"));
 const AdminEnquiries = lazy(() => import("./pages/admin/AdminEnquiries"));
 const AdminEnquiryDetails = lazy(() => import("./pages/admin/AdminEnquiryDetails"));
 const AdminPOS = lazy(() => import("./pages/admin/AdminPOS"));
+const AdminMenu = lazy(() => import("./pages/admin/AdminMenu"));
 const AdminTaskApprovals = lazy(() => import("./pages/admin/AdminTaskApprovals"));
 
 
@@ -284,6 +285,7 @@ function App() {
                 <Route path="/admin/corporate-accounts" element={<PermissionRoute pageKey="CORPORATE_ACCOUNTS"><AdminLayout title="Corporate Accounts & B2B Billing"><AdminCorporateAccounts /></AdminLayout></PermissionRoute>} />
                 <Route path="/admin/banquets" element={<PermissionRoute pageKey="BANQUETS"><AdminLayout title="Banquets & Events"><AdminBanquets /></AdminLayout></PermissionRoute>} />
                 <Route path="/admin/pos" element={<PermissionRoute pageKey="RESTAURANT_POS"><AdminLayout title="Restaurant & POS"><AdminPOS /></AdminLayout></PermissionRoute>} />
+                <Route path="/admin/menu" element={<PermissionRoute pageKey="RESTAURANT_POS"><AdminLayout title="Restaurant Menu"><AdminMenu /></AdminLayout></PermissionRoute>} />
                 <Route path="/admin/ancillary" element={<PermissionRoute pageKey="FRONT_DESK"><AdminLayout title="Ancillary Services"><AdminAncillary /></AdminLayout></PermissionRoute>} />
                 <Route path="/admin/group-bookings" element={<PermissionRoute pageKey="GROUP_BOOKINGS"><AdminLayout title="Group Bookings — MICE & Events"><AdminGroupBookings /></AdminLayout></PermissionRoute>} />
 

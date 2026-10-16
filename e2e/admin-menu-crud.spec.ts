@@ -14,7 +14,7 @@ test("admin can create a menu item through the UI, and it survives reload", asyn
   await page.getByRole("button", { name: /sign in|log in/i }).click();
   await page.waitForURL(/\/admin\/dashboard/, { timeout: 10000 });
 
-  await page.goto("/admin/menu", { waitUntil: "networkidle" });
+  await page.goto("/admin/menu", { waitUntil: "load" });
   await page.getByRole("button", { name: /new menu item/i }).click();
 
   await page.getByPlaceholder("Paneer Tikka").fill(uniqueName);
@@ -32,7 +32,7 @@ test("admin can create a menu item through the UI, and it survives reload", asyn
 
   // Real persistence check: reload the page and confirm the item still
   // renders from the database, not from React state that would vanish.
-  await page.reload({ waitUntil: "networkidle" });
+  await page.reload({ waitUntil: "load" });
   await expect(page.locator("tr", { hasText: uniqueName })).toBeVisible();
   await expect(page.getByText(uniqueSku)).toBeVisible();
 
@@ -41,7 +41,7 @@ test("admin can create a menu item through the UI, and it survives reload", asyn
   await row.getByRole("button", { name: "Active" }).click();
   await expect(row.getByRole("button", { name: "Disabled" })).toBeVisible({ timeout: 10000 });
 
-  await page.reload({ waitUntil: "networkidle" });
+  await page.reload({ waitUntil: "load" });
   const rowAfterReload = page.locator("tr", { hasText: uniqueName });
   await expect(rowAfterReload.getByRole("button", { name: "Disabled" })).toBeVisible();
 });

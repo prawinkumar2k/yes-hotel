@@ -33,6 +33,12 @@ function section(name: string) { console.log(`\n${Y("══")} ${C(name)}`); }
 
 async function main() {
   const DB_URI = (process.env.MONGODB_URI || "mongodb://127.0.0.1:27017/yes_hotels_test");
+  // This script DELETES every collection first: only ever run it on a throwaway test database.
+  const dbName = new URL(DB_URI.replace(/^mongodb(\+srv)?:/, "http:")).pathname.slice(1);
+  if (process.env.NODE_ENV === "production" || !/_(test|e2e)$/.test(dbName)) {
+    console.error(R(`Refusing to run: "${dbName || "(none)"}" is not a test database (its name must end in _test or _e2e).`));
+    process.exit(2);
+  }
   console.log(C(`\n🏨  YES HOTELS — Phase 27 Master E2E Certification`));
   console.log(`   DB: ${DB_URI}\n`);
   await mongoose.connect(DB_URI);
@@ -44,6 +50,8 @@ async function main() {
   console.log(G("  All collections flushed"));
 
   section("1. Seed Master Data");
+  // Every staff and guest record belongs to the hotel property (single-property install).
+  const propertyId = (await mongoose.connection.db!.collection("properties").insertOne({ code: "CERT", name: "Cert Hotel", isActive: true, createdAt: new Date() })).insertedId;
   const admin = await User.create({ firstName: "Admin", lastName: "Test", email: "admin@cert.test", passwordHash: "$2b$10$p", role: UserRole.ADMIN, isActive: true });
   assert(!!admin._id, "Admin user created");
 
@@ -56,14 +64,14 @@ async function main() {
   const category = await RoomCategory.create({ name: "Deluxe King", slug: "deluxe-king", basePrice: 6000, description: "Cert", capacity: { adults: 2, children: 1 }, isActive: true });
   assert(!!category._id, "Room category created");
 
-  const room = await Room.create({ roomNumber: "101", category: category!._id, floor: "1", occupancyStatus: OccupancyStatus.VACANT, housekeepingStatus: HousekeepingRoomStatus.CLEAN, sellStatus: SellStatus.SELLABLE });
+  const room = await Room.create({ propertyId, roomNumber: "101", category: category!._id, floor: "1", occupancyStatus: OccupancyStatus.VACANT, housekeepingStatus: HousekeepingRoomStatus.CLEAN, sellStatus: SellStatus.SELLABLE });
   assert(!!room._id, "Room 101 created (VACANT/CLEAN/SELLABLE)");
 
   section("2. Booking Creation & Tax Invariant");
   const today = new Date(); today.setHours(0, 0, 0, 0);
   const checkoutDate = new Date(today); checkoutDate.setDate(today.getDate() + 2);
 
-  const booking = await Booking.create({
+  const booking = await Booking.create({ propertyId,
     bookingReference: "CERT-001",
     guestDetails: { firstName: "Ravi", lastName: "Kumar", email: "ravi@guest.test", phone: "9876543210", idType: "AADHAAR", idNumber: "1234-5678-9012" },
     roomCategory: category!._id, assignedRoom: room!._id,
@@ -120,7 +128,7 @@ async function main() {
   assert(folioLines1.length >= 1, "Advance payment credited to folio");
 
   section("6. Night Audit — Shift-Block Guard");
-  const openShift = await CashierShift.create({ cashier: admin._id, shiftNumber: "SHIFT-001", openedAt: new Date(), openingFloat: 5000, status: CashierShiftStatus.OPEN });
+  const openShift = await CashierShift.create({ propertyId, cashier: admin._id, shiftNumber: "SHIFT-001", businessDate: new Date(new Date().toISOString().slice(0, 10)), openedAt: new Date(), openingFloat: 5000, status: CashierShiftStatus.OPEN });
   const openCount = await CashierShift.countDocuments({ status: CashierShiftStatus.OPEN });
   assert(openCount === 1, "Night Audit BLOCKED: Open cashier shift detected ✓");
 
@@ -133,10 +141,10 @@ async function main() {
   assert(openCountAfter === 0, "Night Audit ALLOWED: All shifts closed ✓");
 
   let bizDate = await BusinessDate.findOne({ isCurrentDate: true });
-  if (!bizDate) bizDate = await BusinessDate.create({ date: new Date(), state: BusinessDateState.OPEN, isCurrentDate: true, openedAt: new Date() });
+  if (!bizDate) bizDate = await BusinessDate.create({ propertyId, date: new Date(), state: BusinessDateState.OPEN, isCurrentDate: true, openedAt: new Date() });
   const nextDate = new Date(bizDate.date); nextDate.setDate(nextDate.getDate() + 1);
   bizDate.state = BusinessDateState.CLOSED; bizDate.isCurrentDate = false; await bizDate.save();
-  await BusinessDate.create({ date: nextDate, state: BusinessDateState.OPEN, isCurrentDate: true, openedAt: new Date() });
+  await BusinessDate.create({ propertyId, date: nextDate, state: BusinessDateState.OPEN, isCurrentDate: true, openedAt: new Date() });
   const newBiz = await BusinessDate.findOne({ isCurrentDate: true });
   assert(newBiz?.date.toDateString() === nextDate.toDateString(), `Business date rolled to ${nextDate.toDateString()}`);
 
@@ -194,11 +202,11 @@ async function main() {
   assert(auditCount >= 2, `Booking audit entries: ${auditCount} (check-in + checkout ≥ 2)`);
 
   section("11. Concurrency — Double-Booking Guard");
-  const room2 = await Room.create({ roomNumber: "102", category: category!._id, floor: "1", occupancyStatus: OccupancyStatus.VACANT, housekeepingStatus: HousekeepingRoomStatus.CLEAN, sellStatus: SellStatus.SELLABLE });
+  const room2 = await Room.create({ propertyId, roomNumber: "102", category: category!._id, floor: "1", occupancyStatus: OccupancyStatus.VACANT, housekeepingStatus: HousekeepingRoomStatus.CLEAN, sellStatus: SellStatus.SELLABLE });
   const futureCI = new Date(); futureCI.setDate(futureCI.getDate() + 5);
   const futureCO = new Date(futureCI); futureCO.setDate(futureCO.getDate() + 1);
 
-  const b3 = await Booking.create({
+  const b3 = await Booking.create({ propertyId,
     bookingReference: "CERT-CC1",
     guestDetails: { firstName: "A", lastName: "B", email: "a@b.com", phone: "1111111111" },
     roomCategory: category!._id, assignedRoom: room2!._id,

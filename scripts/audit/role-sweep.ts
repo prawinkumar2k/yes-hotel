@@ -21,9 +21,9 @@ import { chromium } from "playwright";
 
 const args = Object.fromEntries(process.argv.slice(2).map((a) => a.replace(/^--/, "").split("=")));
 const BASE = String(args.base || "http://localhost:8090");
-const MATRIX = String(args.matrix || "docs/rbac/after-n2.json");
+const MATRIX = String(args.matrix || "docs/rbac/current.json");
 const LABEL = String(args.label || "latest");
-const ROLES = ["RECEPTIONIST", "CASHIER", "HOUSEKEEPING", "MAINTENANCE", "SUPERVISOR", "MANAGER", "FINANCE", "RESTAURANT"];
+const ROLES = ["ADMIN", "MANAGER", "RECEPTIONIST", "HOUSEKEEPING"]; // the hotel's four logins
 // GET handlers that still write (non-financial); skipped so the sweep stays read-only.
 const SKIP_GET = new Set(["/api/guests/:id"]);
 

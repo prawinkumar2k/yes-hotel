@@ -32,9 +32,9 @@ const get = (o: any, p: string): any => p.split(".").reduce((x, k) => (x == null
 async function main() {
   await mongoose.connect(process.env.MONGODB_URI!);
   const db = mongoose.connection.db!;
-  const admin = await db.collection("users").findOne({ role: "SUPER_ADMIN" });
-  if (!admin) throw new Error("No SUPER_ADMIN user to run the check as");
-  const token = jwt.sign({ id: String(admin._id), role: "SUPER_ADMIN" }, process.env.JWT_ACCESS_SECRET!, { expiresIn: "5m" });
+  const admin = await db.collection("users").findOne({ role: { $in: ["SUPER_ADMIN", "ADMIN"] }, isActive: { $ne: false } });
+  if (!admin) throw new Error("No ADMIN user to run the check as");
+  const token = jwt.sign({ id: String(admin._id), role: admin.role }, process.env.JWT_ACCESS_SECRET!, { expiresIn: "5m" });
 
   const { ymd, start, end } = istToday();
 

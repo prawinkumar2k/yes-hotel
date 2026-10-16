@@ -8,6 +8,7 @@ const HERO_POSTER_IMAGE = "/gallery/hotel-11.jpg";
 
 export default function Hero() {
   const reducedMotion = useReducedMotion();
+  const saveData = typeof navigator !== "undefined" && Boolean((navigator as any).connection?.saveData);
   const [pointer, setPointer] = useState({ x: 0, y: 0 });
 
   useEffect(() => {
@@ -26,7 +27,7 @@ export default function Hero() {
       className="relative min-h-[100vh] w-full flex flex-col justify-between overflow-hidden bg-[#0b0b0b] text-white pt-24 sm:pt-28 pb-8 sm:pb-12"
     >
       {/* LAYER 1: Background Video / Image */}
-      {reducedMotion ? (
+      {reducedMotion || saveData ? (
         <img
           src={HERO_POSTER_IMAGE}
           alt="Reception and lobby at YES HOTELS, Hosa Road Junction, Bengaluru"
@@ -75,8 +76,8 @@ export default function Hero() {
               transform: `translate(${pointer.x * 20}px, ${pointer.y * 20}px)`,
             }}
           >
-            <span className="block font-serif text-[#c9a227] italic">SAY YES</span>
-            <span className="block font-sans font-bold text-white tracking-tighter">TO TIME</span>
+            <span className="block font-serif text-[#c9a227] italic">SAY YES</span>{" "}
+            <span className="block font-sans font-bold text-white tracking-tighter">TO TIME</span>{" "}
             <span className="block font-serif text-gray-300 font-light pl-4 md:pl-12">WELL SPENT.</span>
           </h1>
 

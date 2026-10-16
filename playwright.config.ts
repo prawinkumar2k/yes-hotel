@@ -11,7 +11,7 @@ export default defineConfig({
   reporter: 'list',
   use: {
     actionTimeout: 0,
-    baseURL: 'http://localhost:8080',
+    baseURL: process.env.E2E_BASE_URL || 'http://localhost:8080',
     trace: 'on-first-retry',
     headless: true,
   },

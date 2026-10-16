@@ -29,7 +29,7 @@ export default function Rooms() {
               <Sparkles size={13} className="text-[#c9a227]" /> OUR ROOMS
             </div>
             <h2 className="font-serif text-3xl sm:text-4xl md:text-5xl lg:text-6xl text-slate-800 font-normal leading-tight">
-              Choose Your <span className="text-[#c9a227] italic font-serif">Room</span>.
+              Choose Your <span className="text-[#866A1C] italic font-serif">Room</span>.
             </h2>
           </div>
 

@@ -106,7 +106,7 @@ export default function Footer() {
         </div>
 
         {/* Copyright Bar */}
-        <div className="border-t border-[#262930] pt-8 flex flex-col sm:flex-row items-center justify-between text-xs font-mono text-gray-500 gap-4">
+        <div className="border-t border-[#262930] pt-8 flex flex-col sm:flex-row items-center justify-between text-xs font-mono text-gray-400 gap-4">
           <p>© {new Date().getFullYear()} YES HOTELS, Bengaluru. All rights reserved.</p>
           <div className="flex gap-6">
             <Link to="/privacy-policy" className="hover:text-gray-300 transition">Privacy Policy</Link>

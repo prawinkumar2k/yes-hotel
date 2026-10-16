@@ -71,7 +71,7 @@ export default function AboutPage() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-left mb-14 text-hotel-black/70">
-          <p className="flex gap-2"><MapPin size={18} className="text-hotel-gold shrink-0 mt-0.5" /><span>{contact.address}<br /><span className="text-sm text-hotel-black/50">{HOTEL.landmark}</span></span></p>
+          <p className="flex gap-2"><MapPin size={18} className="text-hotel-gold shrink-0 mt-0.5" /><span>{contact.address}<br /><span className="text-sm text-hotel-black/60">{HOTEL.landmark}</span></span></p>
           <p className="flex gap-2"><Clock size={18} className="text-hotel-gold shrink-0 mt-0.5" /><span>Check-in from {contact.checkIn}<br />Check-out {contact.checkOut} · {HOTEL.frontDesk}</span></p>
         </div>
 

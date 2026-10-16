@@ -65,7 +65,7 @@ export default function YesExperience() {
               <Sparkles size={13} className="text-[#c9a227]" /> THE YES EXPERIENCE
             </div>
             <h2 className="font-serif text-4xl sm:text-6xl text-slate-800 font-normal leading-tight">
-              Your Stay, <span className="text-[#c9a227] italic font-serif">Step by Step</span>.
+              Your Stay, <span className="text-[#866A1C] italic font-serif">Step by Step</span>.
             </h2>
           </div>
 
@@ -156,7 +156,7 @@ export default function YesExperience() {
 
             {/* Bottom Progress Bar */}
             <div className="space-y-2 border-t border-slate-100 pt-6">
-              <div className="flex justify-between text-xs font-mono text-slate-400">
+              <div className="flex justify-between text-xs font-mono text-slate-500">
                 <span>PROGRESSION</span>
                 <span>ACT 0{activeStage + 1} OF 04</span>
               </div>

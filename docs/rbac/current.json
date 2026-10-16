@@ -1,0 +1,3530 @@
+[
+ {
+  "method": "POST",
+  "path": "/api/auth/register",
+  "roles": [
+   "PUBLIC",
+   "CUSTOMER",
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "SUPERVISOR",
+   "RECEPTIONIST",
+   "CASHIER",
+   "HOUSEKEEPING",
+   "MAINTENANCE",
+   "RESTAURANT",
+   "FINANCE",
+   "EVENTS",
+   "INVENTORY",
+   "PROCUREMENT"
+  ]
+ },
+ {
+  "method": "POST",
+  "path": "/api/auth/login",
+  "roles": [
+   "PUBLIC",
+   "CUSTOMER",
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "SUPERVISOR",
+   "RECEPTIONIST",
+   "CASHIER",
+   "HOUSEKEEPING",
+   "MAINTENANCE",
+   "RESTAURANT",
+   "FINANCE",
+   "EVENTS",
+   "INVENTORY",
+   "PROCUREMENT"
+  ]
+ },
+ {
+  "method": "POST",
+  "path": "/api/auth/booking-login",
+  "roles": [
+   "PUBLIC",
+   "CUSTOMER",
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "SUPERVISOR",
+   "RECEPTIONIST",
+   "CASHIER",
+   "HOUSEKEEPING",
+   "MAINTENANCE",
+   "RESTAURANT",
+   "FINANCE",
+   "EVENTS",
+   "INVENTORY",
+   "PROCUREMENT"
+  ]
+ },
+ {
+  "method": "POST",
+  "path": "/api/auth/otp/request",
+  "roles": [
+   "PUBLIC",
+   "CUSTOMER",
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "SUPERVISOR",
+   "RECEPTIONIST",
+   "CASHIER",
+   "HOUSEKEEPING",
+   "MAINTENANCE",
+   "RESTAURANT",
+   "FINANCE",
+   "EVENTS",
+   "INVENTORY",
+   "PROCUREMENT"
+  ]
+ },
+ {
+  "method": "POST",
+  "path": "/api/auth/otp/verify",
+  "roles": [
+   "PUBLIC",
+   "CUSTOMER",
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "SUPERVISOR",
+   "RECEPTIONIST",
+   "CASHIER",
+   "HOUSEKEEPING",
+   "MAINTENANCE",
+   "RESTAURANT",
+   "FINANCE",
+   "EVENTS",
+   "INVENTORY",
+   "PROCUREMENT"
+  ]
+ },
+ {
+  "method": "POST",
+  "path": "/api/auth/refresh",
+  "roles": [
+   "PUBLIC",
+   "CUSTOMER",
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "SUPERVISOR",
+   "RECEPTIONIST",
+   "CASHIER",
+   "HOUSEKEEPING",
+   "MAINTENANCE",
+   "RESTAURANT",
+   "FINANCE",
+   "EVENTS",
+   "INVENTORY",
+   "PROCUREMENT"
+  ]
+ },
+ {
+  "method": "POST",
+  "path": "/api/auth/logout",
+  "roles": [
+   "PUBLIC",
+   "CUSTOMER",
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "SUPERVISOR",
+   "RECEPTIONIST",
+   "CASHIER",
+   "HOUSEKEEPING",
+   "MAINTENANCE",
+   "RESTAURANT",
+   "FINANCE",
+   "EVENTS",
+   "INVENTORY",
+   "PROCUREMENT"
+  ]
+ },
+ {
+  "method": "GET",
+  "path": "/api/auth/me",
+  "roles": [
+   "CUSTOMER",
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "SUPERVISOR",
+   "RECEPTIONIST",
+   "CASHIER",
+   "HOUSEKEEPING",
+   "MAINTENANCE",
+   "RESTAURANT",
+   "FINANCE",
+   "EVENTS",
+   "INVENTORY",
+   "PROCUREMENT"
+  ]
+ },
+ {
+  "method": "PATCH",
+  "path": "/api/auth/profile",
+  "roles": [
+   "CUSTOMER",
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "SUPERVISOR",
+   "RECEPTIONIST",
+   "CASHIER",
+   "HOUSEKEEPING",
+   "MAINTENANCE",
+   "RESTAURANT",
+   "FINANCE",
+   "EVENTS",
+   "INVENTORY",
+   "PROCUREMENT"
+  ]
+ },
+ {
+  "method": "POST",
+  "path": "/api/auth/change-password",
+  "roles": [
+   "CUSTOMER",
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "SUPERVISOR",
+   "RECEPTIONIST",
+   "CASHIER",
+   "HOUSEKEEPING",
+   "MAINTENANCE",
+   "RESTAURANT",
+   "FINANCE",
+   "EVENTS",
+   "INVENTORY",
+   "PROCUREMENT"
+  ]
+ },
+ {
+  "method": "POST",
+  "path": "/api/auth/forgot-password",
+  "roles": [
+   "PUBLIC",
+   "CUSTOMER",
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "SUPERVISOR",
+   "RECEPTIONIST",
+   "CASHIER",
+   "HOUSEKEEPING",
+   "MAINTENANCE",
+   "RESTAURANT",
+   "FINANCE",
+   "EVENTS",
+   "INVENTORY",
+   "PROCUREMENT"
+  ]
+ },
+ {
+  "method": "POST",
+  "path": "/api/auth/reset-password",
+  "roles": [
+   "PUBLIC",
+   "CUSTOMER",
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "SUPERVISOR",
+   "RECEPTIONIST",
+   "CASHIER",
+   "HOUSEKEEPING",
+   "MAINTENANCE",
+   "RESTAURANT",
+   "FINANCE",
+   "EVENTS",
+   "INVENTORY",
+   "PROCUREMENT"
+  ]
+ },
+ {
+  "method": "GET",
+  "path": "/api/rooms/categories",
+  "roles": [
+   "PUBLIC",
+   "CUSTOMER",
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "SUPERVISOR",
+   "RECEPTIONIST",
+   "CASHIER",
+   "HOUSEKEEPING",
+   "MAINTENANCE",
+   "RESTAURANT",
+   "FINANCE",
+   "EVENTS",
+   "INVENTORY",
+   "PROCUREMENT"
+  ]
+ },
+ {
+  "method": "GET",
+  "path": "/api/rooms/categories/:slug",
+  "roles": [
+   "PUBLIC",
+   "CUSTOMER",
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "SUPERVISOR",
+   "RECEPTIONIST",
+   "CASHIER",
+   "HOUSEKEEPING",
+   "MAINTENANCE",
+   "RESTAURANT",
+   "FINANCE",
+   "EVENTS",
+   "INVENTORY",
+   "PROCUREMENT"
+  ]
+ },
+ {
+  "method": "GET",
+  "path": "/api/rooms",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "SUPERVISOR",
+   "HOUSEKEEPING"
+  ]
+ },
+ {
+  "method": "POST",
+  "path": "/api/rooms",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "SUPERVISOR"
+  ]
+ },
+ {
+  "method": "PATCH",
+  "path": "/api/rooms/:id",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "SUPERVISOR"
+  ]
+ },
+ {
+  "method": "DELETE",
+  "path": "/api/rooms/:id",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "SUPERVISOR"
+  ]
+ },
+ {
+  "method": "PATCH",
+  "path": "/api/rooms/:id/status",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "SUPERVISOR"
+  ]
+ },
+ {
+  "method": "GET",
+  "path": "/api/bookings/availability",
+  "roles": [
+   "PUBLIC",
+   "CUSTOMER",
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "SUPERVISOR",
+   "RECEPTIONIST",
+   "CASHIER",
+   "HOUSEKEEPING",
+   "MAINTENANCE",
+   "RESTAURANT",
+   "FINANCE",
+   "EVENTS",
+   "INVENTORY",
+   "PROCUREMENT"
+  ]
+ },
+ {
+  "method": "POST",
+  "path": "/api/bookings/availability",
+  "roles": [
+   "PUBLIC",
+   "CUSTOMER",
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "SUPERVISOR",
+   "RECEPTIONIST",
+   "CASHIER",
+   "HOUSEKEEPING",
+   "MAINTENANCE",
+   "RESTAURANT",
+   "FINANCE",
+   "EVENTS",
+   "INVENTORY",
+   "PROCUREMENT"
+  ]
+ },
+ {
+  "method": "POST",
+  "path": "/api/bookings/quote",
+  "roles": [
+   "PUBLIC",
+   "CUSTOMER",
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "SUPERVISOR",
+   "RECEPTIONIST",
+   "CASHIER",
+   "HOUSEKEEPING",
+   "MAINTENANCE",
+   "RESTAURANT",
+   "FINANCE",
+   "EVENTS",
+   "INVENTORY",
+   "PROCUREMENT"
+  ]
+ },
+ {
+  "method": "POST",
+  "path": "/api/bookings",
+  "roles": [
+   "PUBLIC",
+   "CUSTOMER",
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "SUPERVISOR",
+   "RECEPTIONIST",
+   "CASHIER",
+   "HOUSEKEEPING",
+   "MAINTENANCE",
+   "RESTAURANT",
+   "FINANCE",
+   "EVENTS",
+   "INVENTORY",
+   "PROCUREMENT"
+  ]
+ },
+ {
+  "method": "GET",
+  "path": "/api/bookings/my",
+  "roles": [
+   "CUSTOMER",
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "SUPERVISOR",
+   "RECEPTIONIST",
+   "CASHIER",
+   "HOUSEKEEPING",
+   "MAINTENANCE",
+   "RESTAURANT",
+   "FINANCE",
+   "EVENTS",
+   "INVENTORY",
+   "PROCUREMENT"
+  ]
+ },
+ {
+  "method": "GET",
+  "path": "/api/bookings/my/:id",
+  "roles": [
+   "CUSTOMER",
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "SUPERVISOR",
+   "RECEPTIONIST",
+   "CASHIER",
+   "HOUSEKEEPING",
+   "MAINTENANCE",
+   "RESTAURANT",
+   "FINANCE",
+   "EVENTS",
+   "INVENTORY",
+   "PROCUREMENT"
+  ]
+ },
+ {
+  "method": "GET",
+  "path": "/api/bookings/my/:id/invoice",
+  "roles": [
+   "CUSTOMER",
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "SUPERVISOR",
+   "RECEPTIONIST",
+   "CASHIER",
+   "HOUSEKEEPING",
+   "MAINTENANCE",
+   "RESTAURANT",
+   "FINANCE",
+   "EVENTS",
+   "INVENTORY",
+   "PROCUREMENT"
+  ]
+ },
+ {
+  "method": "POST",
+  "path": "/api/bookings/:id/confirm-demo",
+  "roles": [
+   "PUBLIC",
+   "CUSTOMER",
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "SUPERVISOR",
+   "RECEPTIONIST",
+   "CASHIER",
+   "HOUSEKEEPING",
+   "MAINTENANCE",
+   "RESTAURANT",
+   "FINANCE",
+   "EVENTS",
+   "INVENTORY",
+   "PROCUREMENT"
+  ]
+ },
+ {
+  "method": "POST",
+  "path": "/api/bookings/:id/cancel",
+  "roles": [
+   "CUSTOMER",
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "SUPERVISOR",
+   "RECEPTIONIST",
+   "CASHIER",
+   "HOUSEKEEPING",
+   "MAINTENANCE",
+   "RESTAURANT",
+   "FINANCE",
+   "EVENTS",
+   "INVENTORY",
+   "PROCUREMENT"
+  ]
+ },
+ {
+  "method": "POST",
+  "path": "/api/bookings/:id/check-in",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "SUPERVISOR",
+   "RECEPTIONIST"
+  ]
+ },
+ {
+  "method": "GET",
+  "path": "/api/bookings/:id/checkout-preview",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "SUPERVISOR",
+   "RECEPTIONIST"
+  ]
+ },
+ {
+  "method": "POST",
+  "path": "/api/bookings/:id/check-out",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "SUPERVISOR",
+   "RECEPTIONIST"
+  ]
+ },
+ {
+  "method": "POST",
+  "path": "/api/bookings/:id/extension-check",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "SUPERVISOR",
+   "RECEPTIONIST"
+  ]
+ },
+ {
+  "method": "POST",
+  "path": "/api/bookings/:id/extend",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "SUPERVISOR",
+   "RECEPTIONIST"
+  ]
+ },
+ {
+  "method": "POST",
+  "path": "/api/booking-enquiry",
+  "roles": [
+   "PUBLIC",
+   "CUSTOMER",
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "SUPERVISOR",
+   "RECEPTIONIST",
+   "CASHIER",
+   "HOUSEKEEPING",
+   "MAINTENANCE",
+   "RESTAURANT",
+   "FINANCE",
+   "EVENTS",
+   "INVENTORY",
+   "PROCUREMENT"
+  ]
+ },
+ {
+  "method": "POST",
+  "path": "/api/booking-enquiries",
+  "roles": [
+   "PUBLIC",
+   "CUSTOMER",
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "SUPERVISOR",
+   "RECEPTIONIST",
+   "CASHIER",
+   "HOUSEKEEPING",
+   "MAINTENANCE",
+   "RESTAURANT",
+   "FINANCE",
+   "EVENTS",
+   "INVENTORY",
+   "PROCUREMENT"
+  ]
+ },
+ {
+  "method": "GET",
+  "path": "/api/admin/stats",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "SUPERVISOR"
+  ]
+ },
+ {
+  "method": "GET",
+  "path": "/api/admin/reports/overview",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "SUPERVISOR"
+  ]
+ },
+ {
+  "method": "GET",
+  "path": "/api/admin/bookings",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "SUPERVISOR",
+   "RECEPTIONIST"
+  ]
+ },
+ {
+  "method": "GET",
+  "path": "/api/admin/bookings/:id",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "SUPERVISOR",
+   "RECEPTIONIST"
+  ]
+ },
+ {
+  "method": "PATCH",
+  "path": "/api/admin/bookings/:id/status",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "SUPERVISOR",
+   "RECEPTIONIST"
+  ]
+ },
+ {
+  "method": "GET",
+  "path": "/api/admin/calendar",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "SUPERVISOR",
+   "RECEPTIONIST"
+  ]
+ },
+ {
+  "method": "GET",
+  "path": "/api/admin/housekeeping",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "SUPERVISOR",
+   "HOUSEKEEPING"
+  ]
+ },
+ {
+  "method": "PATCH",
+  "path": "/api/admin/housekeeping/:id",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "SUPERVISOR",
+   "HOUSEKEEPING"
+  ]
+ },
+ {
+  "method": "GET",
+  "path": "/api/admin/maintenance",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "SUPERVISOR",
+   "MAINTENANCE"
+  ]
+ },
+ {
+  "method": "POST",
+  "path": "/api/admin/maintenance",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "SUPERVISOR",
+   "MAINTENANCE"
+  ]
+ },
+ {
+  "method": "PATCH",
+  "path": "/api/admin/maintenance/:id",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "SUPERVISOR",
+   "MAINTENANCE"
+  ]
+ },
+ {
+  "method": "GET",
+  "path": "/api/admin/contact-messages",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN"
+  ]
+ },
+ {
+  "method": "PATCH",
+  "path": "/api/admin/contact-messages/:id/status",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN"
+  ]
+ },
+ {
+  "method": "DELETE",
+  "path": "/api/admin/contact-messages/:id",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN"
+  ]
+ },
+ {
+  "method": "GET",
+  "path": "/api/admin/booking-enquiries",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "SUPERVISOR",
+   "RECEPTIONIST"
+  ]
+ },
+ {
+  "method": "POST",
+  "path": "/api/admin/booking-enquiries",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "SUPERVISOR",
+   "RECEPTIONIST"
+  ]
+ },
+ {
+  "method": "GET",
+  "path": "/api/admin/booking-enquiries/:id",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "SUPERVISOR",
+   "RECEPTIONIST"
+  ]
+ },
+ {
+  "method": "PATCH",
+  "path": "/api/admin/booking-enquiries/:id",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "SUPERVISOR",
+   "RECEPTIONIST"
+  ]
+ },
+ {
+  "method": "PATCH",
+  "path": "/api/admin/booking-enquiries/:id/status",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "SUPERVISOR",
+   "RECEPTIONIST"
+  ]
+ },
+ {
+  "method": "POST",
+  "path": "/api/admin/booking-enquiries/:id/follow-up",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "SUPERVISOR",
+   "RECEPTIONIST"
+  ]
+ },
+ {
+  "method": "POST",
+  "path": "/api/admin/booking-enquiries/:id/convert",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "SUPERVISOR",
+   "RECEPTIONIST"
+  ]
+ },
+ {
+  "method": "DELETE",
+  "path": "/api/admin/booking-enquiries/:id",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN"
+  ]
+ },
+ {
+  "method": "GET",
+  "path": "/api/admin/reviews",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN"
+  ]
+ },
+ {
+  "method": "PATCH",
+  "path": "/api/admin/reviews/:id/status",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN"
+  ]
+ },
+ {
+  "method": "GET",
+  "path": "/api/admin/room-categories",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "SUPERVISOR"
+  ]
+ },
+ {
+  "method": "GET",
+  "path": "/api/admin/room-categories/:id",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "SUPERVISOR"
+  ]
+ },
+ {
+  "method": "POST",
+  "path": "/api/admin/room-categories",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "SUPERVISOR"
+  ]
+ },
+ {
+  "method": "PATCH",
+  "path": "/api/admin/room-categories/:id",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "SUPERVISOR"
+  ]
+ },
+ {
+  "method": "DELETE",
+  "path": "/api/admin/room-categories/:id",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "SUPERVISOR"
+  ]
+ },
+ {
+  "method": "GET",
+  "path": "/api/admin/pricing",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "SUPERVISOR"
+  ]
+ },
+ {
+  "method": "POST",
+  "path": "/api/admin/pricing",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "SUPERVISOR"
+  ]
+ },
+ {
+  "method": "PATCH",
+  "path": "/api/admin/pricing/:id",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "SUPERVISOR"
+  ]
+ },
+ {
+  "method": "DELETE",
+  "path": "/api/admin/pricing/:id",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "SUPERVISOR"
+  ]
+ },
+ {
+  "method": "GET",
+  "path": "/api/admin/master-data/floors",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER"
+  ]
+ },
+ {
+  "method": "POST",
+  "path": "/api/admin/master-data/floors",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN"
+  ]
+ },
+ {
+  "method": "PATCH",
+  "path": "/api/admin/master-data/floors/:id",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER"
+  ]
+ },
+ {
+  "method": "DELETE",
+  "path": "/api/admin/master-data/floors/:id",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN"
+  ]
+ },
+ {
+  "method": "GET",
+  "path": "/api/admin/master-data/amenities",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER"
+  ]
+ },
+ {
+  "method": "POST",
+  "path": "/api/admin/master-data/amenities",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN"
+  ]
+ },
+ {
+  "method": "PATCH",
+  "path": "/api/admin/master-data/amenities/:id",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER"
+  ]
+ },
+ {
+  "method": "DELETE",
+  "path": "/api/admin/master-data/amenities/:id",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN"
+  ]
+ },
+ {
+  "method": "GET",
+  "path": "/api/admin/master-data/bed-types",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER"
+  ]
+ },
+ {
+  "method": "POST",
+  "path": "/api/admin/master-data/bed-types",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN"
+  ]
+ },
+ {
+  "method": "PATCH",
+  "path": "/api/admin/master-data/bed-types/:id",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER"
+  ]
+ },
+ {
+  "method": "DELETE",
+  "path": "/api/admin/master-data/bed-types/:id",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN"
+  ]
+ },
+ {
+  "method": "GET",
+  "path": "/api/admin/master-data/room-views",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER"
+  ]
+ },
+ {
+  "method": "POST",
+  "path": "/api/admin/master-data/room-views",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN"
+  ]
+ },
+ {
+  "method": "PATCH",
+  "path": "/api/admin/master-data/room-views/:id",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER"
+  ]
+ },
+ {
+  "method": "DELETE",
+  "path": "/api/admin/master-data/room-views/:id",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN"
+  ]
+ },
+ {
+  "method": "GET",
+  "path": "/api/payments/config",
+  "roles": [
+   "PUBLIC",
+   "CUSTOMER",
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "SUPERVISOR",
+   "RECEPTIONIST",
+   "CASHIER",
+   "HOUSEKEEPING",
+   "MAINTENANCE",
+   "RESTAURANT",
+   "FINANCE",
+   "EVENTS",
+   "INVENTORY",
+   "PROCUREMENT"
+  ]
+ },
+ {
+  "method": "POST",
+  "path": "/api/payments/create-order",
+  "roles": [
+   "PUBLIC",
+   "CUSTOMER",
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "SUPERVISOR",
+   "RECEPTIONIST",
+   "CASHIER",
+   "HOUSEKEEPING",
+   "MAINTENANCE",
+   "RESTAURANT",
+   "FINANCE",
+   "EVENTS",
+   "INVENTORY",
+   "PROCUREMENT"
+  ]
+ },
+ {
+  "method": "POST",
+  "path": "/api/payments/verify",
+  "roles": [
+   "PUBLIC",
+   "CUSTOMER",
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "SUPERVISOR",
+   "RECEPTIONIST",
+   "CASHIER",
+   "HOUSEKEEPING",
+   "MAINTENANCE",
+   "RESTAURANT",
+   "FINANCE",
+   "EVENTS",
+   "INVENTORY",
+   "PROCUREMENT"
+  ]
+ },
+ {
+  "method": "GET",
+  "path": "/api/payments",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "RECEPTIONIST",
+   "CASHIER",
+   "FINANCE"
+  ]
+ },
+ {
+  "method": "GET",
+  "path": "/api/payments/detail/:id",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "RECEPTIONIST",
+   "CASHIER",
+   "FINANCE"
+  ]
+ },
+ {
+  "method": "GET",
+  "path": "/api/payments/:bookingId",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "RECEPTIONIST",
+   "CASHIER",
+   "FINANCE"
+  ]
+ },
+ {
+  "method": "POST",
+  "path": "/api/contact",
+  "roles": [
+   "PUBLIC",
+   "CUSTOMER",
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "SUPERVISOR",
+   "RECEPTIONIST",
+   "CASHIER",
+   "HOUSEKEEPING",
+   "MAINTENANCE",
+   "RESTAURANT",
+   "FINANCE",
+   "EVENTS",
+   "INVENTORY",
+   "PROCUREMENT"
+  ]
+ },
+ {
+  "method": "GET",
+  "path": "/api/reviews",
+  "roles": [
+   "PUBLIC",
+   "CUSTOMER",
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "SUPERVISOR",
+   "RECEPTIONIST",
+   "CASHIER",
+   "HOUSEKEEPING",
+   "MAINTENANCE",
+   "RESTAURANT",
+   "FINANCE",
+   "EVENTS",
+   "INVENTORY",
+   "PROCUREMENT"
+  ]
+ },
+ {
+  "method": "GET",
+  "path": "/api/reviews/my",
+  "roles": [
+   "CUSTOMER",
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "SUPERVISOR",
+   "RECEPTIONIST",
+   "CASHIER",
+   "HOUSEKEEPING",
+   "MAINTENANCE",
+   "RESTAURANT",
+   "FINANCE",
+   "EVENTS",
+   "INVENTORY",
+   "PROCUREMENT"
+  ]
+ },
+ {
+  "method": "POST",
+  "path": "/api/reviews",
+  "roles": [
+   "CUSTOMER",
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "SUPERVISOR",
+   "RECEPTIONIST",
+   "CASHIER",
+   "HOUSEKEEPING",
+   "MAINTENANCE",
+   "RESTAURANT",
+   "FINANCE",
+   "EVENTS",
+   "INVENTORY",
+   "PROCUREMENT"
+  ]
+ },
+ {
+  "method": "GET",
+  "path": "/api/faqs",
+  "roles": [
+   "PUBLIC",
+   "CUSTOMER",
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "SUPERVISOR",
+   "RECEPTIONIST",
+   "CASHIER",
+   "HOUSEKEEPING",
+   "MAINTENANCE",
+   "RESTAURANT",
+   "FINANCE",
+   "EVENTS",
+   "INVENTORY",
+   "PROCUREMENT"
+  ]
+ },
+ {
+  "method": "POST",
+  "path": "/api/faqs",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER"
+  ]
+ },
+ {
+  "method": "PATCH",
+  "path": "/api/faqs/:id",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER"
+  ]
+ },
+ {
+  "method": "DELETE",
+  "path": "/api/faqs/:id",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER"
+  ]
+ },
+ {
+  "method": "GET",
+  "path": "/api/testimonials",
+  "roles": [
+   "PUBLIC",
+   "CUSTOMER",
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "SUPERVISOR",
+   "RECEPTIONIST",
+   "CASHIER",
+   "HOUSEKEEPING",
+   "MAINTENANCE",
+   "RESTAURANT",
+   "FINANCE",
+   "EVENTS",
+   "INVENTORY",
+   "PROCUREMENT"
+  ]
+ },
+ {
+  "method": "POST",
+  "path": "/api/testimonials",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER"
+  ]
+ },
+ {
+  "method": "PATCH",
+  "path": "/api/testimonials/:id",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER"
+  ]
+ },
+ {
+  "method": "DELETE",
+  "path": "/api/testimonials/:id",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER"
+  ]
+ },
+ {
+  "method": "GET",
+  "path": "/api/content",
+  "roles": [
+   "PUBLIC",
+   "CUSTOMER",
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "SUPERVISOR",
+   "RECEPTIONIST",
+   "CASHIER",
+   "HOUSEKEEPING",
+   "MAINTENANCE",
+   "RESTAURANT",
+   "FINANCE",
+   "EVENTS",
+   "INVENTORY",
+   "PROCUREMENT"
+  ]
+ },
+ {
+  "method": "GET",
+  "path": "/api/content/:key",
+  "roles": [
+   "PUBLIC",
+   "CUSTOMER",
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "SUPERVISOR",
+   "RECEPTIONIST",
+   "CASHIER",
+   "HOUSEKEEPING",
+   "MAINTENANCE",
+   "RESTAURANT",
+   "FINANCE",
+   "EVENTS",
+   "INVENTORY",
+   "PROCUREMENT"
+  ]
+ },
+ {
+  "method": "POST",
+  "path": "/api/content",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN"
+  ]
+ },
+ {
+  "method": "PATCH",
+  "path": "/api/content/:id",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN"
+  ]
+ },
+ {
+  "method": "DELETE",
+  "path": "/api/content/:id",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN"
+  ]
+ },
+ {
+  "method": "GET",
+  "path": "/api/guests/my/profile",
+  "roles": [
+   "CUSTOMER",
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "SUPERVISOR",
+   "RECEPTIONIST",
+   "CASHIER",
+   "HOUSEKEEPING",
+   "MAINTENANCE",
+   "RESTAURANT",
+   "FINANCE",
+   "EVENTS",
+   "INVENTORY",
+   "PROCUREMENT"
+  ]
+ },
+ {
+  "method": "GET",
+  "path": "/api/guests",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "SUPERVISOR",
+   "RECEPTIONIST"
+  ]
+ },
+ {
+  "method": "POST",
+  "path": "/api/guests",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "SUPERVISOR",
+   "RECEPTIONIST"
+  ]
+ },
+ {
+  "method": "GET",
+  "path": "/api/guests/:id",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "SUPERVISOR",
+   "RECEPTIONIST"
+  ]
+ },
+ {
+  "method": "PATCH",
+  "path": "/api/guests/:id",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "SUPERVISOR",
+   "RECEPTIONIST"
+  ]
+ },
+ {
+  "method": "PATCH",
+  "path": "/api/guests/:id/block",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "SUPERVISOR",
+   "RECEPTIONIST"
+  ]
+ },
+ {
+  "method": "GET",
+  "path": "/api/refunds",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "RECEPTIONIST",
+   "CASHIER",
+   "FINANCE"
+  ]
+ },
+ {
+  "method": "POST",
+  "path": "/api/refunds/initiate",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "RECEPTIONIST",
+   "CASHIER"
+  ]
+ },
+ {
+  "method": "POST",
+  "path": "/api/coupons/validate",
+  "roles": [
+   "PUBLIC",
+   "CUSTOMER",
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "SUPERVISOR",
+   "RECEPTIONIST",
+   "CASHIER",
+   "HOUSEKEEPING",
+   "MAINTENANCE",
+   "RESTAURANT",
+   "FINANCE",
+   "EVENTS",
+   "INVENTORY",
+   "PROCUREMENT"
+  ]
+ },
+ {
+  "method": "GET",
+  "path": "/api/coupons",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "RECEPTIONIST"
+  ]
+ },
+ {
+  "method": "POST",
+  "path": "/api/coupons",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER"
+  ]
+ },
+ {
+  "method": "PATCH",
+  "path": "/api/coupons/:id",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER"
+  ]
+ },
+ {
+  "method": "DELETE",
+  "path": "/api/coupons/:id",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER"
+  ]
+ },
+ {
+  "method": "GET",
+  "path": "/api/staff",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER"
+  ]
+ },
+ {
+  "method": "POST",
+  "path": "/api/staff",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER"
+  ]
+ },
+ {
+  "method": "PATCH",
+  "path": "/api/staff/:id",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER"
+  ]
+ },
+ {
+  "method": "POST",
+  "path": "/api/staff/:id/reset-password",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER"
+  ]
+ },
+ {
+  "method": "GET",
+  "path": "/api/gallery/public",
+  "roles": [
+   "PUBLIC",
+   "CUSTOMER",
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "SUPERVISOR",
+   "RECEPTIONIST",
+   "CASHIER",
+   "HOUSEKEEPING",
+   "MAINTENANCE",
+   "RESTAURANT",
+   "FINANCE",
+   "EVENTS",
+   "INVENTORY",
+   "PROCUREMENT"
+  ]
+ },
+ {
+  "method": "GET",
+  "path": "/api/gallery",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER"
+  ]
+ },
+ {
+  "method": "POST",
+  "path": "/api/gallery",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER"
+  ]
+ },
+ {
+  "method": "PATCH",
+  "path": "/api/gallery/reorder",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER"
+  ]
+ },
+ {
+  "method": "PATCH",
+  "path": "/api/gallery/:id",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER"
+  ]
+ },
+ {
+  "method": "DELETE",
+  "path": "/api/gallery/:id",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER"
+  ]
+ },
+ {
+  "method": "GET",
+  "path": "/api/settings/public",
+  "roles": [
+   "PUBLIC",
+   "CUSTOMER",
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "SUPERVISOR",
+   "RECEPTIONIST",
+   "CASHIER",
+   "HOUSEKEEPING",
+   "MAINTENANCE",
+   "RESTAURANT",
+   "FINANCE",
+   "EVENTS",
+   "INVENTORY",
+   "PROCUREMENT"
+  ]
+ },
+ {
+  "method": "GET",
+  "path": "/api/settings",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER"
+  ]
+ },
+ {
+  "method": "PATCH",
+  "path": "/api/settings",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER"
+  ]
+ },
+ {
+  "method": "GET",
+  "path": "/api/public/settings",
+  "roles": [
+   "PUBLIC",
+   "CUSTOMER",
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "SUPERVISOR",
+   "RECEPTIONIST",
+   "CASHIER",
+   "HOUSEKEEPING",
+   "MAINTENANCE",
+   "RESTAURANT",
+   "FINANCE",
+   "EVENTS",
+   "INVENTORY",
+   "PROCUREMENT"
+  ]
+ },
+ {
+  "method": "GET",
+  "path": "/api/public/gallery",
+  "roles": [
+   "PUBLIC",
+   "CUSTOMER",
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "SUPERVISOR",
+   "RECEPTIONIST",
+   "CASHIER",
+   "HOUSEKEEPING",
+   "MAINTENANCE",
+   "RESTAURANT",
+   "FINANCE",
+   "EVENTS",
+   "INVENTORY",
+   "PROCUREMENT"
+  ]
+ },
+ {
+  "method": "GET",
+  "path": "/api/public/faqs",
+  "roles": [
+   "PUBLIC",
+   "CUSTOMER",
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "SUPERVISOR",
+   "RECEPTIONIST",
+   "CASHIER",
+   "HOUSEKEEPING",
+   "MAINTENANCE",
+   "RESTAURANT",
+   "FINANCE",
+   "EVENTS",
+   "INVENTORY",
+   "PROCUREMENT"
+  ]
+ },
+ {
+  "method": "GET",
+  "path": "/api/public/testimonials",
+  "roles": [
+   "PUBLIC",
+   "CUSTOMER",
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "SUPERVISOR",
+   "RECEPTIONIST",
+   "CASHIER",
+   "HOUSEKEEPING",
+   "MAINTENANCE",
+   "RESTAURANT",
+   "FINANCE",
+   "EVENTS",
+   "INVENTORY",
+   "PROCUREMENT"
+  ]
+ },
+ {
+  "method": "GET",
+  "path": "/api/public/content/:key",
+  "roles": [
+   "PUBLIC",
+   "CUSTOMER",
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "SUPERVISOR",
+   "RECEPTIONIST",
+   "CASHIER",
+   "HOUSEKEEPING",
+   "MAINTENANCE",
+   "RESTAURANT",
+   "FINANCE",
+   "EVENTS",
+   "INVENTORY",
+   "PROCUREMENT"
+  ]
+ },
+ {
+  "method": "GET",
+  "path": "/api/public/rooms",
+  "roles": [
+   "PUBLIC",
+   "CUSTOMER",
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "SUPERVISOR",
+   "RECEPTIONIST",
+   "CASHIER",
+   "HOUSEKEEPING",
+   "MAINTENANCE",
+   "RESTAURANT",
+   "FINANCE",
+   "EVENTS",
+   "INVENTORY",
+   "PROCUREMENT"
+  ]
+ },
+ {
+  "method": "GET",
+  "path": "/api/audit-logs",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN"
+  ]
+ },
+ {
+  "method": "GET",
+  "path": "/api/audit-logs/export",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN"
+  ]
+ },
+ {
+  "method": "POST",
+  "path": "/api/webhooks/razorpay",
+  "roles": [
+   "PUBLIC",
+   "CUSTOMER",
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "SUPERVISOR",
+   "RECEPTIONIST",
+   "CASHIER",
+   "HOUSEKEEPING",
+   "MAINTENANCE",
+   "RESTAURANT",
+   "FINANCE",
+   "EVENTS",
+   "INVENTORY",
+   "PROCUREMENT"
+  ]
+ },
+ {
+  "method": "GET",
+  "path": "/api/room-rack",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "SUPERVISOR",
+   "RECEPTIONIST"
+  ]
+ },
+ {
+  "method": "GET",
+  "path": "/api/room-rack/availability",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "SUPERVISOR",
+   "RECEPTIONIST"
+  ]
+ },
+ {
+  "method": "POST",
+  "path": "/api/room-rack/:id/manual-release",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN"
+  ]
+ },
+ {
+  "method": "POST",
+  "path": "/api/room-rack/:id/sell-status",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN"
+  ]
+ },
+ {
+  "method": "POST",
+  "path": "/api/room-rack/:id/assign-booking",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN"
+  ]
+ },
+ {
+  "method": "GET",
+  "path": "/api/front-desk/summary",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "SUPERVISOR",
+   "RECEPTIONIST"
+  ]
+ },
+ {
+  "method": "GET",
+  "path": "/api/front-desk/arrivals",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "SUPERVISOR",
+   "RECEPTIONIST"
+  ]
+ },
+ {
+  "method": "GET",
+  "path": "/api/front-desk/departures",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "SUPERVISOR",
+   "RECEPTIONIST"
+  ]
+ },
+ {
+  "method": "POST",
+  "path": "/api/front-desk/bookings/:id/move-room",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "SUPERVISOR",
+   "RECEPTIONIST"
+  ]
+ },
+ {
+  "method": "GET",
+  "path": "/api/front-desk/registration/guest-search",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "SUPERVISOR",
+   "RECEPTIONIST"
+  ]
+ },
+ {
+  "method": "GET",
+  "path": "/api/front-desk/registration/available-rooms",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "SUPERVISOR",
+   "RECEPTIONIST"
+  ]
+ },
+ {
+  "method": "POST",
+  "path": "/api/front-desk/registration/calculate-rate",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "SUPERVISOR",
+   "RECEPTIONIST"
+  ]
+ },
+ {
+  "method": "POST",
+  "path": "/api/front-desk/registration/walk-in",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "SUPERVISOR",
+   "RECEPTIONIST"
+  ]
+ },
+ {
+  "method": "POST",
+  "path": "/api/front-desk/registration/:bookingId/check-in",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "SUPERVISOR",
+   "RECEPTIONIST"
+  ]
+ },
+ {
+  "method": "GET",
+  "path": "/api/front-desk/registration/:bookingId/print",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "SUPERVISOR",
+   "RECEPTIONIST"
+  ]
+ },
+ {
+  "method": "GET",
+  "path": "/api/front-desk/registration/report",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "SUPERVISOR",
+   "RECEPTIONIST"
+  ]
+ },
+ {
+  "method": "POST",
+  "path": "/api/advances",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "RECEPTIONIST",
+   "CASHIER"
+  ]
+ },
+ {
+  "method": "GET",
+  "path": "/api/advances",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "RECEPTIONIST",
+   "CASHIER",
+   "FINANCE"
+  ]
+ },
+ {
+  "method": "GET",
+  "path": "/api/advances/reconciliation",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "RECEPTIONIST",
+   "CASHIER",
+   "FINANCE"
+  ]
+ },
+ {
+  "method": "GET",
+  "path": "/api/advances/:id/receipt",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "RECEPTIONIST",
+   "CASHIER",
+   "FINANCE"
+  ]
+ },
+ {
+  "method": "GET",
+  "path": "/api/advances/summary/:bookingId",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "RECEPTIONIST",
+   "CASHIER",
+   "FINANCE"
+  ]
+ },
+ {
+  "method": "POST",
+  "path": "/api/advances/:id/adjust",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "RECEPTIONIST",
+   "CASHIER"
+  ]
+ },
+ {
+  "method": "POST",
+  "path": "/api/advances/:id/refund",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "RECEPTIONIST",
+   "CASHIER"
+  ]
+ },
+ {
+  "method": "GET",
+  "path": "/api/verifications",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "SUPERVISOR",
+   "RECEPTIONIST",
+   "CASHIER"
+  ]
+ },
+ {
+  "method": "GET",
+  "path": "/api/verifications/counts",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "SUPERVISOR",
+   "RECEPTIONIST",
+   "CASHIER"
+  ]
+ },
+ {
+  "method": "POST",
+  "path": "/api/verifications/:id/approve",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "SUPERVISOR",
+   "RECEPTIONIST"
+  ]
+ },
+ {
+  "method": "POST",
+  "path": "/api/verifications/:id/reject",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "SUPERVISOR",
+   "RECEPTIONIST"
+  ]
+ },
+ {
+  "method": "POST",
+  "path": "/api/verifications/:id/resubmit",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "SUPERVISOR",
+   "RECEPTIONIST",
+   "CASHIER"
+  ]
+ },
+ {
+  "method": "GET",
+  "path": "/api/reception/billing-queue",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "RECEPTIONIST",
+   "CASHIER"
+  ]
+ },
+ {
+  "method": "POST",
+  "path": "/api/reception/bookings/:id/checkout/initiate",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "SUPERVISOR",
+   "RECEPTIONIST"
+  ]
+ },
+ {
+  "method": "POST",
+  "path": "/api/reception/folios/:folioId/payments",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "RECEPTIONIST",
+   "CASHIER"
+  ]
+ },
+ {
+  "method": "POST",
+  "path": "/api/reception/folios/:folioId/apply-advances",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "RECEPTIONIST",
+   "CASHIER"
+  ]
+ },
+ {
+  "method": "POST",
+  "path": "/api/reception/folios/:folioId/refunds",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "RECEPTIONIST",
+   "CASHIER"
+  ]
+ },
+ {
+  "method": "GET",
+  "path": "/api/reception/payments/:id/receipt",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "RECEPTIONIST",
+   "CASHIER",
+   "FINANCE"
+  ]
+ },
+ {
+  "method": "GET",
+  "path": "/api/folios/booking/:bookingId",
+  "roles": [
+   "CUSTOMER",
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "SUPERVISOR",
+   "RECEPTIONIST",
+   "CASHIER",
+   "HOUSEKEEPING",
+   "MAINTENANCE",
+   "RESTAURANT",
+   "FINANCE",
+   "EVENTS",
+   "INVENTORY",
+   "PROCUREMENT"
+  ]
+ },
+ {
+  "method": "PUT",
+  "path": "/api/folios/booking/:bookingId/bill-edit",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "RECEPTIONIST",
+   "CASHIER"
+  ]
+ },
+ {
+  "method": "POST",
+  "path": "/api/folios/:folioId/charges",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "RECEPTIONIST",
+   "CASHIER"
+  ]
+ },
+ {
+  "method": "DELETE",
+  "path": "/api/folios/:folioId/lines/:lineId",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "RECEPTIONIST",
+   "CASHIER"
+  ]
+ },
+ {
+  "method": "POST",
+  "path": "/api/folios/:folioId/reconcile",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "RECEPTIONIST",
+   "CASHIER"
+  ]
+ },
+ {
+  "method": "POST",
+  "path": "/api/folios/:folioId/finalize",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "RECEPTIONIST",
+   "CASHIER"
+  ]
+ },
+ {
+  "method": "POST",
+  "path": "/api/folios/:folioId/settle",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "RECEPTIONIST",
+   "CASHIER"
+  ]
+ },
+ {
+  "method": "GET",
+  "path": "/api/night-audit/status",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "SUPERVISOR",
+   "RECEPTIONIST",
+   "FINANCE"
+  ]
+ },
+ {
+  "method": "GET",
+  "path": "/api/night-audit/preview",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "FINANCE"
+  ]
+ },
+ {
+  "method": "GET",
+  "path": "/api/night-audit/history",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "FINANCE"
+  ]
+ },
+ {
+  "method": "POST",
+  "path": "/api/night-audit/run",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "FINANCE"
+  ]
+ },
+ {
+  "method": "GET",
+  "path": "/api/reports/revenue-trend",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "RECEPTIONIST",
+   "FINANCE"
+  ]
+ },
+ {
+  "method": "GET",
+  "path": "/api/reports/department-pl",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "RECEPTIONIST",
+   "FINANCE"
+  ]
+ },
+ {
+  "method": "GET",
+  "path": "/api/reports/occupancy-heatmap",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "RECEPTIONIST",
+   "FINANCE"
+  ]
+ },
+ {
+  "method": "GET",
+  "path": "/api/reports/executive-summary",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "RECEPTIONIST",
+   "FINANCE"
+  ]
+ },
+ {
+  "method": "GET",
+  "path": "/api/reports/in-house-list",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "RECEPTIONIST",
+   "FINANCE"
+  ]
+ },
+ {
+  "method": "GET",
+  "path": "/api/reports/day-summary",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "RECEPTIONIST",
+   "FINANCE"
+  ]
+ },
+ {
+  "method": "GET",
+  "path": "/api/reports/monthly-mis",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "RECEPTIONIST",
+   "FINANCE"
+  ]
+ },
+ {
+  "method": "GET",
+  "path": "/api/reports/ops/check-ins",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "RECEPTIONIST",
+   "FINANCE"
+  ]
+ },
+ {
+  "method": "GET",
+  "path": "/api/reports/ops/check-outs",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "RECEPTIONIST",
+   "FINANCE"
+  ]
+ },
+ {
+  "method": "GET",
+  "path": "/api/reports/ops/day-use-sales",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "RECEPTIONIST",
+   "FINANCE"
+  ]
+ },
+ {
+  "method": "GET",
+  "path": "/api/reports/ops/advances",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "RECEPTIONIST",
+   "FINANCE"
+  ]
+ },
+ {
+  "method": "GET",
+  "path": "/api/reports/:reportId",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "RECEPTIONIST",
+   "FINANCE"
+  ]
+ },
+ {
+  "method": "GET",
+  "path": "/api/cashier-shifts/cashiers",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "RECEPTIONIST",
+   "CASHIER",
+   "FINANCE"
+  ]
+ },
+ {
+  "method": "GET",
+  "path": "/api/cashier-shifts/current",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "RECEPTIONIST",
+   "CASHIER",
+   "FINANCE"
+  ]
+ },
+ {
+  "method": "GET",
+  "path": "/api/cashier-shifts",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "RECEPTIONIST",
+   "CASHIER",
+   "FINANCE"
+  ]
+ },
+ {
+  "method": "GET",
+  "path": "/api/cashier-shifts/:id/details",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "RECEPTIONIST",
+   "CASHIER",
+   "FINANCE"
+  ]
+ },
+ {
+  "method": "POST",
+  "path": "/api/cashier-shifts/open",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "RECEPTIONIST",
+   "CASHIER"
+  ]
+ },
+ {
+  "method": "POST",
+  "path": "/api/cashier-shifts/:id/paid-out",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "RECEPTIONIST",
+   "CASHIER"
+  ]
+ },
+ {
+  "method": "POST",
+  "path": "/api/cashier-shifts/:id/sales",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "RECEPTIONIST",
+   "CASHIER"
+  ]
+ },
+ {
+  "method": "POST",
+  "path": "/api/cashier-shifts/:id/handover/initiate",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "RECEPTIONIST",
+   "CASHIER"
+  ]
+ },
+ {
+  "method": "POST",
+  "path": "/api/cashier-shifts/:id/handover/confirm",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "RECEPTIONIST",
+   "CASHIER"
+  ]
+ },
+ {
+  "method": "POST",
+  "path": "/api/cashier-shifts/:id/close",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "RECEPTIONIST",
+   "CASHIER"
+  ]
+ },
+ {
+  "method": "POST",
+  "path": "/api/cashier-shifts/:id/accept",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "RECEPTIONIST",
+   "CASHIER"
+  ]
+ },
+ {
+  "method": "GET",
+  "path": "/api/rate-plans",
+  "roles": [
+   "PUBLIC",
+   "CUSTOMER",
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "SUPERVISOR",
+   "RECEPTIONIST",
+   "CASHIER",
+   "HOUSEKEEPING",
+   "MAINTENANCE",
+   "RESTAURANT",
+   "FINANCE",
+   "EVENTS",
+   "INVENTORY",
+   "PROCUREMENT"
+  ]
+ },
+ {
+  "method": "POST",
+  "path": "/api/rate-plans",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER"
+  ]
+ },
+ {
+  "method": "PATCH",
+  "path": "/api/rate-plans/:id",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER"
+  ]
+ },
+ {
+  "method": "POST",
+  "path": "/api/rate-plans/evaluate-rate",
+  "roles": [
+   "PUBLIC",
+   "CUSTOMER",
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "SUPERVISOR",
+   "RECEPTIONIST",
+   "CASHIER",
+   "HOUSEKEEPING",
+   "MAINTENANCE",
+   "RESTAURANT",
+   "FINANCE",
+   "EVENTS",
+   "INVENTORY",
+   "PROCUREMENT"
+  ]
+ },
+ {
+  "method": "GET",
+  "path": "/api/corporate-accounts",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "FINANCE"
+  ]
+ },
+ {
+  "method": "POST",
+  "path": "/api/corporate-accounts",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "FINANCE"
+  ]
+ },
+ {
+  "method": "GET",
+  "path": "/api/corporate-accounts/:id",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "FINANCE"
+  ]
+ },
+ {
+  "method": "PUT",
+  "path": "/api/corporate-accounts/:id",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "FINANCE"
+  ]
+ },
+ {
+  "method": "POST",
+  "path": "/api/corporate-accounts/:id/check-credit",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "FINANCE"
+  ]
+ },
+ {
+  "method": "GET",
+  "path": "/api/group-bookings",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "RECEPTIONIST"
+  ]
+ },
+ {
+  "method": "GET",
+  "path": "/api/group-bookings/:id",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "RECEPTIONIST"
+  ]
+ },
+ {
+  "method": "GET",
+  "path": "/api/group-bookings/:id/rooming-list",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "RECEPTIONIST"
+  ]
+ },
+ {
+  "method": "POST",
+  "path": "/api/group-bookings/:id/pickup",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "RECEPTIONIST"
+  ]
+ },
+ {
+  "method": "POST",
+  "path": "/api/group-bookings/:id/release",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "RECEPTIONIST"
+  ]
+ },
+ {
+  "method": "POST",
+  "path": "/api/group-bookings",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "RECEPTIONIST"
+  ]
+ },
+ {
+  "method": "PATCH",
+  "path": "/api/group-bookings/:id/status",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "RECEPTIONIST"
+  ]
+ },
+ {
+  "method": "PATCH",
+  "path": "/api/group-bookings/:id/advance",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "RECEPTIONIST",
+   "CASHIER"
+  ]
+ },
+ {
+  "method": "GET",
+  "path": "/api/inspections/templates",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "SUPERVISOR",
+   "HOUSEKEEPING"
+  ]
+ },
+ {
+  "method": "POST",
+  "path": "/api/inspections/submit",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "SUPERVISOR",
+   "HOUSEKEEPING"
+  ]
+ },
+ {
+  "method": "POST",
+  "path": "/api/inspections/release",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "SUPERVISOR",
+   "HOUSEKEEPING"
+  ]
+ },
+ {
+  "method": "GET",
+  "path": "/api/inspections/room/:roomId",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "SUPERVISOR",
+   "HOUSEKEEPING"
+  ]
+ },
+ {
+  "method": "GET",
+  "path": "/api/accounting/summary",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "FINANCE"
+  ]
+ },
+ {
+  "method": "GET",
+  "path": "/api/accounting/aging",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "FINANCE"
+  ]
+ },
+ {
+  "method": "GET",
+  "path": "/api/banquets",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "RECEPTIONIST"
+  ]
+ },
+ {
+  "method": "POST",
+  "path": "/api/banquets",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER"
+  ]
+ },
+ {
+  "method": "PATCH",
+  "path": "/api/banquets/:id/status",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER"
+  ]
+ },
+ {
+  "method": "GET",
+  "path": "/api/ancillary",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "SUPERVISOR",
+   "RECEPTIONIST"
+  ]
+ },
+ {
+  "method": "POST",
+  "path": "/api/ancillary",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "SUPERVISOR",
+   "RECEPTIONIST"
+  ]
+ },
+ {
+  "method": "GET",
+  "path": "/api/complaints/my",
+  "roles": [
+   "CUSTOMER",
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "SUPERVISOR",
+   "RECEPTIONIST",
+   "CASHIER",
+   "HOUSEKEEPING",
+   "MAINTENANCE",
+   "RESTAURANT",
+   "FINANCE",
+   "EVENTS",
+   "INVENTORY",
+   "PROCUREMENT"
+  ]
+ },
+ {
+  "method": "POST",
+  "path": "/api/complaints/my",
+  "roles": [
+   "CUSTOMER",
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "SUPERVISOR",
+   "RECEPTIONIST",
+   "CASHIER",
+   "HOUSEKEEPING",
+   "MAINTENANCE",
+   "RESTAURANT",
+   "FINANCE",
+   "EVENTS",
+   "INVENTORY",
+   "PROCUREMENT"
+  ]
+ },
+ {
+  "method": "GET",
+  "path": "/api/complaints",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "RECEPTIONIST",
+   "HOUSEKEEPING",
+   "MAINTENANCE"
+  ]
+ },
+ {
+  "method": "POST",
+  "path": "/api/complaints",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "RECEPTIONIST",
+   "HOUSEKEEPING",
+   "MAINTENANCE"
+  ]
+ },
+ {
+  "method": "PATCH",
+  "path": "/api/complaints/:id/status",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "RECEPTIONIST",
+   "HOUSEKEEPING",
+   "MAINTENANCE"
+  ]
+ },
+ {
+  "method": "GET",
+  "path": "/api/properties",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN"
+  ]
+ },
+ {
+  "method": "POST",
+  "path": "/api/properties",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN"
+  ]
+ },
+ {
+  "method": "PATCH",
+  "path": "/api/properties/:id",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN"
+  ]
+ },
+ {
+  "method": "PATCH",
+  "path": "/api/properties/:id/toggle-active",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN"
+  ]
+ },
+ {
+  "method": "GET",
+  "path": "/api/properties/channels",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN"
+  ]
+ },
+ {
+  "method": "POST",
+  "path": "/api/properties/channels",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN"
+  ]
+ },
+ {
+  "method": "DELETE",
+  "path": "/api/properties/channels/:id",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN"
+  ]
+ },
+ {
+  "method": "POST",
+  "path": "/api/properties/channels/:id/sync",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN"
+  ]
+ },
+ {
+  "method": "GET",
+  "path": "/api/housekeeping/dashboard",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "SUPERVISOR",
+   "HOUSEKEEPING"
+  ]
+ },
+ {
+  "method": "PATCH",
+  "path": "/api/housekeeping/rooms/:id/status",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "SUPERVISOR",
+   "HOUSEKEEPING"
+  ]
+ },
+ {
+  "method": "GET",
+  "path": "/api/dashboard/command-center",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "RECEPTIONIST",
+   "CASHIER",
+   "HOUSEKEEPING",
+   "MAINTENANCE",
+   "RESTAURANT",
+   "FINANCE",
+   "EVENTS",
+   "INVENTORY",
+   "PROCUREMENT"
+  ]
+ },
+ {
+  "method": "GET",
+  "path": "/api/payment-channels",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "RECEPTIONIST"
+  ]
+ },
+ {
+  "method": "GET",
+  "path": "/api/payment-channels/:id",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "RECEPTIONIST"
+  ]
+ },
+ {
+  "method": "POST",
+  "path": "/api/payment-channels",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER"
+  ]
+ },
+ {
+  "method": "PATCH",
+  "path": "/api/payment-channels/:id",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER"
+  ]
+ },
+ {
+  "method": "DELETE",
+  "path": "/api/payment-channels/:id",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER"
+  ]
+ },
+ {
+  "method": "POST",
+  "path": "/api/task-approvals",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "SUPERVISOR",
+   "RECEPTIONIST",
+   "FINANCE"
+  ]
+ },
+ {
+  "method": "GET",
+  "path": "/api/task-approvals",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "SUPERVISOR",
+   "RECEPTIONIST",
+   "FINANCE"
+  ]
+ },
+ {
+  "method": "GET",
+  "path": "/api/task-approvals/stats",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "SUPERVISOR",
+   "RECEPTIONIST",
+   "FINANCE"
+  ]
+ },
+ {
+  "method": "POST",
+  "path": "/api/task-approvals/:id/approve",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "SUPERVISOR",
+   "RECEPTIONIST",
+   "FINANCE"
+  ]
+ },
+ {
+  "method": "POST",
+  "path": "/api/task-approvals/:id/reject",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "SUPERVISOR",
+   "RECEPTIONIST",
+   "FINANCE"
+  ]
+ },
+ {
+  "method": "GET",
+  "path": "/api/permissions/pages",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN"
+  ]
+ },
+ {
+  "method": "GET",
+  "path": "/api/permissions/roles",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN"
+  ]
+ },
+ {
+  "method": "GET",
+  "path": "/api/permissions/roles/:roleId/permissions",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN"
+  ]
+ },
+ {
+  "method": "PUT",
+  "path": "/api/permissions/roles/:roleId/permissions",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN"
+  ]
+ },
+ {
+  "method": "GET",
+  "path": "/api/permissions/users/:userId/overrides",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN"
+  ]
+ },
+ {
+  "method": "PUT",
+  "path": "/api/permissions/users/:userId/overrides",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN"
+  ]
+ },
+ {
+  "method": "GET",
+  "path": "/api/permissions/users/:userId/effective",
+  "roles": [
+   "CUSTOMER",
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "SUPERVISOR",
+   "RECEPTIONIST",
+   "CASHIER",
+   "HOUSEKEEPING",
+   "MAINTENANCE",
+   "RESTAURANT",
+   "FINANCE",
+   "EVENTS",
+   "INVENTORY",
+   "PROCUREMENT"
+  ]
+ },
+ {
+  "method": "GET",
+  "path": "/api/pos/orders",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "RECEPTIONIST",
+   "CASHIER",
+   "RESTAURANT"
+  ]
+ },
+ {
+  "method": "POST",
+  "path": "/api/pos/orders",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "RESTAURANT"
+  ]
+ },
+ {
+  "method": "POST",
+  "path": "/api/pos/orders/quote",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "RECEPTIONIST",
+   "CASHIER",
+   "RESTAURANT"
+  ]
+ },
+ {
+  "method": "POST",
+  "path": "/api/pos/orders/:id/settle",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "RECEPTIONIST",
+   "CASHIER"
+  ]
+ },
+ {
+  "method": "PATCH",
+  "path": "/api/pos/orders/:id/status",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "RECEPTIONIST",
+   "CASHIER",
+   "RESTAURANT"
+  ]
+ },
+ {
+  "method": "GET",
+  "path": "/api/menu",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "RECEPTIONIST",
+   "CASHIER",
+   "RESTAURANT"
+  ]
+ },
+ {
+  "method": "POST",
+  "path": "/api/menu",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER"
+  ]
+ },
+ {
+  "method": "PATCH",
+  "path": "/api/menu/:id",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER"
+  ]
+ },
+ {
+  "method": "DELETE",
+  "path": "/api/menu/:id",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER"
+  ]
+ },
+ {
+  "method": "GET",
+  "path": "/api/seo/pages",
+  "roles": [
+   "PUBLIC",
+   "CUSTOMER",
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "SUPERVISOR",
+   "RECEPTIONIST",
+   "CASHIER",
+   "HOUSEKEEPING",
+   "MAINTENANCE",
+   "RESTAURANT",
+   "FINANCE",
+   "EVENTS",
+   "INVENTORY",
+   "PROCUREMENT"
+  ]
+ },
+ {
+  "method": "GET",
+  "path": "/api/seo/pages/:slug",
+  "roles": [
+   "PUBLIC",
+   "CUSTOMER",
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "SUPERVISOR",
+   "RECEPTIONIST",
+   "CASHIER",
+   "HOUSEKEEPING",
+   "MAINTENANCE",
+   "RESTAURANT",
+   "FINANCE",
+   "EVENTS",
+   "INVENTORY",
+   "PROCUREMENT"
+  ]
+ },
+ {
+  "method": "POST",
+  "path": "/api/seo/track-start",
+  "roles": [
+   "PUBLIC",
+   "CUSTOMER",
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER",
+   "SUPERVISOR",
+   "RECEPTIONIST",
+   "CASHIER",
+   "HOUSEKEEPING",
+   "MAINTENANCE",
+   "RESTAURANT",
+   "FINANCE",
+   "EVENTS",
+   "INVENTORY",
+   "PROCUREMENT"
+  ]
+ },
+ {
+  "method": "GET",
+  "path": "/api/seo/admin/pages",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER"
+  ]
+ },
+ {
+  "method": "GET",
+  "path": "/api/seo/admin/audit",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER"
+  ]
+ },
+ {
+  "method": "GET",
+  "path": "/api/seo/admin/analytics",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER"
+  ]
+ },
+ {
+  "method": "POST",
+  "path": "/api/seo/admin/pages",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER"
+  ]
+ },
+ {
+  "method": "PUT",
+  "path": "/api/seo/admin/pages/:id",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER"
+  ]
+ },
+ {
+  "method": "DELETE",
+  "path": "/api/seo/admin/pages/:id",
+  "roles": [
+   "SUPER_ADMIN",
+   "ADMIN",
+   "MANAGER"
+  ]
+ }
+]

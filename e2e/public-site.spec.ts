@@ -16,7 +16,7 @@ for (const page of PUBLIC_PAGES) {
   test(`no horizontal overflow on ${page} at any breakpoint`, async ({ page: pw }) => {
     for (const bp of BREAKPOINTS) {
       await pw.setViewportSize({ width: bp.width, height: bp.height });
-      await pw.goto(page, { waitUntil: "networkidle" });
+      await pw.goto(page, { waitUntil: "load" });
       const scrollWidth = await pw.evaluate(() => document.documentElement.scrollWidth);
       const clientWidth = await pw.evaluate(() => document.documentElement.clientWidth);
       // A few px of tolerance for scrollbar rendering differences.
@@ -30,7 +30,7 @@ for (const page of PUBLIC_PAGES) {
 
 for (const page of PUBLIC_PAGES) {
   test(`accessibility scan: ${page}`, async ({ page: pw }) => {
-    await pw.goto(page, { waitUntil: "networkidle" });
+    await pw.goto(page, { waitUntil: "load" });
     // "networkidle" only waits for network activity to quiet down, not for
     // the CSS entrance transitions (.reveal — 0.9s, some delayed up to
     // 650ms) that fade page content in. Scanning immediately after
@@ -55,13 +55,13 @@ for (const page of PUBLIC_PAGES) {
   });
 }
 
-test("homepage loads real seeded content, not hardcoded fallback text", async ({ page }) => {
-  await page.goto("/", { waitUntil: "networkidle" });
-  await expect(page.locator("h1")).toContainText("time well spent");
+test("homepage heading reads as real words (screen readers, search engines)", async ({ page }) => {
+  await page.goto("/", { waitUntil: "load" });
+  await expect(page.locator("h1")).toContainText(/say yes to time well spent/i);
 });
 
 test("keyboard navigation reaches the primary nav and can activate a link", async ({ page }) => {
-  await page.goto("/", { waitUntil: "networkidle" });
+  await page.goto("/", { waitUntil: "load" });
   // Tab through a bounded number of times looking for a focused link/button.
   let foundFocusable = false;
   for (let i = 0; i < 15; i++) {
@@ -75,12 +75,12 @@ test("keyboard navigation reaches the primary nav and can activate a link", asyn
   expect(foundFocusable, "No focusable element reached via keyboard Tab within 15 presses").toBe(true);
 });
 
-test("reduced motion is respected — reveal elements are visible without JS-driven animation delay", async ({ browser }) => {
+test("reduced motion is respected — the hero shows a still photo, not the video", async ({ browser }) => {
   const context = await browser.newContext({ reducedMotion: "reduce" });
   const page = await context.newPage();
-  await page.goto("/", { waitUntil: "networkidle" });
-  const opacity = await page.locator(".reveal").first().evaluate((el) => getComputedStyle(el).opacity);
-  expect(Number(opacity)).toBe(1);
+  await page.goto("/", { waitUntil: "load" });
+  await expect(page.locator("#home img").first()).toBeVisible();
+  expect(await page.locator("#home video").count()).toBe(0);
   await context.close();
 });
 
@@ -101,7 +101,7 @@ test("clicking each header nav link from an interior page actually navigates to 
   ];
 
   for (const { label, expectedPath } of expectations) {
-    await page.goto("/rooms", { waitUntil: "networkidle" });
+    await page.goto("/rooms", { waitUntil: "load" });
     await page.locator("header nav a", { hasText: label }).first().click();
     await page.waitForURL(`**${expectedPath}`, { timeout: 5000 });
     expect(new URL(page.url()).pathname).toBe(expectedPath);
@@ -109,14 +109,14 @@ test("clicking each header nav link from an interior page actually navigates to 
 });
 
 test("the header's Book Your Stay button navigates to /search from an interior page, not a dead #booking hash", async ({ page }) => {
-  await page.goto("/gallery", { waitUntil: "networkidle" });
+  await page.goto("/gallery", { waitUntil: "load" });
   await page.locator("header a", { hasText: "Book Your Stay" }).first().click();
   await page.waitForURL("**/search", { timeout: 5000 });
   expect(new URL(page.url()).pathname).toBe("/search");
 });
 
 test("FAQ and Contact nav links route to their standalone pages even from the homepage (no homepage section exists for either)", async ({ page }) => {
-  await page.goto("/", { waitUntil: "networkidle" });
+  await page.goto("/", { waitUntil: "load" });
   await page.locator("header nav a", { hasText: "FAQ" }).first().click();
   await page.waitForURL("**/faq", { timeout: 5000 });
   expect(new URL(page.url()).pathname).toBe("/faq");
@@ -128,7 +128,7 @@ test("FAQ and Contact nav links route to their standalone pages even from the ho
 // correctly rejected it with a 400 the UI only ever showed as a generic,
 // unexplained "Failed to load availability" error.
 test("changing check-in past an already-selected check-out auto-corrects check-out, never submits an invalid date range", async ({ page }) => {
-  await page.goto("/search", { waitUntil: "networkidle" });
+  await page.goto("/search", { waitUntil: "load" });
 
   await page.fill("#search-checkout", "2026-09-05");
   await page.fill("#search-checkin", "2026-09-09");

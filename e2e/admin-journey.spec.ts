@@ -18,7 +18,7 @@ test("admin sidebar reaches core operational modules", async ({ page }) => {
   await page.waitForURL(/\/admin\/dashboard/, { timeout: 10000 });
 
   for (const path of ["/admin/bookings", "/admin/guests", "/admin/coupons", "/admin/reports", "/admin/settings"]) {
-    await page.goto(path, { waitUntil: "networkidle" });
+    await page.goto(path, { waitUntil: "load" });
     // Any of these landing on a login redirect would mean the session isn't
     // actually persisting across navigation — a real regression to catch.
     expect(page.url()).not.toContain("/login");
@@ -31,6 +31,6 @@ test("housekeeping staff is redirected to their own module, not the customer das
   await page.getByLabel(/password/i).fill("House@123");
   await page.getByRole("button", { name: /sign in|log in/i }).click();
 
-  await page.waitForURL(/\/staff\/housekeeping/, { timeout: 10000 });
-  expect(page.url()).toContain("/staff/housekeeping");
+  await page.waitForURL(/\/housekeeping\/dashboard/, { timeout: 10000 });
+  expect(page.url()).toContain("/housekeeping/dashboard");
 });

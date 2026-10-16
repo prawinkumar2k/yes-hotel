@@ -16,7 +16,7 @@ export default function HotelStory() {
               <Sparkles size={13} className="text-[#c9a227]" /> OUR STORY
             </div>
             <h2 className="font-serif text-4xl sm:text-6xl text-slate-800 font-normal leading-tight">
-              A Place to <span className="text-[#c9a227] italic font-serif">Pause</span> &amp; <span className="font-bold">Reconnect</span>.
+              A Place to <span className="text-[#866A1C] italic font-serif">Pause</span> &amp; <span className="font-bold">Reconnect</span>.
             </h2>
           </div>
 

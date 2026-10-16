@@ -34,7 +34,7 @@ if (!args.includes("--yes")) {
 const mongorestore = findTool("mongorestore");
 const r = spawnSync(
   mongorestore,
-  [`--uri=${uri}`, "--drop", "--gzip", `--nsInclude=${dbName}.*`, path.resolve(dir)],
+  [`--uri=${uri}`, "--drop", "--gzip", `--nsInclude=${dbName}.*`, `--dir=${path.resolve(dir)}`],
   { stdio: "inherit" },
 );
 process.exit(r.status ?? 1);

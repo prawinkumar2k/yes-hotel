@@ -81,7 +81,7 @@ export default function Navbar({ transparent = true }: { transparent?: boolean }
           )}
         >
           <BrandLogo className="w-9 h-9 md:w-10 md:h-10 group-hover:scale-105 transition-transform" />
-          <span>YES <span className="text-[#c9a227] font-normal italic">HOTELS</span></span>
+          <span>YES <span className={`font-normal italic ${isHeroTransparent ? "text-[#c9a227]" : "text-[#866A1C]"}`}>HOTELS</span></span>
         </Link>
 
         {/* Navigation Links */}
