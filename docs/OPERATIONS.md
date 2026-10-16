@@ -15,10 +15,12 @@ For the hotel owner and the Admin login. How to run the system day to day withou
 
 Sign in at **https://yeshotels.in/login**.
 
+These staff emails are **sign-in names only, not mailboxes** — no mail is ever sent to them. The hotel's only mailbox is **bookings@yeshotels.in**.
+
 ## 2. Passwords
 
 - **Change your own password:** the key icon next to *Sign out* (bottom of the menu). Enter the current password and the new one twice (8+ characters). Other devices are signed out.
-- **Someone forgot their password:** Admin → **Staff** → **Reset password** on that person. It's recorded in the audit log.
+- **Someone forgot their password:** Admin → **Staff** → **Reset password** on that person. It's recorded in the audit log. ("Forgot password" on the sign-in page emails a link to **guests** only.)
 - **Add or remove staff:** Admin → Staff. New staff can be Admin, Manager, Reception or Housekeeping.
 
 ### Master password (owner only)
@@ -51,6 +53,9 @@ The policy texts are also kept in `docs/content/legal-pages.json`. The cancellat
 ## 5. Email
 
 Guest sign-in codes and notifications are sent from **bookings@yeshotels.in** (Google Workspace) using an **app password** stored on the server.
+
+- **New website / chatbot enquiry alerts** go to the email in Admin → Settings (bookings@yeshotels.in).
+- Guests get their booking details, sign-in codes and password-reset links from the same address.
 
 - **After every booking** (website, enquiry converted to a booking, walk-in) the guest is emailed the booking number, room, dates, guests, amount, paid and balance, check-in/out times, and how to sign in to their guest account (email code, or booking number + mobile — no password is sent). Bookings without a real guest email are skipped.
 - Every email sent (or failed, then retried automatically) is recorded in the notification log.

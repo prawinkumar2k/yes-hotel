@@ -6,6 +6,8 @@ import { User } from "../models/User";
 import { PasswordResetToken } from "../models/PasswordResetToken";
 import { hashPassword } from "../utils/auth";
 import { revokeAllRefreshTokensForUser } from "../services/refreshToken.service";
+import { NotificationType } from "../models/NotificationLog";
+import { sendNotification } from "../services/notification.service";
 
 const forgotSchema = z.object({ email: z.string().email() });
 const resetSchema = z.object({
@@ -22,13 +24,17 @@ export const forgotPassword = async (req: Request, res: Response) => {
       return res.status(400).json({ success: false, message: "Invalid email address" });
     }
 
-    const { email } = parsed.data;
+    const email = parsed.data.email.trim().toLowerCase();
     const user = await User.findOne({ email });
 
     // IMPORTANT: Always return 200 to prevent account enumeration
     const successMsg = "If an account with that email exists, a password reset link has been sent.";
 
-    if (!user) return res.status(200).json({ success: true, message: successMsg });
+    // Only guests get reset links by email. Staff sign-in names are not mailboxes: the Admin resets
+    // staff passwords (Admin → Staff → Reset password). Placeholder guest addresses can't receive mail.
+    if (!user || user.role !== "CUSTOMER" || user.isActive === false || email.endsWith(".local")) {
+      return res.status(200).json({ success: true, message: successMsg });
+    }
 
     // Invalidate old tokens for this user
     await PasswordResetToken.deleteMany({ userId: user._id });
@@ -50,8 +56,21 @@ export const forgotPassword = async (req: Request, res: Response) => {
       console.log(`   Expires: ${expiresAt.toISOString()}\n`);
     }
 
-    // TODO: In PRODUCTION, send via email (Nodemailer / SendGrid)
-    // await sendPasswordResetEmail(user.email, resetUrl);
+    await sendNotification({
+      type: NotificationType.PASSWORD_RESET,
+      recipientEmail: user.email,
+      subject: "Reset your YES Hotels password",
+      body: [
+        `Hi ${user.firstName || "there"},`,
+        "",
+        "We received a request to reset the password for your YES Hotels guest account.",
+        `Open this link within 1 hour to choose a new password:`,
+        resetUrl,
+        "",
+        "If you didn't ask for this, ignore this email — your password stays the same.",
+        "You can also sign in without a password using the 6-digit email code on the sign-in page.",
+      ].join("\n"),
+    });
 
     return res.status(200).json({ success: true, message: successMsg });
   } catch (error: any) {

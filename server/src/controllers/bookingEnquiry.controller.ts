@@ -157,13 +157,13 @@ export const submitBookingEnquiry = async (req: Request, res: Response) => {
     });
     emitToStaff("enquiry:updated", { _id: String(enquiry._id), bookingStage: enquiry.bookingStage, created: true }, enquiry.propertyId);
 
-    const staff = await User.find({
-      role: { $in: [UserRole.ADMIN, UserRole.MANAGER, UserRole.RECEPTIONIST] },
-      isActive: true,
-    }).select("email").lean();
+    // The hotel's one mailbox (Admin → Settings email, bookings@yeshotels.in) — never the staff
+    // login names, which are not real mailboxes.
+    const { HotelSettings } = await import("../models/HotelSettings");
+    const hotelEmail = String((await HotelSettings.findOne().select("email").lean() as any)?.email || "").trim().toLowerCase();
     const configuredRecipients = (process.env.BOOKING_ENQUIRY_RECIPIENTS || "")
       .split(",").map((e) => e.trim().toLowerCase()).filter(Boolean);
-    const recipients = [...new Set([...staff.map((u) => u.email), ...configuredRecipients])];
+    const recipients = [...new Set([hotelEmail, ...configuredRecipients].filter(Boolean))];
 
     const subject = `New YES Hotels enquiry (${parsed.data.bookingStage || 'Lead'}): ${parsed.data.guestName}`;
     const body = [

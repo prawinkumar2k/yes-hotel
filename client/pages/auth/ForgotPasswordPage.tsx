@@ -121,6 +121,7 @@ export default function ForgotPasswordPage() {
               <p className="mt-1 text-sm text-slate-500">
                 Enter your email address to receive reset instructions
               </p>
+              <p className="mt-1 text-xs text-slate-400">Hotel staff: ask the Admin to reset your password.</p>
             </div>
 
             {success ? (

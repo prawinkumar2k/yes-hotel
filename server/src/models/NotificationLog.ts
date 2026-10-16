@@ -6,6 +6,7 @@ export enum NotificationType {
   PAYMENT_CONFIRMATION = "PAYMENT_CONFIRMATION",
   REFUND_UPDATE = "REFUND_UPDATE",
   BOOKING_ENQUIRY = "BOOKING_ENQUIRY",
+  PASSWORD_RESET = "PASSWORD_RESET",
 }
 
 export enum NotificationStatus {
