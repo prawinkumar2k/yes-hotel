@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useHotelSettings } from "@/hooks/usePublicData";
 import { Link, useNavigate } from "react-router-dom";
 import {
   LogIn, LogOut, Users, BedDouble, AlertCircle, RefreshCw,
@@ -31,6 +32,7 @@ export default function AdminFrontDesk() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { data: hotelSettings } = useHotelSettings();
   const [activeTab, setActiveTab] = useState<"ARRIVALS" | "DEPARTURES" | "IN_HOUSE" | "UNASSIGNED" | "DIRTY">("ARRIVALS");
   
   // Search & Filter
@@ -387,10 +389,11 @@ export default function AdminFrontDesk() {
 
         // Initialize edit bill form with current particulars
         const nights = Math.max(1, countNights(new Date(booking.checkInDate), new Date(booking.checkOutDate)));
-        const currentRate = booking.ratePerNight || Math.round((booking.totalAmount - (booking.taxAmount || 0)) / nights) || 2000;
+        // The booking's own rate; no invented default — staff enter it if the booking has none.
+        const currentRate = booking.ratePerNight || Math.round((booking.totalAmount - (booking.taxAmount || 0)) / nights) || 0;
         setEditBillForm({
           ratePerNight: currentRate,
-          extraBedAmount: (booking.extraPersonsWithBed || 0) * 1200,
+          extraBedAmount: (booking.extraPersonsWithBed || 0) * (Number(hotelSettings?.extraBedRate) || 0),
           otherCharges: 0,
           otherChargesDesc: "",
           discountAmount: booking.discountAmount || 0,

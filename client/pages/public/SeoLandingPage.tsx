@@ -170,7 +170,7 @@ export default function SeoLandingPage() {
               {/* Proximity Pill */}
               <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold uppercase tracking-wider mb-4 shadow-sm">
                 <ShieldCheck size={14} className="text-emerald-600" />
-                <span>Verified Proximity: {pageData.distanceKm === 0 ? "At Location (0 km)" : `${pageData.distanceKm} km away`}</span>
+                <span>{pageData.distanceKm === 0 ? "Right here" : `About ${pageData.distanceKm} km away`}</span>
               </div>
 
               <h1 className="font-serif text-3xl sm:text-4xl lg:text-5xl text-hotel-black font-normal tracking-tight leading-tight mb-4">
@@ -246,7 +246,7 @@ export default function SeoLandingPage() {
                     <span className="text-2xl font-serif font-bold text-hotel-black">{fromLabel} <span className="text-xs font-sans font-normal text-hotel-black/60">/ night</span></span>
                   </div>
                   <span className="px-2.5 py-1 rounded bg-amber-50 text-amber-800 text-[11px] font-bold tracking-wide border border-amber-200">
-                    Best Rate Guarantee
+                    Book direct
                   </span>
                 </div>
 
@@ -475,7 +475,7 @@ export default function SeoLandingPage() {
             <div className="lg:col-span-5 bg-hotel-ivory p-6 rounded-xl border border-hotel-black/10">
               <h3 className="font-serif text-lg text-hotel-black font-semibold mb-4 flex items-center gap-2">
                 <Sparkles size={18} className="text-hotel-gold" />
-                <span>Stay Guarantees</span>
+                <span>Why stay with us</span>
               </h3>
 
               <ul className="space-y-3.5">
@@ -489,7 +489,7 @@ export default function SeoLandingPage() {
 
               <div className="mt-6 pt-5 border-t border-hotel-black/10">
                 <span className="block text-[11px] font-bold uppercase tracking-wider text-hotel-black/50 mb-2">
-                  Nearby Verified Hubs
+                  Nearby places (approx. distance)
                 </span>
                 <div className="space-y-2">
                   {(pageData.nearbyAttractions || []).map((att: any, i: number) => (

@@ -630,7 +630,7 @@ export default function AdminSeo() {
             <div className="flex items-center gap-6">
               <div className="text-right">
                 <span className="text-3xl font-serif font-bold text-slate-900">
-                  {auditData?.summary?.averageScore || 100}
+                  {auditData?.summary?.averageScore ?? "—"}
                   <span className="text-sm font-sans font-normal text-slate-700"> / 100</span>
                 </span>
                 <span className="block text-[11px] font-semibold text-emerald-600">Average Health</span>
