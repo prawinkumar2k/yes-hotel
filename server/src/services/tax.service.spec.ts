@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
   DEFAULT_GST_RULES as R,
+  DEFAULT_GST_RULES,
+  computeChargeTax,
+  netOfIncludedTax,
   computeRoomNightTax,
   computeRoomTax,
   computeSupplyTax,
@@ -81,5 +84,32 @@ describe("validateGstRules", () => {
   });
   it("fails loudly when no rule is in force", () => {
     expect(() => gstRate(R, "ROOM", "2010-01-01", 1000)).toThrow(/No ROOM GST rule/);
+  });
+});
+
+describe("prices that include GST", () => {
+  it("works the GST out of the rate: ₹1,510 = ₹1,438.10 + CGST ₹35.95 + SGST ₹35.95", () => {
+    const r = computeRoomTax(DEFAULT_GST_RULES, { checkIn: "2026-10-17", checkOut: "2026-10-18", nightlyValue: 1510, inclusive: true });
+    expect(r).toMatchObject({ taxable: 1438.1, cgst: 35.95, sgst: 35.95, tax: 71.9, total: 1510 });
+  });
+  it("the total always equals rate × nights × rooms", () => {
+    for (const rate of [999, 1510, 2833.33, 6500, 7875, 7876, 9000]) {
+      const r = computeRoomTax(DEFAULT_GST_RULES, { checkIn: "2026-10-17", checkOut: "2026-10-20", nightlyValue: rate, rooms: 2, inclusive: true });
+      expect(r.total).toBeCloseTo(rate * 3 * 2, 2);
+      expect(r.cgst + r.sgst).toBeCloseTo(r.tax, 2);
+    }
+  });
+  it("picks the slab by the value excluding GST (₹7,875 incl. = ₹7,500 → 5%; above → 18%)", () => {
+    expect(computeRoomTax(DEFAULT_GST_RULES, { checkIn: "2026-10-17", checkOut: "2026-10-18", nightlyValue: 7875, inclusive: true }).lines[0].rate).toBe(5);
+    expect(computeRoomTax(DEFAULT_GST_RULES, { checkIn: "2026-10-17", checkOut: "2026-10-18", nightlyValue: 9000, inclusive: true }).lines[0].rate).toBe(18);
+  });
+  it("one night (night audit) and single charges work the same way", () => {
+    expect(computeRoomNightTax(DEFAULT_GST_RULES, "2026-10-17", 1510, true)).toMatchObject({ taxable: 1438.1, tax: 71.9, total: 1510 });
+    expect(computeChargeTax(DEFAULT_GST_RULES, "EXTRA_BED", 1050, "2026-10-17", { inclusive: true })).toMatchObject({ taxable: 1000, tax: 50, total: 1050 });
+  });
+  it("shares the included GST across charge lines exactly", () => {
+    const nets = netOfIncludedTax([3020, 800, 400], 200.95);
+    expect(nets.reduce((t, n) => t + n, 0)).toBeCloseTo(4220 - 200.95, 2);
+    expect(nets.every((n, i) => n < [3020, 800, 400][i])).toBe(true);
   });
 });

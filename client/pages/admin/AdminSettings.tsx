@@ -41,6 +41,8 @@ export default function AdminSettings() {
     
     const data = {
       ...rawData,
+      gstNumber: String(rawData.gstNumber ?? "").trim().toUpperCase(),
+      taxInclusiveRates: fd.get("taxInclusiveRates") === "on",
       extraPersonRate: Number(rawData.extraPersonRate),
       extraBedRate: Number(rawData.extraBedRate),
       childRateNoBed: Number(rawData.childRateNoBed),
@@ -126,6 +128,18 @@ export default function AdminSettings() {
               <div className="space-y-2 col-span-2">
                 <label className="text-sm font-bold text-black block">Physical Address</label>
                 <Input name="address" required defaultValue={settings?.address} className="border-gray-400 text-black font-medium" />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-bold text-black block">GSTIN (printed on invoices)</label>
+                <Input name="gstNumber" defaultValue={settings?.gstNumber ?? ""} placeholder="29ABCDE1234F1Z5" maxLength={15} className="border-gray-400 text-black font-medium uppercase" />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-bold text-black block">Room prices include GST</label>
+                <label className="flex min-h-[40px] items-center gap-2 text-sm text-black">
+                  <input type="checkbox" name="taxInclusiveRates" defaultChecked={settings?.taxInclusiveRates === true} className="h-4 w-4 accent-[#c9a227]" />
+                  The rate is what the guest pays — GST (CGST + SGST) is worked out inside it, not added on top.
+                </label>
+                <p className="text-xs text-gray-600">Applies to new bookings; existing bookings keep the rule they were made with.</p>
               </div>
               <div className="space-y-2 col-span-2">
                 <label className="text-sm font-bold text-black block">Google Maps Link</label>

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { buildInvoiceRows } from "@/lib/invoiceRows";
 import HotelDocAddress from "@/components/admin/HotelDocAddress";
 import StayExtensionNote from "@/components/admin/StayExtensionNote";
 import { useParams, Link, useSearchParams } from "react-router-dom";
@@ -91,51 +92,16 @@ export default function AdminFolioPrint() {
     const defaultRoomNum = booking?.assignedRoom?.roomNumber || "101";
 
     if (debitLines.length > 0) {
-      const map = new Map();
-      debitLines.forEach((line: any) => {
-        const d = format(new Date(line.date), "dd-MMM");
-        const rNum = line.booking?.assignedRoom?.roomNumber || line.folio?.room?.roomNumber || defaultRoomNum;
-        const groupKey = `${rNum}_${d}`;
-        if (!map.has(groupKey)) {
-          map.set(groupKey, {
-            description: `${rNum} ${d}`,
-            tariff: 0,
-            extBed: 0,
-            disc: 0,
-            cgst: 0,
-            sgst: 0,
-            fnb: 0,
-            others: 0,
-          });
-        }
-        const entry = map.get(groupKey);
-        if (line.lineType === "ROOM_CHARGE") {
-          entry.tariff += line.amount;
-        } else if (line.lineType === "EXTRA_BED") {
-          entry.extBed += line.amount;
-        } else if (line.lineType === "FOOD_AND_BEVERAGE" || line.lineType === "RESTAURANT") {
-          entry.fnb += line.amount;
-        } else if (line.lineType === "TAX_CGST") {
-          entry.cgst += line.amount;
-        } else if (line.lineType === "TAX_SGST") {
-          entry.sgst += line.amount;
-        } else if (line.lineType === "TAX") {
-          entry.cgst += line.amount / 2;
-          entry.sgst += line.amount / 2;
-        } else if (line.lineType === "DISCOUNT") {
-          entry.disc += line.amount;
-        } else {
-          entry.others += line.amount;
-        }
-      });
-      return Array.from(map.values());
+      // One row per room and night, with the GST of that night (shared helper).
+      return buildInvoiceRows(debitLines, defaultRoomNum);
     }
 
     // Default: generate itemized day-by-day charges if no ledger lines
     const rows = [];
     const checkIn = new Date(booking.checkInDate);
-    const dailyTariff = booking.ratePerNight ?? Math.round((booking.totalAmount - (booking.taxAmount || 0)) / nights);
-    const dailyExtBed = booking.extraPersonsWithBed ? 1200 : 0;
+    // The booking's own value excluding GST (correct whether or not its prices include GST).
+    const dailyTariff = Math.round(((booking.totalAmount - (booking.taxAmount || 0)) / nights) * 100) / 100;
+    const dailyExtBed = 0;
     const dailyTaxable = dailyTariff + dailyExtBed;
     // Tax actually charged on the booking, spread per night (never a guessed rate).
     const dailyCgst = Math.round(((booking.cgstAmount ?? (booking.taxAmount || 0) / 2) / Math.max(1, nights)) * 100) / 100;

@@ -512,7 +512,7 @@ export const convertEnquiryToBooking = async (req: Request, res: Response) => {
       let perRoom = { roomCharges: listed.roomCharges, taxAmount: listed.taxAmount, cgst: listed.cgst, sgst: listed.sgst, totalAmount: listed.totalAmount };
       if (enquiry.quotationAmount && enquiry.quotationAmount > 0) {
         const roomCharges = Math.round((enquiry.quotationAmount / rooms) * 100) / 100;
-        const tax = computeRoomTax(await loadGstRules(), { checkIn: enquiry.checkIn, checkOut: enquiry.checkOut, nightlyValue: roomCharges / Math.max(1, nights) });
+        const tax = computeRoomTax(await loadGstRules(), { checkIn: enquiry.checkIn, checkOut: enquiry.checkOut, nightlyValue: roomCharges / Math.max(1, nights), inclusive: listed.pricesIncludeTax });
         perRoom = { roomCharges, taxAmount: tax.tax, cgst: tax.cgst, sgst: tax.sgst, totalAmount: tax.total };
       }
 
@@ -554,6 +554,7 @@ export const convertEnquiryToBooking = async (req: Request, res: Response) => {
             cgstAmount: perRoom.cgst,
             sgstAmount: perRoom.sgst,
             totalAmount: perRoom.totalAmount,
+            pricesIncludeTax: listed.pricesIncludeTax,
             paidAmount: 0,
             discountAmount: 0,
             specialRequests: enquiry.specialRequirements,

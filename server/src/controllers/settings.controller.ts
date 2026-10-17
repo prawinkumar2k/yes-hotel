@@ -32,6 +32,13 @@ const settingsSchema = z.object({
   gstPercentage: z.number().min(0).optional(),
   /** Effective-dated GST rules; an empty array restores the built-in defaults. */
   gstRules: z.array(gstRuleSchema).optional(),
+  /** The hotel's GSTIN, printed on invoices: 15 characters, e.g. 29ABCDE1234F1Z5 (empty = not set). */
+  gstNumber: z.union([
+    z.literal(""),
+    z.string().trim().toUpperCase().regex(/^\d{2}[A-Z]{5}\d{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/, "GSTIN must be 15 characters, e.g. 29ABCDE1234F1Z5"),
+  ]).optional(),
+  /** Room prices include GST: the rate is what the guest pays and the GST is inside it. */
+  taxInclusiveRates: z.boolean().optional(),
   cancellationPolicy: z.string().min(10),
   instagramUrl: z.string().optional(),
   facebookUrl: z.string().optional(),

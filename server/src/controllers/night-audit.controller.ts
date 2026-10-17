@@ -11,7 +11,7 @@ import { CashierShift, CashierShiftStatus } from "../models/CashierShift";
 import { createAuditLog } from "../services/audit.service";
 import { transitionBookingStatus } from "../services/booking-state.service";
 import { releaseInventoryDays } from "../services/booking-safety.service";
-import { computeRoomNightTax, loadGstRules } from "../services/tax.service";
+import { computeRoomNightTax, loadGstRules, pricesIncludeTax } from "../services/tax.service";
 import { addDays, businessDayRange, nights as countNights, toBusinessDate } from "../../../shared/dates";
 import { ensureCurrentBusinessDate, getCurrentBusinessDate } from "../services/business-date.service";
 import { claimRoomNights, RoomUnavailableError } from "../services/room-nights.service";
@@ -130,9 +130,10 @@ export const getNightAuditPreview = async (_req: Request, res: Response) => {
       const plan = nightChargeFor(b, roomLines, auditYmd);
       if (!plan) continue;
       const nightlyRate = plan.rate;
-      const { cgst, sgst } = computeRoomNightTax(gstRules, auditYmd, nightlyRate);
+      const previewTax = computeRoomNightTax(gstRules, auditYmd, nightlyRate, pricesIncludeTax(b));
+      const { cgst, sgst } = previewTax;
 
-      estimatedRoomCharges += nightlyRate;
+      estimatedRoomCharges += previewTax.taxable;
       estimatedCGST += cgst;
       estimatedSGST += sgst;
 
@@ -141,10 +142,10 @@ export const getNightAuditPreview = async (_req: Request, res: Response) => {
         guestName: b.guestDetails ? `${b.guestDetails.firstName} ${b.guestDetails.lastName}`.trim() : "Guest",
         roomNumber: (b.assignedRoom as any)?.roomNumber || "Unassigned",
         categoryName: (b.roomCategory as any)?.name || "Standard",
-        tariff: nightlyRate,
+        tariff: previewTax.taxable,
         cgst,
         sgst,
-        total: nightlyRate + cgst + sgst,
+        total: previewTax.total,
       });
     }
 
@@ -251,7 +252,7 @@ function nightChargeFor(b: any, roomLines: any[], ymd: string): { rate: number }
   );
   if (covered) return null;
   const bookedNights = Math.max(1, countNights(b.checkInDate, b.checkOutDate));
-  const rate = Number(b.ratePerNight) || Math.round(((b.totalAmount || 0) - (b.taxAmount || 0)) / bookedNights) || Number(b.roomCategory?.basePrice) || 0;
+  const rate = Number(b.ratePerNight) || Math.round(((b.totalAmount || 0) - (pricesIncludeTax(b) ? 0 : b.taxAmount || 0)) / bookedNights) || Number(b.roomCategory?.basePrice) || 0;
   return { rate };
 }
 
@@ -354,13 +355,15 @@ export const runNightAudit = async (req: Request, res: Response) => {
         {
           const nightlyRate = plan.rate;
           if (nightlyRate > 0) {
+            // The booking's nightly price; when its prices include GST, the GST is inside it.
+            const nightTax = computeRoomNightTax(gstRules, auditYmd, nightlyRate, pricesIncludeTax(b));
             await postCharge(
               {
                 folioId: folio._id.toString(),
                 bookingId: b._id.toString(),
                 lineType: FolioLineType.ROOM_CHARGE,
                 description: `Room Tariff — night of ${auditYmd}`,
-                amount: nightlyRate,
+                amount: nightTax.taxable,
                 date: auditDate,
                 postedBy: actorId?.toString() || "SYSTEM_NIGHT_AUDIT",
                 businessDate: auditDate,
@@ -371,7 +374,6 @@ export const runNightAudit = async (req: Request, res: Response) => {
             );
 
             // Post GST breakdown (taxService: slab by nightly value, rule in force on the audit date)
-            const nightTax = computeRoomNightTax(gstRules, auditYmd, nightlyRate);
             const { cgst, sgst } = nightTax;
             const halfRate = nightTax.lines[0].rate / 2;
 

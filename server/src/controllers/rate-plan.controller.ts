@@ -2,7 +2,7 @@ import { Request, Response } from "express";
 import { RatePlan, MealPlanType } from "../models/RatePlan";
 import { createAuditLog } from "../services/audit.service";
 import { calculateDynamicBookingTotals } from "../services/pricing.service";
-import { loadGstRules } from "../services/tax.service";
+import { loadGstRules, loadRoomPricing } from "../services/tax.service";
 import { isBusinessDate } from "../../../shared/dates";
 
 
@@ -92,6 +92,7 @@ export const evaluateRatePreview = async (req: Request, res: Response) => {
       requestedDiscountAmount: Number(requestedDiscountAmount),
       userRole,
       gstRules: await loadGstRules(),
+      inclusive: (await loadRoomPricing()).inclusive,
       checkIn: isBusinessDate(req.body.checkIn) ? req.body.checkIn : undefined,
     });
 

@@ -12,6 +12,10 @@
  *
  * Supplies at the hotel are intra-state (place of supply = the property), so tax is
  * always split equally into CGST + SGST; there is no IGST for these supplies.
+ *
+ * Prices including GST (HotelSettings.taxInclusiveRates, recorded on each booking as
+ * pricesIncludeTax): the rate is what the guest pays. GST is worked out of it per night
+ * (slab chosen by the value excluding GST), so taxable value + CGST + SGST = the rate.
  */
 import { type BusinessDate, stayNights, toBusinessDate } from "../../../shared/dates";
 
@@ -109,9 +113,23 @@ export function gstRate(rules: GstRule[], category: TaxCategory, date: BusinessD
   return band.rate;
 }
 
+/** The band for a price that already includes GST: the slab whose limit the value excluding GST fits. */
+function gstRateInclusive(rules: GstRule[], category: TaxCategory, date: BusinessDate, grossPerNight: number): number {
+  const rule = ruleFor(rules, category, date);
+  const band = rule.bands.find((b) => b.upTo === null || grossPerNight / (1 + b.rate / 100) <= b.upTo)!;
+  return band.rate;
+}
+
 function line(category: TaxCategory, date: BusinessDate, taxable: number, rate: number): TaxLine {
   const half = round2((taxable * rate) / 200);
   return { category, date, taxable: round2(taxable), rate, cgst: half, sgst: half, tax: round2(half * 2) };
+}
+
+/** GST inside a price that includes it: tax = price × rate / (100 + rate); taxable = price − tax. */
+function lineInclusive(category: TaxCategory, date: BusinessDate, gross: number, rate: number): TaxLine {
+  const tax = round2((gross * rate) / (100 + rate));
+  const cgst = round2(tax / 2);
+  return { category, date, taxable: round2(gross - tax), rate, cgst, sgst: round2(tax - cgst), tax };
 }
 
 function sum(lines: TaxLine[]): TaxResult {
@@ -125,22 +143,47 @@ function sum(lines: TaxLine[]): TaxResult {
 /**
  * Room-stay GST. `nightlyValue` is what is charged per room per night after discounts
  * (it selects the slab). Each night is taxed under the rule in force on its date.
+ * With `inclusive`, `nightlyValue` already includes GST: `taxable` is the value excluding
+ * GST and `total` equals nightlyValue × nights × rooms.
  */
 export function computeRoomTax(
   rules: GstRule[],
-  stay: { checkIn: Date | string; checkOut: Date | string; nightlyValue: number; rooms?: number },
+  stay: { checkIn: Date | string; checkOut: Date | string; nightlyValue: number; rooms?: number; inclusive?: boolean },
 ): TaxResult {
   const rooms = Math.max(1, stay.rooms ?? 1);
   const dates = stayNights(stay.checkIn, stay.checkOut);
   const nightsList = dates.length ? dates : [toBusinessDate(stay.checkIn)]; // day use: one charge at check-in date
   return sum(
-    nightsList.map((d) => line("ROOM", d, stay.nightlyValue * rooms, gstRate(rules, "ROOM", d, stay.nightlyValue))),
+    nightsList.map((d) =>
+      stay.inclusive
+        ? lineInclusive("ROOM", d, stay.nightlyValue * rooms, gstRateInclusive(rules, "ROOM", d, stay.nightlyValue))
+        : line("ROOM", d, stay.nightlyValue * rooms, gstRate(rules, "ROOM", d, stay.nightlyValue)),
+    ),
   );
 }
 
 /** One room night (night audit posting). */
-export function computeRoomNightTax(rules: GstRule[], nightDate: BusinessDate, nightlyValue: number): TaxResult {
-  return sum([line("ROOM", nightDate, nightlyValue, gstRate(rules, "ROOM", nightDate, nightlyValue))]);
+export function computeRoomNightTax(rules: GstRule[], nightDate: BusinessDate, nightlyValue: number, inclusive = false): TaxResult {
+  return sum([
+    inclusive
+      ? lineInclusive("ROOM", nightDate, nightlyValue, gstRateInclusive(rules, "ROOM", nightDate, nightlyValue))
+      : line("ROOM", nightDate, nightlyValue, gstRate(rules, "ROOM", nightDate, nightlyValue)),
+  ]);
+}
+
+/**
+ * Charge lines whose amounts include GST, reduced to their values excluding GST so that
+ * (sum of the returned amounts) + `tax` = (sum of the given amounts). The tax is shared in
+ * proportion to each amount; the last positive line absorbs the rounding.
+ */
+export function netOfIncludedTax(amounts: number[], tax: number): number[] {
+  const gross = amounts.reduce((t, a) => t + Math.max(0, a), 0);
+  if (gross <= 0 || tax <= 0) return amounts.map((a) => round2(a));
+  const out = amounts.map((a) => (a > 0 ? round2(a - (tax * a) / gross) : round2(a)));
+  const lastIdx = amounts.map((a, i) => (a > 0 ? i : -1)).filter((i) => i >= 0).pop()!;
+  const drift = round2(gross - tax - out.reduce((t, a, i) => t + (amounts[i] > 0 ? a : 0), 0));
+  out[lastIdx] = round2(out[lastIdx] + drift);
+  return out;
 }
 
 /** FOOD / SERVICE supply on a date. */
@@ -195,12 +238,13 @@ export function computeChargeTax(
   lineType: string,
   amount: number,
   date: Date | string,
-  opts: { nightlyValue?: number } = {},
+  opts: { nightlyValue?: number; inclusive?: boolean } = {},
 ): TaxResult | null {
   const category = taxCategoryForLine(lineType);
   if (!category) return null;
   const d = toBusinessDate(date);
   if (category === "ROOM") {
+    if (opts.inclusive) return sum([lineInclusive("ROOM", d, amount, gstRateInclusive(rules, "ROOM", d, opts.nightlyValue ?? amount))]);
     const rate = gstRate(rules, "ROOM", d, opts.nightlyValue ?? amount);
     return sum([line("ROOM", d, amount, rate)]);
   }
@@ -216,6 +260,16 @@ export async function loadGstRules(): Promise<GstRule[]> {
   validateGstRules(custom);
   return custom;
 }
+
+/** GST rules plus whether room prices include GST (Admin → Settings), for new bookings. */
+export async function loadRoomPricing(): Promise<{ rules: GstRule[]; inclusive: boolean }> {
+  const { HotelSettings } = await import("../models/HotelSettings");
+  const settings: any = await HotelSettings.findOne().sort({ updatedAt: -1 }).select("taxInclusiveRates").lean();
+  return { rules: await loadGstRules(), inclusive: settings?.taxInclusiveRates === true };
+}
+
+/** Whether a booking's prices include GST (recorded when it was made). */
+export const pricesIncludeTax = (booking: any) => booking?.pricesIncludeTax === true;
 
 /** Async conveniences for callers that do not hold the rules already. */
 export const taxService = {

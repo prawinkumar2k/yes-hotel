@@ -33,7 +33,7 @@ beforeAll(async () => {
 
 afterAll(async () => {
   if (original) {
-    const restore = { ...original };
+    const restore = { ...original, gstNumber: original.gstNumber ?? "", taxInclusiveRates: original.taxInclusiveRates === true };
     for (const k of ["_id", "__v", "createdAt", "updatedAt"]) delete restore[k];
     await call("PATCH", "/api/settings", restore);
   }
@@ -65,5 +65,18 @@ describe("Admin settings save", () => {
     const body = { ...original, checkInTime: "12 PM" };
     for (const k of ["_id", "__v", "createdAt", "updatedAt"]) delete body[k];
     expect((await call("PATCH", "/api/settings", body)).status).toBe(400);
+  });
+});
+
+describe("GSTIN and GST-inclusive prices in Settings", () => {
+  it("saves a valid GSTIN and the 'prices include GST' switch; refuses a malformed GSTIN", async () => {
+    const body = { ...original, gstNumber: "29abcde1234f1z5", taxInclusiveRates: true };
+    for (const k of ["_id", "__v", "createdAt", "updatedAt"]) delete body[k];
+    expect((await call("PATCH", "/api/settings", body)).status).toBe(200);
+    const saved = (await call("GET", "/api/settings")).json.data;
+    expect(saved.gstNumber).toBe("29ABCDE1234F1Z5");
+    expect(saved.taxInclusiveRates).toBe(true);
+    expect((await call("GET", "/api/settings/public")).json.data.gstNumber).toBe("29ABCDE1234F1Z5");
+    expect((await call("PATCH", "/api/settings", { ...body, gstNumber: "12345" })).status).toBe(400);
   });
 });

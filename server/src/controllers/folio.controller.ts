@@ -14,7 +14,7 @@ import {
   findFolioForBooking,
   reverseFolioLine,
 } from "../services/folio.service";
-import { computeChargeTax, computeRoomTax, loadGstRules, taxCategoryForLine } from "../services/tax.service";
+import { computeChargeTax, computeRoomTax, loadGstRules, netOfIncludedTax, pricesIncludeTax, taxCategoryForLine } from "../services/tax.service";
 import { nights as countNights } from "../../../shared/dates";
 
 /**
@@ -259,6 +259,13 @@ export const postFolioCharge = async (req: Request, res: Response) => {
       }
     }
 
+    // GST for the charge. When the booking's prices include GST, a room-type charge typed in
+    // (early check-in, extra bed, …) already includes it: the line carries the value excluding GST.
+    const { Booking } = await import("../models/Booking");
+    const chargeBooking: any = await Booking.findById(folio.booking).select("pricesIncludeTax").lean();
+    const inclusiveCharge = Boolean(applyTax) && taxCategoryForLine(lineType) === "ROOM" && pricesIncludeTax(chargeBooking);
+    const chargeTax = applyTax && taxCategoryForLine(lineType) ? computeChargeTax(await loadGstRules(), lineType, numAmount, new Date(), { inclusive: inclusiveCharge }) : null;
+
     // 1. Post the main charge line
     const { line, folio: updatedFolio } = await postCharge(
       {
@@ -266,7 +273,7 @@ export const postFolioCharge = async (req: Request, res: Response) => {
         bookingId: folio.booking.toString(),
         lineType: lineType as FolioLineType,
         description,
-        amount: numAmount,
+        amount: inclusiveCharge && chargeTax ? chargeTax.taxable : numAmount,
         quantity: quantity ? Number(quantity) : 1,
         unitPrice: unitPrice ? Number(unitPrice) : numAmount,
         date: new Date(),
@@ -293,8 +300,8 @@ export const postFolioCharge = async (req: Request, res: Response) => {
 
     // 2. Optional automatic CGST / SGST split calculation for taxable charges
     // GST by supply category of the line (taxService): room, food or service.
-    if (applyTax && taxCategoryForLine(lineType)) {
-      const tax = computeChargeTax(await loadGstRules(), lineType, numAmount, new Date())!;
+    if (chargeTax) {
+      const tax = chargeTax;
       if (tax.cgst > 0) {
         await postCharge(
           {
@@ -462,14 +469,22 @@ export const updateBookingBill = async (req: Request, res: Response) => {
         }
         const post = (lineType: FolioLineType, description: string, amount: number) =>
           amount > 0 ? postCharge({ folioId: String(folio._id), bookingId: String(booking._id), lineType, description, amount, date: checkIn, postedBy: actorId, notes: editNote }, { req, session }) : null;
-        await post(FolioLineType.ROOM_CHARGE, `Room Tariff (${nights} Night${nights > 1 ? "s" : ""} @ ₹${newRate.toLocaleString("en-IN")}/night)`, newRate * nights);
-        await post(FolioLineType.EXTRA_BED, "Extra Bed / Person Charges", newExtraBed);
-        await post(FolioLineType.ADDON, otherChargesDesc || "Other Charges", newOther);
-        await post(FolioLineType.DISCOUNT, "Discount / Price Concession", newDiscount);
+        // When the booking's prices include GST, the amounts typed include it: the charge lines
+        // carry the values excluding GST and the bill total stays at the amounts typed.
+        const inclusive = pricesIncludeTax(booking);
         let tax = { tax: 0, cgst: 0, sgst: 0 };
         if (applyTax) {
           const taxable = Math.max(0, newRate * nights + newExtraBed + newOther - newDiscount);
-          tax = computeRoomTax(await loadGstRules(), { checkIn, checkOut, nightlyValue: taxable / nights });
+          tax = computeRoomTax(await loadGstRules(), { checkIn, checkOut, nightlyValue: taxable / nights, inclusive });
+        }
+        const [netRoom, netExtra, netOther] = inclusive && tax.tax > 0
+          ? netOfIncludedTax([newRate * nights, newExtraBed, newOther, -newDiscount], tax.tax)
+          : [newRate * nights, newExtraBed, newOther];
+        await post(FolioLineType.ROOM_CHARGE, `Room Tariff (${nights} Night${nights > 1 ? "s" : ""} @ ₹${newRate.toLocaleString("en-IN")}/night)`, netRoom);
+        await post(FolioLineType.EXTRA_BED, "Extra Bed / Person Charges", netExtra);
+        await post(FolioLineType.ADDON, otherChargesDesc || "Other Charges", netOther);
+        await post(FolioLineType.DISCOUNT, "Discount / Price Concession", newDiscount);
+        if (applyTax) {
           await post(FolioLineType.TAX_CGST, "CGST on Room Tariff", tax.cgst);
           await post(FolioLineType.TAX_SGST, "SGST on Room Tariff", tax.sgst);
         }
@@ -479,7 +494,7 @@ export const updateBookingBill = async (req: Request, res: Response) => {
         booking.cgstAmount = tax.cgst;
         booking.sgstAmount = tax.sgst;
         booking.discountAmount = newDiscount;
-        booking.totalAmount = Math.round((newRate * nights + newExtraBed + newOther - newDiscount + tax.tax) * 100) / 100;
+        booking.totalAmount = Math.round((newRate * nights + newExtraBed + newOther - newDiscount + (inclusive ? 0 : tax.tax)) * 100) / 100;
         await booking.save({ session });
       });
     } finally {

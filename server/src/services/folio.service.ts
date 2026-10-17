@@ -410,45 +410,10 @@ export async function openFolioForBooking(
 
     const hasRoomCharge = await FolioLine.exists({ folio: folio._id, lineType: FolioLineType.ROOM_CHARGE }).session(session);
     if (!hasRoomCharge) {
-      const checkIn = new Date(booking.checkInDate || Date.now());
-      const checkOut = new Date(booking.checkOutDate || Date.now());
-      const nights = Math.max(1, countNights(checkIn, checkOut));
-      const rate = booking.ratePerNight || Math.round(((booking.totalAmount || 0) - (booking.taxAmount || 0)) / nights);
-      const roomTotal = rate * nights;
-      if (roomTotal > 0) {
-        await postCharge(
-          {
-            folioId,
-            bookingId,
-            lineType: FolioLineType.ROOM_CHARGE,
-            description: `Room Tariff (${nights} Night${nights > 1 ? "s" : ""} @ ₹${rate.toLocaleString()}/night)`,
-            amount: roomTotal,
-            date: checkIn,
-            postedBy: actorId,
-          },
-          { req: opts.req, session },
-        );
-        // TODO(step 2): extra-bed rate and tax slab come from settings / taxService.
-        const extraBed = (booking.extraPersonsWithBed || 0) * 1200 * nights;
-        if (extraBed > 0) {
-          await postCharge(
-            { folioId, bookingId, lineType: FolioLineType.EXTRA_BED, description: "Extra Bed Charges", amount: extraBed, date: checkIn, postedBy: actorId },
-            { req: opts.req, session },
-          );
-        }
-        const tax = computeRoomTax(await loadGstRules(), { checkIn, checkOut, nightlyValue: (roomTotal + extraBed) / nights });
-        for (const [lineType, amount, label] of [
-          [FolioLineType.TAX_CGST, tax.cgst, "CGST"],
-          [FolioLineType.TAX_SGST, tax.sgst, "SGST"],
-        ] as const) {
-          if (amount > 0) {
-            await postCharge(
-              { folioId, bookingId, lineType, description: `${label} on Room Tariff`, amount, date: checkIn, postedBy: actorId },
-              { req: opts.req, session },
-            );
-          }
-        }
-      }
+      // The whole stay (room every night, extras, CGST + SGST) — one implementation for every path.
+      const { postStayCharges } = await import("./stay-charges.service");
+      const roomNumber = (booking.assignedRoom as any)?.roomNumber;
+      await postStayCharges({ booking, folioId, roomNumber, postedBy: actorId, req: opts.req, session });
     }
 
     await postRecordedPaymentsToFolio(folioId, bookingId, actorId, { req: opts.req, session });

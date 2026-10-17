@@ -185,6 +185,8 @@ export interface IBooking extends Document {
   checkOutDate: Date;
   /** Every stay extension, oldest first: shown on the registration card and invoice. */
   stayExtensions?: { fromCheckOut: Date; toCheckOut: Date; nights: number; amount: number; at: Date; by?: mongoose.Types.ObjectId }[];
+  /** Prices include GST (the rate is what the guest pays; GST is inside it). Recorded when the booking is made. */
+  pricesIncludeTax?: boolean;
   adults: number;
   children: number;
   status: BookingStatus;
@@ -359,6 +361,7 @@ const BookingSchema = new Schema<IBooking>(
     assignedRoom: { type: Schema.Types.ObjectId, ref: "Room" },
     checkInDate: { type: Date, required: true },
     checkOutDate: { type: Date, required: true },
+    pricesIncludeTax: { type: Boolean },
     stayExtensions: {
       type: [{
         _id: false,

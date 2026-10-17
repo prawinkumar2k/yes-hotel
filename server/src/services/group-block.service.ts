@@ -13,7 +13,7 @@ import mongoose from "mongoose";
 import { GroupBooking, GroupBookingStatus } from "../models/GroupBooking";
 import { Booking, BookingStatus } from "../models/Booking";
 import { prepareInventoryDays, claimInventoryDays, releaseInventoryDays } from "./booking-safety.service";
-import { computeRoomTax, loadGstRules } from "./tax.service";
+import { computeRoomTax, loadRoomPricing } from "./tax.service";
 import { nights as countNights } from "../../../shared/dates";
 
 export class GroupRuleError extends Error {
@@ -106,7 +106,8 @@ export async function pickupGroupRoom(
   if ((block.roomsHeld ?? 0) < 1) throw new GroupRuleError(`No held rooms left in block "${block.categoryName}"`, 409);
 
   const nights = countNights(group.checkIn, group.checkOut);
-  const tax = computeRoomTax(await loadGstRules(), { checkIn: group.checkIn, checkOut: group.checkOut, nightlyValue: block.ratePerRoom });
+  const { rules, inclusive } = await loadRoomPricing();
+  const tax = computeRoomTax(rules, { checkIn: group.checkIn, checkOut: group.checkOut, nightlyValue: block.ratePerRoom, inclusive });
   const { generateBookingReference } = await import("../utils/booking-reference");
   const [booking] = await Booking.create(
     [{
@@ -128,6 +129,7 @@ export async function pickupGroupRoom(
       cgstAmount: tax.cgst,
       sgstAmount: tax.sgst,
       totalAmount: tax.total,
+      pricesIncludeTax: inclusive,
       paidAmount: 0,
       discountAmount: 0,
       paymentStatus: "UNPAID" as any,

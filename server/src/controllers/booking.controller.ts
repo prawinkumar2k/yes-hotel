@@ -8,7 +8,7 @@ import { Payment } from "../models/Payment";
 import { Property } from "../models/Property";
 import { HousekeepingTask, HousekeepingStatus, HousekeepingPriority, HousekeepingTaskType } from "../models/HousekeepingTask";
 import { validateAndCalculateCoupon } from "../services/coupon.service";
-import { computeRoomTax, loadGstRules, splitTax } from "../services/tax.service";
+import { computeRoomTax, loadGstRules, loadRoomPricing, pricesIncludeTax, splitTax } from "../services/tax.service";
 import { logger } from "../services/logger.service";
 import { IllegalBookingTransitionError, transitionBookingStatus } from "../services/booking-state.service";
 import { transitionRoomStatus } from "../services/room-state.service";
@@ -184,12 +184,16 @@ export async function priceStay(params: {
     appliedCoupon = coupon.code;
   }
 
-  const tax = computeRoomTax(await loadGstRules(), {
+  // Prices including GST (Admin → Settings): the guest pays the room price; GST is inside it.
+  const { rules, inclusive } = await loadRoomPricing();
+  const tax = computeRoomTax(rules, {
     checkIn: params.checkIn,
     checkOut: params.checkOut,
     nightlyValue: Math.max(0, roomCharges - discountAmount) / Math.max(1, nights),
+    inclusive,
   });
   return {
+    pricesIncludeTax: inclusive,
     nights,
     roomCharges,
     discountAmount,
@@ -326,7 +330,7 @@ export const createBooking = async (req: Request, res: Response) => {
     // Calculate price — server is the sole source of truth for pricing (same function as /quote)
     const category = await RoomCategory.findById(roomCategoryId);
     if (!category) return res.status(404).json({ success: false, message: "Room category not found" });
-    const { nights, discountAmount, appliedCoupon, taxAmount, totalAmount } = await priceStay({
+    const { nights, discountAmount, appliedCoupon, taxAmount, totalAmount, pricesIncludeTax: inclusivePrices } = await priceStay({
       category,
       checkIn,
       checkOut,
@@ -372,6 +376,7 @@ export const createBooking = async (req: Request, res: Response) => {
               status: BookingStatus.PENDING,
               totalAmount,
               taxAmount,
+              pricesIncludeTax: inclusivePrices,
               discountAmount,
               appliedCoupon,
               specialRequests,
@@ -1277,7 +1282,8 @@ export const checkExtensionConflict = async (req: Request, res: Response) => {
     const basePrice = agreedNightlyRate(booking);
     const additionalTariff = basePrice * additionalNights;
     // Quote exactly what extendStay posts: taxService room GST per added night.
-    const extTax = computeRoomTax(await loadGstRules(), { checkIn: currentCheckOut, checkOut: targetCheckOut, nightlyValue: basePrice });
+    // The agreed rate; when the booking's prices include GST, the GST is inside it.
+    const extTax = computeRoomTax(await loadGstRules(), { checkIn: currentCheckOut, checkOut: targetCheckOut, nightlyValue: basePrice, inclusive: pricesIncludeTax(booking) });
     const additionalTax = extTax.tax;
     const additionalTotal = extTax.total;
 
@@ -1329,7 +1335,8 @@ export const extendStay = async (req: Request, res: Response) => {
     const basePrice = agreedNightlyRate(booking);
     const additionalTariff = basePrice * additionalNights;
     // Room GST per added night via taxService (slab by per-night value, rule in force on each night).
-    const extTax = computeRoomTax(await loadGstRules(), { checkIn: currentCheckOut, checkOut: targetCheckOut, nightlyValue: basePrice });
+    // The agreed rate; when the booking's prices include GST, the GST is inside it.
+    const extTax = computeRoomTax(await loadGstRules(), { checkIn: currentCheckOut, checkOut: targetCheckOut, nightlyValue: basePrice, inclusive: pricesIncludeTax(booking) });
     const extensionRatePct = Math.max(...extTax.lines.map((l) => l.rate));
     const additionalTaxCgst = extTax.cgst;
     const additionalTaxSgst = extTax.sgst;
@@ -1409,7 +1416,7 @@ export const extendStay = async (req: Request, res: Response) => {
           lineType: FolioLineType.ROOM_CHARGE,
           description: `Stay Extension (${additionalNights} extra night${additionalNights > 1 ? "s" : ""})`,
           coversNights: Array.from({ length: additionalNights }, (_, i) => addBusinessDays(toBusinessDate(currentCheckOut), i)),
-          amount: additionalTariff,
+          amount: extTax.taxable, // value excluding GST (equals the tariff unless the price includes GST)
           date: new Date(),
           postedBy: actorId?.toString() || "FRONT_DESK",
           notes: notes || `Extended check-out to ${targetCheckOut.toLocaleDateString()}`,

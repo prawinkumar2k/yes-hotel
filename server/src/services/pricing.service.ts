@@ -16,6 +16,8 @@ export interface DynamicPricingParams {
   userRole?: string; // "RECEPTIONIST", "MANAGER", "ADMIN", etc.
   /** GST rules in force (taxService.rules()). */
   gstRules: GstRule[];
+  /** Rates include GST (Admin → Settings). */
+  inclusive?: boolean;
   /** First night of the stay; defaults to today at the property. Each night is taxed under the rule of its date. */
   checkIn?: BusinessDate;
 }
@@ -85,6 +87,7 @@ export function calculateDynamicBookingTotals(params: DynamicPricingParams): Dyn
     checkIn,
     checkOut: addDays(checkIn, nights),
     nightlyValue: taxableAmount / nights,
+    inclusive: params.inclusive,
   });
   const taxRate = Math.max(...tax.lines.map((l) => l.rate)) / 100;
   const { cgst, sgst } = tax;

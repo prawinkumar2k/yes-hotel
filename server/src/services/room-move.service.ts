@@ -18,7 +18,7 @@ import { FolioLine, FolioLineType } from "../models/FolioLine";
 import { HousekeepingTask, HousekeepingStatus, HousekeepingPriority, HousekeepingTaskType } from "../models/HousekeepingTask";
 import { RoomNight } from "../models/RoomNight";
 import { addDays, toBusinessDate, todayBusinessDate } from "../../../shared/dates";
-import { computeRoomTax, loadGstRules } from "./tax.service";
+import { computeRoomTax, loadGstRules, pricesIncludeTax } from "./tax.service";
 import { postCharge } from "./folio.service";
 import { createAuditLog } from "./audit.service";
 
@@ -105,9 +105,11 @@ export async function moveBookingToRoom(p: {
         const nights = remaining.filter((d) => charged.has(d));
         if (nights.length) {
           const rules = await loadGstRules();
-          const oldTax = computeRoomTax(rules, { checkIn: nights[0], checkOut: addDays(nights[nights.length - 1], 1), nightlyValue: oldRate });
-          const newTax = computeRoomTax(rules, { checkIn: nights[0], checkOut: addDays(nights[nights.length - 1], 1), nightlyValue: newRate });
-          diffCharge = r2((newRate - oldRate) * nights.length);
+          // When the booking's prices include GST, the rates include it: compare values excluding GST.
+          const inclusive = pricesIncludeTax(booking);
+          const oldTax = computeRoomTax(rules, { checkIn: nights[0], checkOut: addDays(nights[nights.length - 1], 1), nightlyValue: oldRate, inclusive });
+          const newTax = computeRoomTax(rules, { checkIn: nights[0], checkOut: addDays(nights[nights.length - 1], 1), nightlyValue: newRate, inclusive });
+          diffCharge = inclusive ? r2(newTax.taxable - oldTax.taxable) : r2((newRate - oldRate) * nights.length);
           diffTax = { cgst: r2(newTax.cgst - oldTax.cgst), sgst: r2(newTax.sgst - oldTax.sgst) };
           const label = `Room move to ${room.roomNumber}: ₹${oldRate.toLocaleString("en-IN")} → ₹${newRate.toLocaleString("en-IN")} × ${nights.length} night${nights.length > 1 ? "s" : ""}`;
           const roomLine = lines.find((l) => l.lineType === FolioLineType.ROOM_CHARGE);
