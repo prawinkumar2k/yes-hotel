@@ -29,6 +29,41 @@ export const cancelBooking = async (req: Request, res: Response) => {
     }
 
     const currentStatus = booking.status;
+
+    // A guest already in the room: staff only — the bill is reversed and the room freed.
+    if (currentStatus === BookingStatus.CHECKED_IN) {
+      if (!isAdmin) return res.status(400).json({ success: false, message: "You are already checked in. Please speak to Reception." });
+      const { cancelCheckedInStay, CancelStayError } = await import("../services/cancel-stay.service");
+      try {
+        const out = await cancelCheckedInStay({ bookingId: String(booking._id), reason, cancellationCharge: req.body?.cancellationCharge, actorId: String(req.user?.id), req });
+        if (out.refundDue > 0) {
+          await queueForVerification({
+            type: VerificationType.CANCEL_WITH_ADVANCE,
+            subjectKey: `booking:${booking._id}:cancel`,
+            returnQueue: "FRONT_DESK",
+            summary: `Checked-in stay cancelled; ₹${out.refundDue.toLocaleString("en-IN")} to refund`,
+            amount: out.refundDue,
+            bookingId: booking._id,
+            details: { previousStatus: currentStatus, reason, cancellationCharge: out.cancellationCharge },
+            note: reason,
+            req,
+          });
+        }
+        const updated = await Booking.findById(booking._id);
+        return res.json({
+          success: true,
+          message: `Stay cancelled${out.roomNumber ? `; room ${out.roomNumber} sent for cleaning` : ""}` + (out.refundDue > 0 ? `. ₹${out.refundDue.toLocaleString("en-IN")} is due back to the guest — refund it from the bill or Advances.` : "")
+            + (out.amountDue > 0 ? `. ₹${out.amountDue.toLocaleString("en-IN")} of the cancellation charge is still to be collected.` : "")
+            + (out.refundDue > 0 || out.amountDue > 0 ? "" : "."),
+          data: updated,
+          cancellation: out,
+        });
+      } catch (e: any) {
+        if (e instanceof CancelStayError) return res.status(e.status).json({ success: false, message: e.message });
+        throw e;
+      }
+    }
+
     try {
       await transitionBookingStatus(booking, BookingStatus.CANCELLED, {
         req,

@@ -239,6 +239,33 @@ export default function AdminFrontDesk() {
   };
 
 
+  // Cancel a stay after check-in: the bill is reversed, the room goes to housekeeping.
+  const [cancelStay, setCancelStay] = useState<{ booking: any; reason: string; charge: string } | null>(null);
+  const handleCancelStay = async () => {
+    if (!cancelStay || cancelStay.reason.trim().length < 3) return;
+    setSubmittingAction(true);
+    try {
+      const token = getStoredAuthToken();
+      const res = await fetch(`/api/bookings/${cancelStay.booking._id}/cancel`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify({ reason: cancelStay.reason.trim(), cancellationCharge: Number(cancelStay.charge) || 0 }),
+      });
+      const json = await res.json().catch(() => ({ success: false, message: `Server error (${res.status})` }));
+      if (json.success) {
+        toast({ title: "Stay Cancelled", description: json.message });
+        setCancelStay(null);
+        queryClient.invalidateQueries();
+      } else {
+        toast({ title: "Could not cancel the stay", description: json.message, variant: "destructive" });
+      }
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    } finally {
+      setSubmittingAction(false);
+    }
+  };
+
   // Handlers for Room Move
   const openRoomMove = (booking: any) => {
     setSelectedRoomId("");
@@ -1140,6 +1167,13 @@ export default function AdminFrontDesk() {
                                       <Clock size={13} /> Extend
                                     </button>
                                     <button
+                                      onClick={() => setCancelStay({ booking: b, reason: "", charge: "" })}
+                                      className="inline-flex items-center gap-1 text-xs font-semibold bg-gray-100 text-red-600 hover:bg-red-500/10 px-2.5 py-1.5 rounded-lg border border-red-500/30 transition"
+                                      title="Cancel this stay (checked in by mistake / guest left)"
+                                    >
+                                      <X size={13} /> Cancel Stay
+                                    </button>
+                                    <button
                                       onClick={() => openCheckOut(b)}
                                       className="inline-flex items-center gap-1 text-xs font-bold bg-blue-600 hover:bg-blue-500 text-white px-3 py-1.5 rounded-lg shadow-md transition"
                                     >
@@ -1233,6 +1267,15 @@ export default function AdminFrontDesk() {
                                               >
                                                 Extend
                                               </button>
+                                              {gb.status === "CHECKED_IN" && (
+                                                <button
+                                                  type="button"
+                                                  onClick={() => setCancelStay({ booking: gb, reason: "", charge: "" })}
+                                                  className="px-2.5 py-1 text-[11px] font-semibold bg-white hover:bg-red-50 text-red-700 rounded border border-red-300 transition"
+                                                >
+                                                  Cancel Stay
+                                                </button>
+                                              )}
                                               <button
                                                 type="button"
                                                 onClick={() => openCheckOut(gb)}
@@ -1551,6 +1594,62 @@ export default function AdminFrontDesk() {
                   {submittingAction ? "Sending..." : "Send to Cashier & Billing"}
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* CANCEL A CHECKED-IN STAY */}
+      {cancelStay && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white border border-gray-200 rounded-2xl w-full max-w-md p-6 shadow-2xl space-y-5 text-gray-800">
+            <div className="flex items-center justify-between border-b border-gray-200 pb-4">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="text-red-500" size={20} />
+                <h3 className="font-serif text-lg font-bold">Cancel Stay — Room {roomOf(cancelStay.booking)}</h3>
+              </div>
+              <button onClick={() => setCancelStay(null)} className="text-gray-500 hover:text-gray-800">
+                <X size={20} />
+              </button>
+            </div>
+            <p className="text-xs text-gray-600">
+              {cancelStay.booking.guestDetails?.firstName} {cancelStay.booking.guestDetails?.lastName} ({cancelStay.booking.bookingReference}) is checked in.
+              Cancelling reverses every room charge and its GST, sends the room to housekeeping and frees its nights.
+              What the guest paid is shown as due back so you can refund it.
+            </p>
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 mb-1">Reason (required)</label>
+              <input
+                type="text"
+                placeholder="e.g. Checked in by mistake, guest left due to emergency"
+                value={cancelStay.reason}
+                onChange={(e) => setCancelStay({ ...cancelStay, reason: e.target.value })}
+                className="w-full bg-gray-100 border border-gray-200 text-sm text-gray-800 rounded-xl p-2.5 focus:border-[#c9a227]"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 mb-1">Cancellation charge ₹ (optional)</label>
+              <input
+                type="number"
+                min="0"
+                placeholder="0 — e.g. for hours the room was used"
+                value={cancelStay.charge}
+                onChange={(e) => setCancelStay({ ...cancelStay, charge: e.target.value })}
+                className="w-full bg-gray-100 border border-gray-200 text-sm text-gray-800 rounded-xl p-2.5"
+              />
+              <p className="mt-1 text-[11px] text-gray-500">Billed as accommodation with GST and taken from what the guest already paid.</p>
+            </div>
+            <div className="flex justify-end gap-3 border-t border-gray-200 pt-4">
+              <button onClick={() => setCancelStay(null)} className="px-4 py-2 bg-gray-100 text-gray-600 rounded-xl text-xs font-semibold">
+                Keep Stay
+              </button>
+              <button
+                disabled={submittingAction || cancelStay.reason.trim().length < 3}
+                onClick={handleCancelStay}
+                className="px-5 py-2 bg-red-600 hover:bg-red-500 text-white rounded-xl text-xs font-bold shadow-lg disabled:opacity-50"
+              >
+                {submittingAction ? "Cancelling..." : "Confirm Cancel Stay"}
+              </button>
             </div>
           </div>
         </div>

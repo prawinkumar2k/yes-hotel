@@ -48,15 +48,18 @@ export default function AdminBookingDetails() {
   
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [cancelReason, setCancelReason] = useState("");
+  const [cancelCharge, setCancelCharge] = useState("");
 
   const cancelMutation = useMutation({
-    mutationFn: () => apiFetch(`/api/bookings/${id}/cancel`, user?.token, "POST", { reason: cancelReason }),
+    mutationFn: () => apiFetch(`/api/bookings/${id}/cancel`, user?.token, "POST", { reason: cancelReason, cancellationCharge: Number(cancelCharge) || 0 }),
     onSuccess: (resData) => {
       if (resData.success) {
-        toast({ title: "Booking Cancelled", description: "Booking has been cancelled by admin." });
+        toast({ title: "Booking Cancelled", description: resData.message || "Booking has been cancelled." });
         queryClient.invalidateQueries({ queryKey: ["adminBooking", id] });
+        queryClient.invalidateQueries({ queryKey: ["folio"] });
         setShowCancelModal(false);
         setCancelReason("");
+        setCancelCharge("");
       } else {
         toast({ title: "Error", description: resData.message, variant: "destructive" });
       }
@@ -341,10 +344,16 @@ export default function AdminBookingDetails() {
       {showCancelModal && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-6">
-            <h3 className="text-lg font-bold text-gray-900 mb-4">Cancel Booking</h3>
-            <p className="text-sm text-gray-500 mb-4">
-              Are you sure you want to cancel this booking? If the reason is an emergency, the system may process a refund automatically.
-            </p>
+            <h3 className="text-lg font-bold text-gray-900 mb-4">{booking.status === "CHECKED_IN" ? "Cancel Stay (guest checked in)" : "Cancel Booking"}</h3>
+            {booking.status === "CHECKED_IN" ? (
+              <p className="text-sm text-gray-500 mb-4">
+                Every room charge and its GST is reversed, the room goes to housekeeping and its nights become free to sell. What the guest paid is shown as due back so you can refund it.
+              </p>
+            ) : (
+              <p className="text-sm text-gray-500 mb-4">
+                Are you sure you want to cancel this booking? If the reason is an emergency, the system may process a refund automatically.
+              </p>
+            )}
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700 mb-1">Cancellation Reason</label>
               <textarea 
@@ -356,6 +365,20 @@ export default function AdminBookingDetails() {
                 required
               />
             </div>
+            {booking.status === "CHECKED_IN" && (
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Cancellation charge (₹, optional)</label>
+                <input
+                  type="number"
+                  min={0}
+                  className="w-full border border-gray-300 rounded shadow-sm text-sm p-2"
+                  value={cancelCharge}
+                  onChange={(e) => setCancelCharge(e.target.value)}
+                  placeholder="0 — e.g. for hours the room was used"
+                />
+                <p className="text-xs text-gray-500 mt-1">Billed as accommodation with GST, paid from what the guest already paid.</p>
+              </div>
+            )}
             <div className="flex justify-end gap-3">
               <button onClick={() => setShowCancelModal(false)} className="px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded">Close</button>
               <button 

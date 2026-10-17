@@ -55,10 +55,18 @@ export function assertLegalBookingTransition(from: BookingStatus, to: BookingSta
 export async function transitionBookingStatus(
   booking: IBooking,
   to: BookingStatus,
-  opts: { req?: Request; action: string; metadata?: Record<string, any>; session?: import("mongoose").ClientSession }
+  opts: {
+    req?: Request;
+    action: string;
+    metadata?: Record<string, any>;
+    session?: import("mongoose").ClientSession;
+    /** Only cancel-stay.service sets this: it reverses the bill and frees the room first. */
+    inHouseCancellation?: boolean;
+  }
 ): Promise<void> {
   const from = booking.status;
-  assertLegalBookingTransition(from, to);
+  const cancellingInHouse = opts.inHouseCancellation && from === BookingStatus.CHECKED_IN && to === BookingStatus.CANCELLED;
+  if (!cancellingInHouse) assertLegalBookingTransition(from, to);
   booking.status = to;
 
   // Room-night inventory follows the booking: cancelled / no-show stays free their
