@@ -34,7 +34,8 @@ import { Property } from "../models/Property";
 import { User, UserRole } from "../models/User";
 import { createFolio, postCharge } from "../services/folio.service";
 import { claimRoomNights, RoomUnavailableError } from "../services/room-nights.service";
-import { computeRoomTax, loadGstRules } from "../services/tax.service";
+import { computeRoomTax, loadGstRules, loadRoomPricing } from "../services/tax.service";
+import { postStayCharges, walkInExtraRates } from "../services/stay-charges.service";
 
 /**
  * Room GST for a walk-in: each room is taxed on its own per-night value (which
@@ -44,15 +45,6 @@ import { computeRoomTax, loadGstRules } from "../services/tax.service";
  * Per-person extra rates (₹ per person per night) for a walk-in: the amounts typed at the
  * desk, or the property defaults from settings for any left blank.
  */
-function walkInExtraRates(settings: any, overrides: any) {
-  const pick = (v: unknown, fallback: number) => (v !== undefined && v !== null && v !== "" && Number(v) >= 0 ? Number(v) : fallback);
-  return {
-    extraPersonRate: pick(overrides?.extraPersonRate, settings?.extraPersonRate ?? 800),
-    extraBedRate: pick(overrides?.extraBedRate, settings?.extraBedRate ?? 1200),
-    childRateNoBed: pick(overrides?.childRateNoBed, settings?.childRateNoBed ?? 400),
-    childRateWithBed: pick(overrides?.childRateWithBed, settings?.childRateWithBed ?? 600),
-  };
-}
 
 /** Tariff per night for one room: its own typed rate, else the single override, else the category rate. */
 function walkInRoomRate(roomId: unknown, baseRatePerNight: number, roomRates: any, rateOverrideAmount: unknown) {
@@ -62,10 +54,10 @@ function walkInRoomRate(roomId: unknown, baseRatePerNight: number, roomRates: an
   return baseRatePerNight;
 }
 
-async function walkInStayTax(perRoomTaxable: number[], checkIn: Date, checkOut: Date, chargedNights: number) {
+async function walkInStayTax(perRoomTaxable: number[], checkIn: Date, checkOut: Date, chargedNights: number, inclusive = false) {
   const rules = await loadGstRules();
   const parts = perRoomTaxable.map((v) =>
-    computeRoomTax(rules, { checkIn, checkOut, nightlyValue: Math.max(0, v) / Math.max(1, chargedNights) }),
+    computeRoomTax(rules, { checkIn, checkOut, nightlyValue: Math.max(0, v) / Math.max(1, chargedNights), inclusive }),
   );
   const r2 = (n: number) => Math.round(n * 100) / 100;
   const cgst = r2(parts.reduce((s, p) => s + p.cgst, 0));
@@ -316,6 +308,8 @@ export const calculateRegistrationRate = async (req: Request, res: Response) => 
 
     // Extras, meal plan, other charges and the discount sit on the primary room (as on create).
     const primaryAdjustment = taxableAmount - roomCharges;
+    // Prices including GST (Admin → Settings): the GST is inside the amounts, not added on top.
+    const { inclusive } = await loadRoomPricing();
     const taxBreakdown = await walkInStayTax(
       roomBreakdowns.length
         ? roomBreakdowns.map((rb: any, i: number) => rb.cost + (i === 0 ? primaryAdjustment : 0))
@@ -323,6 +317,7 @@ export const calculateRegistrationRate = async (req: Request, res: Response) => 
       checkInDate,
       checkOutDate,
       nights,
+      inclusive,
     );
 
     return res.json({
@@ -352,7 +347,8 @@ export const calculateRegistrationRate = async (req: Request, res: Response) => 
         subtotal,
         tax: taxBreakdown,
         dailyTax: taxBreakdown.daily,
-        totalAmount: taxableAmount + taxBreakdown.totalTax,
+        pricesIncludeTax: inclusive,
+        totalAmount: inclusive ? taxableAmount : taxableAmount + taxBreakdown.totalTax,
         breakdown: {
           roomCharges: bookingType === "HOURLY" ? `₹${averageRatePerNight.toLocaleString("en-IN")} × ${hours} hours` : `₹${averageRatePerNight.toLocaleString("en-IN")} × ${nights} nights (${rooms.length} rooms)`,
           extraPersonCharges: extraPersonTotal > 0 ? `₹${extraPersonRate.toLocaleString("en-IN")} × ${Number(extraPersonsNoBed)} pax × ${nights} nights` : null,
@@ -602,6 +598,7 @@ export const walkInArrivalRegistration = async (req: Request, res: Response) => 
         }
       }
 
+      const pricing = await loadRoomPricing();
       for (let i = 0; i < rooms.length; i++) {
         const rm = rooms[i];
         const category = rm.category as any;
@@ -619,8 +616,8 @@ export const walkInArrivalRegistration = async (req: Request, res: Response) => 
 
         const rmSubtotal = rmRoomCharges + rmExtraPersonTotal + rmExtraBedTotal + rmChildNoBedTotal + rmChildWithBedTotal + rmMealPlanTotal + rmOtherCharges;
         const rmTaxableAmount = Math.max(0, rmSubtotal);
-        const rmTaxBreakdown = await walkInStayTax([rmTaxableAmount], checkInDate, checkOutDate, nights);
-        const rmTotalAmount = rmTaxableAmount + rmTaxBreakdown.totalTax;
+        const rmTaxBreakdown = await walkInStayTax([rmTaxableAmount], checkInDate, checkOutDate, nights, pricing.inclusive);
+        const rmTotalAmount = pricing.inclusive ? rmTaxableAmount : rmTaxableAmount + rmTaxBreakdown.totalTax;
 
         // No bill number at registration: it is issued when the bill is settled at checkout.
         const billNumber: string | undefined = undefined;
@@ -678,6 +675,7 @@ export const walkInArrivalRegistration = async (req: Request, res: Response) => 
               checkedInAt: new Date(),
               checkedInBy: (req as any).user?.id ? new mongoose.Types.ObjectId((req as any).user.id) : undefined,
               totalAmount: rmTotalAmount,
+              pricesIncludeTax: pricing.inclusive,
               taxAmount: rmTaxBreakdown.totalTax,
               cgstAmount: rmTaxBreakdown.cgst,
               sgstAmount: rmTaxBreakdown.sgst,
@@ -752,6 +750,11 @@ export const walkInArrivalRegistration = async (req: Request, res: Response) => 
         advance = advanceDocs[0];
       }
 
+      const walkInTotalDue = createdBookings.reduce((t, b) => t + (Number(b.totalAmount) || 0), 0);
+      if ((Number(advanceAmount) || 0) > walkInTotalDue + 0.01) {
+        throw new Error(`Payment ₹${Number(advanceAmount).toLocaleString("en-IN")} is more than the total ₹${walkInTotalDue.toLocaleString("en-IN")}`);
+      }
+
       // Pre-create OPEN Folios for all created bookings
       for (const cb of createdBookings) {
         try {
@@ -766,19 +769,20 @@ export const walkInArrivalRegistration = async (req: Request, res: Response) => 
             { req, session }
           );
 
-          // Post initial room charge for stay
-          await postCharge(
-            {
-              folioId: f._id.toString(),
-              bookingId: cb._id.toString(),
-              lineType: FolioLineType.ROOM_CHARGE,
-              description: `Room Charge (${cb.bookingReference})`,
-              amount: cb.ratePerNight,
-              date: new Date(),
-              postedBy: (req as any).user?.id || (req as any).user?._id || "SYSTEM",
-            },
-            { req, session }
-          );
+          // The whole stay: room for every night, extras on the primary room, then CGST + SGST.
+          const isPrimary = cb._id.toString() === booking._id.toString();
+          const roomDoc = rooms.find((r: any) => String(r._id) === String(cb.assignedRoom));
+          await postStayCharges({
+            booking: cb,
+            folioId: f._id.toString(),
+            roomNumber: roomDoc?.roomNumber,
+            postedBy: (req as any).user?.id || (req as any).user?._id || "SYSTEM",
+            req,
+            session,
+            mealPlanTotal: isPrimary ? mealPlanTotal : 0,
+            otherCharges: isPrimary ? Number(otherCharges) || 0 : 0,
+            otherChargesDesc: otherChargesDesc || undefined,
+          });
 
           if (cb._id.toString() === booking._id.toString() && advanceAmount && Number(advanceAmount) > 0) {
             await postCharge(
@@ -786,7 +790,7 @@ export const walkInArrivalRegistration = async (req: Request, res: Response) => 
                 folioId: f._id.toString(),
                 bookingId: cb._id.toString(),
                 lineType: FolioLineType.ADVANCE_ADJUSTMENT,
-                description: `Advance Payment Received (${advanceMethod || "CASH"})`,
+                description: `${Number(advanceAmount) >= walkInTotalDue - 0.01 ? "Payment Received" : "Advance Payment Received"} (${advanceMethod || "CASH"})`,
                 amount: Number(advanceAmount),
                 advancePaymentId: advance?._id?.toString(),
                 date: new Date(),
@@ -796,7 +800,19 @@ export const walkInArrivalRegistration = async (req: Request, res: Response) => 
             );
           }
         } catch (fErr) {
+          // A registration must never go through with a missing or partial bill.
           console.error("Error initializing folio during walk-in registration:", fErr);
+          throw fErr;
+        }
+      }
+
+      // Payment taken at registration: full (PAID) or part (PARTIAL), recorded on the bookings.
+      const paidNow = Number(advanceAmount) || 0;
+      if (paidNow > 0) {
+        for (const cb of createdBookings) {
+          cb.paymentStatus = paidNow >= walkInTotalDue - 0.01 ? PaymentStatus.PAID : PaymentStatus.PARTIAL;
+          if (cb._id.toString() === booking._id.toString()) cb.paidAmount = paidNow;
+          await cb.save({ session });
         }
       }
 
@@ -934,8 +950,6 @@ export const walkInCheckIn = async (req: Request, res: Response) => {
       targetRoom.currentBooking = booking._id as mongoose.Types.ObjectId;
       await targetRoom.save({ session });
 
-      // Taxable charges posted below (room + extra persons); GST is posted on this.
-      let postedTaxable = 0;
       // 3. Find or create folio
       folio = await Folio.findOne({ booking: booking._id, status: FolioStatus.OPEN }).session(session);
       if (!folio) {
@@ -958,132 +972,15 @@ export const walkInCheckIn = async (req: Request, res: Response) => {
           { req, session }
         );
 
-        const nights = Math.max(
-          1,
-          countNights(new Date(booking.checkInDate), new Date(booking.checkOutDate))
-        );
-
-        // 4. Post room tariff charge
-        const ratePerNight = booking.ratePerNight ?? (booking.totalAmount - booking.taxAmount) / nights;
-        const roomCharges = ratePerNight * nights;
-        postedTaxable = roomCharges > 0 ? roomCharges : 0;
-
-        if (roomCharges > 0) {
-          const roomDesc = booking.stayType === "HOURLY" 
-            ? `Room Charge (Hourly) — Room ${targetRoom.roomNumber} (${booking.hours || 1} hours)`
-            : `Room Tariff — Room ${targetRoom.roomNumber} (${nights} night${nights > 1 ? "s" : ""})`;
-            
-          await postCharge(
-            {
-              folioId: folio._id.toString(),
-              bookingId: booking._id.toString(),
-              lineType: FolioLineType.ROOM_CHARGE,
-              description: roomDesc,
-              amount: roomCharges,
-              date: new Date(),
-              postedBy: (req as any).user?.id || "FRONT_DESK",
-            },
-            { req, session }
-          );
-        }
-
-        // 5. Post extra person / bed charges if applicable
-        const settings = await HotelSettings.findOne().session(session).lean();
-        // The rates agreed at registration (stored on the booking), else the property defaults.
-        const { extraPersonRate, extraBedRate, childRateNoBed, childRateWithBed } = walkInExtraRates(settings, (booking as any).extraRates);
-
-        const extraPersonTotal = (booking.extraPersonsNoBed ?? 0) * extraPersonRate * nights;
-        postedTaxable += Math.max(0, extraPersonTotal);
-        if (extraPersonTotal > 0) {
-          await postCharge(
-            {
-              folioId: folio._id.toString(),
-              bookingId: booking._id.toString(),
-              lineType: FolioLineType.EXTRA_BED, // Using same folio category for now
-              description: `Adult Extra Pax (No Bed) (${booking.extraPersonsNoBed} pax × ${nights} nights)`,
-              amount: extraPersonTotal,
-              date: new Date(),
-              postedBy: (req as any).user?.id || "FRONT_DESK",
-            },
-            { req, session }
-          );
-        }
-        
-        const extraBedTotal = (booking.extraPersonsWithBed ?? 0) * extraBedRate * nights;
-        postedTaxable += Math.max(0, extraBedTotal);
-        if (extraBedTotal > 0) {
-          await postCharge(
-            {
-              folioId: folio._id.toString(),
-              bookingId: booking._id.toString(),
-              lineType: FolioLineType.EXTRA_BED,
-              description: `Adult Extra Pax (With Bed) (${booking.extraPersonsWithBed} bed(s) × ${nights} nights)`,
-              amount: extraBedTotal,
-              date: new Date(),
-              postedBy: (req as any).user?.id || "FRONT_DESK",
-            },
-            { req, session }
-          );
-        }
-
-        const childNoBedTotal = (booking.extraChildrenNoBed ?? 0) * childRateNoBed * nights;
-        postedTaxable += Math.max(0, childNoBedTotal);
-        if (childNoBedTotal > 0) {
-          await postCharge(
-            {
-              folioId: folio._id.toString(),
-              bookingId: booking._id.toString(),
-              lineType: FolioLineType.EXTRA_BED,
-              description: `Child 3-12 (No Bed) (${booking.extraChildrenNoBed} child(ren) × ${nights} nights)`,
-              amount: childNoBedTotal,
-              date: new Date(),
-              postedBy: (req as any).user?.id || "FRONT_DESK",
-            },
-            { req, session }
-          );
-        }
-
-        const childWithBedTotal = (booking.extraChildrenWithBed ?? 0) * childRateWithBed * nights;
-        postedTaxable += Math.max(0, childWithBedTotal);
-        if (childWithBedTotal > 0) {
-          await postCharge(
-            {
-              folioId: folio._id.toString(),
-              bookingId: booking._id.toString(),
-              lineType: FolioLineType.EXTRA_BED,
-              description: `Child 3-12 (With Bed) (${booking.extraChildrenWithBed} bed(s) × ${nights} nights)`,
-              amount: childWithBedTotal,
-              date: new Date(),
-              postedBy: (req as any).user?.id || "FRONT_DESK",
-            },
-            { req, session }
-          );
-        }
-      }
-
-      // GST on the room and extra-person charges just posted: the one tax rule (slab by
-      // per-night value), as a CGST and an SGST line, so the folio and invoice carry the tax.
-      if (folio) {
-        const nightsForTax = Math.max(1, countNights(new Date(booking.checkInDate), new Date(booking.checkOutDate)));
-        const alreadyTaxed = await FolioLine.exists({ folio: folio._id, lineType: { $in: [FolioLineType.TAX_CGST, FolioLineType.TAX_SGST] } }).session(session);
-        if (!alreadyTaxed && postedTaxable > 0) {
-          const tax = computeRoomTax(await loadGstRules(), {
-            checkIn: new Date(booking.checkInDate),
-            checkOut: new Date(booking.checkOutDate),
-            nightlyValue: postedTaxable / nightsForTax,
-          });
-          for (const [lineType, amount, label] of [
-            [FolioLineType.TAX_CGST, tax.cgst, "CGST"],
-            [FolioLineType.TAX_SGST, tax.sgst, "SGST"],
-          ] as const) {
-            if (amount > 0) {
-              await postCharge(
-                { folioId: folio._id.toString(), bookingId: booking._id.toString(), lineType, description: `${label} on Room Tariff`, amount, date: new Date(), postedBy: (req as any).user?.id || "FRONT_DESK" },
-                { req, session }
-              );
-            }
-          }
-        }
+        // 4. The whole stay: room for every night, extras, then CGST + SGST.
+        await postStayCharges({
+          booking,
+          folioId: folio._id.toString(),
+          roomNumber: targetRoom.roomNumber,
+          postedBy: (req as any).user?.id || "FRONT_DESK",
+          req,
+          session,
+        });
       }
 
       // 6. Update booking with folio reference

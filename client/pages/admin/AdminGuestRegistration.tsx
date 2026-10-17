@@ -187,6 +187,8 @@ export default function AdminGuestRegistration() {
 
   const [billingDetails, setBillingDetails] = useState({
     billingInstruction: "CASH",
+    // FULL = the whole bill now, ADVANCE = part now, LATER = everything at checkout.
+    paymentOption: "FULL" as "FULL" | "ADVANCE" | "LATER",
     advanceAmount: "",
     advanceMethod: "CASH",
     advanceReference: "",
@@ -385,8 +387,11 @@ export default function AdminGuestRegistration() {
       const json = await res.json();
       if (json.success) {
         setRateBreakdown(json.data);
-        if (roomSearch.bookingType === "HOURLY" && (!billingDetails.advanceAmount || Number(billingDetails.advanceAmount) === 0)) {
+        // Full payment = the exact total (GST included); pay later = nothing now.
+        if (billingDetails.paymentOption === "FULL" || (roomSearch.bookingType === "HOURLY" && (!billingDetails.advanceAmount || Number(billingDetails.advanceAmount) === 0))) {
           setBillingDetails(prev => ({ ...prev, advanceAmount: String(json.data.totalAmount) }));
+        } else if (billingDetails.paymentOption === "LATER") {
+          setBillingDetails(prev => ({ ...prev, advanceAmount: "" }));
         }
         setStep("CONFIRM");
       } else {
@@ -939,16 +944,50 @@ export default function AdminGuestRegistration() {
             {/* SECTION E & F: Billing & Advance */}
             <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
               <div className="bg-gray-50 px-6 py-3 border-b border-gray-200">
-                <h3 className="font-serif font-bold text-lg text-gray-800">Section E & F — Billing & Advance</h3>
+                <h3 className="font-serif font-bold text-lg text-gray-800">Section E & F — Billing & Payment</h3>
               </div>
               <div className="p-6 grid grid-cols-1 md:grid-cols-3 gap-5">
                 <div><label className="block text-xs font-bold text-gray-500 mb-1">Billing Instruction</label><select className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm" value={billingDetails.billingInstruction} onChange={e => setBillingDetails({...billingDetails, billingInstruction: e.target.value})}><option value="CASH">Direct Settlement (Guest)</option><option value="COMPANY">Bill to Company (BTC)</option><option value="OTA">OTA Prepaid (VCC)</option></select></div>
-                <div>
-                  <label className="block text-xs font-bold text-gray-500 mb-1">Advance Received (₹)</label>
-                  <input type="number" min="0" className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm font-bold text-[#c9a227]" placeholder="0" value={billingDetails.advanceAmount} onChange={e => setBillingDetails({...billingDetails, advanceAmount: e.target.value})} />
-                  {roomSearch.bookingType === "HOURLY" && <p className="text-[10px] text-[#c9a227] mt-1 font-bold">Auto-fills full amount if left at 0.</p>}
+                <div className="md:col-span-2">
+                  <label className="block text-xs font-bold text-gray-500 mb-1">Payment now</label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {([["FULL", "Full payment"], ["ADVANCE", "Advance / part"], ["LATER", "Pay at checkout"]] as const).map(([v, label]) => (
+                      <button key={v} type="button"
+                        onClick={() => setBillingDetails({ ...billingDetails, paymentOption: v, advanceAmount: v === "ADVANCE" ? billingDetails.advanceAmount : "" })}
+                        className={`min-h-[40px] rounded-lg border px-2 text-xs font-bold ${billingDetails.paymentOption === v ? "border-[#c9a227] bg-amber-50 text-amber-900" : "border-gray-200 bg-white text-gray-600"}`}>
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="mt-1 text-[10px] text-gray-500">
+                    {billingDetails.paymentOption === "FULL" ? "The exact total (GST included) is filled in after Calculate Rates." : billingDetails.paymentOption === "LATER" ? "Nothing is collected now; the bill is settled at checkout." : "Type the amount received now; the rest is collected at checkout."}
+                  </p>
                 </div>
-                <div><label className="block text-xs font-bold text-gray-500 mb-1">Payment Method</label><select className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm" value={billingDetails.advanceMethod} onChange={e => setBillingDetails({...billingDetails, advanceMethod: e.target.value})}><option value="CASH">Cash</option><option value="CARD">Credit/Debit Card</option><option value="UPI">UPI</option></select></div>
+                {billingDetails.paymentOption === "ADVANCE" && (
+                  <div>
+                    <label className="block text-xs font-bold text-gray-500 mb-1">Amount received now (₹)</label>
+                    <input type="number" min="0" className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm font-bold text-[#c9a227]" placeholder="0" value={billingDetails.advanceAmount} onChange={e => setBillingDetails({...billingDetails, advanceAmount: e.target.value})} />
+                  </div>
+                )}
+                {billingDetails.paymentOption !== "LATER" && (
+                  <>
+                    <div>
+                      <label className="block text-xs font-bold text-gray-500 mb-1">Payment Method</label>
+                      <select className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm" value={billingDetails.advanceMethod} onChange={e => setBillingDetails({...billingDetails, advanceMethod: e.target.value})}>
+                        <option value="CASH">Cash</option>
+                        <option value="CARD">Credit/Debit Card</option>
+                        <option value="UPI">UPI</option>
+                        <option value="BANK_TRANSFER">Bank Transfer</option>
+                        <option value="CHEQUE">Cheque</option>
+                        <option value="OTHER">Other</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-gray-500 mb-1">Reference / Txn No. (optional)</label>
+                      <input className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm" placeholder="UPI / card / cheque ref." value={billingDetails.advanceReference} onChange={e => setBillingDetails({...billingDetails, advanceReference: e.target.value})} />
+                    </div>
+                  </>
+                )}
               </div>
             </div>
 
@@ -1251,7 +1290,7 @@ export default function AdminGuestRegistration() {
                           </span>
                         </div>
                         <div className="bg-white p-2.5 rounded-lg border border-gray-200">
-                          <span className="text-[10px] font-bold text-gray-400 uppercase block">Payment & Advance</span>
+                          <span className="text-[10px] font-bold text-gray-400 uppercase block">Payment now</span>
                           <span className="font-semibold text-gray-800">
                             {billingDetails.advanceAmount && Number(billingDetails.advanceAmount) > 0 ? (
                               <span className="text-green-700 font-bold">
@@ -1378,7 +1417,7 @@ export default function AdminGuestRegistration() {
                         {advanceAmountNum > 0 ? (
                           <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 text-emerald-900 space-y-1">
                             <div className="flex justify-between font-bold text-xs">
-                              <span>Advance Received:</span>
+                              <span>{advanceAmountNum >= rateBreakdown.totalAmount - 0.01 ? "Paid in full:" : "Advance received:"}</span>
                               <span className="font-mono text-emerald-700">- ₹{advanceAmountNum.toLocaleString("en-IN")}</span>
                             </div>
                             <div className="flex justify-between text-[10px] text-emerald-700">
@@ -1393,7 +1432,7 @@ export default function AdminGuestRegistration() {
                           </div>
                         ) : (
                           <div className="bg-gray-100 rounded-lg p-2 text-center text-[10px] text-gray-500">
-                            No advance deposit recorded (Full settlement at checkout)
+                            Nothing collected now — full settlement at checkout
                           </div>
                         )}
 

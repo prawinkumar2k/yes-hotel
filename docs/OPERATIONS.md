@@ -37,6 +37,7 @@ Opens any **staff** login, even after that person changed their password. It nev
 - **Rooms:** Admin → **Rooms Management**. Change a room's number, floor or type; add or remove rooms.
 - **Changing types safely:** first move rooms to their new type (Rooms Management → Edit), then delete the empty type. A type with past bookings is switched off (hidden from the website) instead of deleted, so old bills keep it. A room with booking history is archived, never deleted.
 - **GST** is automatic: CGST 2.5% + SGST 2.5% (rooms above ₹7,500 a night are 18% by law).
+- **Prices include GST** (Admin → Settings → Contact & Location → "Room prices include GST", on for this hotel): the rate you type is what the guest pays. ₹1,510 a night = room ₹1,438.10 + CGST ₹35.95 + SGST ₹35.95. Each booking keeps the rule it was made with.
 - **Prices on the website** ("From ₹…") come from these rates — change a rate here and the website follows.
 
 ## 4. Website content
@@ -99,7 +100,9 @@ Until Razorpay keys are added, the last booking step says **"Confirm booking · 
 
 ## 7c. Invoices, receipts and registration cards
 
-- The hotel name, address, phone, email and **GSTIN** printed on every invoice, receipt and registration card come from **Admin → Settings**. Fill in the GSTIN before issuing tax invoices — until then they print "GSTIN : —" and staff see a red warning on screen.
+- The hotel name, address, phone, email and **GSTIN** printed on every invoice, receipt and registration card come from **Admin → Settings** (GSTIN is under Contact & Location). Fill in the GSTIN before issuing tax invoices — until then they print "GSTIN : —" and staff see a red warning on screen.
+- The GST invoice shows one row per room per night, each with its tariff, CGST and SGST.
+- **Walk-in payment:** in New Walk-In → Billing & Payment choose **Full payment** (the exact total is filled in after Calculate Rates), **Advance / part** (type the amount) or **Pay at checkout**, and the method (cash, card, UPI, bank transfer, cheque, other) with a reference. Full payment marks the booking PAID with nothing due.
 - **Extending a stay:** Front Desk → In-House → **Extend Stay**. For a group, tick the rooms to extend (All / None). The registration card and invoice then show "Stay extended: original departure … → now … (+N nights)".
 - Bill numbers are issued only at checkout.
 
