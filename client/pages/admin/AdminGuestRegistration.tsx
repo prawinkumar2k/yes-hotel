@@ -69,6 +69,8 @@ function numberToWords(num: number): string {
 
 const STANDARD_ID_TYPES = ["AADHAAR", "PASSPORT", "DRIVING_LICENSE", "VOTER_ID"];
 const isValidEmail = (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test((v || "").trim());
+/** A real email to show / prefill (walk-ins without one have an internal …@yeshotels.local placeholder). */
+const realEmail = (v?: string) => (v && !/@yes-?hotels\.local$/i.test(v.trim()) ? v : "");
 
 export default function AdminGuestRegistration() {
   const navigate = useNavigate();
@@ -247,7 +249,7 @@ export default function AdminGuestRegistration() {
       guestFirstName: guest.fullName?.split(" ")[0] || "",
       guestLastName: guest.fullName?.split(" ").slice(1).join(" ") || "",
       mobile: guest.phone || "",
-      email: guest.email || "",
+      email: realEmail(guest.email),
       nationality: guest.nationality || "Indian",
       idType: guest.idType || "AADHAAR",
       idNumber: guest.idNumber || "",
@@ -264,7 +266,7 @@ export default function AdminGuestRegistration() {
       guestFirstName: booking.guestDetails?.firstName || "",
       guestLastName: booking.guestDetails?.lastName || "",
       mobile: booking.guestDetails?.phone || booking.guestDetails?.phoneNumber || "",
-      email: booking.guestDetails?.email || "",
+      email: realEmail(booking.guestDetails?.email),
       nationality: booking.guestDetails?.nationality || "Indian",
       idType: booking.guestDetails?.idType || "AADHAAR",
       idNumber: booking.guestDetails?.idNumber || "",
@@ -796,7 +798,7 @@ export default function AdminGuestRegistration() {
                 <div><label className="block text-xs font-bold text-gray-500 mb-1">First Name *</label><input type="text" className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm" value={guestDetails.guestFirstName} onChange={e => setGuestDetails({...guestDetails, guestFirstName: e.target.value})} /></div>
                 <div><label className="block text-xs font-bold text-gray-500 mb-1">Last Name</label><input type="text" className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm" value={guestDetails.guestLastName} onChange={e => setGuestDetails({...guestDetails, guestLastName: e.target.value})} /></div>
                 <div><label className="block text-xs font-bold text-gray-500 mb-1">Mobile *</label><input type="tel" className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm" value={guestDetails.mobile} onChange={e => setGuestDetails({...guestDetails, mobile: e.target.value})} /></div>
-                <div><label className="block text-xs font-bold text-gray-500 mb-1">Email *</label><input type="email" required className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm" value={guestDetails.email} onChange={e => setGuestDetails({...guestDetails, email: e.target.value})} /></div>
+                <div><label className="block text-xs font-bold text-gray-500 mb-1">Email (optional)</label><input type="email" autoComplete="off" placeholder="guest@example.com" className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm" value={guestDetails.email} onChange={e => setGuestDetails({...guestDetails, email: e.target.value})} /></div>
                 <div><label className="block text-xs font-bold text-gray-500 mb-1">Gender</label><select className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm" value={guestDetails.gender} onChange={e => setGuestDetails({...guestDetails, gender: e.target.value})}><option value="MALE">Male</option><option value="FEMALE">Female</option><option value="OTHER">Other</option></select></div>
                 <div><label className="block text-xs font-bold text-gray-500 mb-1">Date of Birth</label><input type="date" className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm" value={guestDetails.dateOfBirth} onChange={e => setGuestDetails({...guestDetails, dateOfBirth: e.target.value})} /></div>
                 <div className="md:col-span-2"><label className="block text-xs font-bold text-gray-500 mb-1">Full Address</label><input type="text" className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm" value={guestDetails.address} onChange={e => setGuestDetails({...guestDetails, address: e.target.value})} /></div>
@@ -993,7 +995,7 @@ export default function AdminGuestRegistration() {
 
             <div className="flex justify-end gap-3 mt-8">
               <button onClick={() => setStep("ROOM")} className="px-6 py-2.5 bg-white border border-gray-200 rounded-xl font-bold">Back</button>
-              <button onClick={calculateRates} disabled={submitting || !guestDetails.guestFirstName || !guestDetails.mobile || !isValidEmail(guestDetails.email) || !guestDetails.idType.trim() || !guestDetails.idNumber} className="bg-[#c9a227] text-white px-8 py-2.5 rounded-xl font-bold hover:bg-black transition flex items-center gap-2">
+              <button onClick={calculateRates} disabled={submitting || !guestDetails.guestFirstName || !guestDetails.mobile || (guestDetails.email.trim() !== "" && !isValidEmail(guestDetails.email)) || !guestDetails.idType.trim() || !guestDetails.idNumber} className="bg-[#c9a227] text-white px-8 py-2.5 rounded-xl font-bold hover:bg-black transition flex items-center gap-2">
                 {submitting ? <RefreshCw size={16} className="animate-spin" /> : "Calculate Rates & Proceed"}
               </button>
             </div>

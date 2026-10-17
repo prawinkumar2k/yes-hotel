@@ -72,4 +72,21 @@ router.post("/bookings/:id/time-charge", requirePropertyAccess, requirePermissio
   }
 });
 
+// POST /api/front-desk/bookings/:id/checkout-tariff { ratePerNight, reason? } — tariff typed at
+// express / early check-out, for the nights actually stayed.
+router.post("/bookings/:id/checkout-tariff", requirePropertyAccess, requirePermission("FRONT_DESK", "EDIT"), async (req, res) => {
+  const { PermissionService } = await import("../services/PermissionService");
+  if (!(await PermissionService.can((req as any).user, "CAP.EDIT_TARIFF"))) return res.status(403).json({ success: false, message: "Tariffs are set by the front desk" });
+  const { applyCheckoutTariff, CheckoutTariffError } = await import("../services/checkout-tariff.service");
+  try {
+    const { ratePerNight, reason } = req.body ?? {};
+    if (ratePerNight === undefined || ratePerNight === null || ratePerNight === "") return res.status(400).json({ success: false, message: "Enter the tariff per night" });
+    const out = await applyCheckoutTariff({ bookingId: String(req.params.id), ratePerNight: Number(ratePerNight), reason, actorId: String((req as any).user?.id), req });
+    return res.json({ success: true, message: `Tariff ₹${out.rate.toLocaleString("en-IN")} × ${out.nights} night${out.nights > 1 ? "s" : ""} applied` + (out.earlyDeparture?.nightsCredited?.length ? ` (${out.earlyDeparture.nightsCredited.length} unused night(s) credited)` : ""), data: out });
+  } catch (e: any) {
+    if (e instanceof CheckoutTariffError) return res.status(e.status).json({ success: false, message: e.message });
+    return res.status(500).json({ success: false, message: e.message });
+  }
+});
+
 export default router;

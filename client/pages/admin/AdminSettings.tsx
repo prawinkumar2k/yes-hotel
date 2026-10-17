@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Loader2, Save } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Link } from "react-router-dom";
+import { HOTEL } from "@shared/hotel-info";
 
 export default function AdminSettings() {
   const { toast } = useToast();
@@ -133,7 +134,7 @@ export default function AdminSettings() {
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-bold text-black block">GSTIN (printed on invoices)</label>
-                <Input name="gstNumber" defaultValue={settings?.gstNumber ?? ""} placeholder="29ABCDE1234F1Z5" maxLength={15} className="border-gray-400 text-black font-medium uppercase" />
+                <Input name="gstNumber" defaultValue={settings?.gstNumber || HOTEL.gstin} placeholder="29ABCDE1234F1Z5" maxLength={15} className="border-gray-400 text-black font-medium uppercase" />
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-bold text-black block">Room prices include GST</label>

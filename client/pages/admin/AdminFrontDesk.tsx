@@ -18,6 +18,8 @@ interface FrontDeskSummary {
   todaysDepartures: any[];
   inHouse: any[];
   dirtyRooms: any[];
+  availableRooms?: any[];
+  occupiedRooms?: any[];
   unassignedBookings: any[];
   counts: {
     arrivals: number;
@@ -33,7 +35,7 @@ export default function AdminFrontDesk() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { data: hotelSettings } = useHotelSettings();
-  const [activeTab, setActiveTab] = useState<"ARRIVALS" | "DEPARTURES" | "IN_HOUSE" | "UNASSIGNED" | "DIRTY">("ARRIVALS");
+  const [activeTab, setActiveTab] = useState<"ARRIVALS" | "DEPARTURES" | "IN_HOUSE" | "UNASSIGNED" | "DIRTY" | "AVAILABLE" | "OCCUPIED">("ARRIVALS");
   
   // Search & Filter
   const [searchQuery, setSearchQuery] = useState("");
@@ -57,6 +59,9 @@ export default function AdminFrontDesk() {
   const [checkOutModal, setCheckOutModal] = useState<{ open: boolean; booking: any | null; preview: any | null }>({ open: false, booking: null, preview: null });
   const [paymentMode, setPaymentMode] = useState("CARD");
   const [settlementAmount, setSettlementAmount] = useState<number | string>("");
+  // Tariff typed at checkout (express / early check-out), for the nights actually stayed.
+  const [checkoutRate, setCheckoutRate] = useState("");
+  const [applyingRate, setApplyingRate] = useState(false);
   const [isManualOverride, setIsManualOverride] = useState(false);
   const [checkoutNotes, setCheckoutNotes] = useState("");
   
@@ -199,6 +204,7 @@ export default function AdminFrontDesk() {
         setSettlementAmount(bal);
         setIsManualOverride(false);
         setCheckoutNotes("Front Desk Express Checkout");
+        setCheckoutRate(String(json.data?.booking?.ratePerNight ?? booking.ratePerNight ?? ""));
         setCheckOutModal({ open: true, booking, preview: json.data });
       } else {
         toast({ title: "Failed to generate checkout preview", description: json.message, variant: "destructive" });
@@ -691,12 +697,14 @@ export default function AdminFrontDesk() {
     if (activeTab === "IN_HOUSE") rawList = summary?.inHouse || [];
     if (activeTab === "UNASSIGNED") rawList = summary?.unassignedBookings || [];
     if (activeTab === "DIRTY") rawList = summary?.dirtyRooms || [];
+    if (activeTab === "AVAILABLE") rawList = summary?.availableRooms || [];
+    if (activeTab === "OCCUPIED") rawList = summary?.occupiedRooms || [];
 
-    if (activeTab === "DIRTY") {
+    if (activeTab === "DIRTY" || activeTab === "AVAILABLE" || activeTab === "OCCUPIED") {
       return rawList.filter((item: any) => {
-        const roomNum = (item.roomNumber || '').toString().toLowerCase();
         const q = searchQuery.toLowerCase().trim();
-        return !q || roomNum.includes(q);
+        const hay = `${item.roomNumber || ""} ${item.categoryName || ""} ${item.guestName || ""} ${item.bookingReference || ""}`.toLowerCase();
+        return !q || hay.includes(q);
       });
     }
 
@@ -780,7 +788,7 @@ export default function AdminFrontDesk() {
       </div>
 
       {/* Top KPI Ribbon */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-8 gap-3">
         {/* Arrivals Card */}
         <div
           onClick={() => setActiveTab("ARRIVALS")}
@@ -864,6 +872,40 @@ export default function AdminFrontDesk() {
           </div>
           <p className="text-2xl font-serif font-bold text-gray-800">{counts.dirtyRooms}</p>
           <p className="text-[11px] text-gray-500 mt-1">Pending Cleaning</p>
+        </div>
+
+        {/* Available Rooms Card */}
+        <div
+          onClick={() => setActiveTab("AVAILABLE")}
+          className={`cursor-pointer bg-white p-4 rounded-xl border transition-all ${
+            activeTab === "AVAILABLE"
+              ? "border-teal-500 bg-teal-500/10 shadow-lg shadow-sm"
+              : "border-gray-200 hover:border-teal-500/50"
+          }`}
+        >
+          <div className="flex items-center justify-between text-teal-500 mb-2">
+            <CheckCircle2 size={18} />
+            <span className="text-[10px] font-bold uppercase tracking-wider whitespace-nowrap bg-teal-500/20 text-teal-700 px-2 py-0.5 rounded border border-teal-500/30">Available</span>
+          </div>
+          <p className="text-2xl font-serif font-bold text-gray-800">{summary?.availableRooms?.length ?? 0}</p>
+          <p className="text-[11px] text-gray-500 mt-1">Clean &amp; Ready</p>
+        </div>
+
+        {/* Occupied Rooms Card */}
+        <div
+          onClick={() => setActiveTab("OCCUPIED")}
+          className={`cursor-pointer bg-white p-4 rounded-xl border transition-all ${
+            activeTab === "OCCUPIED"
+              ? "border-indigo-500 bg-indigo-500/10 shadow-lg shadow-sm"
+              : "border-gray-200 hover:border-indigo-500/50"
+          }`}
+        >
+          <div className="flex items-center justify-between text-indigo-500 mb-2">
+            <BedDouble size={18} />
+            <span className="text-[10px] font-bold uppercase tracking-wider whitespace-nowrap bg-indigo-500/20 text-indigo-700 px-2 py-0.5 rounded border border-indigo-500/30">Occupied</span>
+          </div>
+          <p className="text-2xl font-serif font-bold text-gray-800">{summary?.occupiedRooms?.length ?? 0}</p>
+          <p className="text-[11px] text-gray-500 mt-1">Rooms In Use</p>
         </div>
 
         {/* VIP Guests Card */}
@@ -975,6 +1017,22 @@ export default function AdminFrontDesk() {
           >
             <BedDouble size={15} /> Dirty / Turnover Rooms ({summary?.dirtyRooms?.length || 0})
           </button>
+          <button
+            onClick={() => setActiveTab("AVAILABLE")}
+            className={`pb-3 text-xs md:text-sm font-semibold border-b-2 transition whitespace-nowrap flex items-center gap-2 ${
+              activeTab === "AVAILABLE" ? "border-teal-500 text-teal-600" : "border-transparent text-gray-500 hover:text-gray-800"
+            }`}
+          >
+            <CheckCircle2 size={15} /> Available Rooms ({summary?.availableRooms?.length || 0})
+          </button>
+          <button
+            onClick={() => setActiveTab("OCCUPIED")}
+            className={`pb-3 text-xs md:text-sm font-semibold border-b-2 transition whitespace-nowrap flex items-center gap-2 ${
+              activeTab === "OCCUPIED" ? "border-indigo-500 text-indigo-600" : "border-transparent text-gray-500 hover:text-gray-800"
+            }`}
+          >
+            <BedDouble size={15} /> Occupied Rooms ({summary?.occupiedRooms?.length || 0})
+          </button>
         </div>
 
         {/* Render Tab Data */}
@@ -985,7 +1043,37 @@ export default function AdminFrontDesk() {
           </div>
         ) : (
           <div className="table-scroll">
-            {activeTab === "DIRTY" ? (
+            {activeTab === "AVAILABLE" || activeTab === "OCCUPIED" ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                {filteredItems.map((room: any) => (
+                  <div key={room._id} className={`p-4 bg-gray-50 border rounded-xl space-y-2 ${activeTab === "AVAILABLE" ? "border-teal-500/40" : room.overdue ? "border-red-500/50" : "border-indigo-500/40"}`}>
+                    <div className="flex items-center justify-between">
+                      <span className="font-serif text-lg font-bold text-gray-800">Room {room.roomNumber}</span>
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${activeTab === "AVAILABLE" ? "bg-teal-500/15 text-teal-700 border-teal-500/40" : room.overdue ? "bg-red-500/15 text-red-700 border-red-500/40" : "bg-indigo-500/15 text-indigo-700 border-indigo-500/40"}`}>
+                        {activeTab === "AVAILABLE" ? "READY" : room.overdue ? "OVERDUE" : "OCCUPIED"}
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-600">{room.categoryName || "—"}{room.floor ? ` · Floor ${room.floor}` : ""}</p>
+                    {activeTab === "OCCUPIED" && (
+                      <p className="text-xs text-gray-800 font-semibold">
+                        {room.guestName || "Guest"}{room.bookingReference ? <span className="font-mono font-normal text-gray-500"> · #{room.bookingReference}</span> : null}
+                      </p>
+                    )}
+                    <div className="pt-1">
+                      {activeTab === "AVAILABLE" ? (
+                        <Link to="/admin/guest-registration" className="w-full text-center block text-xs font-semibold text-teal-700 bg-teal-500/10 hover:bg-teal-500/20 py-2 rounded-lg border border-teal-500/30 transition">
+                          New Walk-In →
+                        </Link>
+                      ) : room.bookingId ? (
+                        <Link to={`/admin/bookings/${room.bookingId}`} className="w-full text-center block text-xs font-semibold text-indigo-700 bg-indigo-500/10 hover:bg-indigo-500/20 py-2 rounded-lg border border-indigo-500/30 transition">
+                          Open Booking →
+                        </Link>
+                      ) : null}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : activeTab === "DIRTY" ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                 {filteredItems.map((room: any) => (
                   <div key={room._id} className="p-4 bg-gray-100 border border-red-500/30 rounded-xl space-y-3">
@@ -995,8 +1083,8 @@ export default function AdminFrontDesk() {
                         {room.housekeepingStatus}
                       </span>
                     </div>
-                    <p className="text-xs text-gray-500 font-mono">Category: {room.roomCategory?.name || "Standard"}</p>
-                    <p className="text-xs text-gray-500">Floor: {room.floor || "G"}</p>
+                    <p className="text-xs text-gray-500 font-mono">Category: {room.roomCategory?.name || room.categoryName || "—"}</p>
+                    <p className="text-xs text-gray-500">Floor: {room.floor || "—"}</p>
                     <div className="pt-2">
                       <Link
                         to="/admin/housekeeping"
@@ -1547,6 +1635,53 @@ export default function AdminFrontDesk() {
                 </div>
               </div>
             )}
+
+            <div className="bg-white border border-gray-200 p-3 rounded-xl text-xs space-y-2">
+              <div className="flex items-center justify-between gap-2">
+                <label className="font-semibold text-gray-700">Room tariff per night (₹)</label>
+                <span className="text-[11px] text-gray-500">{checkOutModal.booking?.pricesIncludeTax || checkOutModal.preview?.booking?.pricesIncludeTax ? "GST included" : "GST added on top"}</span>
+              </div>
+              <div className="flex gap-2">
+                <input
+                  type="number"
+                  min={0}
+                  value={checkoutRate}
+                  onChange={(e) => setCheckoutRate(e.target.value)}
+                  className="flex-1 bg-gray-100 border border-gray-200 rounded-lg p-2 font-mono"
+                />
+                <button
+                  type="button"
+                  disabled={applyingRate || checkoutRate === "" || Number(checkoutRate) === Number(checkOutModal.preview?.booking?.ratePerNight ?? checkOutModal.booking?.ratePerNight) && !checkOutModal.preview?.earlyDeparture}
+                  onClick={async () => {
+                    setApplyingRate(true);
+                    try {
+                      const token = getStoredAuthToken();
+                      const res = await fetch(`/api/front-desk/bookings/${checkOutModal.booking._id}/checkout-tariff`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+                        body: JSON.stringify({ ratePerNight: Number(checkoutRate), reason: "Tariff set at checkout" }),
+                      });
+                      const json = await res.json().catch(() => ({ success: false, message: `Server error (${res.status})` }));
+                      if (json.success) {
+                        toast({ title: "Tariff Updated", description: json.message });
+                        queryClient.invalidateQueries();
+                        await openCheckOut(checkOutModal.booking);
+                      } else {
+                        toast({ title: "Tariff not changed", description: json.message, variant: "destructive" });
+                      }
+                    } finally {
+                      setApplyingRate(false);
+                    }
+                  }}
+                  className="px-3 py-2 bg-amber-600 hover:bg-amber-500 text-white rounded-lg font-bold disabled:opacity-50"
+                >
+                  {applyingRate ? "Applying..." : "Apply Tariff"}
+                </button>
+              </div>
+              <p className="text-[11px] text-gray-500">
+                Charged for the nights actually stayed{checkOutModal.preview?.earlyDeparture ? " (early check-out: unused nights are credited first)" : ""}, with CGST + SGST. A rate below the room type's rate goes to Reception for verification.
+              </p>
+            </div>
 
             {checkOutModal.preview?.earlyDeparture && (
               <div className="bg-amber-50 border border-amber-300 p-3 rounded-xl text-xs text-amber-900">

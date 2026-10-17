@@ -89,7 +89,7 @@ export default function AdminFolioPrint() {
     if (!booking) return [];
 
     const debitLines = lines.filter((l: any) => l.direction !== "CREDIT");
-    const defaultRoomNum = booking?.assignedRoom?.roomNumber || "101";
+    const defaultRoomNum = booking?.assignedRoom?.roomNumber || "—";
 
     if (debitLines.length > 0) {
       // One row per room and night, with the GST of that night (shared helper).
@@ -170,11 +170,11 @@ export default function AdminFolioPrint() {
   // Determine display room numbers and invoice numbers
   const allRoomsStr = groupBookings.length > 0 
     ? groupBookings.map(b => b.roomNumber).filter(Boolean).join(", ")
-    : folioData?.data?.roomsSummary || booking.assignedRoom?.roomNumber || "101";
+    : folioData?.data?.roomsSummary || booking.assignedRoom?.roomNumber || "—";
 
   const displayRoomHeader = isGroupFolio && isMultiRoomGroup
-    ? `${allRoomsStr} (${booking.roomCategory?.name?.substring(0,3).toUpperCase() || "STA"})`
-    : `${booking.assignedRoom?.roomNumber || "101"} (${booking.roomCategory?.name?.substring(0,3).toUpperCase() || "STA"})`;
+    ? `${allRoomsStr} (${booking.roomCategory?.name?.substring(0,3).toUpperCase() || "—"})`
+    : `${booking.assignedRoom?.roomNumber || "—"} (${booking.roomCategory?.name?.substring(0,3).toUpperCase() || "—"})`;
 
   // The GST invoice number exists only once the folio is settled at checkout. Before that this
   // sheet is a provisional bill and shows no invoice number.
@@ -286,8 +286,8 @@ export default function AdminFolioPrint() {
               <div>State</div><div>: KARNATAKA</div>
             </div>
             <div className="w-1/4 p-1 border-r border-black grid grid-cols-[60px_1fr] gap-1">
-              <div>GRC #</div><div>: {booking.billNumber || booking.bookingReference || "—"}</div>
-              <div className="col-span-2">&nbsp;</div>
+              <div>GRC #</div><div>: {booking.bookingReference || "—"}</div>
+              <div>Bill No.</div><div>: {booking.billNumber || "—"}</div>
               <div>State Code</div><div>: 29</div>
             </div>
             <div className="w-1/4 p-1 grid grid-cols-[60px_1fr] gap-1">
@@ -297,11 +297,13 @@ export default function AdminFolioPrint() {
           </div>
 
           {/* INFO ROW 2 */}
-          <div className="flex border-b border-black min-h-[6rem]">
+          <div className="flex border-b border-black min-h-[8.5rem]">
             <div className="w-1/2 p-1 border-r border-black relative">
               <div className="grid grid-cols-[60px_1fr] gap-1 h-full">
                 <div>Guest</div><div className="font-bold uppercase">MR/MS {booking.guestDetails.firstName} {booking.guestDetails.lastName}</div>
-                <div>Address</div><div className="uppercase">{booking.guestDetails.address || "Bengaluru, Karnataka"}</div>
+                <div>Address</div><div className="uppercase">{booking.guestDetails.address || "—"}</div>
+                <div>Mobile</div><div>{booking.guestDetails.phone || booking.guestDetails.phoneNumber || "—"}</div>
+                <div>Email</div><div className="truncate">{booking.guestDetails.email && !/@yes-?hotels\.local$/i.test(booking.guestDetails.email) ? booking.guestDetails.email : "—"}</div>
                 <div className="absolute bottom-1 w-full grid grid-cols-[80px_1fr] gap-1 pr-2">
                   <div>GSTIN / UIN</div><div className="truncate">: {booking.guestDetails.gstin || "—"}</div>
                   <div>State</div><div>: KARNATAKA <span className="float-right mr-4">State Code 29</span></div>
@@ -348,10 +350,10 @@ export default function AdminFolioPrint() {
                 const rowTotal = rowTaxable + row.cgst + row.sgst + row.fnb + row.others;
                 const cgstRate = rowTaxable > 0 && row.cgst > 0
                   ? `${Number(((row.cgst / rowTaxable) * 100).toFixed(1))}%`
-                  : "-%";
+                  : "0%";
                 const sgstRate = rowTaxable > 0 && row.sgst > 0
                   ? `${Number(((row.sgst / rowTaxable) * 100).toFixed(1))}%`
-                  : "-%";
+                  : "0%";
                 return (
                   <tr key={i} className="align-top h-8">
                     <td className="border-r border-black p-1 text-left font-mono font-bold">{row.description}</td>

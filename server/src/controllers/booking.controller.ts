@@ -29,6 +29,7 @@ import { BookingEvent, BookingEventType } from "../models/BookingEvent";
 import { BookingInventoryDay } from "../models/BookingInventoryDay";
 import { BookingEnquiry, BookingEnquiryStatus } from "../models/BookingEnquiry";
 import { nights as countNights, toBusinessDate, todayBusinessDate, addDays as addBusinessDays } from "../../../shared/dates";
+import { HOTEL as HOTEL_INFO } from "../../../shared/hotel-info";
 import { SeoLandingPage } from "../models/SeoLandingPage";
 import { queueBookingCreatedEmail } from "../services/booking-email.service";
 
@@ -612,7 +613,7 @@ export const getMyBookingInvoice = async (req: Request, res: Response) => {
 <body>
   <div class="header">
     <div><img src="/brand/yes-hotels-logo-sm.png" alt="YES HOTELS" style="height:64px;width:auto;display:block" /><h1>${esc(hotel.hotelName || "YES HOTELS")}</h1><div class="muted">Tax Invoice</div>
-      <div class="muted" style="font-size:12px;max-width:340px">${esc(hotel.address)}<br />Phone ${esc(hotel.phone)}${hotel.email ? ` · ${esc(hotel.email)}` : ""}${hotel.gstNumber ? `<br />GSTIN ${esc(hotel.gstNumber)}` : ""}</div></div>
+      <div class="muted" style="font-size:12px;max-width:340px">${esc(hotel.address)}<br />Phone ${esc(hotel.phone)}${hotel.email ? ` · ${esc(hotel.email)}` : ""}<br />GSTIN ${esc(hotel.gstNumber || HOTEL_INFO.gstin)}</div></div>
     <div class="right">
       <div><strong>${esc(booking.bookingReference)}</strong></div>
       <div class="muted">${esc(booking._id.getTimestamp().toLocaleDateString())}</div>
@@ -1201,6 +1202,9 @@ export const checkOut = async (req: Request, res: Response) => {
   // Audit logging is deliberately outside the transaction (same convention
   // as createBooking): a logging failure must never roll back a checkout
   // that otherwise succeeded.
+  // The room goes straight to a free housekeeper — nobody has to assign it.
+  { const { assignWaitingTasks } = await import("../services/housekeeping-assign.service"); await assignWaitingTasks({ req }).catch(() => undefined); }
+
   if (roomNumber && booking.assignedRoom) {
     await createAuditLog({
       req,

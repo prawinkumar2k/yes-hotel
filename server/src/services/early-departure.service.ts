@@ -93,8 +93,14 @@ export async function applyEarlyDeparture(bookingId: string, opts: { req?: any; 
         // GST on the credited nights, at the same per-night value it was charged at.
         const perNight = roomCredit / nightsCredited.length;
         const tax = computeRoomTax(await loadGstRules(), { checkIn: nightsCredited[0], checkOut: addDays(nightsCredited[nightsCredited.length - 1], 1), nightlyValue: perNight });
-        const cgstLine = lines.find((l) => l.lineType === FolioLineType.TAX_CGST && l.amount > 0);
-        const sgstLine = lines.find((l) => l.lineType === FolioLineType.TAX_SGST && l.amount > 0);
+        // Credited against a room-tariff GST line that has not been reversed yet (a line is reversed once).
+        const reversedIds = new Set(reversals.map((r) => String(r.reversedLineId)));
+        const roomTaxLine = (type: string) =>
+          lines
+            .filter((l) => l.lineType === type && l.amount > 0 && !reversedIds.has(String(l._id)) && !/KOT|Restaurant|POS|late check-out|early check-in|cancellation/i.test(String(l.description ?? "")))
+            .sort((a, b) => b.amount - a.amount)[0];
+        const cgstLine = roomTaxLine(FolioLineType.TAX_CGST);
+        const sgstLine = roomTaxLine(FolioLineType.TAX_SGST);
         for (const [taxLine, amount, label] of [[cgstLine, tax.cgst, "CGST"], [sgstLine, tax.sgst, "SGST"]] as const) {
           if (!taxLine || !(amount > 0)) continue;
           await postCharge(

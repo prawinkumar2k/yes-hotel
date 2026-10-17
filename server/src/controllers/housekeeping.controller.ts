@@ -143,6 +143,9 @@ export const updateHousekeepingTask = async (req: Request, res: Response) => {
       });
     }
 
+    // A housekeeper who finishes a room (or is taken off one) is free: hand out the waiting rooms.
+    if (data.status && ![HousekeepingStatus.ASSIGNED, HousekeepingStatus.CLEANING].includes(data.status as any)) { const { assignWaitingTasks } = await import("../services/housekeeping-assign.service"); await assignWaitingTasks({ req }).catch(() => undefined); }
+
     return res.status(200).json({ success: true, data: task });
   } catch (error: any) {
     if (error instanceof z.ZodError) return res.status(400).json({ success: false, message: error.issues[0].message });
@@ -208,6 +211,9 @@ export const updateRoomHousekeepingStatus = async (req: Request, res: Response) 
     });
 
     if (!room) return res.status(404).json({ success: false, message: "Room not found" });
+
+    // Finished a room: this housekeeper is free — hand out the waiting rooms.
+    if (!["ASSIGNED", "CLEANING"].includes(String(status))) { const { assignWaitingTasks } = await import("../services/housekeeping-assign.service"); await assignWaitingTasks({ req }).catch(() => undefined); }
 
     return res.status(200).json({ success: true, data: room });
   } catch (error: any) {

@@ -455,7 +455,8 @@ export const updateBookingBill = async (req: Request, res: Response) => {
     const editNote = typeof reason === "string" && reason.trim() ? reason.trim() : "Tariff updated at the front desk";
 
     const REPLACED = new Set<string>([FolioLineType.ROOM_CHARGE, FolioLineType.EXTRA_BED, FolioLineType.ADDON, FolioLineType.DISCOUNT, FolioLineType.TAX_CGST, FolioLineType.TAX_SGST, FolioLineType.TAX_IGST]);
-    const isRoomTax = (l: any) => !/KOT|Restaurant|POS/i.test(String(l.description ?? ""));
+    // GST on the room tariff only (not on food, early check-in / late check-out or a cancellation charge, which keep their own GST).
+    const isRoomTax = (l: any) => !/KOT|Restaurant|POS|late check-out|early check-in|cancellation/i.test(String(l.description ?? ""));
     const session = await mongoose.startSession();
     let totals: any;
     try {

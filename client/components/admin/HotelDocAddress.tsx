@@ -1,4 +1,5 @@
 import { hotelContactFrom, useHotelSettings } from "@/hooks/usePublicData";
+import { HOTEL } from "@shared/hotel-info";
 
 /**
  * The hotel's name, address, phone, email, website and GSTIN on printed documents (invoice,
@@ -8,7 +9,7 @@ import { hotelContactFrom, useHotelSettings } from "@/hooks/usePublicData";
 export default function HotelDocAddress({ withEmailAndWeb = true }: { withEmailAndWeb?: boolean }) {
   const { data: settings, isLoading } = useHotelSettings();
   const c = hotelContactFrom(settings);
-  const gstin = String((settings as any)?.gstNumber || "").trim();
+  const gstin = String((settings as any)?.gstNumber || HOTEL.gstin || "").trim();
   return (
     <>
       <p className="font-bold text-sm uppercase">{c.name}</p>

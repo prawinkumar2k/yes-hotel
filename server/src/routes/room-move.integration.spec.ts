@@ -97,7 +97,8 @@ describe("Room move", () => {
   it("the old room goes to housekeeping; the new room is occupied; nights moved", async () => {
     const oldRoom = await db().collection("rooms").findOne({ _id: ids.oldRoom });
     const newRoom = await db().collection("rooms").findOne({ _id: ids.newRoom });
-    expect(oldRoom).toMatchObject({ occupancyStatus: "VACANT", housekeepingStatus: "DIRTY" });
+    expect(oldRoom).toMatchObject({ occupancyStatus: "VACANT" });
+    expect(["DIRTY", "ASSIGNED"]).toContain(oldRoom!.housekeepingStatus); // assigned automatically when a housekeeper is free
     expect(newRoom).toMatchObject({ occupancyStatus: "OCCUPIED" });
     expect(await db().collection("housekeepingtasks").countDocuments({ room: ids.oldRoom })).toBe(1);
     expect(await db().collection("roomnights").countDocuments({ booking: ids.booking, room: ids.newRoom })).toBe(2);

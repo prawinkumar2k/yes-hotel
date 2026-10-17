@@ -128,6 +128,13 @@ export const getFrontDeskSummary = async (req: Request, res: Response) => {
         .lean(),
     ]);
 
+    // Room lists for the desk: ready to sell now, and occupied (with the guest), from the same snapshot.
+    const snap = await getSnapshot(todayBusinessDate());
+    const roomRow = (r: any) => ({ _id: r.roomId, roomNumber: r.roomNumber, floor: r.floor, categoryName: r.categoryName, housekeepingStatus: r.hk, occupancyStatus: r.occupancy, bookingId: r.bookingId, bookingReference: r.bookingReference, guestName: r.guestName, overdue: r.overdue });
+    const byNumber = (a: any, b: any) => String(a.roomNumber).localeCompare(String(b.roomNumber), undefined, { numeric: true });
+    const availableRooms = snap.rooms.filter((r) => r.occupancy === "VACANT" && r.hk === "CLEAN" && r.sell === "SELLABLE" && !r.blocked).map(roomRow).sort(byNumber);
+    const occupiedRooms = snap.rooms.filter((r) => r.occupancy === "OCCUPIED").map(roomRow).sort(byNumber);
+
     // Rooms without assignment among today's arrivals
     const unassignedArrivals = arrivals.filter((b) => !b.assignedRoom);
 
@@ -151,6 +158,8 @@ export const getFrontDeskSummary = async (req: Request, res: Response) => {
         inHouse: inHouse.length,
         unassignedBookings: unassignedArrivals.length,
         dirtyRooms: dirtyRooms.length,
+        availableRooms: availableRooms.length,
+        occupiedRooms: occupiedRooms.length,
       },
     };
 
@@ -178,6 +187,8 @@ export const getFrontDeskSummary = async (req: Request, res: Response) => {
         unassignedArrivals,
         unassignedBookings: unassignedArrivals,
         dirtyRooms,
+        availableRooms,
+        occupiedRooms,
         waitingForRelease,
         blockedRooms,
         pendingPaymentBookings,

@@ -29,6 +29,8 @@ interface NavItem {
   badge?: string | number;
   /** Manager screens a role should not be sent to from the menu (its own screen covers the job). */
   hideForRoles?: string[];
+  /** Hidden when the user can open this page instead (e.g. the executive dashboard). */
+  hideIfPage?: string;
 }
 
 interface NavSection {
@@ -175,6 +177,7 @@ export default function AdminLayout({ children, title, hidePadding }: { children
       title: "FRONT OFFICE",
       items: [
         { label: "Dashboard", to: "/admin/dashboard", icon: LayoutDashboard, pageKey: "DASHBOARD.ADMIN" },
+        { label: "Reception Dashboard", to: "/front-desk/dashboard", icon: LayoutDashboard, pageKey: "DASHBOARD.FRONT_DESK", hideIfPage: "DASHBOARD.ADMIN" },
         { label: "Front Desk (Reception)", to: "/admin/front-desk", icon: Home, pageKey: "FRONT_DESK", badge: arrivalsCount > 0 ? arrivalsCount : undefined },
         { label: "Task Approvals", to: "/admin/task-approvals", icon: ShieldCheck, pageKey: "TASK_APPROVALS" },
         { label: "Room Rack (Tape Chart)", to: "/admin/calendar", icon: CalendarDays, pageKey: "CALENDAR" },
@@ -230,7 +233,7 @@ export default function AdminLayout({ children, title, hidePadding }: { children
   // Filter sections and items based on effective permissions
   const filteredSections = NAV_SECTIONS.map((section) => ({
     ...section,
-    items: section.items.filter((item) => hasPageAccess(item.pageKey) && !item.hideForRoles?.includes(user?.role ?? "")),
+    items: section.items.filter((item) => hasPageAccess(item.pageKey) && !item.hideForRoles?.includes(user?.role ?? "") && !(item.hideIfPage && hasPageAccess(item.hideIfPage))),
   })).filter((section) => section.items.length > 0);
 
   const totalBadgeCount = (arrivalsCount > 0 ? 1 : 0) + (departuresCount > 0 ? 1 : 0) + (dirtyCount > 0 ? 1 : 0);

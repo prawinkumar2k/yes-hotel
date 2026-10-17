@@ -9,6 +9,8 @@ export const HOTEL = {
   category: "Contemporary 3-star boutique hotel",
   tagline: "Say Yes to Time Well Spent",
   website: "https://www.yeshotels.in",
+  /** GSTIN printed on tax invoices (Admin → Settings can override it). */
+  gstin: "29AFAFS2437J1ZS",
   instagram: "yeshotel_blr",
   instagramUrl: "https://www.instagram.com/yeshotel_blr/",
   phones: ["+91 87698 28787"],

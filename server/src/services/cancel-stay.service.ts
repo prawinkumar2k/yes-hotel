@@ -157,6 +157,8 @@ export async function cancelCheckedInStay(p: {
     await session.endSession();
   }
 
+  { const { assignWaitingTasks } = await import("./housekeeping-assign.service"); await assignWaitingTasks({ req: p.req }).catch(() => undefined); }
+
   await createAuditLog({
     req: p.req,
     action: "booking.cancel_check_in",

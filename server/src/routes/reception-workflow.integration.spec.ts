@@ -122,7 +122,8 @@ describe("Reception: one login, three functions", () => {
     expect(r.status).toBe(200);
     const b = await db().collection("bookings").findOne({ _id: ids.booking });
     expect(b).toMatchObject({ status: "CHECKED_OUT", checkoutClearance: expect.objectContaining({ status: "CLEARED" }) });
-    expect((await db().collection("rooms").findOne({ _id: ids.room }))!.housekeepingStatus).toBe("DIRTY");
+    // Dirty, and given straight to a free housekeeper when there is one.
+    expect(["DIRTY", "ASSIGNED"]).toContain((await db().collection("rooms").findOne({ _id: ids.room }))!.housekeepingStatus);
     expect(await db().collection("housekeepingtasks").countDocuments({ room: ids.room })).toBeGreaterThan(0);
   });
 

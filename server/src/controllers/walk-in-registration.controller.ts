@@ -457,9 +457,10 @@ export const walkInArrivalRegistration = async (req: Request, res: Response) => 
         existingGuestId,
       } = req.body;
 
-      // Email and an ID type are required for every registration (no generated placeholder emails).
-      if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email).trim())) {
-        throw new Error("A valid guest email is required");
+      // Email is optional at the desk (many walk-in guests have none); if given it must be valid.
+      // An ID type is required for every registration.
+      if (email && String(email).trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email).trim())) {
+        throw new Error("Enter a valid email, or leave it empty");
       }
       if (!idType || !String(idType).trim()) {
         throw new Error("Select the ID proof type (or enter it under Other)");
@@ -547,10 +548,11 @@ export const walkInArrivalRegistration = async (req: Request, res: Response) => 
       } else {
         const firstName = guestFirstName || (guestName ? guestName.split(" ")[0] : "Guest");
         const lastName = guestLastName || (guestName ? guestName.split(" ").slice(1).join(" ") || "." : ".");
-        const guestEmail = String(email).trim().toLowerCase();
+        // No email: the guest record gets a placeholder (…@yeshotels.local) — unique per phone, never emailed, never shown.
+        const guestEmail = String(email ?? "").trim().toLowerCase() || `walkin-${String(mobile).replace(/\D/g, "") || Date.now()}@yeshotels.local`;
 
         const guestDoc = await Guest.findOneAndUpdate(
-          { $or: [{ phone: mobile }, ...(email ? [{ email: guestEmail }] : [])] },
+          { $or: [{ phone: mobile }, ...(String(email ?? "").trim() ? [{ email: guestEmail }] : [])] },
           {
             $setOnInsert: {
               fullName: `${firstName} ${lastName}`.trim(),
@@ -635,7 +637,7 @@ export const walkInArrivalRegistration = async (req: Request, res: Response) => 
               guestDetails: {
                 firstName: guestFirstName || (guestName ? guestName.split(" ")[0] : "Guest"),
                 lastName: guestLastName || (guestName ? guestName.split(" ").slice(1).join(" ") || "." : "."),
-                email: String(email).trim().toLowerCase(),
+                email: String(email ?? "").trim().toLowerCase(),
                 phone: mobile,
                 idType: idType || undefined,
                 idNumber: idNumber || undefined,
@@ -1040,7 +1042,7 @@ export const printRegistrationCard = async (req: Request, res: Response) => {
     const hotelName = "YES HOTELS";
     const hotelAddress = settings?.address || hotelAddressOneLine();
     const hotelPhone = settings?.phone || HOTEL.phones[0];
-    const hotelGST = settings?.gstNumber || "—";
+    const hotelGST = settings?.gstNumber || HOTEL.gstin || "—";
 
     const room = booking.assignedRoom as any;
     const category = booking.roomCategory as any;
@@ -1231,7 +1233,7 @@ export const printRegistrationCard = async (req: Request, res: Response) => {
 
       <div class="rg-row grid-2">
         <div><div class="rg-label">Mob. No.</div><div class="rg-val" style="font-family:monospace">${esc(guest.phone)}</div></div>
-        <div><div class="rg-label">Email</div><div class="rg-val" style="font-size:10px;text-transform:none;font-family:monospace">${esc(guest.email)}</div></div>
+        <div><div class="rg-label">Email</div><div class="rg-val" style="font-size:10px;text-transform:none;font-family:monospace">${esc(/@yes-?hotels\.local$/i.test(String(guest.email ?? "")) ? "—" : guest.email)}</div></div>
       </div>
 
       <div class="rg-row grid-3">

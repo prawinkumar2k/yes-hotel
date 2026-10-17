@@ -285,7 +285,7 @@ const BookingSchema = new Schema<IBooking>(
     guestDetails: {
       firstName: { type: String, required: true },
       lastName: { type: String, required: true },
-      email: { type: String, required: true },
+      email: { type: String, default: "" }, // optional for walk-ins
       phone: { type: String, required: true },
       idType: { type: String },
       idNumber: { type: String },
