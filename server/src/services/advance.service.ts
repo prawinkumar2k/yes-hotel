@@ -13,7 +13,7 @@ import { nextSequence, ensureSequenceAtLeast } from "./counter.service";
 // ADVANCE NUMBER GENERATION
 // ─────────────────────────────────────────────────────────────────────────────
 
-async function generateAdvanceNumber(session?: mongoose.ClientSession): Promise<string> {
+export async function generateAdvanceNumber(session?: mongoose.ClientSession): Promise<string> {
   const settings = await HotelSettings.findOne().sort({ updatedAt: -1 }).lean();
   const prefix = settings?.advancePrefix ?? "ADV";
   const ym = todayBusinessDate().slice(0, 7).replace("-", ""); // YYYYMM at the property

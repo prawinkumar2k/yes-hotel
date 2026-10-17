@@ -131,3 +131,30 @@ describe("walk-in bill — prices excluding GST (default)", () => {
     expect(f.cgst + f.sgst).toBe(151);
   });
 });
+
+describe("correcting a bill to 'rate includes GST' (Edit Bill)", () => {
+  it("₹1,510 paid on a bill that added GST on top → ₹1,510 incl. GST, nothing due, PAID", async () => {
+    await setInclusive(false);
+    const rid = oid();
+    const P = (await db().collection("properties").findOne({ code: "TEST-PROPERTY" }))!._id;
+    await db().collection("rooms").insertOne({ _id: rid, propertyId: P, roomNumber: `BC${tag}`, category: ids.category, floor: "9", status: "AVAILABLE", occupancyStatus: "VACANT", housekeepingStatus: "CLEAN", sellStatus: "SELLABLE", isActive: true });
+    const r = await walkIn(rid, { checkOut: addDays(today, 1), roomRates: { [String(rid)]: 1510 }, advanceAmount: 1510, advanceMethod: "CASH" });
+    expect(r.status, JSON.stringify(r.json)).toBeLessThan(300);
+    const id = String(r.json.data.booking._id);
+    expect((await db().collection("bookings").findOne({ _id: new mongoose.Types.ObjectId(id) }))!.totalAmount).toBe(1585.5);
+
+    const e = await call("PUT", `/api/folios/booking/${id}/bill-edit`, { ratePerNight: 1510, applyTax: true, pricesIncludeTax: true, reason: "Rate includes GST" });
+    expect(e.status, JSON.stringify(e.json)).toBe(200);
+    const b: any = await db().collection("bookings").findOne({ _id: new mongoose.Types.ObjectId(id) });
+    expect(b).toMatchObject({ totalAmount: 1510, taxAmount: 71.9, pricesIncludeTax: true, paymentStatus: "PAID" });
+    const lines = await db().collection("foliolines").find({ booking: new mongoose.Types.ObjectId(id) }).toArray();
+    const debit = lines.filter((l: any) => l.direction !== "CREDIT").reduce((t: number, l: any) => t + l.amount, 0);
+    const credit = lines.filter((l: any) => l.direction === "CREDIT").reduce((t: number, l: any) => t + l.amount, 0);
+    expect(debit - credit).toBeCloseTo(0, 2);
+    // Clean up this room's records here (afterAll only knows the two shared rooms).
+    const bIds = (await db().collection("bookings").find({ assignedRoom: rid }).project({ _id: 1 }).toArray()).map((x) => x._id);
+    for (const c of ["folios", "foliolines", "roomnights", "advancepayments"]) await db().collection(c).deleteMany({ booking: { $in: bIds } });
+    await db().collection("bookings").deleteMany({ _id: { $in: bIds } });
+    await db().collection("rooms").deleteOne({ _id: rid });
+  });
+});

@@ -73,3 +73,18 @@ describe("Website / chatbot enquiry stages", () => {
     expect(enq.stageHistory.filter((h: any) => h.stage === "WEBSITE_BOOKING_FAILED" && !h.reason)).toHaveLength(0);
   });
 });
+
+describe("enquiry numbers", () => {
+  it("never repeat after an enquiry is deleted", async () => {
+    const mk = (n: number) => post(lead({ phone: `9${tag.replace(/[a-f]/g, "1")}${n}000`.slice(0, 10), email: `num-${n}-${tag}@example.com`, bookingStage: "WEBSITE_GUEST_DETAILS" }));
+    const a = await mk(1);
+    const b = await mk(2);
+    await db().collection("bookingenquiries").deleteOne({ _id: new mongoose.Types.ObjectId(a.json.data.id) });
+    const c = await mk(3);
+    expect(c.status).toBe(201);
+    const nums = await db().collection("bookingenquiries").find({ email: { $in: [`num-2-${tag}@example.com`, `num-3-${tag}@example.com`] } }).project({ enquiryNumber: 1 }).toArray();
+    expect(new Set(nums.map((n: any) => n.enquiryNumber)).size).toBe(2);
+    await db().collection("bookingenquiries").deleteMany({ email: { $regex: `^num-\\d-${tag}@` } });
+    void b;
+  });
+});

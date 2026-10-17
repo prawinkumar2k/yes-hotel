@@ -3,7 +3,8 @@ import express from "express"; // Force reload
 import cors from "cors";
 import { allowedOrigins } from "./src/config/origins";
 import helmet from "helmet";
-import rateLimit from "express-rate-limit";
+import rateLimit, { ipKeyGenerator } from "express-rate-limit";
+import jwt from "jsonwebtoken";
 import cookieParser from "cookie-parser";
 import mongoose from "mongoose";
 import { connectDB } from "./src/config/database";
@@ -191,8 +192,26 @@ export function createServer() {
   // Rate limiting — differentiated: auth/payment-verification endpoints are
   // realistic brute-force/abuse targets and get a much stricter budget than
   // general operational API traffic.
+  // Who a request counts against. Signed-in staff and guests each get their own budget (by
+  // login), so several desks behind the hotel's one internet connection never block each other;
+  // everyone else is counted by IP address.
+  const clientKey = (req: express.Request): string => {
+    const h = String(req.headers.authorization || "");
+    if (h.startsWith("Bearer ")) {
+      try {
+        const d: any = jwt.verify(h.slice(7), getJwtSecret());
+        if (d?.id) return `user:${d.id}`;
+      } catch { /* expired / invalid: fall back to the address */ }
+    }
+    return `ip:${ipKeyGenerator(req.ip || "")}`;
+  };
+  // Read-only public data the website loads on every page (rooms, gallery, FAQs, settings,
+  // content, area pages, availability, price quotes): cheap reads, never counted.
+  const PUBLIC_READ = /^\/api\/(rooms\/categories|public\/|settings\/public|seo\/pages|reviews$|bookings\/availability|bookings\/quote|payments\/config|ready|health)/;
   const generalLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
+    keyGenerator: clientKey,
+    skip: (req) => (req.method === "GET" || req.originalUrl.startsWith("/api/bookings/quote")) && PUBLIC_READ.test(req.originalUrl),
     // 100 was found to be too strict during real testing — a single active
     // admin dashboard session (stats + bookings + guests + payments, each
     // with React Query refetches) can plausibly exceed that in normal use,
@@ -223,6 +242,9 @@ export function createServer() {
     // Only failed attempts count: a hotel's staff share one internet connection, and normal
     // sign-ins must never lock the desk out. Wrong-password guessing is still limited.
     skipSuccessfulRequests: true,
+    // Failed attempts are counted per address AND per account, so one person mistyping a password
+    // never locks the whole front desk out.
+    keyGenerator: (req) => `${ipKeyGenerator(req.ip || "")}|${String((req.body as any)?.email ?? "").trim().toLowerCase()}`,
     message: { success: false, message: "Too many failed attempts from this connection. Please wait 15 minutes and try again." },
     standardHeaders: true,
     legacyHeaders: false,
@@ -237,6 +259,9 @@ export function createServer() {
     legacyHeaders: false,
   });
   app.use("/api", generalLimiter);
+  // The sign-in limiter counts per account, so it needs the request body (parsed once here; the
+  // general JSON parser later skips an already-parsed body).
+  app.use(["/api/auth", "/api/customer/bookings/link"], express.json({ limit: "1mb" }));
   app.use("/api/auth/login", strictLimiter);
   app.use("/api/auth/booking-login", strictLimiter);
   app.use("/api/auth/otp", strictLimiter);

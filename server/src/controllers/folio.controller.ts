@@ -435,7 +435,7 @@ export const updateBookingBill = async (req: Request, res: Response) => {
     if (!(await PermissionService.can((req as any).user, "CAP.EDIT_TARIFF"))) {
       return res.status(403).json({ success: false, message: "Tariffs are set by the front desk" });
     }
-    const { ratePerNight, extraBedAmount, otherCharges, otherChargesDesc, discountAmount, applyTax = true, reason } = req.body ?? {};
+    const { ratePerNight, extraBedAmount, otherCharges, otherChargesDesc, discountAmount, applyTax = true, reason, pricesIncludeTax: includeTaxArg } = req.body ?? {};
     const booking: any = await Booking.findById(bookingId).populate("roomCategory", "basePrice name");
     if (!booking) return res.status(404).json({ success: false, message: "Booking not found" });
     const folio: any = await Folio.findOne({ booking: bookingId, status: FolioStatus.OPEN });
@@ -471,6 +471,8 @@ export const updateBookingBill = async (req: Request, res: Response) => {
           amount > 0 ? postCharge({ folioId: String(folio._id), bookingId: String(booking._id), lineType, description, amount, date: checkIn, postedBy: actorId, notes: editNote }, { req, session }) : null;
         // When the booking's prices include GST, the amounts typed include it: the charge lines
         // carry the values excluding GST and the bill total stays at the amounts typed.
+        // "The rate includes GST" can be set here too (e.g. correcting a booking made before the switch).
+        if (typeof includeTaxArg === "boolean") booking.pricesIncludeTax = includeTaxArg;
         const inclusive = pricesIncludeTax(booking);
         let tax = { tax: 0, cgst: 0, sgst: 0 };
         if (applyTax) {
@@ -489,6 +491,10 @@ export const updateBookingBill = async (req: Request, res: Response) => {
           await post(FolioLineType.TAX_SGST, "SGST on Room Tariff", tax.sgst);
         }
         totals = await recomputeFolioBalance(String(folio._id), { session });
+        // Payment status follows the bill: nothing due → PAID; something paid → PARTIAL.
+        const paidSoFar = Number(totals?.totalPaid ?? 0) + Number(totals?.totalAdvanceAdjusted ?? 0);
+        const due = Number(totals?.balance ?? NaN);
+        if (!Number.isNaN(due)) booking.paymentStatus = due <= 0.009 && paidSoFar > 0 ? "PAID" : paidSoFar > 0 ? "PARTIAL" : booking.paymentStatus;
         booking.ratePerNight = newRate;
         booking.taxAmount = tax.tax;
         booking.cgstAmount = tax.cgst;

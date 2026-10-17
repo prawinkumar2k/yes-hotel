@@ -11,6 +11,7 @@ import { createAuditLog } from "../services/audit.service";
 import mongoose from "mongoose";
 import { nights as countNights, toBusinessDate, todayBusinessDate, businessDayRange } from "../../../shared/dates";
 import { queueBookingCreatedEmail } from "../services/booking-email.service";
+import { ensureSequenceAtLeast, nextSequence } from "../services/counter.service";
 import { PUBLIC_ENQUIRY_STAGES } from "../../../shared/enquiry-stages";
 import { RoomCategory } from "../models/RoomCategory";
 import { emitToStaff } from "../realtime/socket";
@@ -79,11 +80,12 @@ const adminEnquirySchema = z.object({
 
 // ─── Generate enquiry number ───────────────────────────────────────────────
 async function generateEnquiryNumber(): Promise<string> {
-  const prefix = `ENQ-${todayBusinessDate().slice(0, 7).replace("-", "")}`; // YYYYMM at the property
-  const count = await BookingEnquiry.countDocuments({
-    enquiryNumber: { $regex: `^${prefix}` },
-  });
-  return `${prefix}-${String(count + 1).padStart(4, "0")}`;
+  const ym = todayBusinessDate().slice(0, 7).replace("-", ""); // YYYYMM at the property
+  const prefix = `ENQ-${ym}`;
+  // Atomic counter, continuing from the highest number issued (counting collided after a delete).
+  const last = await BookingEnquiry.findOne({ enquiryNumber: { $regex: `^${prefix}-\\d+$` } }).sort({ enquiryNumber: -1 }).select("enquiryNumber").lean();
+  if (last?.enquiryNumber) await ensureSequenceAtLeast(`enquiry:${ym}`, Number(last.enquiryNumber.slice(prefix.length + 1)) || 0);
+  return `${prefix}-${String(await nextSequence(`enquiry:${ym}`)).padStart(4, "0")}`;
 }
 
 // ─── PUBLIC: POST /api/booking-enquiries ───────────────────────────────────

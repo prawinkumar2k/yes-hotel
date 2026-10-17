@@ -72,7 +72,7 @@ async function walkInStayTax(perRoomTaxable: number[], checkIn: Date, checkOut: 
   const daily = [...byDate.values()].map((d) => ({ date: d.date, taxable: r2(d.taxable), cgst: r2(d.cgst), sgst: r2(d.sgst), rates: [...d.rates] }));
   return { cgst, sgst, totalTax: r2(cgst + sgst), daily };
 }
-import { receiveAdvance } from "../services/advance.service";
+import { generateAdvanceNumber, receiveAdvance } from "../services/advance.service";
 import { createAuditLog } from "../services/audit.service";
 import { generateBookingReference } from "../utils/booking-reference";
 import crypto from "crypto";
@@ -713,11 +713,8 @@ export const walkInArrivalRegistration = async (req: Request, res: Response) => 
         const resolvedMethod = (advanceMethod as AdvancePaymentMethod) || AdvancePaymentMethod.CASH;
         const channel = await PaymentChannel.findOne({ code: advanceMethod, isActive: true }).session(session);
 
-        const settings = await HotelSettings.findOne().sort({ updatedAt: -1 }).lean();
-        const advPrefix = settings?.advancePrefix ?? "ADV";
-        const dateStr = todayBusinessDate().slice(0, 7).replace("-", ""); // YYYYMM at the property
-        const advCount = await AdvancePayment.countDocuments().session(session);
-        const advanceNumber = `${advPrefix}-${dateStr}-${String(advCount + 1).padStart(4, "0")}`;
+        // The hotel's one receipt series (atomic counter) — counting documents collided with it.
+        const advanceNumber = await generateAdvanceNumber(session);
 
         let resolvedReceivedBy = advanceReceivedBy || (req as any).user?.id || (req as any).user?._id;
         if (!resolvedReceivedBy || !mongoose.isValidObjectId(resolvedReceivedBy)) {

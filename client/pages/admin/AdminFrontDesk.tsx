@@ -95,6 +95,7 @@ export default function AdminFrontDesk() {
     discountAmount: 0,
     paidAmount: 0,
     applyTax: true,
+    pricesIncludeTax: false,
   });
 
   const { data: summary, isLoading: loading } = useQuery({
@@ -415,6 +416,7 @@ export default function AdminFrontDesk() {
           discountAmount: booking.discountAmount || 0,
           paidAmount: booking.paidAmount || 0,
           applyTax: Boolean(booking.taxAmount && booking.taxAmount > 0) || true,
+          pricesIncludeTax: booking.pricesIncludeTax === true,
         });
         setIsEditingBill(false);
         setShowAddCharge(false);
@@ -1996,6 +1998,15 @@ export default function AdminFrontDesk() {
                         className="w-4 h-4 rounded text-amber-600 focus:ring-amber-500"
                       />
                       <span>Apply GST (CGST 2.5% + SGST 2.5%, SAC 996311)</span>
+                    </label>
+                    <label className="flex items-center gap-2 text-xs font-bold text-gray-700 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={editBillForm.pricesIncludeTax}
+                        onChange={(e) => setEditBillForm({ ...editBillForm, pricesIncludeTax: e.target.checked })}
+                        className="w-4 h-4 rounded text-amber-600 focus:ring-amber-500"
+                      />
+                      <span>Rate includes GST (the guest pays the rate; GST is inside it)</span>
                     </label>
 
                     <div className="flex items-center gap-2">
