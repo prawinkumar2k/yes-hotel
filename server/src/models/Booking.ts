@@ -185,6 +185,8 @@ export interface IBooking extends Document {
   checkOutDate: Date;
   /** Every stay extension, oldest first: shown on the registration card and invoice. */
   stayExtensions?: { fromCheckOut: Date; toCheckOut: Date; nights: number; amount: number; at: Date; by?: mongoose.Types.ObjectId }[];
+  /** Early check-in / late check-out charged by the hour (shown on the GRC and invoice). */
+  timeCharges?: { kind: "EARLY_CHECK_IN" | "LATE_CHECK_OUT"; hours: number; fromTime: string; toTime: string; amount: number; reason?: string; at: Date; by?: mongoose.Types.ObjectId }[];
   /** Prices include GST (the rate is what the guest pays; GST is inside it). Recorded when the booking is made. */
   pricesIncludeTax?: boolean;
   adults: number;
@@ -362,6 +364,20 @@ const BookingSchema = new Schema<IBooking>(
     checkInDate: { type: Date, required: true },
     checkOutDate: { type: Date, required: true },
     pricesIncludeTax: { type: Boolean },
+    timeCharges: {
+      type: [{
+        _id: false,
+        kind: { type: String, enum: ["EARLY_CHECK_IN", "LATE_CHECK_OUT"], required: true },
+        hours: { type: Number, required: true },
+        fromTime: { type: String },
+        toTime: { type: String },
+        amount: { type: Number, default: 0 },
+        reason: { type: String },
+        at: { type: Date, default: Date.now },
+        by: { type: Schema.Types.ObjectId, ref: "User" },
+      }],
+      default: undefined,
+    },
     stayExtensions: {
       type: [{
         _id: false,

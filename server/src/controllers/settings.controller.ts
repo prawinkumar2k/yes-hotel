@@ -48,6 +48,9 @@ const settingsSchema = z.object({
   ogImageUrl: z.string().optional(),
   extraPersonRate: money("Extra person rate").optional(),
   extraBedRate: money("Extra bed rate").optional(),
+  /** Used when a room type has no hourly price: flat fee for early check-in / late check-out. */
+  earlyCheckInFee: money("Early check-in fee").optional(),
+  lateCheckOutFee: money("Late check-out fee").optional(),
   childRateNoBed: money("Child rate (no bed)").optional(),
   childRateWithBed: money("Child rate (with bed)").optional(),
   mealPlanRates: z.object({

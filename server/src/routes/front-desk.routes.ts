@@ -46,4 +46,30 @@ router.post("/bookings/:id/move-room", requirePropertyAccess, requirePermission(
   }
 });
 
+// Early check-in / late check-out by the hour.
+// GET  /api/front-desk/bookings/:id/time-charge?kind=LATE_CHECK_OUT&hours=3[&amount=]  → price, GST, new time
+// POST /api/front-desk/bookings/:id/time-charge  { kind, hours, amount?, reason?, force? } → posts it to the bill
+router.get("/bookings/:id/time-charge", requirePropertyAccess, requirePermission("FRONT_DESK", "VIEW"), async (req, res) => {
+  const { quoteTimeCharge, TimeChargeError } = await import("../services/time-charge.service");
+  try {
+    const { booking: _b, ...q } = await quoteTimeCharge({ bookingId: String(req.params.id), kind: String(req.query.kind) as any, hours: Number(req.query.hours), amount: req.query.amount as any });
+    return res.json({ success: true, data: q });
+  } catch (e: any) {
+    if (e instanceof TimeChargeError) return res.status(e.status).json({ success: false, message: e.message });
+    return res.status(500).json({ success: false, message: e.message });
+  }
+});
+router.post("/bookings/:id/time-charge", requirePropertyAccess, requirePermission("FRONT_DESK", "EDIT"), async (req, res) => {
+  const { postTimeCharge, TimeChargeError } = await import("../services/time-charge.service");
+  try {
+    const { kind, hours, amount, reason, force } = req.body ?? {};
+    const out = await postTimeCharge({ bookingId: String(req.params.id), kind, hours: Number(hours), amount, reason, force: force === true, actorId: String((req as any).user?.id), req });
+    const what = kind === "LATE_CHECK_OUT" ? `Late check-out until ${out.toTime}` : `Early check-in from ${out.toTime}`;
+    return res.json({ success: true, message: `${what} added` + (out.total > 0 ? ` — ₹${out.total.toLocaleString("en-IN")} on the bill` : " (no charge)"), data: out });
+  } catch (e: any) {
+    if (e instanceof TimeChargeError) return res.status(e.status).json({ success: false, message: e.message });
+    return res.status(500).json({ success: false, message: e.message });
+  }
+});
+
 export default router;

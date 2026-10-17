@@ -590,6 +590,10 @@ export const getMyBookingInvoice = async (req: Request, res: Response) => {
     const extLine = ext.length
       ? `<tr><th>Stay extended</th><td class="right">original check-out ${esc(new Date(ext[0].fromCheckOut).toLocaleDateString())} → ${esc(new Date(ext[ext.length - 1].toCheckOut).toLocaleDateString())} (+${extNights} night${extNights === 1 ? "" : "s"})</td></tr>`
       : "";
+    // Early check-in / late check-out by the hour.
+    const timeLines = (((booking as any).timeCharges ?? []) as any[])
+      .map((t) => `<tr><th>${t.kind === "LATE_CHECK_OUT" ? "Late check-out" : "Early check-in"}</th><td class="right">${t.kind === "LATE_CHECK_OUT" ? `+${t.hours} hour${t.hours === 1 ? "" : "s"}, departure ${esc(t.fromTime)} → ${esc(t.toTime)}` : `${t.hours} hour${t.hours === 1 ? "" : "s"} early, arrival ${esc(t.toTime)}`}${t.amount ? ` · ₹${Number(t.amount).toLocaleString("en-IN")}` : ""}</td></tr>`)
+      .join("");
 
     const html = `<!DOCTYPE html>
 <html><head><link rel="icon" href="/favicon-32.png" type="image/png" /><meta charset="utf-8"><title>Invoice ${esc(booking.bookingReference)}</title>
@@ -618,7 +622,7 @@ export const getMyBookingInvoice = async (req: Request, res: Response) => {
     <tr><th>Guest</th><td class="right">${esc(booking.guestDetails.firstName)} ${esc(booking.guestDetails.lastName)}</td></tr>
     <tr><th>Email</th><td class="right">${esc(booking.guestDetails.email)}</td></tr>
     <tr><th>Check-in</th><td class="right">${esc(new Date(booking.checkInDate).toLocaleDateString())}</td></tr>
-    ${extLine}
+    ${extLine}${timeLines}
     <tr><th>Check-out</th><td class="right">${esc(new Date(booking.checkOutDate).toLocaleDateString())}</td></tr>
     ${payment ? `<tr><th>Payment Ref</th><td class="right">${esc(payment.razorpayPaymentId || payment.transactionId || payment._id)}</td></tr>` : ""}
   </table>
@@ -896,6 +900,20 @@ export const getCheckoutPreview = async (req: Request, res: Response) => {
     const totalAdvanceAvailable = advances.reduce((s, a) => s + a.remainingBalance, 0);
     const balance = folio ? folio.balance : 0;
 
+    // Leaving before the booked date: the unused nights are credited at checkout (early-departure.service).
+    let earlyDeparture: { bookedCheckOut: string; newCheckOut: string; unusedNights: string[] } | null = null;
+    if (booking.status === BookingStatus.CHECKED_IN) {
+      const stayIn = toBusinessDate(booking.checkInDate);
+      const bookedOut = toBusinessDate(booking.checkOutDate);
+      const today = todayBusinessDate();
+      const newOut = today > stayIn ? today : addBusinessDays(stayIn, 1);
+      if (newOut < bookedOut) {
+        const unusedNights: string[] = [];
+        for (let d = newOut; d < bookedOut; d = addBusinessDays(d, 1)) unusedNights.push(d);
+        earlyDeparture = { bookedCheckOut: bookedOut, newCheckOut: newOut, unusedNights };
+      }
+    }
+
     return res.json({
       success: true,
       data: {
@@ -904,6 +922,7 @@ export const getCheckoutPreview = async (req: Request, res: Response) => {
         lines,
         availableAdvances: advances,
         totalAdvanceAvailable,
+        earlyDeparture,
         summary: {
           totalCharges: folio?.totalCharges || 0,
           totalTax: folio?.totalTax || 0,

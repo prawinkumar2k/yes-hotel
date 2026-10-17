@@ -317,8 +317,82 @@ export default function AdminFrontDesk() {
   };
   const roomOf = (b: any) => b?.assignedRoom?.roomNumber || b?.roomNumber || b?.bookingReference || "Room";
 
-  const openExtendStay = (booking: any, groupList?: any[]) => {
+  // Extend by hours: late check-out, or early check-in (charged per hour, with GST).
+  type TimeMode = "NIGHTS" | "LATE_CHECK_OUT" | "EARLY_CHECK_IN";
+  const [extendMode, setExtendMode] = useState<TimeMode>("NIGHTS");
+  const [extendHours, setExtendHours] = useState("2");
+  const [hourQuotes, setHourQuotes] = useState<Record<string, { quote?: any; error?: string; amount: string }>>({});
+  const [hourForce, setHourForce] = useState(false);
+
+  const loadHourQuotes = async (kind: TimeMode, hoursStr: string, group: any[]) => {
+    if (kind === "NIGHTS") return;
+    const hours = Number(hoursStr);
+    const token = getStoredAuthToken();
+    const next: Record<string, { quote?: any; error?: string; amount: string }> = {};
+    for (const g of group) {
+      const id = String(g._id);
+      if (!(hours >= 1)) { next[id] = { error: "Enter the hours", amount: "" }; continue; }
+      try {
+        const res = await fetch(`/api/front-desk/bookings/${id}/time-charge?kind=${kind}&hours=${hours}`, { headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) } });
+        const json = await res.json().catch(() => ({ success: false, message: `Server error (${res.status})` }));
+        next[id] = json.success ? { quote: json.data, amount: String(json.data.amount) } : { error: json.message, amount: "" };
+      } catch (err: any) {
+        next[id] = { error: err.message, amount: "" };
+      }
+    }
+    setHourQuotes(next);
+  };
+
+  const switchExtendMode = (mode: TimeMode) => {
+    setExtendMode(mode);
+    setHourForce(false);
+    if (mode !== "NIGHTS" && extendModal.booking) loadHourQuotes(mode, extendHours, extendModal.booking.groupBookings || [extendModal.booking]);
+  };
+
+  /** What a room's hours cost with GST, from the amount typed (GST inside or on top, as the hotel prices). */
+  const hourTotal = (q: any, amountStr: string) => {
+    const amount = Number(amountStr) || 0;
+    if (!q) return 0;
+    return q.pricesIncludeTax ? amount : Math.round(amount * (1 + (q.gstRate || 0) / 100) * 100) / 100;
+  };
+
+  const handleProcessHours = async () => {
+    if (!extendModal.booking || extendMode === "NIGHTS") return;
+    setSubmittingAction(true);
+    const token = getStoredAuthToken();
+    const done: string[] = [];
+    const failed: string[] = [];
+    try {
+      const group = extendModal.booking.groupBookings || [extendModal.booking];
+      for (const g of group.filter((x: any) => extendSelected.includes(String(x._id)))) {
+        const hq = hourQuotes[String(g._id)];
+        if (!hq?.quote) { failed.push(`Room ${roomOf(g)}: ${hq?.error || "no price"}`); continue; }
+        const res = await fetch(`/api/front-desk/bookings/${g._id}/time-charge`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+          body: JSON.stringify({ kind: extendMode, hours: Number(extendHours), amount: Number(hq.amount) || 0, force: hourForce }),
+        });
+        const json = await res.json().catch(() => ({ success: false, message: `Server error (${res.status})` }));
+        if (json.success) done.push(`Room ${roomOf(g)}: ${json.message}`);
+        else failed.push(`Room ${roomOf(g)}: ${json.message}`);
+      }
+      if (done.length) toast({ title: extendMode === "LATE_CHECK_OUT" ? "Late Check-out Added" : "Early Check-in Added", description: done.join(" · ") });
+      if (failed.length) toast({ title: "Not added for some rooms", description: failed.join(" · "), variant: "destructive" });
+      if (!failed.length) setExtendModal({ open: false, booking: null });
+      queryClient.invalidateQueries();
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    } finally {
+      setSubmittingAction(false);
+    }
+  };
+
+  const openExtendStay = (booking: any, groupList?: any[], mode: TimeMode = "NIGHTS") => {
     const group = extensionGroupOf(booking, groupList);
+    setExtendMode(mode);
+    setHourForce(false);
+    setHourQuotes({});
+    if (mode !== "NIGHTS") loadHourQuotes(mode, extendHours, group);
     const selected = group.map((g: any) => String(g._id));
     // Default new date: one night after the latest check-out in the stay.
     const latest = group.map((g: any) => (g.checkOutDate ? toBusinessDate(g.checkOutDate) : "")).sort().pop() || "";
@@ -1167,6 +1241,13 @@ export default function AdminFrontDesk() {
                                       <Clock size={13} /> Extend
                                     </button>
                                     <button
+                                      onClick={() => openExtendStay(b, undefined, "EARLY_CHECK_IN")}
+                                      className="inline-flex items-center gap-1 text-xs font-semibold bg-gray-100 text-teal-700 hover:bg-teal-500/10 px-2.5 py-1.5 rounded-lg border border-teal-500/30 transition"
+                                      title="Charge early check-in by the hour"
+                                    >
+                                      <LogIn size={13} /> Early C/I
+                                    </button>
+                                    <button
                                       onClick={() => setCancelStay({ booking: b, reason: "", charge: "" })}
                                       className="inline-flex items-center gap-1 text-xs font-semibold bg-gray-100 text-red-600 hover:bg-red-500/10 px-2.5 py-1.5 rounded-lg border border-red-500/30 transition"
                                       title="Cancel this stay (checked in by mistake / guest left)"
@@ -1267,6 +1348,15 @@ export default function AdminFrontDesk() {
                                               >
                                                 Extend
                                               </button>
+                                              {gb.status === "CHECKED_IN" && (
+                                                <button
+                                                  type="button"
+                                                  onClick={() => openExtendStay(gb, [gb], "EARLY_CHECK_IN")}
+                                                  className="px-2.5 py-1 text-[11px] font-semibold bg-white hover:bg-teal-50 text-teal-700 rounded border border-teal-300 transition"
+                                                >
+                                                  Early C/I
+                                                </button>
+                                              )}
                                               {gb.status === "CHECKED_IN" && (
                                                 <button
                                                   type="button"
@@ -1455,6 +1545,14 @@ export default function AdminFrontDesk() {
                 <div className="text-[11px] text-blue-800 font-medium">
                   Stay Duration: {Math.max(1, countNights(new Date(checkOutModal.booking.checkInDate), new Date(checkOutModal.booking.checkOutDate)))} night(s) booked
                 </div>
+              </div>
+            )}
+
+            {checkOutModal.preview?.earlyDeparture && (
+              <div className="bg-amber-50 border border-amber-300 p-3 rounded-xl text-xs text-amber-900">
+                <b>Early check-out:</b> booked until {checkOutModal.preview.earlyDeparture.bookedCheckOut}, leaving {checkOutModal.preview.earlyDeparture.newCheckOut}.{" "}
+                {checkOutModal.preview.earlyDeparture.unusedNights.length} unused night{checkOutModal.preview.earlyDeparture.unusedNights.length === 1 ? "" : "s"} ({checkOutModal.preview.earlyDeparture.unusedNights.join(", ")}) and their GST
+                will be credited to the bill automatically when you send it to billing, and the nights become free to sell.
               </div>
             )}
 
@@ -1732,13 +1830,90 @@ export default function AdminFrontDesk() {
             <div className="flex items-center justify-between border-b border-gray-200 pb-4">
               <div className="flex items-center gap-2">
                 <Clock className="text-purple-400" size={20} />
-                <h3 className="font-serif text-lg font-bold">Extend Guest Stay</h3>
+                <h3 className="font-serif text-lg font-bold">{extendMode === "EARLY_CHECK_IN" ? "Early Check-in" : "Extend Guest Stay"}</h3>
               </div>
               <button onClick={() => setExtendModal({ open: false, booking: null })} className="text-gray-500 hover:text-gray-800">
                 <X size={20} />
               </button>
             </div>
 
+            <div className="grid grid-cols-3 gap-1.5">
+              {([["NIGHTS", "Extra nights"], ["LATE_CHECK_OUT", "Late check-out (hours)"], ["EARLY_CHECK_IN", "Early check-in (hours)"]] as const).map(([m, label]) => (
+                <button
+                  key={m}
+                  type="button"
+                  onClick={() => switchExtendMode(m)}
+                  className={`min-h-[40px] rounded-xl border px-2 text-[11px] font-bold leading-tight ${extendMode === m ? "bg-purple-100 border-purple-400 text-purple-900" : "bg-white border-gray-200 text-gray-600"}`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+
+            {extendMode !== "NIGHTS" && (
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">{extendMode === "LATE_CHECK_OUT" ? "Extra hours after check-out time" : "Hours before check-in time"}</label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={23}
+                    value={extendHours}
+                    onChange={(e) => { setExtendHours(e.target.value); loadHourQuotes(extendMode, e.target.value, extendModal.booking.groupBookings || [extendModal.booking]); }}
+                    className="w-full bg-gray-100 border border-gray-200 text-sm text-gray-800 rounded-xl p-2.5 focus:border-[#c9a227]"
+                  />
+                </div>
+                <ul className="text-xs divide-y divide-gray-100 border border-gray-200 rounded-xl">
+                  {(extendModal.booking.groupBookings || [extendModal.booking]).map((g: any) => {
+                    const id = String(g._id);
+                    const on = extendSelected.includes(id);
+                    const hq = hourQuotes[id];
+                    const many = (extendModal.booking.groupBookings || []).length > 1;
+                    return (
+                      <li key={id} className={`px-3 py-2 space-y-1.5 ${on ? "bg-purple-50/60" : ""}`}>
+                        <label className="flex min-h-[32px] cursor-pointer items-center justify-between gap-3">
+                          <span className="flex items-center gap-2 font-semibold">
+                            {many && <input type="checkbox" checked={on} onChange={() => setExtendSelected(on ? extendSelected.filter((x) => x !== id) : [...extendSelected, id])} className="h-4 w-4 accent-purple-600" />}
+                            Room {roomOf(g)}
+                          </span>
+                          {hq?.quote && (
+                            <span className="text-gray-600">
+                              {extendMode === "LATE_CHECK_OUT" ? `Departure ${hq.quote.fromTime} → ${hq.quote.toTime}` : `Arrival ${hq.quote.toTime} (not ${hq.quote.fromTime})`}
+                            </span>
+                          )}
+                        </label>
+                        {hq?.error && <div className="text-red-600">{hq.error}</div>}
+                        {hq?.quote && (
+                          <div className="flex items-center gap-2">
+                            <span className="text-gray-500 shrink-0">₹</span>
+                            <input
+                              type="number"
+                              min={0}
+                              value={hq.amount}
+                              onChange={(e) => setHourQuotes({ ...hourQuotes, [id]: { ...hq, amount: e.target.value } })}
+                              className="w-28 bg-white border border-gray-200 rounded-lg p-1.5 font-mono"
+                            />
+                            <span className="text-[11px] text-gray-500">
+                              {hq.quote.hourlyPrice > 0 ? `₹${hq.quote.hourlyPrice.toLocaleString("en-IN")}/hour × ${hq.quote.hours}` : hq.quote.flatFee > 0 ? "fee from Settings" : "set the amount"}
+                              {" · "}{hq.quote.pricesIncludeTax ? "GST included" : `+ GST ${hq.quote.gstRate}%`} = <b className="font-mono">₹{hourTotal(hq.quote, hq.amount).toLocaleString("en-IN")}</b>
+                            </span>
+                          </div>
+                        )}
+                      </li>
+                    );
+                  })}
+                </ul>
+                <label className="flex items-center gap-2 text-[11px] text-gray-600">
+                  <input type="checkbox" checked={hourForce} onChange={(e) => setHourForce(e.target.checked)} className="h-4 w-4 accent-purple-600" />
+                  Add even if already charged / the next guest arrives in this room today
+                </label>
+                <p className="text-[11px] text-purple-700">
+                  Posted to the bill as {extendMode === "LATE_CHECK_OUT" ? "Late check-out" : "Early check-in"} with CGST + SGST; the registration card and invoice show the new {extendMode === "LATE_CHECK_OUT" ? "departure" : "arrival"} time.
+                </p>
+              </div>
+            )}
+
+            {extendMode === "NIGHTS" && (<>
             <div>
               <label className="block text-xs font-semibold text-gray-600 mb-1">New Check-Out Date</label>
               <input
@@ -1799,18 +1974,29 @@ export default function AdminFrontDesk() {
                 </p>
               </div>
             )}
+            </>)}
 
             <div className="flex justify-end gap-3 border-t border-gray-200 pt-4">
               <button onClick={() => setExtendModal({ open: false, booking: null })} className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl text-xs font-semibold transition">
                 Cancel
               </button>
-              <button
-                disabled={submittingAction || !newCheckOutDate || Boolean(extensionConflict)}
-                onClick={handleProcessExtend}
-                className="px-5 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-xs font-bold shadow-md hover:shadow-lg disabled:opacity-50 transition"
-              >
-                {submittingAction ? "Extending..." : "Confirm Extension"}
-              </button>
+              {extendMode === "NIGHTS" ? (
+                <button
+                  disabled={submittingAction || !newCheckOutDate || Boolean(extensionConflict)}
+                  onClick={handleProcessExtend}
+                  className="px-5 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-xs font-bold shadow-md hover:shadow-lg disabled:opacity-50 transition"
+                >
+                  {submittingAction ? "Extending..." : "Confirm Extension"}
+                </button>
+              ) : (
+                <button
+                  disabled={submittingAction || !extendSelected.some((id) => hourQuotes[id]?.quote)}
+                  onClick={handleProcessHours}
+                  className="px-5 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-xs font-bold shadow-md hover:shadow-lg disabled:opacity-50 transition"
+                >
+                  {submittingAction ? "Adding..." : extendMode === "LATE_CHECK_OUT" ? "Add Late Check-out" : "Add Early Check-in"}
+                </button>
+              )}
             </div>
           </div>
         </div>

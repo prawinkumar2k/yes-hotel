@@ -45,6 +45,8 @@ export default function AdminSettings() {
       taxInclusiveRates: fd.get("taxInclusiveRates") === "on",
       extraPersonRate: Number(rawData.extraPersonRate),
       extraBedRate: Number(rawData.extraBedRate),
+      earlyCheckInFee: Number(rawData.earlyCheckInFee) || 0,
+      lateCheckOutFee: Number(rawData.lateCheckOutFee) || 0,
       childRateNoBed: Number(rawData.childRateNoBed),
       childRateWithBed: Number(rawData.childRateWithBed),
       mealPlanRates: {
@@ -197,6 +199,16 @@ export default function AdminSettings() {
               <div className="space-y-2">
                 <label className="text-sm font-bold text-black block">Adult Extra Pax (With Bed) - ₹/night</label>
                 <Input name="extraBedRate" type="number" required defaultValue={settings?.extraBedRate ?? 1200} className="border-gray-400 text-black font-medium" />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-bold text-black block">Early Check-in Fee - ₹</label>
+                <Input name="earlyCheckInFee" type="number" min={0} defaultValue={settings?.earlyCheckInFee ?? 0} className="border-gray-400 text-black font-medium" />
+                <p className="text-xs text-gray-600">Used when the room type has no hourly price (Room Types → hourly price × hours otherwise). Staff can change it at the desk.</p>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-bold text-black block">Late Check-out Fee - ₹</label>
+                <Input name="lateCheckOutFee" type="number" min={0} defaultValue={settings?.lateCheckOutFee ?? 0} className="border-gray-400 text-black font-medium" />
+                <p className="text-xs text-gray-600">Same rule as early check-in.</p>
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-bold text-black block">Child 3-12 (No Bed) - ₹/night</label>

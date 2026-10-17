@@ -44,7 +44,8 @@ export function buildInvoiceRows(debitLines: any[], defaultRoomNum: string): Inv
       else if (line.lineType === "FOOD_AND_BEVERAGE" || line.lineType === "RESTAURANT") entry.fnb += part;
       else if (line.lineType === "DISCOUNT") entry.disc += part;
       else entry.others += part;
-      if (line.lineType === "ROOM_CHARGE" || line.lineType === "EXTRA_BED") {
+      // Taxed lines: room, extra bed, early check-in / late check-out (accommodation).
+      if (["ROOM_CHARGE", "EXTRA_BED", "EARLY_CHECK_IN", "LATE_CHECK_OUT"].includes(line.lineType)) {
         const m = contrib.get(posted) ?? new Map<string, number>();
         m.set(key, (m.get(key) ?? 0) + part);
         contrib.set(posted, m);
@@ -52,7 +53,7 @@ export function buildInvoiceRows(debitLines: any[], defaultRoomNum: string): Inv
     });
   }
 
-  // GST posted on a day goes to the rows whose room / extra-bed charges were posted that day.
+  // GST posted on a day goes to the rows whose taxed charges were posted that day.
   for (const [day, t] of taxByDay) {
     const m = contrib.get(day);
     const total = m ? [...m.values()].reduce((a, b) => a + b, 0) : 0;

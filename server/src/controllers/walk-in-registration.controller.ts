@@ -1253,10 +1253,12 @@ export const printRegistrationCard = async (req: Request, res: Response) => {
 ${(() => {
   // Extended stays: original departure and each extension.
   const ext: any[] = (booking as any).stayExtensions ?? [];
-  if (!ext.length) return "";
+  const timed: any[] = (booking as any).timeCharges ?? [];
   const d = (v: any) => new Date(v).toLocaleDateString("en-IN");
+  const timedRows = timed.map((t) => `      <div class="rg-row" style="font-size:10px"><b>${t.kind === "LATE_CHECK_OUT" ? "Late check-out" : "Early check-in"}:</b> ${t.kind === "LATE_CHECK_OUT" ? `+${t.hours} hour${t.hours === 1 ? "" : "s"}, departure ${esc(t.fromTime)} &rarr; ${esc(t.toTime)}` : `${t.hours} hour${t.hours === 1 ? "" : "s"} early, arrival ${esc(t.toTime)}`}${t.amount ? ` &middot; &#8377;${Number(t.amount).toLocaleString("en-IN")}` : ""}</div>\n`).join("");
+  if (!ext.length) return timedRows;
   const total = ext.reduce((t, e) => t + (Number(e.nights) || 0), 0);
-  return `      <div class="rg-row" style="font-size:10px"><b>Stay extended:</b> original departure ${d(ext[0].fromCheckOut)} &rarr; now ${d(ext[ext.length - 1].toCheckOut)} (+${total} night${total === 1 ? "" : "s"})${ext.map((e) => ` &middot; ${d(e.fromCheckOut)} &rarr; ${d(e.toCheckOut)} (on ${d(e.at)})`).join("")}</div>\n`;
+  return timedRows + `      <div class="rg-row" style="font-size:10px"><b>Stay extended:</b> original departure ${d(ext[0].fromCheckOut)} &rarr; now ${d(ext[ext.length - 1].toCheckOut)} (+${total} night${total === 1 ? "" : "s"})${ext.map((e) => ` &middot; ${d(e.fromCheckOut)} &rarr; ${d(e.toCheckOut)} (on ${d(e.at)})`).join("")}</div>\n`;
 })()}
       <div class="rg-row grid-2" style="border:none">
         <div><div class="rg-label">Purpose of Visit</div><div class="rg-val" style="font-size:11px">${esc(guest.purposeOfVisit || "Personal / Business")}</div></div>
