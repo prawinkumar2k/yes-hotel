@@ -157,6 +157,12 @@ export default function AdminLayout({ children, title, hidePadding }: { children
     refetchInterval: 120000,
   });
   const { toast } = useToast();
+  // This tab was switched because someone signed in with another account in another tab.
+  useEffect(() => {
+    let who: string | null = null;
+    try { who = sessionStorage.getItem("yes_hotels_switched_to"); sessionStorage.removeItem("yes_hotels_switched_to"); } catch { /* private mode */ }
+    if (who) toast({ title: "Signed in with another account", description: `${who} signed in in another tab. All tabs in this browser use the same login; use a different browser (or a private window) for a second person.` });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
   useStaffRealtime((event, payload) => {
     if (event === "chat:activity") return; // keystrokes: only the Live Chat page uses them
     if (event.startsWith("chat:")) queryClient.invalidateQueries({ queryKey: ["live-chat-counts"] });

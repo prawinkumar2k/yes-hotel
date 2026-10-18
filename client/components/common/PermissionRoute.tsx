@@ -2,6 +2,7 @@ import React from "react";
 import { Navigate, useLocation, Outlet } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { usePermissions } from "@/context/PermissionContext";
+import { roleHome } from "@/lib/roleHome";
 
 interface PermissionRouteProps {
   pageKey: string;
@@ -54,10 +55,19 @@ export const PermissionRoute: React.FC<PermissionRouteProps> = ({
           <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
             You do not have permission to access this resource. If you believe this is an error, please contact your administrator.
           </p>
-          <div className="text-xs text-gray-400 font-mono bg-gray-50 dark:bg-gray-900 p-2 rounded mb-6">
+          <div className="text-xs text-gray-400 font-mono bg-gray-50 dark:bg-gray-900 p-2 rounded mb-2">
             Missing: {pageKey}.{action}
           </div>
+          <p className="text-xs text-gray-500 mb-6">
+            Signed in as <b>{user.email}</b> ({user.role}). All tabs in this browser share one login.
+          </p>
           <div className="flex flex-col gap-2">
+            <button
+              onClick={() => { window.location.href = roleHome(user.role); }}
+              className="w-full py-2 px-4 bg-gray-900 text-white font-medium rounded-lg text-sm hover:opacity-90 transition-opacity"
+            >
+              Go to my home page
+            </button>
             <button
               onClick={() => refreshPermissions()}
               className="w-full py-2 px-4 bg-primary text-primary-foreground font-medium rounded-lg text-sm hover:opacity-90 transition-opacity"

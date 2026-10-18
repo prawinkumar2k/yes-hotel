@@ -27,6 +27,7 @@ import {
   Hash
 } from "lucide-react";
 import BrandLogo from "@/components/hotel/BrandLogo";
+import { roleHome } from "@/lib/roleHome";
 
 
 const LIGHT_HERO_IMAGE = "/gallery/hotel-60.jpg";
@@ -104,25 +105,8 @@ export default function LoginPage() {
       if (data.success) {
         login(data.data);
         toast({ title: "Welcome back", description: `Signed in as ${data.data.name || data.data.email}` });
-        const role = data.data.role;
-        const ROLE_ROUTES: Record<string, string> = {
-          SUPER_ADMIN: "/admin/dashboard",
-          ADMIN: "/admin/dashboard",
-          MANAGER: "/admin/dashboard",
-          SUPERVISOR: "/admin/dashboard",
-          RECEPTIONIST: "/front-desk/dashboard",
-          CASHIER: "/cashier/dashboard",
-          HOUSEKEEPING: "/housekeeping/dashboard",
-          MAINTENANCE: "/maintenance/dashboard",
-          RESTAURANT: "/restaurant/dashboard",
-          FINANCE: "/finance/dashboard",
-          EVENTS: "/events/dashboard",
-          INVENTORY: "/inventory/dashboard",
-          PROCUREMENT: "/procurement/dashboard",
-          CUSTOMER: "/customer/dashboard",
-        };
         // Booking login opens the stay the guest just proved.
-        navigate(mode === "booking" && data.data.bookingId ? `/customer/bookings/${data.data.bookingId}` : ROLE_ROUTES[role] || "/customer/dashboard");
+        navigate(mode === "booking" && data.data.bookingId ? `/customer/bookings/${data.data.bookingId}` : roleHome(data.data.role));
       } else {
         toast({ title: "Login Failed", description: data.message, variant: "destructive" });
       }

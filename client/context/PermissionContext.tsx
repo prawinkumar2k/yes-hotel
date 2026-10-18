@@ -20,37 +20,49 @@ const PermissionContext = createContext<PermissionContextType | undefined>(undef
 export const PermissionProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user } = useAuth();
   const [effectivePermissions, setEffectivePermissions] = useState<Record<string, string[]>>({});
-  const [isLoading, setIsLoading] = useState(true);
+  const [loading, setLoading] = useState(true);
+  /** Whose permissions are loaded — never judge one person's access with another's list. */
+  const [loadedFor, setLoadedFor] = useState<string | null>(null);
   const [currentPropertyId, setCurrentPropertyId] = useState<string | null>(null);
+  const userId = user?._id ?? null;
 
-  // Initialize propertyId from user
+  // Property follows the signed-in person (reset when someone else signs in).
   useEffect(() => {
-    if (user && !currentPropertyId && (user as any).propertyId) {
-      setCurrentPropertyId((user as any).propertyId);
-    }
-  }, [user, currentPropertyId]);
+    setCurrentPropertyId(((user as any)?.propertyId as string) || null);
+  }, [userId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const refreshPermissions = useCallback(async () => {
     if (!user) {
       setEffectivePermissions({});
-      setIsLoading(false);
+      setLoadedFor(null);
+      setLoading(false);
       return;
     }
-    
-    try {
-      setIsLoading(true);
-      const url = currentPropertyId 
-        ? `/permissions/users/${user._id}/effective?propertyId=${currentPropertyId}`
-        : `/permissions/users/${user._id}/effective`;
-      const res = await api.get(url);
-      setEffectivePermissions(res.data);
-    } catch (error) {
-      console.error("Failed to load permissions", error);
-      setEffectivePermissions({});
-    } finally {
-      setIsLoading(false);
+
+    setLoading(true);
+    const url = currentPropertyId
+      ? `/permissions/users/${user._id}/effective?propertyId=${currentPropertyId}`
+      : `/permissions/users/${user._id}/effective`;
+    // A brief network or server hiccup must not lock staff out: try a few times.
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        const res = await api.get(url);
+        setEffectivePermissions(res.data);
+        setLoadedFor(user._id);
+        setLoading(false);
+        return;
+      } catch (error) {
+        console.error("Failed to load permissions", error);
+        await new Promise((r) => setTimeout(r, 600 * (attempt + 1)));
+      }
     }
-  }, [user, currentPropertyId]);
+    setEffectivePermissions({});
+    setLoadedFor(user._id);
+    setLoading(false);
+  }, [userId, currentPropertyId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Still loading while the list on hand belongs to someone else (e.g. right after signing in).
+  const isLoading = loading || (Boolean(user) && loadedFor !== user?._id);
 
   useEffect(() => {
     refreshPermissions();
