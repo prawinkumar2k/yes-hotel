@@ -72,17 +72,18 @@ export const getMyGuestProfile = async (req: Request, res: Response) => {
       return res.status(403).json({ success: false, message: "Guest profiles are available to guest accounts only" });
     }
 
+    // A guest who has not stayed yet has no guest record: that is not an error.
     const guest = await Guest.findOne({ email: account.email.toLowerCase() });
-    if (!guest) return res.status(404).json({ success: false, message: "Guest profile not found" });
-
-    // Include loyalty transactions
-    const loyaltyTransactions = await LoyaltyTransaction.find({ guest: guest._id }).sort({ date: -1 }).limit(20);
+    const loyaltyTransactions = guest ? await LoyaltyTransaction.find({ guest: guest._id }).sort({ date: -1 }).limit(20) : [];
+    // Stays and spend from the bookings and settled bills themselves (by account, email and phone).
+    const { totalStays, totalBookings, totalSpend, lastStay } = await guestStats({ _id: userId, email: account.email, phone: guest?.phone });
 
     return res.status(200).json({
       success: true,
       data: {
         guest,
-        loyaltyTransactions
+        loyaltyTransactions,
+        stats: { totalStays, totalBookings, totalSpend, lastStay },
       }
     });
   } catch (error: any) {

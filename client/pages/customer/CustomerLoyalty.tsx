@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import Navbar from "@/components/hotel/Navbar";
 import Footer from "@/components/hotel/Footer";
-import { Award, Star, Clock } from "lucide-react";
+import { Award, Clock } from "lucide-react";
 import { format } from "date-fns";
 
 export default function CustomerLoyalty() {
@@ -20,27 +20,18 @@ export default function CustomerLoyalty() {
     enabled: !!user,
   });
 
-  const guest = data?.data?.guest;
+  const stats = data?.data?.stats;
   const transactions = data?.data?.loyaltyTransactions || [];
-
-  const getTierColor = (tier: string) => {
-    switch (tier) {
-      case "PLATINUM": return "text-gray-900 bg-gray-200 border-gray-400";
-      case "GOLD": return "text-yellow-800 bg-yellow-100 border-yellow-400";
-      case "SILVER": return "text-slate-700 bg-slate-200 border-slate-400";
-      default: return "text-hotel-black/70 bg-hotel-black/5 border-hotel-black/20";
-    }
-  };
 
   return (
     <div className="min-h-screen bg-hotel-ivory pt-24">
       <Navbar transparent={false} />
-      
+
       <div className="max-w-4xl mx-auto px-6 py-12">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-8 gap-4">
           <div>
-            <h1 className="font-serif text-3xl text-hotel-black mb-2">My Loyalty Rewards</h1>
-            <p className="text-hotel-black/60">Manage your points, tier, and exclusive benefits.</p>
+            <h1 className="font-serif text-3xl text-hotel-black mb-2">My Stays with Us</h1>
+            <p className="text-hotel-black/60">Your stays and spend at YES HOTELS.</p>
           </div>
           <Award className="text-hotel-gold hidden sm:block" size={48} />
         </div>
@@ -48,43 +39,30 @@ export default function CustomerLoyalty() {
         {isLoading ? (
           <div className="animate-pulse space-y-6">
             <div className="h-40 bg-hotel-black/5" />
-            <div className="h-64 bg-hotel-black/5" />
-          </div>
-        ) : !guest ? (
-          <div className="bg-hotel-white border border-hotel-black/10 p-12 text-center">
-            <Star size={40} className="mx-auto text-hotel-black/20 mb-4" />
-            <p className="text-hotel-black/50">Your loyalty profile is not available yet.</p>
           </div>
         ) : (
           <div className="space-y-8">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="bg-hotel-black text-hotel-white p-8 border border-hotel-gold/30">
-                <p className="text-xs uppercase tracking-widest text-hotel-gold mb-2">Current Tier</p>
-                <h2 className="font-serif text-4xl mb-4">{guest.loyaltyTier}</h2>
-                <span className={`inline-block text-xs uppercase tracking-widest px-3 py-1 border ${getTierColor(guest.loyaltyTier)}`}>
-                  Active Member
-                </span>
+              <div className="bg-hotel-white border border-hotel-black/10 p-8 flex flex-col justify-center">
+                <p className="text-xs uppercase tracking-widest text-hotel-black/50 mb-2">Completed Stays</p>
+                <h2 className="font-serif text-4xl text-hotel-black">{stats?.totalStays ?? 0}</h2>
+                <p className="text-xs text-hotel-black/40 mt-2">{stats?.totalBookings ?? 0} booking{(stats?.totalBookings ?? 0) === 1 ? "" : "s"} in total</p>
               </div>
               <div className="bg-hotel-white border border-hotel-black/10 p-8 flex flex-col justify-center">
-                <p className="text-xs uppercase tracking-widest text-hotel-black/50 mb-2">Available Points</p>
-                <h2 className="font-serif text-4xl text-hotel-gold">{guest.loyaltyPoints?.toLocaleString()}</h2>
-                <p className="text-xs text-hotel-black/40 mt-2">Redeemable for stays and dining.</p>
+                <p className="text-xs uppercase tracking-widest text-hotel-black/50 mb-2">Total Spent</p>
+                <h2 className="font-serif text-4xl text-hotel-gold">₹{(stats?.totalSpend ?? 0).toLocaleString("en-IN")}</h2>
+                <p className="text-xs text-hotel-black/40 mt-2">From your settled bills</p>
               </div>
               <div className="bg-hotel-white border border-hotel-black/10 p-8 flex flex-col justify-center">
-                <p className="text-xs uppercase tracking-widest text-hotel-black/50 mb-2">Total Stays</p>
-                <h2 className="font-serif text-4xl text-hotel-black">{guest.totalBookings || 0}</h2>
-                <p className="text-xs text-hotel-black/40 mt-2">Total spend: ₹{(guest.totalSpend || 0).toLocaleString()}</p>
+                <p className="text-xs uppercase tracking-widest text-hotel-black/50 mb-2">Last Stay</p>
+                <h2 className="font-serif text-2xl text-hotel-black">{stats?.lastStay ? format(new Date(stats.lastStay), "dd MMM yyyy") : "—"}</h2>
+                <Link to="/customer/bookings" className="text-xs text-hotel-gold mt-2 hover:underline">View my bookings →</Link>
               </div>
             </div>
 
-            <div className="bg-hotel-white border border-hotel-black/10 p-8">
-              <h3 className="font-serif text-2xl text-hotel-black mb-6">Recent Activity</h3>
-              {transactions.length === 0 ? (
-                <div className="text-center py-8">
-                  <Clock size={32} className="mx-auto text-hotel-black/20 mb-4" />
-                  <p className="text-hotel-black/50">No loyalty points activity recorded yet.</p>
-                </div>
-              ) : (
+            {transactions.length > 0 ? (
+              <div className="bg-hotel-white border border-hotel-black/10 p-8">
+                <h3 className="font-serif text-2xl text-hotel-black mb-6">Points Activity</h3>
                 <div className="divide-y divide-hotel-black/10">
                   {transactions.map((tx: any) => (
                     <div key={tx._id} className="py-4 flex items-center justify-between">
@@ -98,8 +76,13 @@ export default function CustomerLoyalty() {
                     </div>
                   ))}
                 </div>
-              )}
-            </div>
+              </div>
+            ) : (
+              <div className="bg-hotel-white border border-hotel-black/10 p-8 text-center">
+                <Clock size={28} className="mx-auto text-hotel-black/20 mb-3" />
+                <p className="text-hotel-black/60">We don't run a points programme yet. For returning-guest offers, ask the front desk or check Offers on our website.</p>
+              </div>
+            )}
           </div>
         )}
       </div>

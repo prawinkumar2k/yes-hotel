@@ -29,7 +29,15 @@ export const getContentKeys = async (req: Request, res: Response) => {
 export const getContentByKey = async (req: Request, res: Response) => {
   try {
     const content = await WebsiteContent.findOne({ key: req.params.key });
-    if (!content) return res.status(404).json({ success: false, message: "Content not found" });
+    if (!content) {
+      // Terms / privacy / cancellation: the hotel's default text until it writes its own.
+      const { defaultLegalContent } = await import("../services/legal-defaults");
+      const { HotelSettings } = await import("../models/HotelSettings");
+      const settings = await HotelSettings.findOne().sort({ updatedAt: -1 }).lean();
+      const fallback = defaultLegalContent(String(req.params.key), settings);
+      if (fallback) return res.status(200).json({ success: true, data: fallback });
+      return res.status(404).json({ success: false, message: "Content not found" });
+    }
     return res.status(200).json({ success: true, data: content });
   } catch (error: any) {
     return res.status(500).json({ success: false, message: error.message });

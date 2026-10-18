@@ -32,9 +32,11 @@ export default function LegalPage({ contentKey, title }: { contentKey: string, t
               <div className="mt-6 whitespace-pre-wrap font-sans text-sm md:text-base text-hotel-black/80 leading-relaxed">
                 {data.description}
               </div>
-              <div className="mt-12 text-sm text-hotel-black/60 border-t pt-4">
-                Last updated: {new Date(data.updatedAt).toLocaleDateString()}
-              </div>
+              {data.updatedAt && (
+                <div className="mt-12 text-sm text-hotel-black/60 border-t pt-4">
+                  Last updated: {new Date(data.updatedAt).toLocaleDateString("en-IN")}
+                </div>
+              )}
             </div>
           ) : (
             <div className="bg-white p-6 md:p-12 text-center shadow-sm rounded-lg">

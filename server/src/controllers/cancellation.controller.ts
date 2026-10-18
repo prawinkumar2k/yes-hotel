@@ -136,8 +136,11 @@ export const cancelBooking = async (req: Request, res: Response) => {
       
       // Calculate hours until check-in. If booking was for today, hoursUntilCheckIn might be negative.
       const hoursUntilCheckIn = (checkIn.getTime() - now.getTime()) / (1000 * 60 * 60);
+      // Free-cancellation window from Admin → Settings (the published policy uses the same number).
+      const { HotelSettings } = await import("../models/HotelSettings");
+      const freeHours = Number((await HotelSettings.findOne().sort({ updatedAt: -1 }).select("cancellationFreeHours").lean())?.cancellationFreeHours) || 48;
 
-      if (hoursUntilCheckIn >= 48) {
+      if (hoursUntilCheckIn >= freeHours) {
         penaltyPercentage = 0; // Free cancellation
       } else if (hoursUntilCheckIn >= 24) {
         penaltyPercentage = 50; // 50% penalty

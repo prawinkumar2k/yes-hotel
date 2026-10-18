@@ -26,6 +26,20 @@ export function errorHandler(err: any, req: Request, res: Response, next: NextFu
     return next(err);
   }
 
+  // Client mistakes are answered as such, not as a server failure.
+  if (err?.type === "entity.parse.failed") {
+    return res.status(400).json({ success: false, message: "The request body is not valid JSON", requestId: req.id });
+  }
+  if (err?.type === "entity.too.large") {
+    return res.status(413).json({ success: false, message: "The request is too large", requestId: req.id });
+  }
+  if (err?.name === "CastError" || err?.name === "BSONError") {
+    return res.status(400).json({ success: false, message: "Invalid id or value in the request", requestId: req.id });
+  }
+  if (Number(err?.status) >= 400 && Number(err?.status) < 500) {
+    return res.status(Number(err.status)).json({ success: false, message: err.expose ? err.message : "Bad request", requestId: req.id });
+  }
+
   res.status(500).json({
     success: false,
     message: "Internal server error",

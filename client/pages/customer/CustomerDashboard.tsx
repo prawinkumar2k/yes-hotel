@@ -88,7 +88,7 @@ export default function CustomerDashboard() {
             { label: "My Profile", to: "/customer/profile", desc: "Update your personal information" },
             { label: "Payment History", to: "/customer/payments", desc: "Track all your payments and invoices" },
             { label: "My Reviews", to: "/customer/reviews", desc: "Leave reviews for your completed stays" },
-            { label: "Loyalty & Rewards", to: "/customer/loyalty", desc: "View your points and tier status" },
+            { label: "My Stays with Us", to: "/customer/loyalty", desc: "Your stays and spend" },
           ].map(({ label, to, desc }) => (
             <Link key={to} to={to} className="bg-hotel-white border border-hotel-black/10 p-6 flex items-center justify-between hover:border-hotel-gold transition-colors group">
               <div>
