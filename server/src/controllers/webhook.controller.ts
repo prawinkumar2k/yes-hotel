@@ -115,13 +115,23 @@ export const handleRazorpayWebhook = async (req: Request, res: Response) => {
     switch (eventType) {
       case "payment.captured": {
         const paymentEntity = event.payload.payment.entity;
-        const bookingId = paymentEntity.notes?.bookingId;
+        // Which booking this money is for comes from the ORDER (its notes are written by our
+        // server), read from Razorpay — never from the payment's notes, which checkout code in a
+        // browser can set. Gateway unreachable → throw → 500 → Razorpay redelivers later.
+        const { fetchGatewayOrder } = await import("../services/razorpay-gateway.service");
+        const order = paymentEntity.order_id ? await fetchGatewayOrder(String(paymentEntity.order_id)) : null;
+        const bookingId = order?.notes?.bookingId;
         if (!bookingId) {
           logger.error("webhook.payment_captured_missing_booking_id", { requestId: req.id, razorpayPaymentId: paymentEntity.id });
           break;
         }
+        if (paymentEntity.currency !== "INR" || order?.currency !== "INR") {
+          logger.error("webhook.payment_currency_mismatch", { requestId: req.id, razorpayPaymentId: paymentEntity.id });
+          await createAuditLog({ actorType: AuditActorType.SYSTEM, action: "payment.currency_mismatch", resourceType: "Booking", resourceId: String(bookingId), metadata: { razorpayPaymentId: paymentEntity.id } });
+          break;
+        }
         // A guest paying the balance of an existing stay: record it, never re-confirm the booking.
-        if (paymentEntity.notes?.purpose === "BALANCE") {
+        if (order?.notes?.purpose === "BALANCE") {
           const { Booking } = await import("../models/Booking");
           const { recordBalancePayment } = await import("../services/customer.service");
           const booking = await Booking.findById(bookingId);

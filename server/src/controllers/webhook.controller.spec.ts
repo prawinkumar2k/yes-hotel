@@ -7,6 +7,7 @@ import { Payment, PaymentMethod, PaymentTxStatus } from "../models/Payment";
 import { Refund, RefundStatus } from "../models/Refund";
 import { WebhookEvent } from "../models/WebhookEvent";
 import { AuditLog } from "../models/AuditLog";
+import { setRazorpayGatewayForTests } from "../services/razorpay-gateway.service";
 
 const TEST_DB_URI = process.env.MONGODB_URI || "mongodb://127.0.0.1:27017/yes_hotels_test";
 const WEBHOOK_SECRET = "test_webhook_secret_value";
@@ -61,12 +62,17 @@ async function createTestBooking(overrides: Partial<any> = {}) {
 
 beforeAll(async () => {
   process.env.RAZORPAY_WEBHOOK_SECRET = WEBHOOK_SECRET;
+  // Razorpay stand-in: the order "order_test_<bookingId>[_n]" was created by our server for that booking.
+  setRazorpayGatewayForTests({
+    fetchOrder: async (id) => ({ id, amount: 0, currency: "INR", notes: { bookingId: (id.match(/[a-f0-9]{24}/) || [""])[0] } }),
+  });
   if (mongoose.connection.readyState === 0) {
     await mongoose.connect(TEST_DB_URI);
   }
 });
 
 afterAll(async () => {
+  setRazorpayGatewayForTests(null);
   await mongoose.connection.close();
 });
 
@@ -104,6 +110,7 @@ describe("handleRazorpayWebhook", () => {
         payment: {
           entity: {
             id: `pay_test_${booking._id}`,
+            currency: "INR",
             order_id: `order_test_${booking._id}`,
             amount: Math.round(booking.totalAmount * 100),
             notes: { bookingId: booking._id.toString() },
@@ -161,6 +168,7 @@ describe("handleRazorpayWebhook", () => {
         payment: {
           entity: {
             id: razorpayPaymentId,
+            currency: "INR",
             order_id: `order_test_${booking._id}`,
             amount: Math.round(booking.totalAmount * 100),
             notes: { bookingId: booking._id.toString() },
@@ -184,6 +192,7 @@ describe("handleRazorpayWebhook", () => {
         payment: {
           entity: {
             id: `pay_test_mismatch_${booking._id}`,
+            currency: "INR",
             order_id: `order_test_${booking._id}`,
             amount: 100000, // far more than the booking's 2000 * 100 paise
             notes: { bookingId: booking._id.toString() },
@@ -209,6 +218,7 @@ describe("handleRazorpayWebhook", () => {
         payment: {
           entity: {
             id: `pay_test_first_${booking._id}`,
+            currency: "INR",
             order_id: `order_test_a_${booking._id}`,
             amount: Math.round(booking.totalAmount * 100),
             notes: { bookingId: booking._id.toString() },
@@ -228,6 +238,7 @@ describe("handleRazorpayWebhook", () => {
         payment: {
           entity: {
             id: `pay_test_second_${booking._id}`,
+            currency: "INR",
             order_id: `order_test_b_${booking._id}`,
             amount: Math.round(booking.totalAmount * 100),
             notes: { bookingId: booking._id.toString() },

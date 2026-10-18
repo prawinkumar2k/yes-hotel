@@ -94,38 +94,54 @@ export async function finalizePaymentSuccess(
     }
   }
 
-  const booking = await Booking.findByIdAndUpdate(
-    bookingId,
-    { paymentStatus: PaymentStatus.PAID, status: BookingStatus.CONFIRMED },
-    { returnDocument: "after" }
-  );
-  if (!booking) return { alreadyProcessed: false, bookingNotFound: true, booking: null };
+  const { resolvePaymentChannel } = await import("../utils/payment-channel.resolver");
+  const razorpayChannelId = await resolvePaymentChannel("RAZORPAY");
+  let propertyId: any = bookingBefore.propertyId || (bookingBefore as any).property;
+  if (!propertyId) {
+    const { Property } = await import("../models/Property");
+    propertyId = (await Property.findOne({ isActive: { $ne: false } }).select("_id").lean())?._id;
+  }
 
+  // Confirming the booking and recording the payment happen together or not at all: a booking is
+  // never left PAID without its payment record. The booking update is guarded by its previous
+  // status, so a client confirmation racing the gateway webhook processes the payment once.
+  let booking: any = null;
+  const session = await mongoose.startSession();
   try {
-    const { resolvePaymentChannel } = await import("../utils/payment-channel.resolver");
-    const razorpayChannelId = await resolvePaymentChannel("RAZORPAY");
-
-    await Payment.create({
-      propertyId: bookingBefore.propertyId || (bookingBefore as any).property || new mongoose.Types.ObjectId(),
-      booking: booking._id,
-      amount: booking.totalAmount,
-      currency: "INR",
-      method: PaymentMethod.RAZORPAY,
-      paymentChannel: razorpayChannelId,
-      razorpayOrderId,
-      razorpayPaymentId,
-      razorpaySignature,
-      status: PaymentTxStatus.COMPLETED,
+    await session.withTransaction(async () => {
+      booking = await Booking.findOneAndUpdate(
+        { _id: bookingId, status: bookingBefore.status },
+        { $set: { paymentStatus: PaymentStatus.PAID, status: BookingStatus.CONFIRMED, paidAmount: bookingBefore.totalAmount } },
+        { returnDocument: "after", session },
+      );
+      if (!booking) throw Object.assign(new Error("booking changed concurrently"), { concurrentChange: true });
+      await Payment.create(
+        [{
+          propertyId,
+          booking: booking._id,
+          amount: booking.totalAmount,
+          currency: "INR",
+          method: PaymentMethod.RAZORPAY,
+          paymentChannel: razorpayChannelId,
+          razorpayOrderId,
+          razorpayPaymentId,
+          razorpaySignature,
+          status: PaymentTxStatus.COMPLETED,
+        }],
+        { session },
+      );
     });
   } catch (error: any) {
-    // Unique-index collision: another concurrent call (the other of
-    // CLIENT_VERIFY/WEBHOOK, or a duplicate webhook delivery) already
-    // recorded this exact payment. Treat as already-processed, not an error.
-    if (error?.code === 11000) {
-      const existing = await Booking.findById(bookingId);
-      return { alreadyProcessed: true, bookingNotFound: false, booking: existing };
+    // Only "this exact gateway payment is already recorded" means already processed (the other
+    // of CLIENT_VERIFY / WEBHOOK, or a repeated delivery). Any other failure is a real error.
+    const samePayment = error?.code === 11000 && (error?.keyPattern?.razorpayPaymentId || /razorpayPaymentId/.test(String(error?.message)));
+    if (samePayment || error?.concurrentChange) {
+      const recorded = await Payment.findOne({ razorpayPaymentId }).select("_id").lean();
+      if (recorded) return { alreadyProcessed: true, bookingNotFound: false, booking: await Booking.findById(bookingId) };
     }
     throw error;
+  } finally {
+    await session.endSession();
   }
 
   await createAuditLog({
@@ -144,9 +160,6 @@ export async function finalizePaymentSuccess(
       bookingStatusTransition: `${bookingBefore.status} -> ${BookingStatus.CONFIRMED}`,
     },
   });
-
-  booking.paidAmount = booking.totalAmount;
-  await booking.save();
 
   if (booking.appliedCoupon) {
     await redeemCouponForBooking(booking._id.toString());

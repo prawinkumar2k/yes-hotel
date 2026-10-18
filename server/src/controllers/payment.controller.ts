@@ -144,14 +144,44 @@ export const verifyPayment = async (req: Request, res: Response) => {
     const secret = process.env.RAZORPAY_KEY_SECRET;
     if (!secret) return res.status(500).json({ success: false, message: "Payment gateway not configured" });
 
-    // Verify HMAC-SHA256 signature
+    // Verify HMAC-SHA256 signature (constant-time comparison)
     const expectedSignature = crypto
       .createHmac("sha256", secret)
       .update(`${razorpay_order_id}|${razorpay_payment_id}`)
       .digest("hex");
-
-    if (expectedSignature !== razorpay_signature) {
+    const given = String(razorpay_signature);
+    if (expectedSignature.length !== given.length || !crypto.timingSafeEqual(Buffer.from(expectedSignature), Buffer.from(given))) {
       return res.status(400).json({ success: false, message: "Payment signature verification failed" });
+    }
+
+    // The signature proves only that this payment id belongs to this order id. Which booking the
+    // order is for, its amount and currency, and whether the money was actually taken come from
+    // Razorpay itself — never from the request — so a payment for one booking can never confirm
+    // another, a cheaper order a dearer booking, or a failed payment anything.
+    const { fetchGatewayOrder, fetchGatewayPayment, SUCCESSFUL_PAYMENT } = await import("../services/razorpay-gateway.service");
+    let order: any;
+    let payment: any;
+    try {
+      [order, payment] = await Promise.all([fetchGatewayOrder(String(razorpay_order_id)), fetchGatewayPayment(String(razorpay_payment_id))]);
+    } catch {
+      return res.status(502).json({ success: false, message: "Could not confirm the payment with the gateway yet. Your booking will update automatically once it is confirmed." });
+    }
+    const notThisBooking = () => res.status(400).json({ success: false, message: "This payment is not for this booking" });
+    if (!order || !payment) return notThisBooking();
+    if (String(order.notes?.bookingId) !== String(bookingId) || order.notes?.purpose === "BALANCE") return notThisBooking();
+    if (String(payment.order_id) !== String(order.id)) return notThisBooking();
+    if (order.currency !== "INR" || payment.currency !== "INR") {
+      return res.status(400).json({ success: false, message: "Payment currency does not match the booking" });
+    }
+    if (payment.status === "failed" || payment.status === "refunded") {
+      return res.status(400).json({ success: false, message: "This payment did not go through. Nothing was charged — please try again." });
+    }
+    if (!SUCCESSFUL_PAYMENT.has(String(payment.status))) {
+      // Still being processed by the bank / UPI app: confirm later (webhook), never now.
+      return res.status(202).json({ success: true, pending: true, message: "Your payment is being processed. The booking will be confirmed as soon as the bank confirms it." });
+    }
+    if (Number(payment.amount) !== Number(order.amount)) {
+      return res.status(400).json({ success: false, message: "The amount paid does not match this booking" });
     }
 
     const result = await finalizePaymentSuccess({
@@ -159,12 +189,17 @@ export const verifyPayment = async (req: Request, res: Response) => {
       razorpayOrderId: razorpay_order_id,
       razorpayPaymentId: razorpay_payment_id,
       razorpaySignature: razorpay_signature,
+      gatewayAmountPaise: Number(payment.amount), // compared with the booking's own total
       source: "CLIENT_VERIFY",
       req,
     });
 
     if (result.bookingNotFound) {
       return res.status(404).json({ success: false, message: "Booking not found" });
+    }
+    // A payment already recorded for a different booking can never be reused for this one.
+    if (result.alreadyProcessed && result.booking && String(result.booking._id) !== String(bookingId)) {
+      return notThisBooking();
     }
 
     return res.status(200).json({
@@ -183,7 +218,8 @@ export const verifyPayment = async (req: Request, res: Response) => {
       });
     }
     logger.error("payment.verify_failed", { requestId: req.id, message: error.message, bookingId: req.body?.bookingId });
-    return res.status(500).json({ success: false, message: error.message });
+    // Internal details stay in the server log. Nothing was confirmed; the gateway webhook retries.
+    return res.status(500).json({ success: false, message: "We couldn't record your payment just now. Nothing was charged twice — your booking will update once the payment is confirmed. If it doesn't within a few minutes, contact the hotel.", requestId: req.id });
   }
 };
 
