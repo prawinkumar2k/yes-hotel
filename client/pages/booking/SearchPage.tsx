@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { track } from "@/lib/analytics";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -58,6 +59,10 @@ export default function SearchPage() {
     },
     enabled: !!isValidRange,
   });
+
+  useEffect(() => {
+    if (availableRooms) track("search_availability", { check_in: checkIn, check_out: checkOut, adults, children, rooms_found: Array.isArray(availableRooms) ? availableRooms.length : undefined });
+  }, [availableRooms]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();

@@ -137,13 +137,17 @@ export function createServer() {
   // serves the prebuilt dist/spa assets with no Vite runtime involved), so
   // production does not need 'unsafe-inline'/'unsafe-eval' for scripts.
   const RAZORPAY_ORIGINS = ["https://checkout.razorpay.com", "https://api.razorpay.com", "https://lumberjack.razorpay.com"];
+  // Google Analytics (GA4) is allowed only when GA_MEASUREMENT_ID is set on the server.
+  const GA_ON = /^G-[A-Z0-9]{6,}$/.test(String(process.env.GA_MEASUREMENT_ID ?? "").trim());
+  const GA_SCRIPT = GA_ON ? ["https://www.googletagmanager.com"] : [];
+  const GA_CONNECT = GA_ON ? ["https://www.google-analytics.com", "https://*.google-analytics.com", "https://*.analytics.google.com", "https://www.googletagmanager.com"] : [];
   app.use(helmet({
     contentSecurityPolicy: {
       directives: {
         defaultSrc: ["'self'"],
         scriptSrc: isProduction
-          ? ["'self'", ...RAZORPAY_ORIGINS]
-          : ["'self'", "'unsafe-inline'", "'unsafe-eval'", ...RAZORPAY_ORIGINS],
+          ? ["'self'", ...RAZORPAY_ORIGINS, ...GA_SCRIPT]
+          : ["'self'", "'unsafe-inline'", "'unsafe-eval'", ...RAZORPAY_ORIGINS, ...GA_SCRIPT],
         // Inline `style="..."` attributes are load-bearing for this app —
         // Framer Motion and Radix UI both set element styles directly
         // (animation transforms, positioning), not via injected stylesheets.
@@ -151,7 +155,7 @@ export function createServer() {
         // *scripts*, and is the standard accepted tradeoff for this stack.
         styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
         fontSrc: ["'self'", "data:", "https://fonts.gstatic.com"],
-        imgSrc: ["'self'", "data:", "blob:", "https://res.cloudinary.com", "https://images.unsplash.com"],
+        imgSrc: ["'self'", "data:", "blob:", "https://res.cloudinary.com", "https://images.unsplash.com", ...GA_CONNECT],
         // The homepage hero background video (Hero.tsx) is hosted on
         // Pixabay's CDN. Without an explicit media-src, CSP falls back to
         // default-src 'self' and silently blocks the video (no console
@@ -159,8 +163,8 @@ export function createServer() {
         mediaSrc: ["'self'", "https://cdn.pixabay.com"],
         workerSrc: ["'self'", "blob:"],
         connectSrc: isProduction
-          ? ["'self'", ...RAZORPAY_ORIGINS]
-          : ["'self'", ...RAZORPAY_ORIGINS, "ws:", "wss:"],
+          ? ["'self'", ...RAZORPAY_ORIGINS, ...GA_CONNECT]
+          : ["'self'", ...RAZORPAY_ORIGINS, ...GA_CONNECT, "ws:", "wss:"],
         frameSrc: ["'self'", "https://api.razorpay.com", "https://checkout.razorpay.com"],
         objectSrc: ["'none'"],
         baseUri: ["'self'"],

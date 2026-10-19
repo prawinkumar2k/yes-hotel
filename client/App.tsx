@@ -1,4 +1,4 @@
-import { lazy as reactLazy, Suspense, type ComponentType } from "react";
+import { lazy as reactLazy, Suspense, useEffect, type ComponentType } from "react";
 
 /**
  * Lazy page loader that survives a stale bundle: when a page chunk can't be fetched
@@ -26,7 +26,8 @@ function lazy<T extends ComponentType<any>>(load: () => Promise<{ default: T }>)
       }),
   );
 }
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
+import { trackPageView } from "@/lib/analytics";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "./lib/queryClient";
 import { Toaster } from "@/components/ui/toaster";
@@ -53,6 +54,16 @@ const ForgotPasswordPage = lazy(() => import("./pages/auth/ForgotPasswordPage"))
 const ResetPasswordPage = lazy(() => import("./pages/auth/ResetPasswordPage"));
 
 import { OnlineBookingGate } from "@/components/hotel/OnlineBookingHold";
+/** Sends a page view on every route change (public pages only; staff screens are not tracked). */
+function RouteTracker() {
+  const { pathname } = useLocation();
+  useEffect(() => {
+    if (/^\/(admin|staff|customer|login|register|forgot-password|reset-password)/.test(pathname)) return;
+    trackPageView(pathname);
+  }, [pathname]);
+  return null;
+}
+
 const SearchPage = lazy(() => import("./pages/booking/SearchPage"));
 const GuestDetailsPage = lazy(() => import("./pages/booking/GuestDetailsPage"));
 const PaymentPage = lazy(() => import("./pages/booking/PaymentPage"));
@@ -187,6 +198,7 @@ function App() {
             <RoomHoverPreview />
             <PageTransitionOverlay />
             <Chatbot />
+            <RouteTracker />
             <Suspense fallback={<PageLoader />}>
               <Routes>
                 {/* PUBLIC ROUTES */}
@@ -198,7 +210,7 @@ function App() {
                 <Route path="/gallery" element={<GalleryPage />} />
                 <Route path="/faq" element={<FAQPage />} />
                 <Route path="/contact" element={<ContactPage />} />
-                <Route path="/search" element={<OnlineBookingGate><SearchPage /></OnlineBookingGate>} />
+                <Route path="/search" element={<SearchPage />} />
                 <Route path="/booking" element={<Navigate to="/search" replace />} />
                 <Route path="/booking/guest-details" element={<OnlineBookingGate><GuestDetailsPage /></OnlineBookingGate>} />
                 <Route path="/booking/payment" element={<OnlineBookingGate><PaymentPage /></OnlineBookingGate>} />

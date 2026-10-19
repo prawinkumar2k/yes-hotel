@@ -24,6 +24,26 @@ async function liveHotelFacts() {
   return facts;
 }
 
+const BRAND = "YES HOTELS";
+/** "<page title> | YES HOTELS" without repeating the brand when the title already carries it. */
+const withBrand = (t: string) => (new RegExp(BRAND, "i").test(t) ? t : `${t} | ${BRAND}`);
+
+/** Plain HTML of a page's main content, served inside #root so crawlers that do not run scripts still read it (React replaces it on load). */
+function staticBody(parts: { h1: string; sub?: string; paragraphs?: string[]; bullets?: string[]; faqs?: { question: string; answer: string }[]; contact: string }) {
+  const e = escapeHtml;
+  return [
+    `<main data-prerender="1" style="max-width:860px;margin:0 auto;padding:96px 16px 32px;font-family:Inter,system-ui,sans-serif;line-height:1.6">`,
+    `<h1>${e(parts.h1)}</h1>`,
+    parts.sub ? `<h2>${e(parts.sub)}</h2>` : "",
+    ...(parts.paragraphs ?? []).filter(Boolean).map((p) => `<p>${e(p)}</p>`),
+    parts.bullets?.length ? `<ul>${parts.bullets.map((b) => `<li>${e(b)}</li>`).join("")}</ul>` : "",
+    parts.faqs?.length ? `<h2>Frequently asked questions</h2>${parts.faqs.map((f) => `<h3>${e(f.question)}</h3><p>${e(f.answer)}</p>`).join("")}` : "",
+    `<p>${e(parts.contact)}</p>`,
+    `<p><a href="/rooms">View rooms</a> · <a href="/contact">Contact</a></p>`,
+    `</main>`,
+  ].join("");
+}
+
 /**
  * Injects dynamic, database-backed Meta Tags, Canonical URL, Open Graph,
  * Twitter Cards, and Rich Schema.org JSON-LD into the index.html template.
@@ -44,6 +64,8 @@ export async function injectSeoTagsIntoHtml(
   let canonicalUrl = `${baseUrl}${pathname === "/" ? "" : pathname}`;
   let ogImage = `${baseUrl}/brand/icon-512.png`;
   let structuredDataGraphs: any[] = [];
+  let prerender = "";
+  const contactLine = `${HOTEL.name}, ${hotelAddressOneLine()}. Phone ${facts.phone}.`;
 
   // Core Hotel Schema (always present)
   const hotelSchema: any = {
@@ -108,13 +130,13 @@ export async function injectSeoTagsIntoHtml(
     try {
       const page = await SeoLandingPage.findOne({ slug, isPublished: true }).lean();
       if (page) {
-        title = `${page.metaTitle} | YES HOTELS`;
+        title = withBrand(page.metaTitle);
         description = page.metaDescription;
         canonicalUrl = `${baseUrl}/hotels-near/${page.slug}`;
 
         // Enhanced Hotel Schema with local target locality reference
         hotelSchema.description = page.metaDescription;
-        hotelSchema.name = `YES HOTELS near ${page.targetLocality}`;
+        // The hotel's name stays "YES HOTELS" on every page (one entity, not one per locality).
 
         // BreadcrumbList Schema
         const breadcrumbs = {
@@ -143,6 +165,15 @@ export async function injectSeoTagsIntoHtml(
 
         structuredDataGraphs.push(breadcrumbs);
 
+        prerender = staticBody({
+          h1: page.h1,
+          sub: page.h2Subheading,
+          paragraphs: String(page.overviewContent ?? "").split(/\n{2,}/),
+          bullets: ((page as any).stayHighlights ?? []).map((h: any) => (typeof h === "string" ? h : h?.title ?? h?.text ?? "")).filter(Boolean),
+          faqs: page.faqs as any,
+          contact: contactLine,
+        });
+
         // FAQPage Schema if FAQs exist
         if (page.faqs && page.faqs.length > 0) {
           const faqSchema = {
@@ -162,6 +193,33 @@ export async function injectSeoTagsIntoHtml(
     } catch {
       // Fallback gracefully on query error
     }
+  }
+
+  // /rooms/:slug: title, description and a crawlable summary from the room type itself
+  const roomMatch = pathname.match(/^\/rooms\/([a-z0-9-]+)\/?$/i);
+  if (roomMatch) {
+    try {
+      const cat: any = await RoomCategory.findOne({ slug: roomMatch[1].toLowerCase(), isActive: { $ne: false } }).select("name description slug basePrice").lean();
+      if (cat) {
+        title = withBrand(`${cat.name} at Hosa Road Junction, Bengaluru`);
+        description = `${cat.name} at YES HOTELS, Hosa Road Junction, Bengaluru: air-conditioned, free Wi-Fi, 24-hour front desk. Rooms from ₹${Number(cat.basePrice).toLocaleString("en-IN")} per night. Book direct.`;
+        canonicalUrl = `${baseUrl}/rooms/${cat.slug}`;
+        structuredDataGraphs.push({
+          "@type": "BreadcrumbList",
+          itemListElement: [
+            { "@type": "ListItem", position: 1, name: "Home", item: baseUrl },
+            { "@type": "ListItem", position: 2, name: "Rooms", item: `${baseUrl}/rooms` },
+            { "@type": "ListItem", position: 3, name: cat.name, item: canonicalUrl },
+          ],
+        });
+        prerender = staticBody({ h1: `${cat.name} at YES HOTELS, Hosa Road Junction, Bengaluru`, paragraphs: [String(cat.description ?? ""), `From ₹${Number(cat.basePrice).toLocaleString("en-IN")} per night.`], contact: contactLine });
+      }
+    } catch {
+      // keep the default tags
+    }
+  }
+  if (pathname === "/" || pathname === "") {
+    prerender = staticBody({ h1: "YES HOTELS: hotel at Hosa Road Junction, Bengaluru", paragraphs: [description], contact: contactLine });
   }
 
   structuredDataGraphs.unshift(hotelSchema);
@@ -207,6 +265,13 @@ export async function injectSeoTagsIntoHtml(
   // Twitter
   result = result.replace(/<meta\s+name="twitter:title"\s+content=".*?"\s*\/?>/i, `<meta name="twitter:title" content="${escapeHtml(title)}" />`);
   result = result.replace(/<meta\s+name="twitter:description"\s+content=".*?"\s*\/?>/i, `<meta name="twitter:description" content="${escapeHtml(description)}" />`);
+
+  // Crawlable content (React replaces it when the app starts)
+  if (prerender) result = result.replace('<div id="root"></div>', `<div id="root">${prerender}</div>`);
+
+  // Web analytics id from the server's environment (GA4), read by the client; nothing is loaded without it.
+  const ga = String(process.env.GA_MEASUREMENT_ID ?? "").trim();
+  if (/^G-[A-Z0-9]{6,}$/.test(ga)) result = result.replace("</head>", `  <meta name="ga-measurement-id" content="${ga}" />\n</head>`);
 
   // Inject JSON-LD right before </head>
   result = result.replace("</head>", `${jsonLdScript}\n  </head>`);

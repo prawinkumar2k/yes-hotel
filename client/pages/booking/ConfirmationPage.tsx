@@ -2,11 +2,28 @@ import { Link, useSearchParams } from "react-router-dom";
 import Navbar from "@/components/hotel/Navbar";
 import { GoldButton } from "@/components/hotel/HotelButtons";
 import { CheckCircle2 } from "lucide-react";
+import { useEffect } from "react";
+import { track } from "@/lib/analytics";
 
 export default function ConfirmationPage() {
   const [searchParams] = useSearchParams();
   const reference = searchParams.get("ref");
   const payAtHotel = searchParams.get("pay") === "hotel";
+
+  // One "purchase" per booking reference (value = what the guest was quoted), so organic revenue can be measured.
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem("yes:purchase");
+      const sent = sessionStorage.getItem("yes:purchase-sent");
+      if (!raw || !reference || sent === reference) return;
+      const p = JSON.parse(raw);
+      if (p.ref !== reference) return;
+      track("purchase", { transaction_id: reference, value: Number(p.value) || 0, currency: "INR", payment_type: payAtHotel ? "pay_at_hotel" : "online" });
+      sessionStorage.setItem("yes:purchase-sent", reference);
+    } catch {
+      // ignore
+    }
+  }, [reference, payAtHotel]);
 
   return (
     <div className="min-h-screen bg-hotel-ivory pt-24">

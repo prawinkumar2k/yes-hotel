@@ -166,12 +166,45 @@ describe("Local SEO & Discovery Engine Integration Tests", () => {
     const mockHtml = `<!doctype html><html><head><title>Original</title></head><body><div id="root"></div></body></html>`;
     const enriched = await injectSeoTagsIntoHtml(mockHtml, `/hotels-near/${testSlug}`);
 
-    expect(enriched).toContain("<title>Hotels Near Electronic City Bengaluru | YES HOTELS from ₹1,400 | YES HOTELS</title>");
+    expect(enriched).toContain("<title>Hotels Near Electronic City Bengaluru | YES HOTELS from ₹1,400</title>");
     expect(enriched).toContain(`<link rel="canonical" href="https://yeshotels.in/hotels-near/${testSlug}" />`);
     expect(enriched).toContain('application/ld+json');
     expect(enriched).toContain('"@type": "Hotel"');
     expect(enriched).toContain('"@type": "FAQPage"');
     expect(enriched).toContain('"@type": "BreadcrumbList"');
+  });
+
+  it("the brand is not repeated in the title, the hotel name stays constant, and the page text is in the HTML for crawlers", async () => {
+    const mockHtml = `<!doctype html><html><head><title>Original</title></head><body><div id="root"></div></body></html>`;
+    const enriched = await injectSeoTagsIntoHtml(mockHtml, `/hotels-near/${testSlug}`);
+    expect(enriched).not.toMatch(/YES HOTELS[^<]*\| YES HOTELS<\/title>/);
+    expect(enriched).not.toContain("YES HOTELS near");
+    expect(enriched).toContain('<div id="root"><main data-prerender="1"');
+    expect(enriched).toContain("Premium Boutique Hotel Near Electronic City, Bengaluru</h1>");
+    expect(enriched).toContain("Frequently asked questions");
+  });
+
+  it("the home page carries a crawlable heading, and the analytics id appears only when configured", async () => {
+    const mockHtml = `<!doctype html><html><head><title>Original</title></head><body><div id="root"></div></body></html>`;
+    const before = process.env.GA_MEASUREMENT_ID;
+    try {
+      delete process.env.GA_MEASUREMENT_ID;
+      const off = await injectSeoTagsIntoHtml(mockHtml, "/");
+      expect(off).toContain("<h1>YES HOTELS: hotel at Hosa Road Junction, Bengaluru</h1>");
+      expect(off).not.toContain("ga-measurement-id");
+      process.env.GA_MEASUREMENT_ID = "G-TEST123456";
+      expect(await injectSeoTagsIntoHtml(mockHtml, "/")).toContain('<meta name="ga-measurement-id" content="G-TEST123456" />');
+      process.env.GA_MEASUREMENT_ID = "not an id";
+      expect(await injectSeoTagsIntoHtml(mockHtml, "/")).not.toContain("ga-measurement-id");
+    } finally {
+      if (before === undefined) delete process.env.GA_MEASUREMENT_ID; else process.env.GA_MEASUREMENT_ID = before;
+    }
+  });
+
+  it("the sitemap leaves out the thin /search page", async () => {
+    const xml = await (await fetch(`${base}/sitemap.xml`)).text();
+    expect(xml).not.toContain("/search</loc>");
+    expect(xml).toContain("/hotels-near/");
   });
 
   it("calculateSeoAuditScore accurately evaluates pages and flags defects", () => {

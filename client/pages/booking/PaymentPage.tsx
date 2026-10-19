@@ -192,6 +192,7 @@ export default function PaymentPage() {
       const payAtHotel = () => {
         sessionStorage.removeItem("bookingDetails");
         sessionStorage.removeItem("bookingIdempotencyKey");
+        try { sessionStorage.setItem("yes:purchase", JSON.stringify({ ref: currentBookingRef, value: totalAmount })); } catch { /* ignore */ }
         navigate(`/booking/confirmation?ref=${encodeURIComponent(currentBookingRef ?? "")}&pay=hotel`);
       };
       if (!onlinePay) { payAtHotel(); return; }
@@ -238,6 +239,7 @@ export default function PaymentPage() {
           if (verifyJson.success) {
             sessionStorage.removeItem("bookingDetails");
             sessionStorage.removeItem("bookingIdempotencyKey");
+            try { sessionStorage.setItem("yes:purchase", JSON.stringify({ ref: verifyJson.data.bookingReference, value: totalAmount })); } catch { /* ignore */ }
             navigate(`/booking/confirmation?ref=${verifyJson.data.bookingReference}`);
           } else {
             toast({ title: "Payment verification failed", description: verifyJson.message, variant: "destructive" });

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { track } from "@/lib/analytics";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import Navbar from "@/components/hotel/Navbar";
 import { GoldButton } from "@/components/hotel/HotelButtons";
@@ -12,6 +13,8 @@ export default function GuestDetailsPage() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { user } = useAuth();
+
+  useEffect(() => { track("begin_checkout", { currency: "INR" }); }, []);
 
   const category = searchParams.get("category");
   const checkIn = searchParams.get("checkIn");
