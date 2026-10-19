@@ -28,7 +28,9 @@ export default function AdminAdvanceReceipt() {
   }
   if (!data?.advance) return <div className="p-8 text-center text-red-600 font-bold">Advance receipt not found.</div>;
 
-  const { advance, booking, groupRooms } = data as { advance: any; booking: any; groupRooms: { bookingReference: string; roomNumber?: string }[] };
+  const { advance, booking, groupRooms, reservation } = data as { advance: any; booking: any; groupRooms: { bookingReference: string; roomNumber?: string }[]; reservation?: any };
+  const realEmail = advance.guest?.email && !/@yes-?hotels\.local$/i.test(advance.guest.email) ? advance.guest.email : "";
+  const phone = String(advance.guest?.phone ?? "").replace(/^[^\d+]+/, "");
   const received = new Date(advance.receivedAt || advance.createdAt);
   const stayNights = booking ? Math.max(1, countNights(booking.checkInDate, booking.checkOutDate)) : 0;
   const isGroup = groupRooms.length > 1;
@@ -76,9 +78,10 @@ export default function AdminAdvanceReceipt() {
           </div>
           <div className="w-1/2 p-2 grid grid-cols-[95px_1fr] gap-1">
             <div>Guest</div><div className="font-bold">: MR/MS {String(advance.guest?.fullName ?? "—").toUpperCase()}</div>
-            <div>Mobile</div><div>: {advance.guest?.phone || "—"}</div>
-            <div>Email</div><div>: {advance.guest?.email || "—"}</div>
-            <div>State</div><div>: KARNATAKA</div>
+            <div>Mobile</div><div>: {phone || "—"}</div>
+            {realEmail && (<><div>Email</div><div>: {realEmail}</div></>)}
+            {(reservation?.customer?.address || advance.guest?.address) && (<><div>Address</div><div>: {reservation?.customer?.address || advance.guest?.address}</div></>)}
+            {reservation?.customer?.gstin && (<><div>GSTIN</div><div>: {reservation.customer.gstin}</div></>)}
           </div>
         </div>
 
@@ -97,7 +100,15 @@ export default function AdminAdvanceReceipt() {
                 <div>Arrival</div><div className="font-bold">: {format(new Date(booking.checkInDate), "dd-MMM-yy")}</div>
                 <div>Departure</div><div className="font-bold">: {format(new Date(booking.checkOutDate), "dd-MMM-yy")}</div>
                 <div>{booking.stayType === "HOURLY" ? "Stay" : "Nights"}</div><div>: {booking.stayType === "HOURLY" ? "Day use" : stayNights}</div>
-                <div>Guests</div><div>: {booking.adults ?? 1} Adult{(booking.adults ?? 1) > 1 ? "s" : ""}{booking.children ? `, ${booking.children} Child` : ""}</div>
+                {reservation ? (
+                  <>
+                    <div>Rooms</div><div>: {reservation.item.rooms} × {reservation.item.description}</div>
+                    <div>Guests</div><div>: {reservation.item.adults} Adult{reservation.item.adults > 1 ? "s" : ""}{reservation.item.children ? `, ${reservation.item.children} Child` : ""}</div>
+                    <div>Check-in / out</div><div>: {reservation.booking.arrivalTime} / {reservation.booking.departureTime}</div>
+                  </>
+                ) : (
+                  <><div>Guests</div><div>: {booking.adults ?? 1} Adult{(booking.adults ?? 1) > 1 ? "s" : ""}{booking.children ? `, ${booking.children} Child` : ""}</div></>
+                )}
               </div>
             </div>
           ) : (
@@ -117,6 +128,13 @@ export default function AdminAdvanceReceipt() {
             <div className="flex justify-between p-2 border-b border-black"><span>Adjusted to Bill</span><span>{inr(advance.totalAdjusted)}</span></div>
             {advance.totalRefunded > 0 && <div className="flex justify-between p-2 border-b border-black"><span>Refunded</span><span>{inr(advance.totalRefunded)}</span></div>}
             <div className="flex justify-between p-2 font-bold text-sm"><span>Balance Held</span><span>{inr(advance.remainingBalance)}</span></div>
+            {reservation && (
+              <>
+                <div className="flex justify-between p-2 border-t border-black"><span>Booking Total</span><span>{inr(reservation.amounts.roundedTotal)}</span></div>
+                <div className="flex justify-between p-2 border-t border-black"><span>All Advances Paid</span><span>{inr(reservation.advance.paid)}</span></div>
+                <div className="flex justify-between p-2 border-t border-black font-bold"><span>Balance Due</span><span>{inr(reservation.balance)}</span></div>
+              </>
+            )}
           </div>
         </div>
 

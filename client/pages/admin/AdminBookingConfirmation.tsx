@@ -1,98 +1,140 @@
-import React, { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
-import { Printer } from "lucide-react";
+import { useParams, Link } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { Loader2, Printer, ArrowLeft } from "lucide-react";
 import HotelDocAddress from "@/components/admin/HotelDocAddress";
-import { numberToWords } from "../../lib/numberToWords";
-import { getStoredAuthToken } from "../../lib/authStorage";
+import { api } from "@/lib/api";
+import { amountInWords } from "@/lib/amount-in-words";
 
-const inr = (n: number) => (Number(n) || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const dmy = (d?: string) => (d ? d.split("-").reverse().join("-") : "");
-const MEAL: Record<string, string> = { EP: "EP", CP: "CP", MAP: "MAP", AP: "AP" };
+const inr = (n: number) => `₹${Number(n || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const dmy = (d?: string) => {
+  if (!d) return "";
+  const [y, m, day] = d.split("-");
+  const mon = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][Number(m) - 1];
+  return `${day}-${mon}-${y.slice(2)}`;
+};
+const MEAL: Record<string, string> = { EP: "Room only", CP: "Breakfast", MAP: "Breakfast + one meal", AP: "All meals" };
 
-/** Printable Booking Confirmation for an advance reservation (all rooms of the booking on one page). */
+/** Booking Confirmation for an advance reservation — same ruled-sheet layout as the advance receipt, invoice and GRC. */
 export default function AdminBookingConfirmation() {
   const { id } = useParams();
-  const [d, setD] = useState<any>(null);
-  const [err, setErr] = useState("");
+  const embedded = typeof window !== "undefined" && window.self !== window.top;
+  const { data: d, isLoading, error } = useQuery({
+    queryKey: ["booking-confirmation", id],
+    queryFn: async () => (await api.get(`/advances/bookings/${id}/confirmation`)).data.data,
+    enabled: !!id,
+  });
 
-  useEffect(() => {
-    (async () => {
-      try {
-        const t = getStoredAuthToken();
-        const r = await fetch(`/api/advances/bookings/${id}/confirmation`, { headers: t ? { Authorization: `Bearer ${t}` } : {} });
-        const j = await r.json();
-        if (j.success) setD(j.data);
-        else setErr(j.message || "Could not load the booking");
-      } catch {
-        setErr("Could not load the booking");
-      }
-    })();
-  }, [id]);
+  if (isLoading) return <div className="flex justify-center items-center h-64"><Loader2 className="animate-spin text-hotel-gold" size={32} /></div>;
+  if (error || !d) return <div className="p-8 text-center text-red-600 font-bold">Booking confirmation not found.</div>;
 
-  if (err) return <p className="p-6 text-red-600">{err}</p>;
-  if (!d) return <p className="p-6 text-gray-500">Loading…</p>;
   const { booking: b, customer: c, item: it, amounts: a, advance: adv } = d;
-  const th = "border border-gray-400 px-2 py-1 text-left text-[11px]";
-  const td = "border border-gray-400 px-2 py-1 text-[11px]";
+  const half = a.gstRate / 2;
+  const meal = String(it.description).split(" - ")[1] ?? "EP";
+  const cell = "border-r border-black p-1.5 last:border-r-0";
 
   return (
-    <div className="bg-gray-100 min-h-screen p-4 print:p-0 print:bg-white">
-      <div className="max-w-3xl mx-auto mb-3 flex justify-end print:hidden">
-        <button onClick={() => window.print()} className="px-4 py-2 bg-[#c9a227] text-white rounded-xl text-sm font-bold flex items-center gap-2"><Printer size={16} /> Print</button>
-      </div>
-      <div className="max-w-3xl mx-auto bg-white text-gray-900 p-8 print:p-4 border border-gray-300 print:border-0 text-xs space-y-4">
-        <div className="text-center space-y-0.5"><HotelDocAddress /></div>
-        <h1 className="text-center text-base font-bold tracking-wide border-y border-gray-400 py-1">BOOKING CONFIRMATION{b.cancelled ? " — CANCELLED" : ""}</h1>
+    <div className="max-w-3xl mx-auto bg-white print:max-w-none">
+      {!embedded && (
+        <div className="print:hidden flex justify-between items-center mb-4 bg-gray-100 p-3 rounded-lg border border-gray-300">
+          <Link to="/admin/advances" className="flex items-center gap-1.5 text-xs font-bold text-gray-700 hover:text-black"><ArrowLeft size={14} /> Back to Advances</Link>
+          <button onClick={() => window.print()} className="px-4 py-2 bg-black text-[#e5c76b] rounded-lg text-xs font-bold flex items-center gap-1.5"><Printer size={14} /> PRINT BOOKING CONFIRMATION</button>
+        </div>
+      )}
 
-        <div className="grid grid-cols-3 gap-2">
-          <div><b>Booking No</b> : {b.number}{b.rooms > 1 ? ` (+${b.rooms - 1} more)` : ""}</div>
-          <div><b>Booking Date</b> : {dmy(b.bookingDate)}</div>
-          <div><b>Arrival</b> : {dmy(b.arrivalDate)} {b.arrivalTime}</div>
-          <div className="col-span-3"><b>Departure</b> : {dmy(b.departureDate)} {b.departureTime} &nbsp;({b.nights} night{b.nights === 1 ? "" : "s"})</div>
+      <div className="border border-black text-[11px] leading-tight font-medium bg-white">
+        <div className="flex border-b border-black">
+          <div className="w-1/3 p-2 flex items-center justify-center border-r border-black">
+            <img src="/brand/yes-hotels-logo-sm.png" alt="YES HOTELS" className="h-16 w-auto object-contain mb-1 print:h-14" />
+            <h1 className="font-serif text-3xl font-black italic tracking-widest uppercase">YES HOTELS</h1>
+          </div>
+          <div className="w-2/3 p-2 text-right"><HotelDocAddress /></div>
         </div>
 
-        <div className="border border-gray-400 p-2 space-y-0.5">
-          <p className="font-bold uppercase">{c.name}</p>
-          {c.address && <p>{c.address}</p>}
-          <p>Mobile : {c.phone}{c.email ? ` · ${c.email}` : ""}</p>
-          {c.gstin && <p>Customer GSTIN : {c.gstin}</p>}
+        <div className="text-center border-b border-black py-1 font-bold text-sm bg-gray-100">BOOKING CONFIRMATION{b.cancelled ? " — CANCELLED" : ""}</div>
+
+        <div className="flex border-b border-black">
+          <div className="w-1/2 p-2 border-r border-black grid grid-cols-[95px_1fr] gap-1">
+            <div>Booking No.</div><div className="font-bold">: {b.number}{b.rooms > 1 ? ` (+${b.rooms - 1} more)` : ""}</div>
+            <div>Booking Date</div><div>: {dmy(b.bookingDate)}</div>
+            <div>Status</div><div>: {b.status}</div>
+            <div>Rooms</div><div>: {b.rooms} (numbers allotted at check-in)</div>
+          </div>
+          <div className="w-1/2 p-2 grid grid-cols-[95px_1fr] gap-1">
+            <div>Arrival</div><div className="font-bold">: {dmy(b.arrivalDate)}, {b.arrivalTime}</div>
+            <div>Departure</div><div className="font-bold">: {dmy(b.departureDate)}, {b.departureTime}</div>
+            <div>Nights</div><div>: {b.nights}</div>
+            <div>Meal Plan</div><div>: {meal} ({MEAL[meal] ?? meal})</div>
+          </div>
         </div>
 
-        <table className="w-full border-collapse">
-          <thead>
-            <tr><th className={th}>Description</th><th className={th}>SAC</th><th className={th}>Adults</th><th className={th}>Children</th><th className={th}>Rooms</th><th className={th}>Nights</th><th className={th + " text-right"}>Rate</th><th className={th + " text-right"}>Taxable</th></tr>
+        <div className="border-b border-black">
+          <div className="px-2 py-1 font-bold bg-gray-50 border-b border-black">CUSTOMER DETAILS</div>
+          <div className="flex">
+            <div className="w-1/2 p-2 border-r border-black grid grid-cols-[95px_1fr] gap-1">
+              <div>Name</div><div className="font-bold">: {String(c.name).toUpperCase()}</div>
+              <div>Address</div><div>: {c.address || "—"}</div>
+            </div>
+            <div className="w-1/2 p-2 grid grid-cols-[95px_1fr] gap-1">
+              <div>Mobile</div><div>: {String(c.phone).replace(/^[^\d+]+/, "") || "—"}</div>
+              {c.email && (<><div>Email</div><div>: {c.email}</div></>)}
+              <div>GSTIN</div><div>: {c.gstin || "—"}</div>
+            </div>
+          </div>
+        </div>
+
+        <table className="w-full border-collapse border-b border-black">
+          <thead className="bg-gray-50">
+            <tr className="border-b border-black text-left">
+              {["Description", "SAC", "Adults", "Children", "Rooms", "Nights", "Rate / night", "Taxable"].map((h, i) => (
+                <th key={h} className={`${cell} font-bold ${i > 5 ? "text-right" : ""}`}>{h}</th>
+              ))}
+            </tr>
           </thead>
           <tbody>
             <tr>
-              <td className={td}>{it.description}</td><td className={td}>{it.sac}</td><td className={td}>{it.adults}</td><td className={td}>{it.children}</td>
-              <td className={td}>{it.rooms}</td><td className={td}>{b.nights}</td>
-              <td className={td + " text-right"}>{inr(it.ratePerNight)}{it.pricesIncludeTax ? " (incl. GST)" : ""}</td><td className={td + " text-right"}>{inr(a.taxable)}</td>
+              <td className={cell}>{it.description}</td><td className={cell}>{it.sac}</td><td className={cell}>{it.adults}</td><td className={cell}>{it.children}</td>
+              <td className={cell}>{it.rooms}</td><td className={cell}>{b.nights}</td>
+              <td className={`${cell} text-right`}>{inr(it.ratePerNight)}{it.pricesIncludeTax ? " (incl. GST)" : ""}</td>
+              <td className={`${cell} text-right`}>{inr(a.taxable)}</td>
             </tr>
           </tbody>
         </table>
 
-        <div className="flex justify-between gap-6">
-          <p className="uppercase font-mono text-[10px] flex-1">{numberToWords(a.roundedTotal)}</p>
-          <table className="text-[11px] min-w-[16rem]">
-            <tbody>
-              <tr><td className="pr-4">Taxable Value</td><td className="text-right">{inr(a.taxable)}</td></tr>
-              <tr><td>CGST ({a.gstRate / 2}%)</td><td className="text-right">{inr(a.cgst)}</td></tr>
-              <tr><td>SGST ({a.gstRate / 2}%)</td><td className="text-right">{inr(a.sgst)}</td></tr>
-              <tr><td>Total GST</td><td className="text-right">{inr(a.totalGst)}</td></tr>
-              <tr><td>Sub Total</td><td className="text-right">{inr(a.total)}</td></tr>
-              <tr><td>Round off</td><td className="text-right">{inr(a.roundOff)}</td></tr>
-              <tr className="font-bold border-t border-gray-400"><td>Net Amount</td><td className="text-right">{inr(a.roundedTotal)}</td></tr>
-              <tr><td>Advance Paid</td><td className="text-right">{inr(adv.paid)}</td></tr>
-              <tr className="font-bold"><td>Balance</td><td className="text-right">{inr(d.balance)}</td></tr>
-            </tbody>
-          </table>
+        <div className="flex border-b border-black">
+          <div className="w-2/3 p-2 border-r border-black">
+            <div className="text-gray-600">Amount in words</div>
+            <div className="font-bold mt-0.5">{amountInWords(a.roundedTotal)}</div>
+            {adv.receipts.length > 0 && (
+              <div className="mt-3 text-gray-700">
+                <div className="font-bold">Advance receipts</div>
+                {adv.receipts.map((r: any) => <div key={r.number}>{r.number} — {r.method} — {inr(r.amount)}</div>)}
+              </div>
+            )}
+          </div>
+          <div className="w-1/3">
+            {([
+              ["Taxable Value", a.taxable],
+              [`CGST (${half}%)`, a.cgst],
+              [`SGST (${half}%)`, a.sgst],
+              ["Total GST", a.totalGst],
+              ["Sub Total", a.total],
+              ["Round off", a.roundOff],
+            ] as [string, number][]).map(([k, v]) => (
+              <div key={k} className="flex justify-between px-2 py-1 border-b border-black"><span>{k}</span><span>{inr(v)}</span></div>
+            ))}
+            <div className="flex justify-between px-2 py-1.5 border-b border-black font-bold text-sm"><span>Net Amount</span><span>{inr(a.roundedTotal)}</span></div>
+            <div className="flex justify-between px-2 py-1 border-b border-black"><span>Advance Paid</span><span>{inr(adv.paid)}</span></div>
+            <div className="flex justify-between px-2 py-1.5 font-bold text-sm"><span>Balance</span><span>{inr(d.balance)}</span></div>
+          </div>
         </div>
 
-        {adv.receipts.length > 0 && (
-          <p className="text-[10px] text-gray-600">Advance receipts: {adv.receipts.map((r: any) => `${r.number} (${r.method}, ₹${inr(r.amount)})`).join(", ")}</p>
-        )}
-        <p className="text-[10px] text-gray-600">Room numbers are allotted at check-in. The advance is adjusted against the final bill.</p>
-        <div className="flex justify-between pt-8 text-[11px]"><span>Guest signature</span><span>For {d.hotel.name}</span></div>
+        <div className="p-2 text-[10px] text-gray-700 border-b border-black">
+          Room numbers are allotted at check-in. The advance is adjusted against the final bill; the GST invoice is issued at checkout.
+        </div>
+        <div className="flex justify-between items-end p-2 pt-10">
+          <div className="text-center"><div className="border-t border-black w-40 pt-1">Guest Signature</div></div>
+          <div className="text-center"><div className="border-t border-black w-40 pt-1">For {d.hotel.name}</div></div>
+        </div>
       </div>
     </div>
   );

@@ -167,7 +167,13 @@ router.get("/:id/receipt", requirePropertyAccess, requirePermission("ADVANCES", 
           }))
         : [];
 
-      return res.json({ success: true, data: { advance, booking, groupRooms } });
+      // The whole reservation (rooms, meal plan, times, total, advances so far, balance) when there is one.
+      let reservation: any = null;
+      if (booking) {
+        const { getReservationConfirmation } = await import("../services/advance-reservation.service");
+        reservation = await getReservationConfirmation(String(booking._id)).catch(() => null);
+      }
+      return res.json({ success: true, data: { advance, booking, groupRooms, reservation } });
     } catch (error: any) {
       return res.status(500).json({ success: false, message: error.message });
     }
