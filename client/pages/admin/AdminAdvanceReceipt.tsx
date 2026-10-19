@@ -75,13 +75,15 @@ export default function AdminAdvanceReceipt() {
             <div>Date</div><div>: {format(received, "dd-MMM-yy, hh:mm a")}</div>
             <div>Payment Mode</div><div>: {advance.method}{advance.referenceNumber ? ` (Ref: ${advance.referenceNumber})` : ""}</div>
             <div>Received By</div><div>: {receivedBy}</div>
+            {reservation && (<><div>Booking Date</div><div>: {reservation.booking.bookingDate.split("-").reverse().join("-")}</div></>)}
+            {advance.notes && (<><div>Notes</div><div>: {advance.notes}</div></>)}
           </div>
           <div className="w-1/2 p-2 grid grid-cols-[95px_1fr] gap-1">
             <div>Guest</div><div className="font-bold">: MR/MS {String(advance.guest?.fullName ?? "—").toUpperCase()}</div>
             <div>Mobile</div><div>: {phone || "—"}</div>
-            {realEmail && (<><div>Email</div><div>: {realEmail}</div></>)}
-            {(reservation?.customer?.address || advance.guest?.address) && (<><div>Address</div><div>: {reservation?.customer?.address || advance.guest?.address}</div></>)}
-            {reservation?.customer?.gstin && (<><div>GSTIN</div><div>: {reservation.customer.gstin}</div></>)}
+            <div>Email</div><div>: {realEmail || "—"}</div>
+            <div>Address</div><div>: {reservation?.customer?.address || advance.guest?.address || "—"}</div>
+            <div>GSTIN</div><div>: {reservation?.customer?.gstin || "—"}</div>
           </div>
         </div>
 
@@ -105,6 +107,7 @@ export default function AdminAdvanceReceipt() {
                     <div>Rooms</div><div>: {reservation.item.rooms} × {reservation.item.description}</div>
                     <div>Guests</div><div>: {reservation.item.adults} Adult{reservation.item.adults > 1 ? "s" : ""}{reservation.item.children ? `, ${reservation.item.children} Child` : ""}</div>
                     <div>Check-in / out</div><div>: {reservation.booking.arrivalTime} / {reservation.booking.departureTime}</div>
+                    <div>Meal Plan</div><div>: {String(reservation.item.description).split(" - ")[1] ?? "EP"}</div>
                   </>
                 ) : (
                   <><div>Guests</div><div>: {booking.adults ?? 1} Adult{(booking.adults ?? 1) > 1 ? "s" : ""}{booking.children ? `, ${booking.children} Child` : ""}</div></>
@@ -116,12 +119,61 @@ export default function AdminAdvanceReceipt() {
           )}
         </div>
 
+
+        {/* WHAT WAS BOOKED AND ITS GST — the full booking, so the receipt stands on its own */}
+        {reservation && (
+          <>
+            <table className="w-full border-collapse border-b border-black">
+              <thead className="bg-gray-50">
+                <tr className="border-b border-black text-left">
+                  {["Description", "SAC", "Adults", "Children", "Rooms", "Nights", "Rate / night", "Taxable"].map((h, i) => (
+                    <th key={h} className={`border-r border-black p-1.5 last:border-r-0 font-bold ${i > 5 ? "text-right" : ""}`}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td className="border-r border-black p-1.5">{reservation.item.description}</td>
+                  <td className="border-r border-black p-1.5">{reservation.item.sac}</td>
+                  <td className="border-r border-black p-1.5">{reservation.item.adults}</td>
+                  <td className="border-r border-black p-1.5">{reservation.item.children}</td>
+                  <td className="border-r border-black p-1.5">{reservation.item.rooms}</td>
+                  <td className="border-r border-black p-1.5">{reservation.booking.nights}</td>
+                  <td className="border-r border-black p-1.5 text-right">{inr(reservation.item.ratePerNight)}{reservation.item.pricesIncludeTax ? " (incl. GST)" : ""}</td>
+                  <td className="p-1.5 text-right">{inr(reservation.amounts.taxable)}</td>
+                </tr>
+              </tbody>
+            </table>
+            <div className="flex border-b border-black">
+              <div className="w-2/3 p-2 border-r border-black text-gray-700">
+                Booking value in words
+                <div className="font-bold text-black mt-0.5">{amountInWords(reservation.amounts.roundedTotal)}</div>
+              </div>
+              <div className="w-1/3">
+                {([
+                  ["Taxable Value", reservation.amounts.taxable],
+                  [`CGST (${reservation.amounts.gstRate / 2}%)`, reservation.amounts.cgst],
+                  [`SGST (${reservation.amounts.gstRate / 2}%)`, reservation.amounts.sgst],
+                  ["Total GST", reservation.amounts.totalGst],
+                  ["Sub Total", reservation.amounts.total],
+                  ["Round off", reservation.amounts.roundOff],
+                ] as [string, number][]).map(([k, v]) => (
+                  <div key={k} className="flex justify-between px-2 py-1 border-b border-black"><span>{k}</span><span>{inr(v)}</span></div>
+                ))}
+                <div className="flex justify-between px-2 py-1.5 font-bold text-sm"><span>Net Amount</span><span>{inr(reservation.amounts.roundedTotal)}</span></div>
+              </div>
+            </div>
+          </>
+        )}
+
         {/* AMOUNT */}
         <div className="flex border-b border-black">
           <div className="w-2/3 p-2 border-r border-black">
             <div className="text-gray-600">Amount in words</div>
             <div className="font-bold mt-0.5">{amountInWords(advance.amount)}</div>
-            {advance.notes && <div className="mt-2 text-gray-600">Notes: {advance.notes}</div>}
+            {reservation && reservation.advance.receipts.length > 1 && (
+              <div className="mt-3 text-gray-700"><div className="font-bold">All advances on this booking</div>{reservation.advance.receipts.map((x: any) => <div key={x.number}>{x.number} — {x.method} — {inr(x.amount)}</div>)}</div>
+            )}
           </div>
           <div className="w-1/3">
             <div className="flex justify-between p-2 border-b border-black"><span>Advance Received</span><span className="font-bold">{inr(advance.amount)}</span></div>
