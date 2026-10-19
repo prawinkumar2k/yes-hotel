@@ -25,34 +25,45 @@ router.post("/", requirePropertyAccess, requirePermission("ADVANCES", "CREATE"),
     try {
       const { bookingId, guestId, guestName, guestPhone, guestEmail, amount, method, paymentChannelId, referenceNumber, razorpayPaymentId, purpose, notes } = req.body;
 
+      // The deposit goes on the SAME guest: matched by email, then by mobile number (a walk-in with
+      // no email, or an email typed in another case, must never become a second guest record).
       let resolvedGuestId = guestId;
+      let guestNote: string | undefined;
       if (!resolvedGuestId) {
-        if (!guestName || !guestPhone || !guestEmail) {
-          return res.status(400).json({
-            success: false,
-            message: "Either guestId, or guestName + guestPhone + guestEmail, are required",
-          });
+        if (!guestName || !guestPhone) {
+          return res.status(400).json({ success: false, message: "Enter the guest's name and mobile number (email is optional)" });
         }
-        const email = String(guestEmail).trim().toLowerCase();
-        const guest = await Guest.findOneAndUpdate(
-          { email },
-          { $setOnInsert: { email, fullName: guestName, phone: guestPhone } },
-          { upsert: true, new: true }
-        );
-        resolvedGuestId = guest._id.toString();
+        const { resolveGuest } = await import("../services/guest-match.service");
+        const found = await resolveGuest({ name: String(guestName), phone: String(guestPhone), email: guestEmail ? String(guestEmail) : undefined });
+        resolvedGuestId = found.guest._id.toString();
+        guestNote = found.created ? "new guest" : `existing guest (matched by ${found.matchedBy})`;
       }
 
-      if (!resolvedGuestId || !amount || !method) {
-        return res.status(400).json({ success: false, message: "guestId, amount, and method are required" });
+      // The form sends the payment channel chosen at the desk (e.g. "Cash Counter"); the method
+      // follows from the channel when it is not sent explicitly.
+      let resolvedMethod: string | undefined = method;
+      if (!resolvedMethod && paymentChannelId) {
+        const { PaymentChannel } = await import("../models/PaymentChannel");
+        const channel: any = /^[a-f0-9]{24}$/i.test(String(paymentChannelId)) ? await PaymentChannel.findById(paymentChannelId).select("type isActive").lean() : null;
+        if (!channel || channel.isActive === false) return res.status(400).json({ success: false, message: "Choose a valid payment channel" });
+        const byType: Record<string, string> = { CASH: "CASH", CARD: "CARD", UPI: "UPI", GATEWAY: "RAZORPAY", BANK_TRANSFER: "BANK_TRANSFER" };
+        resolvedMethod = byType[channel.type] ?? "OTHER";
       }
+      const value = Number(amount);
+      if (!resolvedGuestId) return res.status(400).json({ success: false, message: "Choose the guest" });
+      if (!Number.isFinite(value) || value <= 0) return res.status(400).json({ success: false, message: "Enter an amount greater than zero" });
+      if (!resolvedMethod || !Object.values(AdvancePaymentMethod).includes(resolvedMethod as AdvancePaymentMethod)) {
+        return res.status(400).json({ success: false, message: "Choose how the payment was received (payment channel)" });
+      }
+      const method_ = resolvedMethod;
       const { resolvePaymentChannel } = await import("../utils/payment-channel.resolver");
-      const resolvedChannelId = await resolvePaymentChannel(method || "CASH", paymentChannelId);
+      const resolvedChannelId = await resolvePaymentChannel(method_, paymentChannelId);
 
       const advance = await receiveAdvance(
-        { bookingId, guestId: resolvedGuestId, amount: Number(amount), method: method as AdvancePaymentMethod, paymentChannelId: resolvedChannelId?.toString(), referenceNumber, razorpayPaymentId, purpose, receivedBy: (req as any).user?.id, notes },
+        { bookingId, guestId: resolvedGuestId, amount: value, method: method_ as AdvancePaymentMethod, paymentChannelId: resolvedChannelId?.toString(), referenceNumber, razorpayPaymentId, purpose, receivedBy: (req as any).user?.id, notes },
         { req }
       );
-      return res.status(201).json({ success: true, data: advance });
+      return res.status(201).json({ success: true, data: advance, guest: guestNote });
     } catch (error: any) {
       return res.status(400).json({ success: false, message: error.message });
     }

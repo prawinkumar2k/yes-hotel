@@ -474,10 +474,9 @@ export default function AdminAdvances() {
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-gray-600 mb-1">Guest Email *</label>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">Guest Email (optional)</label>
                 <input
                   type="email"
-                  required
                   value={guestEmail}
                   onChange={(e) => setGuestEmail(e.target.value)}
                   placeholder="guest@example.com"
