@@ -480,3 +480,16 @@
     print-color-adjust: exact;
   }
 }
+
+/* Staff screens: larger, higher-contrast text so nobody has to strain (screen only; printouts keep their own sizes). */
+@media screen {
+  .admin-panel .text-\[9px\],
+  .admin-panel .text-\[10px\] { font-size: 0.8125rem !important; line-height: 1.2rem !important; }
+  .admin-panel .text-\[11px\] { font-size: 0.875rem !important; line-height: 1.3rem !important; }
+  .admin-panel .text-xs { font-size: 0.9375rem !important; line-height: 1.35rem !important; }
+  .admin-panel .text-sm { font-size: 1rem !important; line-height: 1.5rem !important; }
+  .admin-panel .text-slate-400, .admin-panel .text-gray-400 { color: #64748b !important; }
+  .admin-panel .text-slate-500, .admin-panel .text-gray-500 { color: #475569 !important; }
+  .admin-panel input, .admin-panel select, .admin-panel textarea { font-size: 1rem; }
+  .admin-panel th { font-size: 0.8125rem; }
+}

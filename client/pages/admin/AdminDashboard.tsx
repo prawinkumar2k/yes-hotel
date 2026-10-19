@@ -100,6 +100,14 @@ function StatusDot({ status }: { status: string }) {
 }
 
 // ─── Main Dashboard ──────────────────────────────────────────────────────────
+const MOVEMENT_ORDER = ["In-House", "Checked In", "Checked Out", "Exp. Arrivals", "Arrivals Pending", "Exp. Departures"];
+// The three live counts are big and coloured; the expected ones sit below them.
+const MOVEMENT_BIG: Record<string, string> = {
+  "In-House": "bg-purple-600 border-purple-700 text-white",
+  "Checked In": "bg-emerald-600 border-emerald-700 text-white",
+  "Checked Out": "bg-blue-600 border-blue-700 text-white",
+};
+
 export default function AdminDashboard() {
   const { user } = useAuth();
   const { hasPageAccess } = usePermissions();
@@ -289,15 +297,17 @@ export default function AdminDashboard() {
                     { label: "Exp. Departures", value: inHouse?.stats?.expectedDepartures || 0, icon: LogOut, color: "blue" as const, link: "/admin/check-out" },
                     { label: "Checked Out", value: inHouse?.stats?.actualCheckouts || 0, icon: CheckCircle2, color: "blue" as const, link: "/admin/check-out" },
                     { label: "In-House", value: inHouse?.stats?.inHouseStays ?? inHouse?.guests?.length ?? 0, icon: Users, color: "purple" as const, link: "/admin/in-house-list" },
-                  ].map(({ label, value, icon: Icon, color, link }) => (
-                    <Link key={label} to={link} className="bg-white border-2 border-slate-200 rounded-2xl p-6 hover:border-amber-300 hover:shadow-md transition-all flex flex-col gap-3">
+                  ].sort((a, b) => MOVEMENT_ORDER.indexOf(a.label) - MOVEMENT_ORDER.indexOf(b.label)).map(({ label, value, icon: Icon, color, link }) => {
+                  const big = !!MOVEMENT_BIG[label];
+                  return (
+                    <Link key={label} to={link} className={`border-2 rounded-2xl hover:shadow-lg transition-all flex flex-col gap-3 ${big ? `${MOVEMENT_BIG[label]} p-7` : "bg-white border-slate-300 p-5"}`}>
                       <div className="flex items-center justify-between">
-                        <span className="text-base uppercase tracking-wider font-bold text-slate-600">{label}</span>
-                        <Icon size={28} className={color === "green" ? "text-emerald-500" : color === "blue" ? "text-blue-500" : color === "purple" ? "text-purple-500" : "text-amber-500"} />
+                        <span className={`uppercase tracking-wider font-bold ${big ? "text-xl text-white" : "text-base text-slate-700"}`}>{label}</span>
+                        <Icon size={big ? 36 : 26} className={big ? "text-white" : color === "green" ? "text-emerald-500" : color === "blue" ? "text-blue-500" : color === "purple" ? "text-purple-500" : "text-amber-500"} />
                       </div>
-                      <span className="text-6xl font-bold font-serif tabular-nums text-slate-900 leading-none">{value}</span>
+                      <span className={`font-bold font-serif tabular-nums leading-none ${big ? "text-8xl text-white" : "text-5xl text-slate-900"}`}>{value}</span>
                     </Link>
-                  ))}
+                  );})}
                 </div>
               )}
 
