@@ -264,15 +264,15 @@ export default function AdminDashboard() {
             <section className="mb-8">
               <div className="flex items-center gap-3 mb-4">
                 <div>
-                  <h2 className="text-sm font-bold uppercase tracking-widest text-slate-400">Guest Movement</h2>
-                  <p className="text-xs text-slate-500">Today's arrivals & departures</p>
+                  <h2 className="text-lg font-bold uppercase tracking-widest text-slate-600">Guest Movement</h2>
+                  <p className="text-sm text-slate-600">Today's arrivals & departures</p>
                 </div>
                 <div className="ml-auto flex gap-1.5">
                   {(["overview", "arrivals", "departures"] as const).map(t => (
                     <button
                       key={t}
                       onClick={() => setTab(t)}
-                      className={`px-3 py-1 rounded-lg text-xs font-bold transition ${tab === t ? "bg-amber-100 text-amber-800 border border-amber-200" : "text-slate-500 hover:bg-slate-100"}`}
+                      className={`px-4 py-2 rounded-lg text-sm font-bold transition ${tab === t ? "bg-amber-100 text-amber-800 border border-amber-200" : "text-slate-500 hover:bg-slate-100"}`}
                     >
                       {t.charAt(0).toUpperCase() + t.slice(1)}
                     </button>
@@ -281,7 +281,7 @@ export default function AdminDashboard() {
               </div>
 
               {tab === "overview" && (
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+                <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
                   {[
                     { label: "Exp. Arrivals", value: inHouse?.stats?.expectedArrivals ?? arrivals.length, icon: LogIn, color: "green" as const, link: "/admin/check-in" },
                     { label: "Checked In", value: inHouse?.stats?.actualArrivals || 0, icon: UserCheck, color: "green" as const, link: "/admin/check-in" },
@@ -290,12 +290,12 @@ export default function AdminDashboard() {
                     { label: "Checked Out", value: inHouse?.stats?.actualCheckouts || 0, icon: CheckCircle2, color: "blue" as const, link: "/admin/check-out" },
                     { label: "In-House", value: inHouse?.stats?.inHouseStays ?? inHouse?.guests?.length ?? 0, icon: Users, color: "purple" as const, link: "/admin/in-house-list" },
                   ].map(({ label, value, icon: Icon, color, link }) => (
-                    <Link key={label} to={link} className="bg-white border border-slate-200 rounded-xl p-4 hover:border-amber-200 hover:shadow-sm transition-all flex flex-col gap-2">
+                    <Link key={label} to={link} className="bg-white border-2 border-slate-200 rounded-2xl p-6 hover:border-amber-300 hover:shadow-md transition-all flex flex-col gap-3">
                       <div className="flex items-center justify-between">
-                        <span className="text-[10px] uppercase tracking-widest font-bold text-slate-400">{label}</span>
-                        <Icon size={14} className={color === "green" ? "text-emerald-500" : color === "blue" ? "text-blue-500" : color === "purple" ? "text-purple-500" : "text-amber-500"} />
+                        <span className="text-base uppercase tracking-wider font-bold text-slate-600">{label}</span>
+                        <Icon size={28} className={color === "green" ? "text-emerald-500" : color === "blue" ? "text-blue-500" : color === "purple" ? "text-purple-500" : "text-amber-500"} />
                       </div>
-                      <span className="text-2xl font-bold font-serif tabular-nums text-slate-900">{value}</span>
+                      <span className="text-6xl font-bold font-serif tabular-nums text-slate-900 leading-none">{value}</span>
                     </Link>
                   ))}
                 </div>
@@ -306,8 +306,8 @@ export default function AdminDashboard() {
                   {/* Day use / hourly stays */}
                   <div className="bg-white border border-slate-200 rounded-xl p-4">
                     <div className="flex items-center justify-between mb-3">
-                      <span className="text-[10px] uppercase tracking-widest font-bold text-slate-400">Day Use (Hourly)</span>
-                      <Clock size={14} className="text-amber-500" />
+                      <span className="text-sm uppercase tracking-wider font-bold text-slate-600">Day Use (Hourly)</span>
+                      <Clock size={20} className="text-amber-500" />
                     </div>
                     <div className="grid grid-cols-4 gap-2 text-center">
                       {[
@@ -317,8 +317,8 @@ export default function AdminDashboard() {
                         ["Booked Today", inHouse.stats.dayUse?.bookedToday ?? 0],
                       ].map(([k, v]) => (
                         <div key={k as string}>
-                          <div className="text-xl font-bold font-serif tabular-nums text-slate-900">{v as number}</div>
-                          <div className="text-[10px] font-semibold text-slate-500">{k as string}</div>
+                          <div className="text-3xl font-bold font-serif tabular-nums text-slate-900">{v as number}</div>
+                          <div className="text-xs font-semibold text-slate-600">{k as string}</div>
                         </div>
                       ))}
                     </div>
@@ -326,8 +326,8 @@ export default function AdminDashboard() {
                   {/* Today's bookings by kind */}
                   <div className="bg-white border border-slate-200 rounded-xl p-4 lg:col-span-2">
                     <div className="flex items-center justify-between mb-3">
-                      <span className="text-[10px] uppercase tracking-widest font-bold text-slate-400">Bookings Made Today</span>
-                      <span className="text-xl font-bold font-serif tabular-nums text-slate-900">{inHouse.stats.bookingsTodayTotal ?? 0}</span>
+                      <span className="text-sm uppercase tracking-wider font-bold text-slate-600">Bookings Made Today</span>
+                      <span className="text-3xl font-bold font-serif tabular-nums text-slate-900">{inHouse.stats.bookingsTodayTotal ?? 0}</span>
                     </div>
                     {Object.keys(inHouse.stats.bookingsToday ?? {}).length === 0 ? (
                       <p className="text-xs text-slate-400">No bookings made today yet.</p>
