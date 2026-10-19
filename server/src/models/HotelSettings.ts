@@ -61,6 +61,7 @@ export interface IHotelSettings extends Document {
   /** @deprecated Not used for tax (hotel supplies are intra-state: CGST + SGST). */
   igstPercentage: number;
   taxInclusiveRates: boolean; // if true, room rates are tax-inclusive
+  onlineBookingOpen?: boolean; // website bookings are accepted only when this is true (anything else = on hold)
 
   // Invoice settings
   invoicePrefix: string;    // e.g. "INV"
@@ -150,6 +151,7 @@ const HotelSettingsSchema = new Schema<IHotelSettings>(
     sgstPercentage: { type: Number, required: true, default: 2.5 },
     igstPercentage: { type: Number, required: true, default: 5 },
     taxInclusiveRates: { type: Boolean, default: false },
+    onlineBookingOpen: { type: Boolean, default: false },
 
     // ── INVOICE ──
     invoicePrefix: { type: String, default: "INV" },

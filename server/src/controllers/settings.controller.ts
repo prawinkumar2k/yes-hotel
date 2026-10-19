@@ -39,6 +39,7 @@ const settingsSchema = z.object({
   ]).optional(),
   /** Room prices include GST: the rate is what the guest pays and the GST is inside it. */
   taxInclusiveRates: z.boolean().optional(),
+  onlineBookingOpen: z.boolean().optional(),
   cancellationPolicy: z.string().min(10),
   instagramUrl: z.string().optional(),
   facebookUrl: z.string().optional(),
@@ -69,13 +70,14 @@ const PUBLIC_SETTING_FIELDS = [
   "hotelName", "logoUrl", "tagline", "description", "phone", "email", "address", "googleMapsUrl", "whatsappNumber",
   "checkInTime", "checkOutTime", "earlyCheckInFee", "lateCheckOutFee", "extraPersonRate", "extraBedRate",
   "childRateNoBed", "childRateWithBed", "mealPlanRates", "currency", "currencySymbol", "cgstPercentage", "sgstPercentage",
-  "igstPercentage", "taxInclusiveRates", "gstNumber", "cancellationPolicy", "cancellationFreeHours",
+  "igstPercentage", "taxInclusiveRates", "onlineBookingOpen", "gstNumber", "cancellationPolicy", "cancellationFreeHours",
   "cancellationPenaltyPercentage", "instagramUrl", "facebookUrl", "youtubeUrl", "metaTitle", "metaDescription", "ogImageUrl",
 ] as const;
 
 export function publicSettingsView(settings: any) {
   const s = settings?.toObject ? settings.toObject() : settings ?? {};
-  return Object.fromEntries(PUBLIC_SETTING_FIELDS.filter((k) => s[k] !== undefined).map((k) => [k, s[k]]));
+  // Website bookings are on hold unless staff have switched them on.
+  return { ...Object.fromEntries(PUBLIC_SETTING_FIELDS.filter((k) => s[k] !== undefined).map((k) => [k, s[k]])), onlineBookingOpen: s.onlineBookingOpen === true };
 }
 
 export const getSettings = async (req: Request, res: Response) => {

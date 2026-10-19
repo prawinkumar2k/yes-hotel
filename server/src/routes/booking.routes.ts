@@ -1,3 +1,4 @@
+import { requireOnlineBookingOpen } from "../middleware/onlineBookingGate";
 import { Router } from "express";
 import { requirePropertyAccess } from "../middleware/propertyAuth";
 import { requirePermission } from "../middleware/permissionAuth";
@@ -19,7 +20,7 @@ router.post("/availability", checkAvailability);
 router.post("/quote", quoteBooking);
 
 // Create booking (public or logged-in customer)
-router.post("/", optionalProtect, createBooking);
+router.post("/", optionalProtect, requireOnlineBookingOpen, createBooking);
 
 // Customer's own bookings
 router.get("/my", protect, getMyBookings);
@@ -31,7 +32,7 @@ router.get("/my/:id/invoice", protect, getMyBookingInvoice);
 // (not protect) because guest checkout has no account to require a login
 // for; when a caller IS logged in, the controller still enforces that only
 // the booking's own owner or an admin/manager may use it.
-router.post("/:id/confirm-demo", optionalProtect, confirmDemoBooking);
+router.post("/:id/confirm-demo", optionalProtect, requireOnlineBookingOpen, confirmDemoBooking);
 
 // Cancel booking (customer or admin)
 router.post("/:id/cancel", protect, cancelBooking);

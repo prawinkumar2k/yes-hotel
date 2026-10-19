@@ -52,6 +52,7 @@ const RegisterPage = lazy(() => import("./pages/auth/RegisterPage"));
 const ForgotPasswordPage = lazy(() => import("./pages/auth/ForgotPasswordPage"));
 const ResetPasswordPage = lazy(() => import("./pages/auth/ResetPasswordPage"));
 
+import { OnlineBookingGate } from "@/components/hotel/OnlineBookingHold";
 const SearchPage = lazy(() => import("./pages/booking/SearchPage"));
 const GuestDetailsPage = lazy(() => import("./pages/booking/GuestDetailsPage"));
 const PaymentPage = lazy(() => import("./pages/booking/PaymentPage"));
@@ -197,10 +198,10 @@ function App() {
                 <Route path="/gallery" element={<GalleryPage />} />
                 <Route path="/faq" element={<FAQPage />} />
                 <Route path="/contact" element={<ContactPage />} />
-                <Route path="/search" element={<SearchPage />} />
+                <Route path="/search" element={<OnlineBookingGate><SearchPage /></OnlineBookingGate>} />
                 <Route path="/booking" element={<Navigate to="/search" replace />} />
-                <Route path="/booking/guest-details" element={<GuestDetailsPage />} />
-                <Route path="/booking/payment" element={<PaymentPage />} />
+                <Route path="/booking/guest-details" element={<OnlineBookingGate><GuestDetailsPage /></OnlineBookingGate>} />
+                <Route path="/booking/payment" element={<OnlineBookingGate><PaymentPage /></OnlineBookingGate>} />
                 <Route path="/booking/confirmation" element={<ConfirmationPage />} />
                 <Route path="/terms-and-conditions" element={<LegalPage title="Terms & Conditions" contentKey="terms" />} />
                 <Route path="/privacy-policy" element={<LegalPage title="Privacy Policy" contentKey="privacy" />} />

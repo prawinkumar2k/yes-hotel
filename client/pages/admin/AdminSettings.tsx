@@ -44,6 +44,7 @@ export default function AdminSettings() {
       ...rawData,
       gstNumber: String(rawData.gstNumber ?? "").trim().toUpperCase(),
       taxInclusiveRates: fd.get("taxInclusiveRates") === "on",
+      onlineBookingOpen: fd.get("onlineBookingOpen") === "on",
       extraPersonRate: Number(rawData.extraPersonRate),
       extraBedRate: Number(rawData.extraBedRate),
       earlyCheckInFee: Number(rawData.earlyCheckInFee) || 0,
@@ -143,6 +144,14 @@ export default function AdminSettings() {
                   The rate is what the guest pays — GST (CGST + SGST) is worked out inside it, not added on top.
                 </label>
                 <p className="text-xs text-gray-600">Applies to new bookings; existing bookings keep the rule they were made with.</p>
+              </div>
+              <div className="space-y-2 col-span-2">
+                <label className="text-sm font-bold text-black block">Online booking on the website</label>
+                <label className="flex min-h-[40px] items-center gap-2 text-sm text-black">
+                  <input type="checkbox" name="onlineBookingOpen" defaultChecked={settings?.onlineBookingOpen === true} className="h-4 w-4 accent-[#c9a227]" />
+                  Accept bookings from the website. Switched off = on hold: guests see a "call us to book" notice and cannot confirm a booking.
+                </label>
+                <p className="text-xs text-gray-600">Reception can still take bookings, advances and walk-ins as usual.</p>
               </div>
               <div className="space-y-2 col-span-2">
                 <label className="text-sm font-bold text-black block">Google Maps Link</label>

@@ -128,6 +128,10 @@ For a customer who pays now for rooms later (for example "10 rooms, 20 guests, t
 
 Day Summary, Check-in, Check-out and Day-use reports count what actually happened that day (check-in time and check-out time), and keep showing it after the guest has checked out. Day Summary receipts include advances; the Check-in, Check-out and Day-use grids appear under the summary for the chosen date.
 
+## 7f. Holding online booking
+
+Website bookings are **on hold** unless **Admin → Settings → Online booking on the website** is ticked. While on hold, guests see "Online booking is temporarily on hold — call us" on the search, guest-details and payment pages, and the server refuses a booking even if someone calls it directly. Reception walk-ins, advances and reservations are not affected. Tick the box and save to reopen.
+
 ## 8. Daily checks
 
 - Admin → **Audit Log**: look for unexpected `master_password_login` or failed logins.
