@@ -57,6 +57,13 @@ Gaps found and the action taken:
 - `client/App.tsx`: `/search` is not covered by the booking hold.
 - Tests: `seo.integration.spec.ts` covers the title, entity name, crawlable content, the analytics id (on/off/invalid) and the sitemap. The whole suite passes: 77 files, 469 tests, and the production build succeeds.
 
+### Second round (aggressive, still white-hat)
+
+- Home page: broader title and description built from live data ("Hotel near Hosa Road Metro & Electronic City, Bengaluru | Rooms from ₹6,500"), real crawlable body text with room types and prices, and links to every area page.
+- Every area page now links to all the other areas; a new hub page `/hotels-near` lists them all with distances (in the sitemap).
+- Robots meta: indexable pages allow large previews; `/search` is `noindex, follow`; admin, staff, customer, login, register and booking steps are `noindex, nofollow`.
+- Honest limit: very broad searches ("hotels in Bangalore") are won by large travel sites with thousands of pages and cannot be won by one hotel's website. The achievable, valuable targets are the local searches in the list at the top of this document and the hotel's own name. More pages will not fix that; real photos, real reviews and the Business Profile will.
+
 ## 4. Facts on the location pages that the owner must confirm
 
 The ten pages are marked "verified" in the database, all on the same date, with generic source names. I could not independently confirm them. I checked what could be checked against public station data:

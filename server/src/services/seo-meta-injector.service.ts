@@ -24,12 +24,28 @@ async function liveHotelFacts() {
   return facts;
 }
 
+/** Published area pages and active room types, cached for 5 minutes: used for internal links and the home page text. */
+let siteMapCache: { at: number; areas: { href: string; label: string }[]; rooms: { slug: string; name: string; basePrice: number; description: string }[] } | null = null;
+async function siteLinks() {
+  if (siteMapCache && Date.now() - siteMapCache.at < 5 * 60 * 1000) return siteMapCache;
+  const [pages, cats]: [any[], any[]] = await Promise.all([
+    SeoLandingPage.find({ isPublished: true }).select("slug targetLocality").sort({ targetLocality: 1 }).lean().catch(() => []),
+    RoomCategory.find({ isActive: { $ne: false } }).select("slug name basePrice description").sort({ basePrice: 1 }).lean().catch(() => []),
+  ]);
+  siteMapCache = {
+    at: Date.now(),
+    areas: pages.map((p) => ({ href: `/hotels-near/${p.slug}`, label: `Hotel near ${p.targetLocality}` })),
+    rooms: cats.map((c) => ({ slug: c.slug, name: c.name, basePrice: Number(c.basePrice) || 0, description: String(c.description ?? "") })),
+  };
+  return siteMapCache;
+}
+
 const BRAND = "YES HOTELS";
 /** "<page title> | YES HOTELS" without repeating the brand when the title already carries it. */
 const withBrand = (t: string) => (new RegExp(BRAND, "i").test(t) ? t : `${t} | ${BRAND}`);
 
 /** Plain HTML of a page's main content, served inside #root so crawlers that do not run scripts still read it (React replaces it on load). */
-function staticBody(parts: { h1: string; sub?: string; paragraphs?: string[]; bullets?: string[]; faqs?: { question: string; answer: string }[]; contact: string }) {
+function staticBody(parts: { h1: string; sub?: string; paragraphs?: string[]; bullets?: string[]; faqs?: { question: string; answer: string }[]; contact: string; links?: { href: string; label: string }[]; linksTitle?: string }) {
   const e = escapeHtml;
   return [
     `<main data-prerender="1" style="max-width:860px;margin:0 auto;padding:96px 16px 32px;font-family:Inter,system-ui,sans-serif;line-height:1.6">`,
@@ -38,8 +54,9 @@ function staticBody(parts: { h1: string; sub?: string; paragraphs?: string[]; bu
     ...(parts.paragraphs ?? []).filter(Boolean).map((p) => `<p>${e(p)}</p>`),
     parts.bullets?.length ? `<ul>${parts.bullets.map((b) => `<li>${e(b)}</li>`).join("")}</ul>` : "",
     parts.faqs?.length ? `<h2>Frequently asked questions</h2>${parts.faqs.map((f) => `<h3>${e(f.question)}</h3><p>${e(f.answer)}</p>`).join("")}` : "",
+    parts.links?.length ? `<h2>${e(parts.linksTitle ?? "Explore")}</h2><ul>${parts.links.map((l) => `<li><a href="${e(l.href)}">${e(l.label)}</a></li>`).join("")}</ul>` : "",
     `<p>${e(parts.contact)}</p>`,
-    `<p><a href="/rooms">View rooms</a> · <a href="/contact">Contact</a></p>`,
+    `<p><a href="/rooms">Rooms</a> · <a href="/about">About</a> · <a href="/faq">FAQ</a> · <a href="/contact">Contact</a></p>`,
     `</main>`,
   ].join("");
 }
@@ -65,6 +82,7 @@ export async function injectSeoTagsIntoHtml(
   let ogImage = `${baseUrl}/brand/icon-512.png`;
   let structuredDataGraphs: any[] = [];
   let prerender = "";
+  let robots = "index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1";
   const contactLine = `${HOTEL.name}, ${hotelAddressOneLine()}. Phone ${facts.phone}.`;
 
   // Core Hotel Schema (always present)
@@ -152,7 +170,7 @@ export async function injectSeoTagsIntoHtml(
               "@type": "ListItem",
               position: 2,
               name: "Hotels Near",
-              item: `${baseUrl}/rooms`,
+              item: `${baseUrl}/hotels-near`,
             },
             {
               "@type": "ListItem",
@@ -172,6 +190,8 @@ export async function injectSeoTagsIntoHtml(
           bullets: ((page as any).stayHighlights ?? []).map((h: any) => (typeof h === "string" ? h : h?.title ?? h?.text ?? "")).filter(Boolean),
           faqs: page.faqs as any,
           contact: contactLine,
+          linksTitle: "Other areas we serve",
+          links: (await siteLinks()).areas.filter((a) => a.href !== `/hotels-near/${page.slug}`),
         });
 
         // FAQPage Schema if FAQs exist
@@ -219,8 +239,34 @@ export async function injectSeoTagsIntoHtml(
     }
   }
   if (pathname === "/" || pathname === "") {
-    prerender = staticBody({ h1: "YES HOTELS: hotel at Hosa Road Junction, Bengaluru", paragraphs: [description], contact: contactLine });
+    const links = await siteLinks();
+    title = `Hotel near Hosa Road Metro & Electronic City, Bengaluru${facts.priceRange ? ` | Rooms from ${facts.priceRange.split(" - ")[0]}` : ""} | ${BRAND}`;
+    description = `Book direct at YES HOTELS, Hosa Road Junction, Bengaluru: air-conditioned rooms close to Hosa Road Metro, Electronic City, Bommasandra and Narayana Health City. Free Wi-Fi, parking and a 24-hour front desk. Call ${facts.phone}.`;
+    prerender = staticBody({
+      h1: "YES HOTELS: hotel and rooms at Hosa Road Junction, Bengaluru",
+      sub: "A place to stay near Hosa Road Metro, Electronic City and South Bengaluru",
+      paragraphs: [
+        "YES HOTELS is a hotel at Hosa Road Junction on Hosur Main Road, Bengaluru 560100, close to Hosa Road Metro Station on the Yellow Line. It suits business travellers visiting Electronic City, families visiting Narayana Health City, and anyone who wants a clean room with parking and a 24-hour front desk in South Bengaluru.",
+        "Every room is air-conditioned and includes free Wi-Fi. There is a lift, free on-site parking and daily housekeeping. Book directly with us for the hotel's own rates.",
+        ...links.rooms.map((r) => `${r.name}${r.basePrice ? ` from ₹${r.basePrice.toLocaleString("en-IN")} per night` : ""}. ${r.description}`),
+      ],
+      links: [...links.rooms.map((r) => ({ href: `/rooms/${r.slug}`, label: `${r.name}: rooms and rates` })), ...links.areas],
+      linksTitle: "Rooms and the areas we serve",
+      contact: contactLine,
+    });
   }
+
+  if (pathname === "/hotels-near" || pathname === "/hotels-near/") {
+    const links = await siteLinks();
+    title = "Hotels near Hosa Road Metro, Electronic City & South Bengaluru | YES HOTELS";
+    description = "YES HOTELS at Hosa Road Junction: distances and travel times to Hosa Road Metro, Electronic City, Bommasandra, Narayana Health City, Bommanahalli, Singasandra, Kudlu Gate, Begur and Hebbagodi.";
+    canonicalUrl = `${baseUrl}/hotels-near`;
+    prerender = staticBody({ h1: "Where to stay near Hosa Road Metro and South Bengaluru", paragraphs: [description], links: links.areas, linksTitle: "Areas we serve", contact: contactLine });
+  }
+
+  // The search page is thin and driven by dates: keep it out of the index, let links through.
+  if (pathname === "/search") robots = "noindex, follow";
+  if (/^\/(admin|staff|customer|login|register|forgot-password|reset-password|booking)(\/|$)/.test(pathname)) robots = "noindex, nofollow";
 
   structuredDataGraphs.unshift(hotelSchema);
 
@@ -265,6 +311,10 @@ export async function injectSeoTagsIntoHtml(
   // Twitter
   result = result.replace(/<meta\s+name="twitter:title"\s+content=".*?"\s*\/?>/i, `<meta name="twitter:title" content="${escapeHtml(title)}" />`);
   result = result.replace(/<meta\s+name="twitter:description"\s+content=".*?"\s*\/?>/i, `<meta name="twitter:description" content="${escapeHtml(description)}" />`);
+
+  // Robots directive: indexable pages may show large previews; the search page is noindex
+  result = result.replace(/<meta\s+name="robots"[^>]*>\s*/i, "");
+  result = result.replace("</head>", `  <meta name="robots" content="${robots}" />\n</head>`);
 
   // Crawlable content (React replaces it when the app starts)
   if (prerender) result = result.replace('<div id="root"></div>', `<div id="root">${prerender}</div>`);

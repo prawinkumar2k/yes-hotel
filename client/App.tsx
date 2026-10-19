@@ -64,6 +64,7 @@ function RouteTracker() {
   return null;
 }
 
+const AreasPage = lazy(() => import("./pages/public/AreasPage"));
 const SearchPage = lazy(() => import("./pages/booking/SearchPage"));
 const GuestDetailsPage = lazy(() => import("./pages/booking/GuestDetailsPage"));
 const PaymentPage = lazy(() => import("./pages/booking/PaymentPage"));
@@ -206,6 +207,7 @@ function App() {
                 <Route path="/about" element={<AboutPage />} />
                 <Route path="/rooms" element={<RoomsPage />} />
                 <Route path="/rooms/:slug" element={<RoomDetailsPage />} />
+                <Route path="/hotels-near" element={<AreasPage />} />
                 <Route path="/hotels-near/:slug" element={<SeoLandingPage />} />
                 <Route path="/gallery" element={<GalleryPage />} />
                 <Route path="/faq" element={<FAQPage />} />

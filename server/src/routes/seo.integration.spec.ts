@@ -190,7 +190,9 @@ describe("Local SEO & Discovery Engine Integration Tests", () => {
     try {
       delete process.env.GA_MEASUREMENT_ID;
       const off = await injectSeoTagsIntoHtml(mockHtml, "/");
-      expect(off).toContain("<h1>YES HOTELS: hotel at Hosa Road Junction, Bengaluru</h1>");
+      expect(off).toContain("<h1>YES HOTELS: hotel and rooms at Hosa Road Junction, Bengaluru</h1>");
+      expect(off).toContain(`href="/hotels-near/${testSlug}"`); // internal link to every published area page
+      expect(off).toMatch(/<title>Hotel near Hosa Road Metro &amp; Electronic City, Bengaluru/);
       expect(off).not.toContain("ga-measurement-id");
       process.env.GA_MEASUREMENT_ID = "G-TEST123456";
       expect(await injectSeoTagsIntoHtml(mockHtml, "/")).toContain('<meta name="ga-measurement-id" content="G-TEST123456" />');
@@ -199,6 +201,23 @@ describe("Local SEO & Discovery Engine Integration Tests", () => {
     } finally {
       if (before === undefined) delete process.env.GA_MEASUREMENT_ID; else process.env.GA_MEASUREMENT_ID = before;
     }
+  });
+
+  it("indexable pages allow rich previews; the search page and private areas are kept out of the index", async () => {
+    const html = `<!doctype html><html><head><title>Original</title></head><body><div id="root"></div></body></html>`;
+    expect(await injectSeoTagsIntoHtml(html, "/rooms")).toContain('content="index, follow, max-image-preview:large');
+    expect(await injectSeoTagsIntoHtml(html, "/search")).toContain('<meta name="robots" content="noindex, follow" />');
+    for (const path of ["/admin/dashboard", "/staff/x", "/customer/bookings", "/login", "/booking/payment"]) {
+      expect(await injectSeoTagsIntoHtml(html, path), path).toContain('<meta name="robots" content="noindex, nofollow" />');
+    }
+  });
+
+  it("the /hotels-near hub lists every published area page", async () => {
+    const html = `<!doctype html><html><head><title>Original</title></head><body><div id="root"></div></body></html>`;
+    const out = await injectSeoTagsIntoHtml(html, "/hotels-near");
+    expect(out).toContain('<link rel="canonical" href="https://yeshotels.in/hotels-near" />');
+    expect(out).toContain(`href="/hotels-near/${testSlug}"`);
+    expect(out).toContain("<h1>Where to stay near Hosa Road Metro and South Bengaluru</h1>");
   });
 
   it("the sitemap leaves out the thin /search page", async () => {
