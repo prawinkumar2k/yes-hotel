@@ -26,6 +26,25 @@ export async function generateAdvanceNumber(session?: mongoose.ClientSession): P
   return `${prefix}-${ym}-${String(seq).padStart(4, "0")}`;
 }
 
+/**
+ * The desk picks a payment channel ("Cash Counter", "UPI"…); the advance's method follows from it
+ * unless a method is sent explicitly. Throws a message fit to show the user.
+ */
+export async function resolveAdvanceMethod(method?: string, paymentChannelId?: string): Promise<AdvancePaymentMethod> {
+  let resolved = method;
+  if (!resolved && paymentChannelId) {
+    const { PaymentChannel } = await import("../models/PaymentChannel");
+    const channel: any = /^[a-f0-9]{24}$/i.test(String(paymentChannelId)) ? await PaymentChannel.findById(paymentChannelId).select("type isActive").lean() : null;
+    if (!channel || channel.isActive === false) throw new Error("Choose a valid payment channel");
+    const byType: Record<string, string> = { CASH: "CASH", CARD: "CARD", UPI: "UPI", GATEWAY: "RAZORPAY", BANK_TRANSFER: "BANK_TRANSFER" };
+    resolved = byType[channel.type] ?? "OTHER";
+  }
+  if (!resolved || !Object.values(AdvancePaymentMethod).includes(resolved as AdvancePaymentMethod)) {
+    throw new Error("Choose how the payment was received (payment channel)");
+  }
+  return resolved as AdvancePaymentMethod;
+}
+
 /** Statuses from which money can still be drawn (applied or refunded). */
 const DRAWABLE = [AdvancePaymentStatus.RECEIVED, AdvancePaymentStatus.PARTIALLY_ADJUSTED, AdvancePaymentStatus.PARTIALLY_REFUNDED];
 
@@ -58,65 +77,74 @@ export interface ReceiveAdvanceParams {
 
 export async function receiveAdvance(
   params: ReceiveAdvanceParams,
-  opts: { req?: Request } = {}
+  // `session`: when given, every read and write joins that transaction (a booking and its advance are saved together).
+  opts: { req?: Request; session?: mongoose.ClientSession } = {}
 ): Promise<IAdvancePayment> {
   if (params.amount <= 0) throw new Error("Advance amount must be positive");
+  const session = opts.session ?? null;
 
   let resolvedPropertyId = params.propertyId || (opts.req as any)?.propertyId || (opts.req as any)?.user?.propertyId;
   if (!resolvedPropertyId && params.bookingId) {
     const { Booking } = await import("../models/Booking");
-    const bk = await Booking.findById(params.bookingId).lean();
+    const bk = await Booking.findById(params.bookingId).session(session).lean();
     if (bk) resolvedPropertyId = bk.propertyId || (bk as any).property;
   }
   if (!resolvedPropertyId) {
     const { Property } = await import("../models/Property");
-    const prop = await Property.findOne().lean();
+    const prop = await Property.findOne().session(session).lean();
     resolvedPropertyId = prop?._id;
   }
 
-  const advanceNumber = await generateAdvanceNumber();
+  const advanceNumber = await generateAdvanceNumber(opts.session);
   if (params.bookingId) {
     const { Booking } = await import("../models/Booking");
-    const bk = await Booking.findById(params.bookingId).select("status").lean();
+    const bk = await Booking.findById(params.bookingId).session(session).select("status").lean();
     if (!bk) throw new Error("Booking not found");
     if (["CANCELLED", "NO_SHOW", "CHECKED_OUT"].includes(String(bk.status))) {
       throw new Error(`Cannot take an advance against a ${bk.status} booking`);
     }
   }
 
-  const advance = await AdvancePayment.create({
-    propertyId: resolvedPropertyId,
-    advanceNumber,
-    booking: params.bookingId,
-    guest: params.guestId,
-    amount: params.amount,
-    totalAdjusted: 0,
-    totalRefunded: 0,
-    remainingBalance: params.amount,
-    method: params.method,
-    paymentChannel: params.paymentChannelId,
-    referenceNumber: params.referenceNumber,
-    razorpayPaymentId: params.razorpayPaymentId,
-    status: AdvancePaymentStatus.RECEIVED,
-    receivedAt: new Date(),
-    receivedBy: params.receivedBy,
-    purpose: params.purpose,
-    notes: params.notes,
-  });
-
-  await createAuditLog({
-    req: opts.req,
-    action: "advance.received",
-    resourceType: "AdvancePayment",
-    resourceId: advance._id.toString(),
-    metadata: {
+  const [advance] = await AdvancePayment.create(
+    [{
+      propertyId: resolvedPropertyId,
       advanceNumber,
-      bookingId: params.bookingId,
-      guestId: params.guestId,
+      booking: params.bookingId,
+      guest: params.guestId,
       amount: params.amount,
+      totalAdjusted: 0,
+      totalRefunded: 0,
+      remainingBalance: params.amount,
       method: params.method,
-    },
-  });
+      paymentChannel: params.paymentChannelId,
+      referenceNumber: params.referenceNumber,
+      razorpayPaymentId: params.razorpayPaymentId,
+      status: AdvancePaymentStatus.RECEIVED,
+      receivedAt: new Date(),
+      receivedBy: params.receivedBy,
+      purpose: params.purpose,
+      notes: params.notes,
+    }],
+    { session: opts.session },
+  );
+
+  // Inside a transaction the caller writes this audit entry after commit (an entry written now
+  // would survive a rollback and describe a deposit that was never saved).
+  if (!opts.session) {
+    await createAuditLog({
+      req: opts.req,
+      action: "advance.received",
+      resourceType: "AdvancePayment",
+      resourceId: advance._id.toString(),
+      metadata: {
+        advanceNumber,
+        bookingId: params.bookingId,
+        guestId: params.guestId,
+        amount: params.amount,
+        method: params.method,
+      },
+    });
+  }
 
   return advance;
 }
@@ -317,8 +345,15 @@ export async function applyAdvancesToFolio(
   const due = (await recomputeFolioBalance(params.folioId, { session: opts.session })).balance;
   let left = Math.round(Math.min(params.maxAmount, Math.max(0, due)) * 100) / 100;
   if (left <= 0) return 0;
+  // An advance taken for a group (several rooms booked together) sits on the group's first room but
+  // belongs to the whole group: every room's bill can draw from it.
+  const { Booking } = await import("../models/Booking");
+  const own: any = await Booking.findById(params.bookingId).select("groupId").session(opts.session ?? null).lean();
+  const bookingIds = own?.groupId
+    ? (await Booking.find({ groupId: own.groupId }).select("_id").session(opts.session ?? null).lean()).map((b: any) => b._id)
+    : [params.bookingId];
   const q = AdvancePayment.find({
-    $or: [{ booking: params.bookingId }, ...(params.guestId ? [{ guest: params.guestId, booking: { $in: [null, undefined] } }] : [])],
+    $or: [{ booking: { $in: bookingIds } }, ...(params.guestId ? [{ guest: params.guestId, booking: { $in: [null, undefined] } }] : [])],
     remainingBalance: { $gt: 0 },
     status: { $in: DRAWABLE },
   }).sort({ receivedAt: 1 });

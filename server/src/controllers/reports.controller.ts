@@ -4,6 +4,7 @@ import { FolioLine, FolioLineType, FolioLineDirection } from "../models/FolioLin
 import { Booking, BookingStatus, PaymentStatus } from "../models/Booking";
 import { Room, HousekeepingRoomStatus } from "../models/Room";
 import { AdvancePayment } from "../models/AdvancePayment";
+import { AdvanceAdjustment } from "../models/AdvanceAdjustment";
 import { RestaurantOrder } from "../models/RestaurantOrder";
 import { Complaint } from "../models/Complaint";
 import { Payment } from "../models/Payment";
@@ -660,16 +661,18 @@ export const getDaySummary = async (req: Request, res: Response) => {
     const { start: dayStart, end: dayEnd } = dayBounds(targetYmd);
     // A date-range condition only; property scoping is propertyMatch below (putting
     // propertyId inside this operator object made Mongo reject the query).
-    const dayQuery: any = { $gte: dayStart, $lte: dayEnd };
+    const dayQuery: any = { $gte: dayStart, $lt: dayEnd };
 
     // 1. Fetch relevant bookings for the day
     // We add propertyId to the queries.
     const propertyMatch = (req as any).propertyId ? { propertyId: (req as any).propertyId } : {};
     
     const [checkIns, checkOuts, dayUses, activeBookings, cancelledCount, noShowCount, totalRooms] = await Promise.all([
-      Booking.find({ ...propertyMatch, checkInDate: dayQuery }),
-      Booking.find({ ...propertyMatch, checkOutDate: dayQuery }),
-      Booking.find({ ...propertyMatch, stayType: "HOURLY", createdAt: dayQuery }),
+      // Actual events of the day (same definitions as the check-in / check-out / day-use reports),
+      // not the booked dates: a guest who arrived yesterday and left today is a check-out today only.
+      Booking.find({ ...propertyMatch, checkedInAt: dayQuery }),
+      Booking.find({ ...propertyMatch, status: BookingStatus.CHECKED_OUT, checkedOutAt: dayQuery }),
+      Booking.find({ ...propertyMatch, stayType: "HOURLY", status: { $nin: [BookingStatus.CANCELLED, BookingStatus.NO_SHOW] }, $or: [{ checkedInAt: dayQuery }, { checkInDate: dayQuery }] }),
       Booking.find({ ...propertyMatch, status: BookingStatus.CHECKED_IN }),
       Booking.countDocuments({ ...propertyMatch, status: BookingStatus.CANCELLED, updatedAt: dayQuery }),
       Booking.countDocuments({ ...propertyMatch, status: BookingStatus.NO_SHOW, updatedAt: dayQuery }),
@@ -693,9 +696,16 @@ export const getDaySummary = async (req: Request, res: Response) => {
     const agencies = checkIns.filter(b => b.source === "CORPORATE").length;
 
     // 2. Fetch payments for the day
-    const todayPayments = await Payment.find({ ...propertyMatch, createdAt: dayQuery });
+    let advAdjd = 0;
+    const todayPayments = await Payment.find({ ...propertyMatch, status: "COMPLETED", createdAt: dayQuery } as any);
+    const todayAdvances = await AdvancePayment.find({ ...propertyMatch, receivedAt: dayQuery }).lean();
+    const adjustedToday = await AdvanceAdjustment.aggregate([
+      { $match: { type: "ADJUSTMENT", status: "COMPLETED", performedAt: dayQuery } },
+      { $group: { _id: null, total: { $sum: "$amount" } } },
+    ]);
+    advAdjd = adjustedToday[0]?.total ?? 0;
 
-    let resrvAdv = 0, roomAdv = 0, partial = 0, final = 0, advAdjd = 0;
+    let resrvAdv = 0, roomAdv = 0, partial = 0, final = 0;
     const paymentModes: Record<string, number> = {
       CASH: 0, UPI: 0, CARD: 0, PAYTM: 0, HDFC: 0, OTA_CREDIT: 0
     };
@@ -718,6 +728,19 @@ export const getDaySummary = async (req: Request, res: Response) => {
       else if (mode.includes("CARD")) paymentModes.CARD += p.amount;
       else paymentModes.CASH += p.amount;
     });
+
+    // Advances received today (net of refunds): for a guest who checked in today = room advance, otherwise reservation advance.
+    const checkedInToday = new Set(checkIns.map((c) => c._id.toString()));
+    for (const a of todayAdvances as any[]) {
+      const net = (a.amount || 0) - (a.totalRefunded || 0);
+      if (a.booking && checkedInToday.has(String(a.booking))) roomAdv += net;
+      else resrvAdv += net;
+      const mode = String(a.method || "").toUpperCase();
+      if (paymentModes[mode] !== undefined) paymentModes[mode] += net;
+      else if (mode.includes("UPI")) paymentModes.UPI += net;
+      else if (mode.includes("CARD")) paymentModes.CARD += net;
+      else paymentModes.CASH += net;
+    }
 
     // 3. Cash Sheet Data
     const cashPayments = todayPayments.filter(p => p.method.toUpperCase().includes("CASH"));
@@ -778,6 +801,7 @@ export const getDaySummary = async (req: Request, res: Response) => {
         hdfcUpi: paymentModes.UPI + paymentModes.HDFC,
         otaCredit: paymentModes.OTA_CREDIT,
         credits: resrvAdv + roomAdv + partial + final,
+        advAdjdTotal: advAdjd,
         roomSales: roomSalesTotal,
         miscSales: 0,
         // -- Nested structure (kept for CashSheetReport backward compat) --

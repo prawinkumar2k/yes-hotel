@@ -150,18 +150,6 @@ export default function AdminFrontDesk() {
     try {
       const token = getStoredAuthToken();
       
-      // If room was selected/changed
-      if (selectedRoomId && selectedRoomId !== (checkInModal.booking.assignedRoom?._id || checkInModal.booking.assignedRoom)) {
-        await fetch(`/api/room-rack/${selectedRoomId}/assign-booking`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          },
-          body: JSON.stringify({ bookingId: checkInModal.booking._id }),
-        });
-      }
-
       const res = await fetch(`/api/bookings/${checkInModal.booking._id}/check-in`, {
         method: "POST",
         headers: {
@@ -169,6 +157,7 @@ export default function AdminFrontDesk() {
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         body: JSON.stringify({
+          roomId: selectedRoomId || checkInModal.booking.assignedRoom?._id || checkInModal.booking.assignedRoom,
           idType,
           idNumber,
           notes: "In-line Front Desk Check-In",

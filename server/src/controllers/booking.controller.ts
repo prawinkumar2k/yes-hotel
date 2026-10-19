@@ -651,10 +651,13 @@ class IllegalCheckInTransitionError extends Error {}
 // Admin Check-In
 export const checkIn = async (req: Request, res: Response) => {
   try {
-    const { roomId, idType, idNumber, nationality, emergencyPhone, overrideHousekeeping, overrideReason } = req.body;
+    const { idType, idNumber, nationality, emergencyPhone, overrideHousekeeping, overrideReason } = req.body;
     const booking = await Booking.findById(req.params.id);
     if (!booking) return res.status(404).json({ success: false, message: "Booking not found" });
 
+    // The room chosen at the desk, else the room already assigned to the booking.
+    const roomId = req.body.roomId || (booking.assignedRoom ? String((booking.assignedRoom as any)._id ?? booking.assignedRoom) : undefined);
+    if (!roomId) return res.status(400).json({ success: false, message: "Choose a room for this booking before check-in" });
     const targetRoom = await Room.findById(roomId);
     if (!targetRoom) return res.status(404).json({ success: false, message: "Room not found" });
 

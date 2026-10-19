@@ -114,6 +114,20 @@ Until Razorpay keys are added, the last booking step says **"Confirm booking · 
 - **GSTIN** 29AFAFS2437J1ZS prints on every invoice. Admin → Settings can change it.
 - Bill numbers are issued only at checkout.
 
+## 7d. Reserve rooms with an advance
+
+For a customer who pays now for rooms later (for example "10 rooms, 20 guests, tomorrow"): **Advances → Reserve Rooms with Advance**, or **New Walk-In → Reserve for later**.
+
+- Enter the guest (name, mobile, address, GSTIN if any), room type, rooms, adults, children, meal plan, dates and times, the rate and the advance. The price, GST and free rooms update as you type; the form will not save if the rooms are not free.
+- Rooms are held by room type. No room number is chosen now.
+- Save, then **Print Booking Confirmation** (same layout as the old paper confirmation).
+- On the arrival day, **Front Desk → Arrivals**: pick the room for each booking and check in. The advance is applied to the bill automatically (shared across all rooms of the booking).
+- Pressing Save twice, or a slow network, never books twice.
+
+## 7e. Day reports
+
+Day Summary, Check-in, Check-out and Day-use reports count what actually happened that day (check-in time and check-out time), and keep showing it after the guest has checked out. Day Summary receipts include advances; the Check-in, Check-out and Day-use grids appear under the summary for the chosen date.
+
 ## 8. Daily checks
 
 - Admin → **Audit Log**: look for unexpected `master_password_login` or failed logins.

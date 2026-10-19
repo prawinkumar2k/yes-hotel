@@ -41,21 +41,16 @@ router.post("/", requirePropertyAccess, requirePermission("ADVANCES", "CREATE"),
 
       // The form sends the payment channel chosen at the desk (e.g. "Cash Counter"); the method
       // follows from the channel when it is not sent explicitly.
-      let resolvedMethod: string | undefined = method;
-      if (!resolvedMethod && paymentChannelId) {
-        const { PaymentChannel } = await import("../models/PaymentChannel");
-        const channel: any = /^[a-f0-9]{24}$/i.test(String(paymentChannelId)) ? await PaymentChannel.findById(paymentChannelId).select("type isActive").lean() : null;
-        if (!channel || channel.isActive === false) return res.status(400).json({ success: false, message: "Choose a valid payment channel" });
-        const byType: Record<string, string> = { CASH: "CASH", CARD: "CARD", UPI: "UPI", GATEWAY: "RAZORPAY", BANK_TRANSFER: "BANK_TRANSFER" };
-        resolvedMethod = byType[channel.type] ?? "OTHER";
-      }
-      const value = Number(amount);
       if (!resolvedGuestId) return res.status(400).json({ success: false, message: "Choose the guest" });
+      const value = Number(amount);
       if (!Number.isFinite(value) || value <= 0) return res.status(400).json({ success: false, message: "Enter an amount greater than zero" });
-      if (!resolvedMethod || !Object.values(AdvancePaymentMethod).includes(resolvedMethod as AdvancePaymentMethod)) {
-        return res.status(400).json({ success: false, message: "Choose how the payment was received (payment channel)" });
+      const { resolveAdvanceMethod } = await import("../services/advance.service");
+      let method_: string;
+      try {
+        method_ = await resolveAdvanceMethod(method, paymentChannelId);
+      } catch (e: any) {
+        return res.status(400).json({ success: false, message: e.message });
       }
-      const method_ = resolvedMethod;
       const { resolvePaymentChannel } = await import("../utils/payment-channel.resolver");
       const resolvedChannelId = await resolvePaymentChannel(method_, paymentChannelId);
 
@@ -69,6 +64,48 @@ router.post("/", requirePropertyAccess, requirePermission("ADVANCES", "CREATE"),
     }
   }
 );
+
+// ── Advance booking: reserve rooms for a later stay against an advance ─────────────────────────
+// POST /api/advances/bookings/quote           live price, GST and free rooms (changes nothing)
+// POST /api/advances/bookings                 reserve the rooms + take the advance (one transaction)
+// GET  /api/advances/bookings/:id/confirmation   data for the printed Booking Confirmation
+const reservationFail = async (res: Response, error: any) => {
+  const { ReservationError } = await import("../services/advance-reservation.service");
+  if (error instanceof ReservationError) return res.status(error.status).json({ success: false, message: error.message });
+  return res.status(500).json({ success: false, message: "We couldn't save the reservation. Nothing was booked — please try again.", requestId: (res.req as any)?.id });
+};
+
+router.post("/bookings/quote", requirePropertyAccess, requirePermission("ADVANCES", "VIEW"), async (req: Request, res: Response) => {
+  try {
+    const { quoteReservation } = await import("../services/advance-reservation.service");
+    return res.json({ success: true, data: await quoteReservation(req.body ?? {}) });
+  } catch (error: any) {
+    return reservationFail(res, error);
+  }
+});
+
+router.post("/bookings", requirePropertyAccess, requirePermission("ADVANCES", "CREATE"), async (req: Request, res: Response) => {
+  try {
+    const { createAdvanceReservation } = await import("../services/advance-reservation.service");
+    const data = await createAdvanceReservation(req.body ?? {}, { req, actorId: String((req as any).user?.id) });
+    return res.status(data.duplicate ? 200 : 201).json({
+      success: true,
+      message: data.duplicate ? "This reservation was already saved" : `Booking ${data.bookingNumber} confirmed — ${data.rooms} room${data.rooms === 1 ? "" : "s"} reserved`,
+      data,
+    });
+  } catch (error: any) {
+    return reservationFail(res, error);
+  }
+});
+
+router.get("/bookings/:id/confirmation", requirePropertyAccess, requirePermission("ADVANCES", "VIEW"), async (req: Request, res: Response) => {
+  try {
+    const { getReservationConfirmation } = await import("../services/advance-reservation.service");
+    return res.json({ success: true, data: await getReservationConfirmation(String(req.params.id)) });
+  } catch (error: any) {
+    return reservationFail(res, error);
+  }
+});
 
 // GET /api/advances — list advances (filter by booking or guest)
 router.get("/", requirePropertyAccess, requirePermission("ADVANCES", "VIEW"), async (req: Request, res: Response) => {

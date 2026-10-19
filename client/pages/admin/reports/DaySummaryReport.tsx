@@ -2,6 +2,7 @@ import { useState } from "react";
 import { getStoredAuthToken } from "@/lib/authStorage";
 import { useQuery } from "@tanstack/react-query";
 import { todayBusinessDate } from "@shared/dates";
+import { CheckInReport, CheckOutReport, DayUseSalesReport } from "./OperationsReports";
 
 const formatAmount = (val: any) => {
   if (val === undefined || val === null || val === "") return "0.00";
@@ -336,6 +337,13 @@ export default function DaySummaryReport() {
             Page 2 of 2
           </div>
         </div>
+      </div>
+
+      {/* Detail behind the counts above, in the same grid as the Check-in / Check-out / Day-use reports */}
+      <div className="mt-8 space-y-8 print:break-before-page">
+        <CheckInReport day={date} />
+        <CheckOutReport day={date} />
+        <DayUseSalesReport day={date} />
       </div>
     </div>
   );

@@ -43,11 +43,13 @@ function downloadCsv(name: string, csv: string) {
   URL.revokeObjectURL(url);
 }
 
-function useRange(defaultDays = 0) {
+function useRange(defaultDays = 0, fixed?: { from: string; to: string }) {
   const today = todayBusinessDate();
   const [from, setFrom] = useState(today);
   const [to, setTo] = useState(addDays(today, defaultDays));
-  return { from, to, setFrom, setTo };
+  // `fixed`: embedded under another report (e.g. the Day Summary) for one chosen day; no date pickers.
+  if (fixed) return { from: fixed.from, to: fixed.to, setFrom, setTo, fixed: true };
+  return { from, to, setFrom, setTo, fixed: false };
 }
 
 function ReportShell(props: {
@@ -62,12 +64,12 @@ function ReportShell(props: {
   const { range } = props;
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-end justify-between gap-3 print:hidden">
+      <div className={`flex flex-wrap items-end justify-between gap-3 ${range.fixed ? "" : "print:hidden"}`}>
         <div>
           <h2 className="text-xl font-serif font-bold text-gray-900">{props.title}</h2>
           <p className="text-xs text-gray-500">{props.subtitle}</p>
         </div>
-        <div className="flex flex-wrap items-end gap-2">
+        <div className={`flex flex-wrap items-end gap-2 ${range.fixed ? "hidden" : ""}`}>
           <label className="text-xs font-semibold text-gray-600">
             From
             <input type="date" value={range.from} max={range.to} onChange={(e) => range.setFrom(e.target.value)} className="block mt-1 px-2 py-1.5 border border-gray-300 rounded-lg text-sm bg-white" />
@@ -161,8 +163,8 @@ function useReport(path: string, from: string, to: string) {
 }
 
 // ─── Check-in report ─────────────────────────────────────────────────────────
-export function CheckInReport() {
-  const range = useRange();
+export function CheckInReport({ day: fixedDay }: { day?: string } = {}) {
+  const range = useRange(0, fixedDay ? { from: fixedDay, to: fixedDay } : undefined);
   const { data, isLoading, error } = useReport("check-ins", range.from, range.to);
   const cols: Col<any>[] = [
     { key: "checkedInAt", label: "Checked In", value: (r) => dt(r.checkedInAt) },
@@ -193,8 +195,8 @@ export function CheckInReport() {
 }
 
 // ─── Check-out report ────────────────────────────────────────────────────────
-export function CheckOutReport() {
-  const range = useRange();
+export function CheckOutReport({ day: fixedDay }: { day?: string } = {}) {
+  const range = useRange(0, fixedDay ? { from: fixedDay, to: fixedDay } : undefined);
   const { data, isLoading, error } = useReport("check-outs", range.from, range.to);
   const cols: Col<any>[] = [
     { key: "checkedOutAt", label: "Checked Out", value: (r) => dt(r.checkedOutAt) },
@@ -224,8 +226,8 @@ export function CheckOutReport() {
 }
 
 // ─── Day-use / hourly sales report ───────────────────────────────────────────
-export function DayUseSalesReport() {
-  const range = useRange();
+export function DayUseSalesReport({ day: fixedDay }: { day?: string } = {}) {
+  const range = useRange(0, fixedDay ? { from: fixedDay, to: fixedDay } : undefined);
   const { data, isLoading, error } = useReport("day-use-sales", range.from, range.to);
   const cols: Col<any>[] = [
     { key: "date", label: "Date", value: (r) => day(r.date) },

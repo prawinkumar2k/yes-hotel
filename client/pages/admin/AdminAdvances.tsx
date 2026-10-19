@@ -5,6 +5,7 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { getStoredAuthToken } from "../../lib/authStorage";
+import AdvanceBookingDialog from "@/components/admin/AdvanceBookingDialog";
 
 interface AdvanceItem {
   _id: string;
@@ -29,6 +30,7 @@ export default function AdminAdvances() {
 
   // New Advance Modal
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showReserve, setShowReserve] = useState(false);
   const [guestName, setGuestName] = useState("");
   const [guestPhone, setGuestPhone] = useState("");
   const [guestEmail, setGuestEmail] = useState("");
@@ -242,6 +244,13 @@ export default function AdminAdvances() {
           >
             <Plus size={16} /> Issue Advance Receipt
           </button>
+          <button
+            onClick={() => setShowReserve(true)}
+            className="flex items-center gap-2 px-4 py-2.5 border border-[#c9a227] text-[#8a6d12] hover:bg-[#c9a227]/10 font-bold rounded-xl transition text-xs"
+          >
+            <Plus size={16} /> Reserve Rooms with Advance
+          </button>
+          <AdvanceBookingDialog open={showReserve} onClose={() => setShowReserve(false)} onSaved={fetchAdvances} />
           <button
             onClick={fetchAdvances}
             className="flex items-center gap-2 px-4 py-2.5 bg-gray-100 text-gray-600 hover:text-gray-800 rounded-xl transition text-xs font-semibold border border-gray-200"
