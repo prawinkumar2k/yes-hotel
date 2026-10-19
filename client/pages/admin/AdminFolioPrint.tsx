@@ -7,7 +7,6 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { format, differenceInDays } from "date-fns";
 import { Loader2, Printer, Key, ArrowLeft, FileCheck2, Building2, CheckCircle2 } from "lucide-react";
-import AdminLayout from "@/components/admin/AdminLayout";
 
 // Number to words helper
 function numberToWords(num: number): string {
@@ -188,7 +187,7 @@ export default function AdminFolioPrint() {
   const primaryAdvance = creditLines[0] || advancesList[0] || null;
 
   return (
-    <AdminLayout title="Folio & GST Invoice">
+    <>
       <div className="min-h-screen bg-white text-black p-4 font-sans print:p-0 print:m-0 mx-auto max-w-[850px]">
         {/* Top Control Bar (Hidden on print) */}
         <div className={`print:hidden mb-4 bg-gray-100 p-3 rounded-xl border border-gray-300 shadow-sm space-y-3${embedded ? " hidden" : ""}`}>
@@ -502,6 +501,6 @@ export default function AdminFolioPrint() {
           </div>
         </div>
       </div>
-    </AdminLayout>
+    </>
   );
 }

@@ -4,6 +4,7 @@ import { format } from "date-fns";
 import { Loader2, Printer, Download } from "lucide-react";
 import { api } from "@/lib/api";
 import { todayBusinessDate, addDays } from "@shared/dates";
+import ReportPrintHeader from "@/components/admin/ReportPrintHeader";
 
 // ─── Shared building blocks ──────────────────────────────────────────────────
 
@@ -63,7 +64,7 @@ function ReportShell(props: {
 }) {
   const { range } = props;
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 report-print">
       <div className={`flex flex-wrap items-end justify-between gap-3 ${range.fixed ? "" : "print:hidden"}`}>
         <div>
           <h2 className="text-xl font-serif font-bold text-gray-900">{props.title}</h2>
@@ -86,11 +87,7 @@ function ReportShell(props: {
           </button>
         </div>
       </div>
-      <div className="hidden print:block text-center">
-        <div className="font-serif text-xl font-black">YES HOTELS</div>
-        <div className="font-bold">{props.title}</div>
-        <div className="text-xs">{day(range.from)} to {day(range.to)}</div>
-      </div>
+      {!range.fixed && <ReportPrintHeader title={props.title} period={`${day(range.from)}${range.to !== range.from ? ` to ${day(range.to)}` : ""}`} />}
       {props.loading ? (
         <div className="flex justify-center p-12"><Loader2 className="animate-spin text-hotel-gold" size={28} /></div>
       ) : props.error ? (

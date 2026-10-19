@@ -493,3 +493,20 @@
   .admin-panel input, .admin-panel select, .admin-panel textarea { font-size: 1rem; }
   .admin-panel th { font-size: 0.8125rem; }
 }
+
+/* ── Printing: every admin page and report prints as a clean document (no menus, no scroll boxes) ── */
+@page report { size: A4 landscape; margin: 10mm; }
+@media print {
+  html, body, #root { height: auto !important; overflow: visible !important; max-width: none !important; background: #fff !important; }
+  .admin-panel, .admin-panel main { height: auto !important; max-height: none !important; overflow: visible !important; display: block !important; }
+  .admin-panel [class*="h-[calc"] { height: auto !important; overflow: visible !important; }
+  .admin-panel .overflow-auto, .admin-panel .overflow-y-auto, .admin-panel .overflow-x-auto, .admin-panel .overflow-hidden { overflow: visible !important; }
+  .report-print { page: report; }
+  .report-print table { width: 100%; border-collapse: collapse; font-size: 9px !important; }
+  .report-print th, .report-print td { padding: 3px 5px !important; font-size: 9px !important; line-height: 1.25 !important; }
+  .report-print thead { display: table-header-group; }
+  .report-print tfoot { display: table-footer-group; }
+  .report-print tr { break-inside: avoid; page-break-inside: avoid; }
+  .report-print .text-xs, .report-print .text-sm { font-size: 10px !important; }
+  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}
