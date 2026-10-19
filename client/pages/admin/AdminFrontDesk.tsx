@@ -35,7 +35,7 @@ export default function AdminFrontDesk() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { data: hotelSettings } = useHotelSettings();
-  const [activeTab, setActiveTab] = useState<"ARRIVALS" | "DEPARTURES" | "IN_HOUSE" | "UNASSIGNED" | "DIRTY" | "AVAILABLE" | "OCCUPIED">("ARRIVALS");
+  const [activeTab, setActiveTab] = useState<"ARRIVALS" | "DEPARTURES" | "IN_HOUSE" | "UNASSIGNED" | "DIRTY" | "AVAILABLE" | "OCCUPIED">("IN_HOUSE");
   
   // Search & Filter
   const [searchQuery, setSearchQuery] = useState("");
@@ -778,44 +778,10 @@ export default function AdminFrontDesk() {
 
       {/* Top KPI Ribbon */}
       <div className="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-8 gap-3">
-        {/* Arrivals Card */}
-        <div
-          onClick={() => setActiveTab("ARRIVALS")}
-          className={`cursor-pointer bg-white p-4 rounded-xl border transition-all ${
-            activeTab === "ARRIVALS"
-              ? "border-emerald-500 bg-emerald-500/10 shadow-lg shadow-sm"
-              : "border-gray-200 hover:border-emerald-500/50"
-          }`}
-        >
-          <div className="flex items-center justify-between text-emerald-400 mb-2">
-            <LogIn size={18} />
-            <span className="text-[10px] font-bold uppercase tracking-wider whitespace-nowrap bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded border border-emerald-500/30">Arrivals</span>
-          </div>
-          <p className="text-2xl font-serif font-bold text-gray-800">{counts.arrivals}</p>
-          <p className="text-[11px] text-gray-500 mt-1">Expected Today</p>
-        </div>
-
-        {/* Departures Card */}
-        <div
-          onClick={() => setActiveTab("DEPARTURES")}
-          className={`cursor-pointer bg-white p-4 rounded-xl border transition-all ${
-            activeTab === "DEPARTURES"
-              ? "border-blue-500 bg-blue-500/10 shadow-lg shadow-sm"
-              : "border-gray-200 hover:border-blue-500/50"
-          }`}
-        >
-          <div className="flex items-center justify-between text-blue-400 mb-2">
-            <LogOut size={18} />
-            <span className="text-[10px] font-bold uppercase tracking-wider whitespace-nowrap bg-blue-500/20 text-blue-300 px-2 py-0.5 rounded border border-blue-500/30">Departures</span>
-          </div>
-          <p className="text-2xl font-serif font-bold text-gray-800">{counts.departures}</p>
-          <p className="text-[11px] text-gray-500 mt-1">Checking Out</p>
-        </div>
-
         {/* In House Card */}
         <div
           onClick={() => setActiveTab("IN_HOUSE")}
-          className={`cursor-pointer bg-white p-4 rounded-xl border transition-all ${
+          className={`cursor-pointer bg-white p-5 rounded-xl border-2 transition-all ${
             activeTab === "IN_HOUSE"
               ? "border-purple-500 bg-purple-500/10 shadow-lg shadow-sm"
               : "border-gray-200 hover:border-purple-500/50"
@@ -825,65 +791,14 @@ export default function AdminFrontDesk() {
             <Users size={18} />
             <span className="text-[10px] font-bold uppercase tracking-wider whitespace-nowrap bg-purple-500/20 text-purple-300 px-2 py-0.5 rounded border border-purple-500/30">In-House</span>
           </div>
-          <p className="text-2xl font-serif font-bold text-gray-800">{counts.inHouse}</p>
-          <p className="text-[11px] text-gray-500 mt-1">Active Stays</p>
-        </div>
-
-        {/* Unassigned Card */}
-        <div
-          onClick={() => setActiveTab("UNASSIGNED")}
-          className={`cursor-pointer bg-white p-4 rounded-xl border transition-all ${
-            activeTab === "UNASSIGNED"
-              ? "border-amber-500 bg-amber-500/10 shadow-lg shadow-sm"
-              : "border-gray-200 hover:border-amber-500/50"
-          }`}
-        >
-          <div className="flex items-center justify-between text-amber-400 mb-2">
-            <AlertCircle size={18} />
-            <span className="text-[10px] font-bold uppercase tracking-wider whitespace-nowrap bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded border border-amber-500/30">Unassigned</span>
-          </div>
-          <p className="text-2xl font-serif font-bold text-gray-800">{counts.unassignedBookings}</p>
-          <p className="text-[11px] text-gray-500 mt-1">To Allocate</p>
-        </div>
-
-        {/* Dirty Rooms Card */}
-        <div
-          onClick={() => setActiveTab("DIRTY")}
-          className={`cursor-pointer bg-white p-4 rounded-xl border transition-all ${
-            activeTab === "DIRTY"
-              ? "border-red-500 bg-red-500/10 shadow-lg shadow-sm"
-              : "border-gray-200 hover:border-red-500/50"
-          }`}
-        >
-          <div className="flex items-center justify-between text-red-400 mb-2">
-            <BedDouble size={18} />
-            <span className="text-[10px] font-bold uppercase tracking-wider whitespace-nowrap bg-red-500/20 text-red-300 px-2 py-0.5 rounded border border-red-500/30">Dirty Rooms</span>
-          </div>
-          <p className="text-2xl font-serif font-bold text-gray-800">{counts.dirtyRooms}</p>
-          <p className="text-[11px] text-gray-500 mt-1">Pending Cleaning</p>
-        </div>
-
-        {/* Available Rooms Card */}
-        <div
-          onClick={() => setActiveTab("AVAILABLE")}
-          className={`cursor-pointer bg-white p-4 rounded-xl border transition-all ${
-            activeTab === "AVAILABLE"
-              ? "border-teal-500 bg-teal-500/10 shadow-lg shadow-sm"
-              : "border-gray-200 hover:border-teal-500/50"
-          }`}
-        >
-          <div className="flex items-center justify-between text-teal-500 mb-2">
-            <CheckCircle2 size={18} />
-            <span className="text-[10px] font-bold uppercase tracking-wider whitespace-nowrap bg-teal-500/20 text-teal-700 px-2 py-0.5 rounded border border-teal-500/30">Available</span>
-          </div>
-          <p className="text-2xl font-serif font-bold text-gray-800">{summary?.availableRooms?.length ?? 0}</p>
-          <p className="text-[11px] text-gray-500 mt-1">Clean &amp; Ready</p>
+          <p className="text-4xl font-serif font-bold text-gray-900">{counts.inHouse}</p>
+          <p className="text-sm font-medium text-gray-600 mt-1">Active Stays</p>
         </div>
 
         {/* Occupied Rooms Card */}
         <div
           onClick={() => setActiveTab("OCCUPIED")}
-          className={`cursor-pointer bg-white p-4 rounded-xl border transition-all ${
+          className={`cursor-pointer bg-white p-5 rounded-xl border-2 transition-all ${
             activeTab === "OCCUPIED"
               ? "border-indigo-500 bg-indigo-500/10 shadow-lg shadow-sm"
               : "border-gray-200 hover:border-indigo-500/50"
@@ -893,8 +808,93 @@ export default function AdminFrontDesk() {
             <BedDouble size={18} />
             <span className="text-[10px] font-bold uppercase tracking-wider whitespace-nowrap bg-indigo-500/20 text-indigo-700 px-2 py-0.5 rounded border border-indigo-500/30">Occupied</span>
           </div>
-          <p className="text-2xl font-serif font-bold text-gray-800">{summary?.occupiedRooms?.length ?? 0}</p>
-          <p className="text-[11px] text-gray-500 mt-1">Rooms In Use</p>
+          <p className="text-4xl font-serif font-bold text-gray-900">{summary?.occupiedRooms?.length ?? 0}</p>
+          <p className="text-sm font-medium text-gray-600 mt-1">Rooms In Use</p>
+        </div>
+
+        {/* Available Rooms Card */}
+        <div
+          onClick={() => setActiveTab("AVAILABLE")}
+          className={`cursor-pointer bg-white p-5 rounded-xl border-2 transition-all ${
+            activeTab === "AVAILABLE"
+              ? "border-teal-500 bg-teal-500/10 shadow-lg shadow-sm"
+              : "border-gray-200 hover:border-teal-500/50"
+          }`}
+        >
+          <div className="flex items-center justify-between text-teal-500 mb-2">
+            <CheckCircle2 size={18} />
+            <span className="text-[10px] font-bold uppercase tracking-wider whitespace-nowrap bg-teal-500/20 text-teal-700 px-2 py-0.5 rounded border border-teal-500/30">Available</span>
+          </div>
+          <p className="text-4xl font-serif font-bold text-gray-900">{summary?.availableRooms?.length ?? 0}</p>
+          <p className="text-sm font-medium text-gray-600 mt-1">Clean &amp; Ready</p>
+        </div>
+
+        {/* Dirty Rooms Card */}
+        <div
+          onClick={() => setActiveTab("DIRTY")}
+          className={`cursor-pointer bg-white p-5 rounded-xl border-2 transition-all ${
+            activeTab === "DIRTY"
+              ? "border-red-500 bg-red-500/10 shadow-lg shadow-sm"
+              : "border-gray-200 hover:border-red-500/50"
+          }`}
+        >
+          <div className="flex items-center justify-between text-red-400 mb-2">
+            <BedDouble size={18} />
+            <span className="text-[10px] font-bold uppercase tracking-wider whitespace-nowrap bg-red-500/20 text-red-300 px-2 py-0.5 rounded border border-red-500/30">Dirty Rooms</span>
+          </div>
+          <p className="text-4xl font-serif font-bold text-gray-900">{counts.dirtyRooms}</p>
+          <p className="text-sm font-medium text-gray-600 mt-1">Pending Cleaning</p>
+        </div>
+
+        {/* Unassigned Card */}
+        <div
+          onClick={() => setActiveTab("UNASSIGNED")}
+          className={`cursor-pointer bg-white p-5 rounded-xl border-2 transition-all ${
+            activeTab === "UNASSIGNED"
+              ? "border-amber-500 bg-amber-500/10 shadow-lg shadow-sm"
+              : "border-gray-200 hover:border-amber-500/50"
+          }`}
+        >
+          <div className="flex items-center justify-between text-amber-400 mb-2">
+            <AlertCircle size={18} />
+            <span className="text-[10px] font-bold uppercase tracking-wider whitespace-nowrap bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded border border-amber-500/30">Unassigned</span>
+          </div>
+          <p className="text-4xl font-serif font-bold text-gray-900">{counts.unassignedBookings}</p>
+          <p className="text-sm font-medium text-gray-600 mt-1">To Allocate</p>
+        </div>
+
+        {/* Departures Card */}
+        <div
+          onClick={() => setActiveTab("DEPARTURES")}
+          className={`cursor-pointer bg-white p-5 rounded-xl border-2 transition-all ${
+            activeTab === "DEPARTURES"
+              ? "border-blue-500 bg-blue-500/10 shadow-lg shadow-sm"
+              : "border-gray-200 hover:border-blue-500/50"
+          }`}
+        >
+          <div className="flex items-center justify-between text-blue-400 mb-2">
+            <LogOut size={18} />
+            <span className="text-[10px] font-bold uppercase tracking-wider whitespace-nowrap bg-blue-500/20 text-blue-300 px-2 py-0.5 rounded border border-blue-500/30">Departures</span>
+          </div>
+          <p className="text-4xl font-serif font-bold text-gray-900">{counts.departures}</p>
+          <p className="text-sm font-medium text-gray-600 mt-1">Checking Out</p>
+        </div>
+
+        {/* Arrivals Card */}
+        <div
+          onClick={() => setActiveTab("ARRIVALS")}
+          className={`cursor-pointer bg-white p-5 rounded-xl border-2 transition-all ${
+            activeTab === "ARRIVALS"
+              ? "border-emerald-500 bg-emerald-500/10 shadow-lg shadow-sm"
+              : "border-gray-200 hover:border-emerald-500/50"
+          }`}
+        >
+          <div className="flex items-center justify-between text-emerald-400 mb-2">
+            <LogIn size={18} />
+            <span className="text-[10px] font-bold uppercase tracking-wider whitespace-nowrap bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded border border-emerald-500/30">Arrivals</span>
+          </div>
+          <p className="text-4xl font-serif font-bold text-gray-900">{counts.arrivals}</p>
+          <p className="text-sm font-medium text-gray-600 mt-1">Expected Today</p>
         </div>
 
         {/* VIP Guests Card */}
@@ -967,22 +967,6 @@ export default function AdminFrontDesk() {
         {/* Navigation Tabs */}
         <div className="flex border-b border-gray-200 gap-4 md:gap-8 overflow-x-auto pb-1">
           <button
-            onClick={() => setActiveTab("ARRIVALS")}
-            className={`pb-3 text-xs md:text-sm font-semibold border-b-2 transition whitespace-nowrap flex items-center gap-2 ${
-              activeTab === "ARRIVALS" ? "border-emerald-500 text-emerald-400" : "border-transparent text-gray-500 hover:text-gray-800"
-            }`}
-          >
-            <LogIn size={15} /> Expected Arrivals ({arrivalsGrouped.length}{summary?.todaysArrivals?.length && summary.todaysArrivals.length !== arrivalsGrouped.length ? ` · ${summary.todaysArrivals.length} Rms` : ""})
-          </button>
-          <button
-            onClick={() => setActiveTab("DEPARTURES")}
-            className={`pb-3 text-xs md:text-sm font-semibold border-b-2 transition whitespace-nowrap flex items-center gap-2 ${
-              activeTab === "DEPARTURES" ? "border-blue-500 text-blue-400" : "border-transparent text-gray-500 hover:text-gray-800"
-            }`}
-          >
-            <LogOut size={15} /> Scheduled Departures ({departuresGrouped.length}{summary?.todaysDepartures?.length && summary.todaysDepartures.length !== departuresGrouped.length ? ` · ${summary.todaysDepartures.length} Rms` : ""})
-          </button>
-          <button
             onClick={() => setActiveTab("IN_HOUSE")}
             className={`pb-3 text-xs md:text-sm font-semibold border-b-2 transition whitespace-nowrap flex items-center gap-2 ${
               activeTab === "IN_HOUSE" ? "border-purple-500 text-purple-400" : "border-transparent text-gray-500 hover:text-gray-800"
@@ -991,20 +975,12 @@ export default function AdminFrontDesk() {
             <Users size={15} /> In-House Stays ({inHouseGrouped.length}{summary?.inHouse?.length && summary.inHouse.length !== inHouseGrouped.length ? ` · ${summary.inHouse.length} Rms` : ""})
           </button>
           <button
-            onClick={() => setActiveTab("UNASSIGNED")}
+            onClick={() => setActiveTab("OCCUPIED")}
             className={`pb-3 text-xs md:text-sm font-semibold border-b-2 transition whitespace-nowrap flex items-center gap-2 ${
-              activeTab === "UNASSIGNED" ? "border-amber-500 text-amber-400" : "border-transparent text-gray-500 hover:text-gray-800"
+              activeTab === "OCCUPIED" ? "border-indigo-500 text-indigo-600" : "border-transparent text-gray-500 hover:text-gray-800"
             }`}
           >
-            <AlertCircle size={15} /> Unassigned Bookings ({unassignedGrouped.length}{summary?.unassignedBookings?.length && summary.unassignedBookings.length !== unassignedGrouped.length ? ` · ${summary.unassignedBookings.length} Rms` : ""})
-          </button>
-          <button
-            onClick={() => setActiveTab("DIRTY")}
-            className={`pb-3 text-xs md:text-sm font-semibold border-b-2 transition whitespace-nowrap flex items-center gap-2 ${
-              activeTab === "DIRTY" ? "border-red-500 text-red-400" : "border-transparent text-gray-500 hover:text-gray-800"
-            }`}
-          >
-            <BedDouble size={15} /> Dirty / Turnover Rooms ({summary?.dirtyRooms?.length || 0})
+            <BedDouble size={15} /> Occupied Rooms ({summary?.occupiedRooms?.length || 0})
           </button>
           <button
             onClick={() => setActiveTab("AVAILABLE")}
@@ -1015,12 +991,36 @@ export default function AdminFrontDesk() {
             <CheckCircle2 size={15} /> Available Rooms ({summary?.availableRooms?.length || 0})
           </button>
           <button
-            onClick={() => setActiveTab("OCCUPIED")}
+            onClick={() => setActiveTab("DIRTY")}
             className={`pb-3 text-xs md:text-sm font-semibold border-b-2 transition whitespace-nowrap flex items-center gap-2 ${
-              activeTab === "OCCUPIED" ? "border-indigo-500 text-indigo-600" : "border-transparent text-gray-500 hover:text-gray-800"
+              activeTab === "DIRTY" ? "border-red-500 text-red-400" : "border-transparent text-gray-500 hover:text-gray-800"
             }`}
           >
-            <BedDouble size={15} /> Occupied Rooms ({summary?.occupiedRooms?.length || 0})
+            <BedDouble size={15} /> Dirty / Turnover Rooms ({summary?.dirtyRooms?.length || 0})
+          </button>
+          <button
+            onClick={() => setActiveTab("UNASSIGNED")}
+            className={`pb-3 text-xs md:text-sm font-semibold border-b-2 transition whitespace-nowrap flex items-center gap-2 ${
+              activeTab === "UNASSIGNED" ? "border-amber-500 text-amber-400" : "border-transparent text-gray-500 hover:text-gray-800"
+            }`}
+          >
+            <AlertCircle size={15} /> Unassigned Bookings ({unassignedGrouped.length}{summary?.unassignedBookings?.length && summary.unassignedBookings.length !== unassignedGrouped.length ? ` · ${summary.unassignedBookings.length} Rms` : ""})
+          </button>
+          <button
+            onClick={() => setActiveTab("DEPARTURES")}
+            className={`pb-3 text-xs md:text-sm font-semibold border-b-2 transition whitespace-nowrap flex items-center gap-2 ${
+              activeTab === "DEPARTURES" ? "border-blue-500 text-blue-400" : "border-transparent text-gray-500 hover:text-gray-800"
+            }`}
+          >
+            <LogOut size={15} /> Scheduled Departures ({departuresGrouped.length}{summary?.todaysDepartures?.length && summary.todaysDepartures.length !== departuresGrouped.length ? ` · ${summary.todaysDepartures.length} Rms` : ""})
+          </button>
+          <button
+            onClick={() => setActiveTab("ARRIVALS")}
+            className={`pb-3 text-xs md:text-sm font-semibold border-b-2 transition whitespace-nowrap flex items-center gap-2 ${
+              activeTab === "ARRIVALS" ? "border-emerald-500 text-emerald-400" : "border-transparent text-gray-500 hover:text-gray-800"
+            }`}
+          >
+            <LogIn size={15} /> Expected Arrivals ({arrivalsGrouped.length}{summary?.todaysArrivals?.length && summary.todaysArrivals.length !== arrivalsGrouped.length ? ` · ${summary.todaysArrivals.length} Rms` : ""})
           </button>
         </div>
 

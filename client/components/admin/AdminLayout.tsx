@@ -1,4 +1,4 @@
-import React, { ReactNode, useState, useEffect } from "react";
+import React, { ReactNode, useState, useEffect, useRef } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { usePermissions } from "../../context/PermissionContext";
@@ -45,6 +45,12 @@ export default function AdminLayout({ children, title, hidePadding }: { children
   const { hasPageAccess } = usePermissions();
   const navigate = useNavigate();
   const location = useLocation();
+  const mainRef = useRef<HTMLElement>(null);
+  // Every page opens at its top (the content area keeps its own scroll position otherwise).
+  useEffect(() => {
+    mainRef.current?.scrollTo({ top: 0 });
+    window.scrollTo({ top: 0 });
+  }, [location.pathname]);
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
@@ -508,7 +514,7 @@ export default function AdminLayout({ children, title, hidePadding }: { children
         </header>
 
         {/* Page Content Body */}
-        <main className={`flex-1 overflow-auto print:overflow-visible ${hidePadding ? "" : "p-4 sm:p-6 lg:p-8"} print:p-0`}>
+        <main ref={mainRef} style={{ overflowAnchor: "none" }} className={`flex-1 overflow-auto print:overflow-visible ${hidePadding ? "" : "p-4 sm:p-6 lg:p-8"} print:p-0`}>
           {children}
         </main>
       </div>
