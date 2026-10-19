@@ -30,6 +30,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsLoading(false);
   }, []);
 
+  // The session ended (renewal refused): sign out here too; the sign-in page explains why.
+  useEffect(() => {
+    const onExpired = () => {
+      try { sessionStorage.setItem("yes_session_expired", "1"); } catch { /* private mode */ }
+      setUser(null);
+    };
+    window.addEventListener("yes:session-expired", onExpired);
+    return () => window.removeEventListener("yes:session-expired", onExpired);
+  }, []);
+
   // One sign-in per browser: the session is shared by every tab, so when another tab signs in
   // (or out), this tab follows — otherwise it would show one person while sending another's key.
   useEffect(() => {

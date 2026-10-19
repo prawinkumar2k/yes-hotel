@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useAuth } from "../../context/AuthContext";
@@ -85,6 +85,12 @@ export default function LoginPage() {
   const { login } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  // Arrived here because the sign-in ran out: say so once.
+  useEffect(() => {
+    let expired = false;
+    try { expired = sessionStorage.getItem("yes_session_expired") === "1"; sessionStorage.removeItem("yes_session_expired"); } catch { /* private mode */ }
+    if (expired) toast({ title: "Please sign in again", description: "Your session expired for security. Sign in to continue where you left off." });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

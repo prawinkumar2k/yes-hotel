@@ -6,7 +6,7 @@ import { getStoredAuthToken, getStoredAuthUser, setStoredAuthUser, clearStoredAu
 // other's token under the reuse-detection in refreshToken.service).
 let refreshPromise: Promise<string | null> | null = null;
 
-async function refreshAccessToken(): Promise<string | null> {
+export async function refreshAccessToken(): Promise<string | null> {
   if (!refreshPromise) {
     refreshPromise = (async () => {
       try {
@@ -16,7 +16,10 @@ async function refreshAccessToken(): Promise<string | null> {
         });
         const json = await res.json();
         if (!res.ok || !json.success) {
+          // The session is over (expired, revoked or account disabled): sign out cleanly.
+          const hadSession = Boolean(getStoredAuthUser());
           clearStoredAuthUser();
+          if (hadSession && typeof window !== "undefined") window.dispatchEvent(new CustomEvent("yes:session-expired"));
           return null;
         }
         const currentUser = getStoredAuthUser();
