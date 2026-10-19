@@ -192,7 +192,7 @@ grant(base, [UserRole.MANAGER, UserRole.FINANCE, UserRole.RECEPTIONIST, UserRole
 // CRITICAL needs MANAGER or higher; HIGH can be approved by SUPERVISOR or higher.
 grant(base, [UserRole.MANAGER], "CAP.APPROVE_CRITICAL", ["ALLOW"]);
 // Passing a housekeeping inspection (formerly a hardcoded MANAGER/ADMIN check).
-grant(base, [UserRole.MANAGER], "CAP.HK_PASS_INSPECTION", ["ALLOW"]);
+grant(base, [UserRole.MANAGER, UserRole.RECEPTIONIST], "CAP.HK_PASS_INSPECTION", ["ALLOW"]);
 // Checking a guest into a room that is not CLEAN (reason required, audit-logged).
 grant(base, [UserRole.MANAGER], "CAP.CHECKIN_UNCLEAN_OVERRIDE", ["ALLOW"]);
 grant(base, [UserRole.MANAGER, UserRole.SUPERVISOR], "CAP.APPROVE_HIGH", ["ALLOW"]);
@@ -244,6 +244,8 @@ grant(base, [UserRole.RECEPTIONIST], "CAP.SHIFT_SUPERVISOR_OVERRIDE", ["ALLOW"])
 grant(base, [UserRole.RECEPTIONIST], "CAP.PAYMENT_CLEARANCE", ["ALLOW"]);
 grant(base, [UserRole.RECEPTIONIST], "CAP.APPROVE_HIGH", ["ALLOW"]);
 grant(base, [UserRole.RECEPTIONIST], "CAP.CC_FINANCE", ["ALLOW"]);
+// Housekeeping: reception runs the whole process (view board, assign, update, inspect) — approved by the owner.
+grant(base, [UserRole.RECEPTIONIST], "HOUSEKEEPING", ["VIEW", "ASSIGN", "UPDATE", "INSPECT"]);
 // Reports (read-only): check-in/out, day-use sales, advances, daily summary, in-house list, GRC/invoices, MIS.
 grant(base, [UserRole.RECEPTIONIST], "REPORTS_LAYOUT", ["VIEW"]);
 
