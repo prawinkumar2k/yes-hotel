@@ -9,6 +9,7 @@
 import { Booking, BookingStatus } from "../models/Booking";
 import { Payment } from "../models/Payment";
 import { AdvancePayment } from "../models/AdvancePayment";
+import { CreditEntry } from "../models/CreditEntry";
 import { AdvanceAdjustment } from "../models/AdvanceAdjustment";
 import { CashierShift } from "../models/CashierShift";
 import { Refund } from "../models/Refund";
@@ -64,7 +65,7 @@ export async function computeMis(month: string, scope: Record<string, unknown> =
 
   // Refunds and advance adjustments have no property of their own: they belong to the property of their booking.
   const byBooking: Record<string, unknown> = Object.keys(scope).length ? { booking: { $in: await Booking.find(scope as any).distinct("_id") } } : {};
-  const [checkedIn, checkedOut, stays, cancelled, noShows, payments, advances, adjustments, shifts, refunds] = await Promise.all([
+  const [checkedIn, checkedOut, stays, cancelled, noShows, payments, advances, adjustments, shifts, refunds, credits] = await Promise.all([
     Booking.find({ ...scope, checkedInAt: inRange } as any).select("source otaName otaPaymentModel otaReceivable checkedInAt").lean(),
     Booking.find({ ...scope, status: BookingStatus.CHECKED_OUT, checkedOutAt: inRange } as any).select("checkedOutAt").lean(),
     Booking.find({ ...scope, status: { $in: CHECKED_STAYS }, checkInDate: { $lt: end }, checkOutDate: { $gt: start } } as any).select("checkInDate checkOutDate adults children stayType").lean(),
@@ -75,6 +76,7 @@ export async function computeMis(month: string, scope: Record<string, unknown> =
     AdvanceAdjustment.find({ ...byBooking, type: "ADJUSTMENT", status: "COMPLETED", performedAt: inRange } as any).select("amount performedAt").lean(),
     CashierShift.find({ ...scope, $or: [{ counterSales: { $elemMatch: { createdAt: inRange } } }, { paidOuts: { $elemMatch: { createdAt: inRange } } }] } as any).select("counterSales paidOuts").lean(),
     Refund.find({ ...byBooking, status: "COMPLETED", updatedAt: inRange } as any).select("amount updatedAt").lean(),
+    CreditEntry.find({ ...scope, $or: [{ createdAt: inRange }, { "collections.at": inRange }] } as any).select("amount createdAt collections").lean(),
   ]);
 
   // Rooms
@@ -120,6 +122,11 @@ export async function computeMis(month: string, scope: Record<string, unknown> =
     r.recAdvance += amount;
   }
   for (const a of adjustments as any[]) { const r = row(a.performedAt); if (r) r.advancesAdj += Number(a.amount) || 0; }
+  // Credit (kadan): given on the day it was left unpaid, collected on the day it was paid (that money is also in the modes above)
+  for (const cr of credits as any[]) {
+    const g = row(cr.createdAt); if (g) g.credit += Number(cr.amount) || 0;
+    for (const col of cr.collections || []) { const k = row(col.at); if (k) k.creditCollected += Number(col.amount) || 0; }
+  }
   for (const rf of refunds as any[]) { const r = row(rf.updatedAt); if (r) r.refunds += Number(rf.amount) || 0; }
 
   // Counter sales (water bottle, dental kit, mess …) and petty-cash expenses from cashier shifts

@@ -9,7 +9,7 @@ import ChangePasswordDialog from "./ChangePasswordDialog";
 import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import {
-  LayoutDashboard, CalendarDays, CalendarClock, MessagesSquare, KeyRound, BedDouble, Users, CreditCard,
+  LayoutDashboard, CalendarDays, CalendarClock, MessagesSquare, KeyRound, BedDouble, Users, CreditCard, Wallet,
   BarChart3, Settings, Home, Wrench, LogIn, LogOut, MenuIcon, X,
   Image, HelpCircle, MessageSquare, FileText, Star, Ticket, RotateCcw,
   ScrollText, Moon, DollarSign, Tag, Building2, UtensilsCrossed,
@@ -234,6 +234,7 @@ export default function AdminLayout({ children, title, hidePadding }: { children
       title: "CASHIERING",
       items: [
         { label: "Advance Deposits", to: "/admin/advances", icon: CreditCard, pageKey: "ADVANCES" },
+        { label: "Credit (Kadan)", to: "/admin/credits", icon: Wallet, pageKey: "ADVANCES" },
         { label: "Cashier Shifts", to: "/admin/cashier-shifts", icon: DollarSign, pageKey: "CASHIER_SHIFTS" },
       ],
     },

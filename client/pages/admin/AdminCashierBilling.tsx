@@ -48,7 +48,9 @@ export default function AdminCashierBilling() {
   });
   const recordPayment = useMutation({
     mutationFn: async () =>
-      (await api.post(`/reception/folios/${payFor!.folioId}/payments`, {
+      pay.method === "CREDIT"
+        ? (await api.post(`/reception/folios/${payFor!.folioId}/credit`, { amount: Number(pay.amount), note: pay.reference || undefined })).data
+        : (await api.post(`/reception/folios/${payFor!.folioId}/payments`, {
         amount: Number(pay.amount), method: pay.method, reference: pay.reference || undefined, clientRequestId: pay.key,
       })).data,
     onSuccess: (res) => {
@@ -194,10 +196,10 @@ export default function AdminCashierBilling() {
             </label>
             <label className="block text-xs font-bold text-slate-600">Method
               <select value={pay.method} onChange={(e) => setPay({ ...pay, method: e.target.value })} className="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white">
-                <option value="CASH">Cash</option><option value="CARD">Card</option><option value="UPI">UPI</option>
+                <option value="CASH">Cash</option><option value="CARD">Card</option><option value="UPI">UPI</option><option value="CREDIT">Credit (Kadan): pay later</option>
               </select>
             </label>
-            {pay.method !== "CASH" && (
+            {pay.method !== "CASH" && pay.method !== "CREDIT" && (
               <label className="block text-xs font-bold text-slate-600">{pay.method === "CARD" ? "Approval code" : "UTR / reference"} *
                 <input required value={pay.reference} onChange={(e) => setPay({ ...pay, reference: e.target.value })} className="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" />
               </label>

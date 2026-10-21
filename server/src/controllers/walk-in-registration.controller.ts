@@ -771,9 +771,11 @@ export const walkInArrivalRegistration = async (req: Request, res: Response) => 
       }
 
       booking = createdBookings[0];
+      // "Credit (Kadan)": nothing is paid now; the amount is left on credit and collected later.
+      const onCredit = String(advanceMethod ?? "").toUpperCase() === "CREDIT";
 
       // If advance payment provided, record it on the primary booking (or folio)
-      if (advanceAmount && Number(advanceAmount) > 0) {
+      if (advanceAmount && Number(advanceAmount) > 0 && !onCredit) {
         const resolvedMethod = (advanceMethod as AdvancePaymentMethod) || AdvancePaymentMethod.CASH;
         const channel = await PaymentChannel.findOne({ code: advanceMethod, isActive: true }).session(session);
 
@@ -845,7 +847,10 @@ export const walkInArrivalRegistration = async (req: Request, res: Response) => 
             otherChargesDesc: otherChargesDesc || undefined,
           });
 
-          if (cb._id.toString() === booking._id.toString() && advanceAmount && Number(advanceAmount) > 0) {
+          if (onCredit && cb._id.toString() === booking._id.toString() && advanceAmount && Number(advanceAmount) > 0) {
+            const { recordCredit } = await import("../services/credit.service");
+            await recordCredit({ folioId: f._id.toString(), bookingId: cb._id.toString(), amount: Number(advanceAmount), note: advanceReference || undefined, by: String((req as any).user?.id || (req as any).user?._id || "") }, { req, session });
+          } else if (cb._id.toString() === booking._id.toString() && advanceAmount && Number(advanceAmount) > 0) {
             await postCharge(
               {
                 folioId: f._id.toString(),
@@ -868,7 +873,7 @@ export const walkInArrivalRegistration = async (req: Request, res: Response) => 
       }
 
       // Payment taken at registration: full (PAID) or part (PARTIAL), recorded on the bookings.
-      const paidNow = Number(advanceAmount) || 0;
+      const paidNow = onCredit ? 0 : Number(advanceAmount) || 0;
       if (paidNow > 0) {
         for (const cb of createdBookings) {
           cb.paymentStatus = paidNow >= walkInTotalDue - 0.01 ? PaymentStatus.PAID : PaymentStatus.PARTIAL;

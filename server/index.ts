@@ -39,6 +39,7 @@ import sitemapRoutes from "./src/routes/sitemap.routes";
 import roomRackRoutes from "./src/routes/room-rack.routes";
 import frontDeskRoutes from "./src/routes/front-desk.routes";
 import advanceRoutes from "./src/routes/advance.routes";
+import creditRoutes from "./src/routes/credit.routes";
 import verificationRoutes from "./src/routes/verification.routes";
 import { customerRouter, changeRequestRouter } from "./src/routes/customer.routes";
 import chatRoutes from "./src/routes/chat.routes";
@@ -339,6 +340,7 @@ export function createServer() {
   // Walk-in Guest Registration workflow (Sections A–F of the physical registration card)
   app.use("/api/front-desk/registration", walkInRegistrationRoutes);
   app.use("/api/advances", advanceRoutes);
+  app.use("/api/credits", creditRoutes);
   app.use("/api/verifications", verificationRoutes);
   app.use("/api/customer", customerRouter);
   app.use("/api/chat", chatRoutes);

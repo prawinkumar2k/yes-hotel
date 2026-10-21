@@ -189,6 +189,30 @@ router.post("/folios/:folioId/payments", requirePermission("PAYMENTS", "CREATE")
   }
 });
 
+// ── Leave part of the bill on credit (kadan): paid later from the Credits page ──
+router.post("/folios/:folioId/credit", requirePermission("PAYMENTS", "CREATE"), async (req: Request, res: Response) => {
+  const found = await openFolio(String(req.params.folioId));
+  if ("error" in found) return fail(res, found.error[0], found.error[1]);
+  const { folio } = found;
+  const session = await mongoose.startSession();
+  try {
+    let entry: any;
+    await session.withTransaction(async () => {
+      const amt = r2(Number(req.body?.amount));
+      const due = (await recomputeFolioBalance(String(folio._id), { session })).balance;
+      if (amt > due) throw Object.assign(new Error(due <= 0 ? "Nothing is due on this bill" : `Only ₹${due.toFixed(2)} is due`), { status: 409 });
+      const { recordCredit } = await import("../services/credit.service");
+      entry = await recordCredit({ folioId: String(folio._id), bookingId: String(folio.booking), amount: amt, note: typeof req.body?.note === "string" ? req.body.note.trim() : undefined, by: actorId(req) }, { req, session });
+    });
+    const totals = await recomputeFolioBalance(String(folio._id));
+    return res.status(201).json({ success: true, message: `₹${entry.amount.toLocaleString("en-IN")} left on credit (kadan)`, data: { credit: entry, balance: totals.balance } });
+  } catch (error: any) {
+    return fail(res, error.status ?? 500, error.message);
+  } finally {
+    await session.endSession();
+  }
+});
+
 // ── Apply advances ───────────────────────────────────────────────────────────
 router.post("/folios/:folioId/apply-advances", requirePermission("ADVANCES", "ADJUST"), async (req: Request, res: Response) => {
   const found = await openFolio(String(req.params.folioId));
