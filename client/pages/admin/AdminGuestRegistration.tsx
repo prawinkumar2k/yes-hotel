@@ -96,6 +96,8 @@ export default function AdminGuestRegistration() {
     checkIn: todayBusinessDate(),
     checkOut: addDays(todayBusinessDate(), 1),
     adults: "1",
+    maleCount: "1",
+    femaleCount: "0",
     children: "0",
     bookingType: "NIGHTLY" as "NIGHTLY" | "HOURLY",
     hours: "4",
@@ -176,7 +178,12 @@ export default function AdminGuestRegistration() {
       })
       .catch(() => undefined);
   }, []);
-  const defaultRoomRate = (r: any) => r?.ratePerNight || r?.category?.basePrice || 0;
+  // One adult per room (or fewer adults than rooms) takes the category's single-occupancy tariff when it has one.
+  const defaultRoomRate = (r: any) => {
+    const single = Number(r?.category?.singleOccupancyPrice) || 0;
+    const roomCount = Math.max(1, selectedRooms.length || 1);
+    return r?.ratePerNight || (single > 0 && Number(roomSearch.adults) <= roomCount ? single : r?.category?.basePrice) || 0;
+  };
   const roomRatesPayload = (rooms: any[]) =>
     Object.fromEntries(rooms.map((r) => [r._id, roomRates[r._id] !== undefined && roomRates[r._id] !== "" ? Number(roomRates[r._id]) : defaultRoomRate(r)]));
   const extraRatesPayload = () => ({
@@ -377,6 +384,8 @@ export default function AdminGuestRegistration() {
           checkOut: roomSearch.checkOut,
           mealPlan: stayDetails.mealPlan,
           adults: Number(roomSearch.adults),
+          maleCount: Number(roomSearch.maleCount) || 0,
+          femaleCount: Number(roomSearch.femaleCount) || 0,
           children: Number(roomSearch.children),
           bookingType: roomSearch.bookingType,
           hours: Number(roomSearch.hours),
@@ -427,6 +436,8 @@ export default function AdminGuestRegistration() {
         checkIn: roomSearch.checkIn,
         checkOut: roomSearch.checkOut,
         adults: Number(roomSearch.adults),
+        maleCount: Number(roomSearch.maleCount) || 0,
+        femaleCount: Number(roomSearch.femaleCount) || 0,
         children: Number(roomSearch.children),
         bookingType: roomSearch.bookingType,
         hours: Number(roomSearch.hours),
@@ -682,7 +693,20 @@ export default function AdminGuestRegistration() {
                 <div>
                   <label className="block text-xs font-bold text-gray-500 mb-1">Adults</label>
                   <input type="number" min="1" className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm"
-                    value={roomSearch.adults} onChange={e => setRoomSearch({...roomSearch, adults: e.target.value})} />
+                    value={roomSearch.adults} onChange={e => {
+                      const n = Math.max(1, Number(e.target.value) || 1);
+                      const female = Math.min(Number(roomSearch.femaleCount) || 0, n);
+                      setRoomSearch({...roomSearch, adults: e.target.value, femaleCount: String(female), maleCount: String(n - female)});
+                    }} />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 mb-1">Male / Female</label>
+                  <div className="flex gap-1">
+                    <input type="number" min="0" aria-label="Male adults" title="Male" className="w-full px-2 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm"
+                      value={roomSearch.maleCount} onChange={e => { const m = Math.min(Math.max(0, Number(e.target.value) || 0), Number(roomSearch.adults) || 1); setRoomSearch({...roomSearch, maleCount: String(m), femaleCount: String((Number(roomSearch.adults) || 1) - m)}); }} />
+                    <input type="number" min="0" aria-label="Female adults" title="Female" className="w-full px-2 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm"
+                      value={roomSearch.femaleCount} onChange={e => { const f = Math.min(Math.max(0, Number(e.target.value) || 0), Number(roomSearch.adults) || 1); setRoomSearch({...roomSearch, femaleCount: String(f), maleCount: String((Number(roomSearch.adults) || 1) - f)}); }} />
+                  </div>
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-gray-500 mb-1">Children</label>
@@ -899,7 +923,7 @@ export default function AdminGuestRegistration() {
                       </div>
                     ))}
                   </div>
-                  <p className="text-[10px] text-gray-500 mt-0.5">Each room starts at its category tariff. Type any amount to change it.</p>
+                  <p className="text-[10px] text-gray-500 mt-0.5">Each room starts at its category tariff (the single-person tariff when one adult has the room). Type any amount to change it.</p>
                 </div>
                 <div><label className="block text-xs font-bold text-gray-500 mb-1">Kids &lt; 3 (Free)</label><input type="number" min="0" className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm" value={stayDetails.kidsUnder3} onChange={e => setStayDetails({...stayDetails, kidsUnder3: parseInt(e.target.value)||0})} /></div>
                 <div><label className="block text-xs font-bold text-gray-500 mb-1">Adult Extra Pax (No Bed)</label><div className="flex gap-2"><input type="number" min="0" aria-label="Adult Extra Pax (No Bed) count" title="Persons" className="w-20 px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm" value={stayDetails.extraPersonsNoBed} onChange={e => setStayDetails({...stayDetails, extraPersonsNoBed: parseInt(e.target.value)||0})} /><div className="relative flex-1"><span className="absolute left-2 top-2 text-xs text-gray-400">₹</span><input type="number" min="0" aria-label="Adult Extra Pax (No Bed) rate per person per night" className="w-full pl-5 pr-2 py-2 bg-[#fdfaf2] border border-[#e5c76b] rounded-lg text-sm" value={extraRates.extraPersonRate} onChange={e => setExtraRates({...extraRates, extraPersonRate: e.target.value})} /></div></div><p className="text-[10px] text-gray-500 mt-0.5">persons · ₹ per person / night</p></div>

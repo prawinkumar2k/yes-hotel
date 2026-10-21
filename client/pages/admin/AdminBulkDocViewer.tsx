@@ -681,7 +681,7 @@ function BookingDocCard({
                 <div>Stay Days</div><div>: {nights}</div><div className="col-span-2"></div>
                 <div>Meal Plan</div><div>: {b.mealPlan || "EP"}</div><div className="col-span-2"></div>
                 <div>Rate/Night</div><div>: {Number(b.ratePerNight || 0).toFixed(2)}{b.pricesIncludeTax ? " (incl. GST)" : ""}</div><div className="col-span-2"></div>
-                <div className="col-span-4 mt-1 font-bold">M {b.adults || 1} F 0 C {b.children || 0}</div>
+                <div className="col-span-4 mt-1 font-bold">M {b.maleCount ?? (b.adults || 1)} F {b.femaleCount ?? 0} C {b.children || 0}</div>
                 <StayExtensionNote booking={b} className="col-span-4" />
               </div>
             </div>

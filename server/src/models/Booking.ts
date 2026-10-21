@@ -190,6 +190,9 @@ export interface IBooking extends Document {
   /** Prices include GST (the rate is what the guest pays; GST is inside it). Recorded when the booking is made. */
   pricesIncludeTax?: boolean;
   adults: number;
+  /** Of the adults: how many are men / women (shown on the registration card and invoice). */
+  maleCount?: number;
+  femaleCount?: number;
   children: number;
   status: BookingStatus;
   totalAmount: number;
@@ -396,6 +399,8 @@ const BookingSchema = new Schema<IBooking>(
       default: undefined,
     },
     adults: { type: Number, required: true, default: 1 },
+    maleCount: { type: Number, min: 0 },
+    femaleCount: { type: Number, min: 0 },
     children: { type: Number, required: true, default: 0 },
     status: { type: String, enum: Object.values(BookingStatus), default: BookingStatus.PENDING },
     totalAmount: { type: Number, required: true },

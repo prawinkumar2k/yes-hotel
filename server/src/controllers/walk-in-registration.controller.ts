@@ -47,6 +47,12 @@ import { postStayCharges, walkInExtraRates } from "../services/stay-charges.serv
  */
 
 /** Tariff per night for one room: its own typed rate, else the single override, else the category rate. */
+/** Nightly tariff: the single-occupancy rate when each room has at most one adult, else the category's double rate. */
+function categoryNightlyRate(cat: any, adults: unknown, roomCount: number) {
+  const single = Number(cat?.singleOccupancyPrice) || 0;
+  return single > 0 && Number(adults) <= roomCount ? single : (cat?.basePrice ?? 0);
+}
+
 function walkInRoomRate(roomId: unknown, baseRatePerNight: number, roomRates: any, rateOverrideAmount: unknown) {
   const own = roomRates?.[String(roomId)];
   if (own !== undefined && own !== null && own !== "" && Number(own) > 0) return Number(own);
@@ -193,7 +199,7 @@ export const getAvailableRoomsForRegistration = async (req: Request, res: Respon
     const rooms = await Room.find(roomFilter)
       .populate({
         path: "category",
-        select: "name description basePrice capacity bedTypes amenities images",
+        select: "name description basePrice singleOccupancyPrice capacity bedTypes amenities images",
       })
       .sort({ floor_number: 1, sortOrder: 1, roomNumber: 1 })
       .lean();
@@ -287,7 +293,7 @@ export const calculateRegistrationRate = async (req: Request, res: Response) => 
     const checkOutDate = bookingType === "HOURLY" ? new Date(checkInDate.getTime() + Number(hours) * 3600000) : new Date(checkOut);
     const nights = bookingType === "HOURLY" ? 1 : Math.max(1, countNights(checkInDate, checkOutDate));
 
-    const rooms = await Room.find({ _id: { $in: allRoomIds } }).populate("category", "name basePrice hourlyPrice").lean();
+    const rooms = await Room.find({ _id: { $in: allRoomIds } }).populate("category", "name basePrice singleOccupancyPrice hourlyPrice").lean();
     if (rooms.length === 0) return res.status(404).json({ success: false, message: "No matching rooms found" });
 
     const settings = await HotelSettings.findOne().lean();
@@ -302,7 +308,7 @@ export const calculateRegistrationRate = async (req: Request, res: Response) => 
     let totalRoomCharges = 0;
     const roomBreakdowns = rooms.map(rm => {
       const cat = rm.category as any;
-      const baseRatePerNight = bookingType === "HOURLY" ? (cat?.hourlyPrice ?? 0) * Number(hours) : (cat?.basePrice ?? 0);
+      const baseRatePerNight = bookingType === "HOURLY" ? (cat?.hourlyPrice ?? 0) * Number(hours) : categoryNightlyRate(cat, adults, rooms.length);
       const rmRatePerNight = walkInRoomRate(rm._id, baseRatePerNight, roomRates, rateOverrideAmount);
       const cost = rmRatePerNight * (bookingType === "HOURLY" ? 1 : nights);
       totalRoomCharges += cost;
@@ -430,6 +436,8 @@ export const walkInArrivalRegistration = async (req: Request, res: Response) => 
         vehicleNumber,
         proceedingTo,
         adults = 1,
+        maleCount,
+        femaleCount,
         children = 0,
 
         // Section C — Identification
@@ -641,7 +649,7 @@ export const walkInArrivalRegistration = async (req: Request, res: Response) => 
       // The discount is worked out on the whole booking and shared across the rooms in proportion to their charges.
       const preSubtotals = rooms.map((rm, i) => {
         const category = rm.category as any;
-        const baseRate = bookingType === "HOURLY" ? (category?.hourlyPrice ?? 0) * Number(hours) : (category?.basePrice ?? 0);
+        const baseRate = bookingType === "HOURLY" ? (category?.hourlyPrice ?? 0) * Number(hours) : categoryNightlyRate(category, adults, rooms.length);
         const rate = walkInRoomRate(rm._id, baseRate, roomRates, rateOverrideAmount);
         const charges = rate * (bookingType === "HOURLY" ? 1 : nights);
         return charges + (i === 0 ? extraPersonTotal + extraBedTotal + childNoBedTotal + childWithBedTotal + mealPlanTotal + Number(otherCharges) : 0);
@@ -654,7 +662,7 @@ export const walkInArrivalRegistration = async (req: Request, res: Response) => 
       for (let i = 0; i < rooms.length; i++) {
         const rm = rooms[i];
         const category = rm.category as any;
-        const baseRatePerNight = bookingType === "HOURLY" ? (category?.hourlyPrice ?? 0) * Number(hours) : (category?.basePrice ?? 0);
+        const baseRatePerNight = bookingType === "HOURLY" ? (category?.hourlyPrice ?? 0) * Number(hours) : categoryNightlyRate(category, adults, rooms.length);
         const rmRatePerNight = walkInRoomRate(rm._id, baseRatePerNight, roomRates, rateOverrideAmount);
         const rmRoomCharges = rmRatePerNight * (bookingType === "HOURLY" ? 1 : nights);
 
@@ -723,6 +731,8 @@ export const walkInArrivalRegistration = async (req: Request, res: Response) => 
               ratePerNight: rmRatePerNight,
               billingInstruction: billingInstruction || undefined,
               adults: i === 0 ? Number(adults) : 1,
+              ...(i === 0 && maleCount !== undefined ? { maleCount: Math.max(0, Number(maleCount) || 0) } : {}),
+              ...(i === 0 && femaleCount !== undefined ? { femaleCount: Math.max(0, Number(femaleCount) || 0) } : {}),
               children: i === 0 ? Number(children) : 0,
               status: BookingStatus.CHECKED_IN,
               checkedInAt: new Date(),

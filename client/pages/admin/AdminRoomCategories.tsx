@@ -22,6 +22,7 @@ export default function AdminRoomCategories() {
     description: "",
     basePrice: 0,
     hourlyPrice: 0,
+    singleOccupancyPrice: 0,
     capacityAdults: 2,
     capacityChildren: 0,
     bedType: "",
@@ -51,6 +52,7 @@ export default function AdminRoomCategories() {
         shortDescription: data.shortDescription,
         description: data.description,
         basePrice: Number(data.basePrice),
+        singleOccupancyPrice: Number(data.singleOccupancyPrice) || 0,
         capacity: { adults: Number(data.capacityAdults), children: Number(data.capacityChildren) },
         bedType: data.bedType,
         amenities: data.amenities.split(",").map((a: string) => a.trim()).filter(Boolean),
@@ -104,6 +106,7 @@ export default function AdminRoomCategories() {
         description: category.description,
         basePrice: category.basePrice,
         hourlyPrice: category.hourlyPrice || 0,
+        singleOccupancyPrice: category.singleOccupancyPrice || 0,
         capacityAdults: category.capacity.adults,
         capacityChildren: category.capacity.children,
         bedType: category.bedType || "",
@@ -113,7 +116,7 @@ export default function AdminRoomCategories() {
     } else {
       setEditingCategory(null);
       setFormData({
-        name: "", slug: "", shortDescription: "", description: "", basePrice: 0, hourlyPrice: 0,
+        name: "", slug: "", shortDescription: "", description: "", basePrice: 0, hourlyPrice: 0, singleOccupancyPrice: 0,
         capacityAdults: 2, capacityChildren: 0, bedType: "", amenities: "", isActive: true,
       });
     }
@@ -220,10 +223,14 @@ export default function AdminRoomCategories() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">Full Description</label>
                 <textarea required rows={3} value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-1 focus:ring-hotel-gold"></textarea>
               </div>
-              <div className="grid grid-cols-4 gap-4">
+              <div className="grid grid-cols-5 gap-3">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Nightly Price (₹)</label>
                   <input type="number" required min="0" value={formData.basePrice} onChange={e => setFormData({...formData, basePrice: Number(e.target.value)})} className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-1 focus:ring-hotel-gold" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Single Person (₹)</label>
+                  <input type="number" min="0" placeholder="same as nightly" value={formData.singleOccupancyPrice || ""} onChange={e => setFormData({...formData, singleOccupancyPrice: Number(e.target.value)})} className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-1 focus:ring-hotel-gold" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Hourly Price (₹)</label>

@@ -318,7 +318,7 @@ export default function AdminFolioPrint() {
                <div>Stay Days</div><div>: {nights}</div><div className="col-span-2"></div>
                <div>Meal Plan</div><div>: {booking.mealPlan || "EP"}</div><div className="col-span-2"></div>
                <div>Rate/Night</div><div>: {Number(booking.ratePerNight || 0).toFixed(2)}{booking.pricesIncludeTax ? " (incl. GST)" : ""}</div><div className="col-span-2"></div>
-               <div className="col-span-4 mt-1 font-bold">M {booking.adults || 1} F 0 C {booking.children || 0}</div>
+               <div className="col-span-4 mt-1 font-bold">M {booking.maleCount ?? (booking.adults || 1)} F {booking.femaleCount ?? 0} C {booking.children || 0}</div>
                <StayExtensionNote booking={booking} className="col-span-4" />
             </div>
           </div>
