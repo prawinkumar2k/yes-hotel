@@ -611,7 +611,9 @@ export const getInHouseList = async (req: Request, res: Response) => {
           : booking.checkOutDate;
 
         const companyName = booking.company ? corporateMap.get(booking.company.toString()) : null;
-        const companyGroup = companyName || booking.guestDetails?.organization || booking.groupId?.toString() || booking.source || "Direct";
+        // An OTA booking names the OTA it came through (MakeMyTrip, Agoda, Booking.com ...).
+        const sourceLabel = booking.source === "OTA" ? (booking.otaName ? `OTA - ${booking.otaName}` : "OTA") : booking.source;
+        const companyGroup = companyName || booking.guestDetails?.organization || (booking.source === "OTA" ? sourceLabel : "") || booking.groupId?.toString() || String(sourceLabel || "").replace(/_/g, " ") || "Direct";
 
         return {
           _id: booking._id,
@@ -693,6 +695,12 @@ export const getDaySummary = async (req: Request, res: Response) => {
     // Through channels
     const walkins = checkIns.filter(b => b.source === "WALK_IN").length;
     const otas = checkIns.filter(b => b.source === "OTA").length;
+    // Which OTA each of today's OTA check-ins came through
+    const otaCount = (re: RegExp) => checkIns.filter((b: any) => b.source === "OTA" && re.test(String(b.otaName || ""))).length;
+    const otaAgoda = otaCount(/agoda/i);
+    const otaMmt = otaCount(/make\s*my\s*trip|mmt/i);
+    const otaBooking = otaCount(/booking(\.com)?/i);
+    const otaGoibibo = otaCount(/goibibo|ibibo/i);
     const agencies = checkIns.filter(b => b.source === "CORPORATE").length;
 
     // 2. Fetch payments for the day
@@ -800,6 +808,10 @@ export const getDaySummary = async (req: Request, res: Response) => {
         paytm: paymentModes.PAYTM,
         hdfcUpi: paymentModes.UPI + paymentModes.HDFC,
         otaCredit: paymentModes.OTA_CREDIT,
+        otaAgoda,
+        otaMmt,
+        otaBooking,
+        otaGoibibo,
         credits: resrvAdv + roomAdv + partial + final,
         advAdjdTotal: advAdjd,
         roomSales: roomSalesTotal,

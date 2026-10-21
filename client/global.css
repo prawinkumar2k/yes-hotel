@@ -501,6 +501,7 @@
   .admin-panel, .admin-panel main { height: auto !important; max-height: none !important; overflow: visible !important; display: block !important; }
   .admin-panel [class*="h-[calc"] { height: auto !important; overflow: visible !important; }
   .admin-panel .overflow-auto, .admin-panel .overflow-y-auto, .admin-panel .overflow-x-auto, .admin-panel .overflow-hidden { overflow: visible !important; }
+  .mobile-bottom-nav, .mobile-bottom-nav * { display: none !important; }
   .report-print { page: report; }
   .report-print table { width: 100%; border-collapse: collapse; font-size: 9px !important; }
   .report-print th, .report-print td { padding: 3px 5px !important; font-size: 9px !important; line-height: 1.25 !important; }

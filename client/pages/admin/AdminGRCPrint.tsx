@@ -1,3 +1,4 @@
+import { advanceInfo, settlementKind } from "@/lib/advanceInfo";
 import { useEffect, useState } from "react";
 import { hotelContactFrom, useHotelSettings } from "@/hooks/usePublicData";
 import StayExtensionNote from "@/components/admin/StayExtensionNote";
@@ -36,6 +37,14 @@ export default function AdminGRCPrint() {
 
   const booking = bookingData?.data;
 
+  // The bill (when one exists) carries the advance receipts even when the advance record is not linked to the booking.
+  const { data: folioData } = useQuery({
+    queryKey: ["folio", id, "grc"],
+    queryFn: async () => (await api.get(`/folios/booking/${id}?single=true`)).data,
+    enabled: !!id,
+    retry: false,
+  });
+
   const { data: groupBookingsData } = useQuery({
     queryKey: ["groupBookings", booking?.groupId],
     queryFn: async () => {
@@ -53,7 +62,8 @@ export default function AdminGRCPrint() {
     };
   }, []);
 
-  const advances = advancesData?.data?.advances || [];
+  const advances = Array.isArray(advancesData?.data) ? advancesData.data : advancesData?.data?.advances || [];
+  const adv = advanceInfo({ advances, lines: folioData?.data?.lines, booking });
   const latestAdvance = advances[0];
   const groupBookings = groupBookingsData || [];
   const allRoomNumbers = groupBookings.length > 0
@@ -88,8 +98,16 @@ export default function AdminGRCPrint() {
   // The bill number exists only after checkout; until then the card shows none.
   const billNo = booking.billNumber || "Issued at checkout";
   const ratePerNight = booking.ratePerNight ?? (booking.totalAmount / nights);
-  const advanceAmount = latestAdvance?.amount ?? (booking.advanceAmount ?? 0);
-  const advanceMethod = latestAdvance?.method ?? booking.paymentMethod ?? "CASH";
+  const advanceAmount = adv.total;
+  const advanceMethod = latestAdvance?.method ?? adv.receipts[0]?.mode ?? booking.paymentMethod ?? "";
+  const settle = settlementKind(booking.billingInstruction, advanceMethod, booking.paymentStatus === "PAID");
+  // Charges beyond the room rate (extra persons / children): what the bill shows over the nightly tariff.
+  const taxable = Math.max(0, Number(booking.totalAmount || 0) - Number(booking.taxAmount || 0));
+  const extrasAmount = Math.max(0, Math.round((taxable - Number(booking.ratePerNight || 0) * nights) * 100) / 100);
+  const stayTotal = Number(booking.totalAmount || 0);
+  const balanceDue = Math.max(0, stayTotal - advanceAmount);
+  const inr = (n: number) => Number(n || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const planLabel: Record<string, string> = { EP: "Room only", CP: "Breakfast", MAP: "Breakfast + one meal", AP: "All meals" };
 
   return (
     <div className="min-h-screen bg-white text-black p-4 font-sans print:p-0 print:m-0 mx-auto max-w-[850px]">
@@ -197,35 +215,47 @@ export default function AdminGRCPrint() {
                   <span className="font-bold">Room No.</span>
                   <span className="font-black text-sm font-mono">{allRoomNumbers}</span>
                   <span className="font-bold ml-2">Tariff</span>
-                  <span className="font-black font-mono">₹{ratePerNight}/-</span>
+                  <span className="font-black font-mono">₹{inr(ratePerNight)}/-</span>
                 </div>
                 <div className="flex justify-between border-b border-dotted border-gray-400 pb-0.5">
                   <span className="font-bold">Extra Bed</span>
-                  <span className="font-mono">{booking.extraPersonsWithBed || "—"}</span>
+                  <span className="font-mono">{Number(booking.extraPersonsWithBed || 0) + Number(booking.extraChildrenWithBed || 0) || "—"}</span>
                   <span className="font-bold ml-2">Bill No.</span>
                   <span className="font-mono">{billNo}</span>
                 </div>
                 <div className="flex justify-between border-b border-dotted border-gray-400 pb-0.5">
                   <span className="font-bold">Advance</span>
-                  <span className="font-black font-mono text-green-800">₹{advanceAmount}/-</span>
+                  <span className="font-black font-mono text-green-800">₹{inr(advanceAmount)}/-</span>
                   <span className="font-bold ml-2">Receipt No.</span>
-                  <span className="font-mono">{latestAdvance?.advanceNumber?.slice(-6) || "—"}</span>
+                  <span className="font-mono text-right">{adv.numbers.join(", ") || "—"}</span>
                 </div>
+                <div className="flex justify-between border-b border-dotted border-gray-400 pb-0.5">
+                  <span className="font-bold">Stay Total</span>
+                  <span className="font-black font-mono">₹{inr(stayTotal)}/-</span>
+                  <span className="font-bold ml-2">Balance</span>
+                  <span className="font-black font-mono">₹{inr(balanceDue)}/-</span>
+                </div>
+                {extrasAmount > 0 && (
+                  <div className="flex justify-between border-b border-dotted border-gray-400 pb-0.5">
+                    <span className="font-bold">Extra persons / children</span>
+                    <span className="font-mono">₹{inr(extrasAmount)}/-</span>
+                  </div>
+                )}
 
                 <div className="pt-1">
                   <div className="font-bold text-[9px] uppercase text-gray-700">Billing Instruction / Settlement :</div>
                   <div className="grid grid-cols-2 gap-1 mt-1 text-[10px]">
                     <span className="flex items-center gap-1">
-                      <input type="checkbox" checked={advanceMethod === "CASH"} readOnly className="accent-black w-3 h-3" /> Cash
+                      <input type="checkbox" checked={settle === "CASH"} readOnly className="accent-black w-3 h-3" /> Cash
                     </span>
                     <span className="flex items-center gap-1">
-                      <input type="checkbox" checked={advanceMethod === "CARD"} readOnly className="accent-black w-3 h-3" /> Card / DD
+                      <input type="checkbox" checked={settle === "CARD"} readOnly className="accent-black w-3 h-3" /> Card / DD
                     </span>
                     <span className="flex items-center gap-1">
-                      <input type="checkbox" checked={advanceMethod === "UPI"} readOnly className="accent-black w-3 h-3" /> UPI
+                      <input type="checkbox" checked={settle === "UPI"} readOnly className="accent-black w-3 h-3" /> UPI
                     </span>
                     <span className="flex items-center gap-1">
-                      <input type="checkbox" checked={booking.paymentStatus === "PAID"} readOnly className="accent-black w-3 h-3" /> Net Pay
+                      <input type="checkbox" checked={settle === "NET"} readOnly className="accent-black w-3 h-3" /> Net Pay
                     </span>
                   </div>
                 </div>
@@ -250,7 +280,11 @@ export default function AdminGRCPrint() {
 
                 <div className="pt-1 flex justify-between font-bold text-[10px]">
                   <span>B/ID No.</span>
-                  <span className="font-mono">{booking.source || "Walk-In"}</span>
+                  <span className="font-mono">{booking.otaBookingId || booking.otaReference || booking.bookingReference}</span>
+                </div>
+                <div className="flex justify-between text-[10px]">
+                  <span className="font-bold">Booked through</span>
+                  <span className="font-mono">{String(booking.source || "WALK_IN").replace(/_/g, " ")}{booking.otaName ? ` (${booking.otaName})` : ""}</span>
                 </div>
               </div>
             </div>
@@ -379,6 +413,38 @@ export default function AdminGRCPrint() {
                 <span className="font-semibold">{guest.proceedingTo || "—"}</span>
               </div>
             </div>
+
+            <div className="grid grid-cols-3 gap-2 border-b border-gray-300 pb-1">
+              <div>
+                <span className="text-[9px] uppercase font-bold text-gray-600 block">Room Type</span>
+                <span className="font-semibold">{booking.roomCategory?.name || "—"}</span>
+              </div>
+              <div>
+                <span className="text-[9px] uppercase font-bold text-gray-600 block">Meal Plan</span>
+                <span className="font-semibold">{booking.mealPlan || "EP"} ({planLabel[booking.mealPlan || "EP"] || ""})</span>
+              </div>
+              <div>
+                <span className="text-[9px] uppercase font-bold text-gray-600 block">Rooms</span>
+                <span className="font-semibold">{groupBookings.length || 1}{allRoomNumbers !== "—" ? ` (${allRoomNumbers})` : ""}</span>
+              </div>
+            </div>
+
+            {(Number(booking.extraPersonsNoBed || 0) + Number(booking.extraPersonsWithBed || 0) + Number(booking.extraChildrenNoBed || 0) + Number(booking.extraChildrenWithBed || 0) + Number(booking.kidsUnder3 || 0)) > 0 && (
+              <div className="grid grid-cols-5 gap-1 border-b border-gray-300 pb-1 text-[10px]">
+                <div><span className="text-[8px] uppercase font-bold text-gray-600 block">Extra adult (no bed)</span>{booking.extraPersonsNoBed || 0}</div>
+                <div><span className="text-[8px] uppercase font-bold text-gray-600 block">Extra adult (bed)</span>{booking.extraPersonsWithBed || 0}</div>
+                <div><span className="text-[8px] uppercase font-bold text-gray-600 block">Child (no bed)</span>{booking.extraChildrenNoBed || 0}</div>
+                <div><span className="text-[8px] uppercase font-bold text-gray-600 block">Child (bed)</span>{booking.extraChildrenWithBed || 0}</div>
+                <div><span className="text-[8px] uppercase font-bold text-gray-600 block">Under 3</span>{booking.kidsUnder3 || 0}</div>
+              </div>
+            )}
+
+            {booking.specialRequests && (
+              <div className="border-b border-gray-300 pb-1">
+                <span className="text-[9px] uppercase font-bold text-gray-600 block">Special requests / notes</span>
+                <span className="font-medium">{booking.specialRequests}</span>
+              </div>
+            )}
 
             {guest.gstin && (
               <div className="pt-1 border-t border-gray-200">

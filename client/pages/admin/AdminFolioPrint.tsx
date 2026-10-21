@@ -297,16 +297,14 @@ export default function AdminFolioPrint() {
 
           {/* INFO ROW 2 */}
           <div className="flex border-b border-black min-h-[8.5rem]">
-            <div className="w-1/2 p-1 border-r border-black relative">
-              <div className="grid grid-cols-[60px_1fr] gap-1 h-full">
+            <div className="w-1/2 p-1 border-r border-black">
+              <div className="grid grid-cols-[80px_1fr] gap-x-1 gap-y-0.5">
                 <div>Guest</div><div className="font-bold uppercase">MR/MS {booking.guestDetails.firstName} {booking.guestDetails.lastName}</div>
                 <div>Address</div><div className="uppercase">{booking.guestDetails.address || "—"}</div>
-                <div>Mobile</div><div>{booking.guestDetails.phone || booking.guestDetails.phoneNumber || "—"}</div>
-                <div>Email</div><div className="truncate">{booking.guestDetails.email && !/@yes-?hotels\.local$/i.test(booking.guestDetails.email) ? booking.guestDetails.email : "—"}</div>
-                <div className="absolute bottom-1 w-full grid grid-cols-[80px_1fr] gap-1 pr-2">
-                  <div>GSTIN / UIN</div><div className="truncate">: {booking.guestDetails.gstin || "—"}</div>
-                  <div>State</div><div>: KARNATAKA <span className="float-right mr-4">State Code 29</span></div>
-                </div>
+                <div>Mobile</div><div>{String(booking.guestDetails.phone || booking.guestDetails.phoneNumber || "").replace(/^[^\d+]+/, "") || "—"}</div>
+                <div>Email</div><div className="break-all">{booking.guestDetails.email && !/@yes-?hotels\.local$/i.test(booking.guestDetails.email) ? booking.guestDetails.email : "—"}</div>
+                <div>GSTIN / UIN</div><div>: {booking.guestDetails.gstin || "—"}</div>
+                <div>State</div><div>: KARNATAKA <span className="float-right mr-4">State Code 29</span></div>
               </div>
             </div>
             <div className="w-1/2 p-1 grid grid-cols-[80px_1fr_80px_1fr] gap-1 content-start pb-2">
@@ -316,6 +314,8 @@ export default function AdminFolioPrint() {
                <div>Dept Date</div><div>: {format(new Date(booking.checkOutDate), "dd-MMM-yy")}</div><div className="col-span-2"></div>
                <div>Dept Time</div><div>: {booking.departureTime || "11:00"}</div><div className="col-span-2"></div>
                <div>Stay Days</div><div>: {nights}</div><div className="col-span-2"></div>
+               <div>Meal Plan</div><div>: {booking.mealPlan || "EP"}</div><div className="col-span-2"></div>
+               <div>Rate/Night</div><div>: {Number(booking.ratePerNight || 0).toFixed(2)}{booking.pricesIncludeTax ? " (incl. GST)" : ""}</div><div className="col-span-2"></div>
                <div className="col-span-4 mt-1 font-bold">M {booking.adults || 1} F 0 C {booking.children || 0}</div>
                <StayExtensionNote booking={booking} className="col-span-4" />
             </div>
@@ -403,7 +403,7 @@ export default function AdminFolioPrint() {
                          <span key={i} className="mr-2">| {format(new Date(a.date), "dd.MM")}. Rs.{a.amount} ({a.paymentReference || "ADV"}): {a.paymentMode || "—"} </span>
                        ))
                      ) : advanceTotal > 0 ? (
-                       <span>| {format(new Date(booking.checkInDate), "dd.MM")}. Rs.{advanceTotal} ({primaryAdvance?.advanceNumber?.slice(-6) || "ADV"}): {primaryAdvance?.method || primaryAdvance?.paymentMode || "—"} </span>
+                       <span>| {format(new Date(booking.checkInDate), "dd.MM")}. Rs.{advanceTotal} ({primaryAdvance?.advanceNumber || "ADV"}): {primaryAdvance?.method || primaryAdvance?.paymentMode || "—"} </span>
                      ) : (
                        <span>-</span>
                      )}

@@ -443,16 +443,16 @@ export default function AdminLayout({ children, title, hidePadding }: { children
           </div>
 
           {/* Center: Command Search Bar */}
-          <div className="hidden md:flex flex-1 max-w-md mx-4">
+          <div className="hidden lg:flex flex-1 min-w-0 max-w-md mx-4">
             <button
               onClick={() => setCommandPaletteOpen(true)}
-              className="w-full flex items-center justify-between px-3.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 border border-slate-200 text-xs text-slate-400 transition"
+              className="w-full min-w-0 overflow-hidden flex items-center justify-between gap-2 px-3.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 border border-slate-200 text-xs text-slate-400 transition"
             >
-              <div className="flex items-center gap-2">
-                <Search size={14} className="text-slate-400" />
-                <span>Quick search (guest, room, booking, folio)...</span>
+              <div className="flex items-center gap-2 min-w-0">
+                <Search size={14} className="text-slate-400 shrink-0" />
+                <span className="truncate whitespace-nowrap">Quick search (guest, room, booking, folio)...</span>
               </div>
-              <kbd className="hidden sm:inline-block px-1.5 py-0.5 rounded bg-slate-200 text-[10px] text-slate-500 font-mono">
+              <kbd className="hidden sm:inline-block shrink-0 whitespace-nowrap px-1.5 py-0.5 rounded bg-slate-200 text-[10px] text-slate-500 font-mono">
                 Ctrl K
               </kbd>
             </button>

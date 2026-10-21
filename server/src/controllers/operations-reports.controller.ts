@@ -33,6 +33,8 @@ function range(req: Request, defaultDays = 0) {
 
 const scopeOf = (req: Request) => ((req as any).propertyId ? { propertyId: (req as any).propertyId } : {});
 const staffName = (u: any) => (u ? `${u.firstName ?? ""} ${u.lastName ?? ""}`.trim() || u.email : "");
+/** "OTA - MakeMyTrip" for OTA bookings, otherwise the plain source. */
+const sourceOf = (b: any) => (b.source === "OTA" ? (b.otaName ? `OTA - ${b.otaName}` : "OTA") : String(b.source ?? "").replace(/_/g, " "));
 const guestName = (b: any) => `${b.guestDetails?.firstName ?? ""} ${b.guestDetails?.lastName ?? ""}`.replace(/\s+\.$/, "").trim();
 
 /** Money received per booking, by mode: completed payments and advances. */
@@ -93,7 +95,8 @@ export const getCheckInReport = async (req: Request, res: Response) => {
         departure: toBusinessDate(b.checkOutDate),
         nights: b.stayType === "HOURLY" ? 0 : Math.max(1, countNights(b.checkInDate, b.checkOutDate)),
         pax: (b.adults ?? 0) + (b.children ?? 0),
-        source: b.source,
+        source: sourceOf(b),
+        otaConfirmation: b.otaConfirmationNumber ?? "",
         ratePerNight: b.ratePerNight ?? 0,
         totalAmount: b.totalAmount ?? 0,
         advance: r2(m?.advance ?? 0),
@@ -141,6 +144,7 @@ export const getCheckOutReport = async (req: Request, res: Response) => {
         guest: guestName(b),
         room: b.assignedRoom?.roomNumber ?? "",
         category: b.roomCategory?.name ?? "",
+        source: sourceOf(b),
         arrival: toBusinessDate(b.checkedInAt ?? b.checkInDate),
         nights: b.stayType === "HOURLY" ? 0 : Math.max(1, countNights(b.checkedInAt ?? b.checkInDate, b.checkedOutAt)),
         billAmount: billed,

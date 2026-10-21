@@ -20,7 +20,7 @@ let server: Server;
 let base = "";
 let P: mongoose.Types.ObjectId;
 const db = () => mongoose.connection.db!;
-const ids: Record<string, mongoose.Types.ObjectId> = { stay: oid(), dayuse: oid(), arrivalOnly: oid(), advBooking: oid(), cat: oid() };
+const ids: Record<string, mongoose.Types.ObjectId> = { stay: oid(), dayuse: oid(), arrivalOnly: oid(), advBooking: oid(), ota: oid(), cat: oid() };
 const get = async (path: string) => {
   const res = await fetch(base + path, { headers: { Authorization: `Bearer ${jwt.sign({ id: String(user), role: "RECEPTIONIST" }, getJwtSecret(), { expiresIn: "5m" })}` } });
   return { status: res.status, json: (await res.json()) as any };
@@ -46,6 +46,8 @@ beforeAll(async () => {
     booking("arrivalOnly", { status: "CHECKED_IN", checkInDate: new Date(today), checkOutDate: new Date(addDays(today, 1)), checkedInAt: noon(today, 13) }),
     // hourly stay today, already checked out
     booking("dayuse", { status: "CHECKED_OUT", stayType: "HOURLY", hours: 4, checkInDate: new Date(today), checkOutDate: new Date(today), checkedInAt: noon(today, 9), checkedOutAt: noon(today, 13) }),
+    // arrived today through MakeMyTrip: the reports say which OTA
+    booking("ota", { status: "CHECKED_IN", source: "OTA", otaName: "MakeMyTrip", otaConfirmationNumber: "MMT-TEST", checkInDate: new Date(today), checkOutDate: new Date(addDays(today, 1)), checkedInAt: noon(today, 15) }),
     // future arrival that received an advance today
     booking("advBooking", { status: "CONFIRMED", checkInDate: new Date(addDays(today, 5)), checkOutDate: new Date(addDays(today, 6)) }),
   ]);
@@ -87,6 +89,17 @@ describe("day reports after check-out", () => {
     expect(d.dayUses).toBeGreaterThanOrEqual(1);
     expect(d.resrvAdv).toBeGreaterThanOrEqual(2000);
     expect(d.paymentModes.UPI).toBeGreaterThanOrEqual(2000);
+  });
+
+  it("OTA bookings name the OTA in the check-in report and the day sheet", async () => {
+    const ci = await get(`/api/reports/ops/check-ins?from=${today}&to=${today}`);
+    const row = ci.json.data.rows.find((r: any) => r.bookingReference === `DR-${tag}-ota`);
+    expect(row.source).toBe("OTA - MakeMyTrip");
+    expect(row.otaConfirmation).toBe("MMT-TEST");
+    const ds = await get(`/api/reports/day-summary?date=${today}`);
+    expect(ds.json.data.otaMmt).toBeGreaterThanOrEqual(1);
+    const co = await get(`/api/reports/ops/check-outs?from=${today}&to=${today}`);
+    expect(co.json.data.rows.every((r: any) => "source" in r)).toBe(true);
   });
 
   it("Day Summary for yesterday counts the stay's check-in", async () => {
