@@ -164,7 +164,6 @@ export default function FinanceDashboard() {
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
             {[
               { label: "Revenue Reports", href: "/admin/reports" },
-              { label: "Payment History", href: "/admin/payments" },
               { label: "Accounting Ledger", href: "/admin/accounting" },
               { label: "Corporate Accounts", href: "/admin/corporate-accounts" },
               { label: "Audit Logs", href: "/admin/audit-logs" },

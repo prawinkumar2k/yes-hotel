@@ -750,6 +750,19 @@ export const getDaySummary = async (req: Request, res: Response) => {
       else paymentModes.CASH += net;
     }
 
+    // Room service / counter sales (water bottle, dental kit, mess …) taken at the desk today: money in by mode, and miscellaneous sales
+    let miscSalesToday = 0;
+    {
+      const { CashierShift } = await import("../models/CashierShift");
+      const shiftsToday: any[] = await CashierShift.find({ ...propertyMatch, counterSales: { $elemMatch: { createdAt: dayQuery } } } as any).select("counterSales").lean();
+      for (const sh of shiftsToday) for (const c of sh.counterSales || []) {
+        if (!(c.createdAt >= dayStart && c.createdAt < dayEnd)) continue;
+        const amount = Number(c.amount) || 0;
+        miscSalesToday += amount;
+        if (c.mode === "UPI") paymentModes.UPI += amount; else if (c.mode === "CARD") paymentModes.CARD += amount; else paymentModes.CASH += amount;
+      }
+    }
+
     // 3. Cash Sheet Data
     const cashPayments = todayPayments.filter(p => p.method.toUpperCase().includes("CASH"));
     let todayCashInward = 0;
@@ -792,7 +805,7 @@ export const getDaySummary = async (req: Request, res: Response) => {
         advAdjd,
         paymentModes,
         salesRoom: roomSalesTotal,
-        misc: 0,
+        misc: miscSalesToday,
         // -- Aliases used by DaySummaryReport.tsx --
         checkIn: checkIns.length,
         checkOut: checkOuts.length,
@@ -815,7 +828,7 @@ export const getDaySummary = async (req: Request, res: Response) => {
         credits: resrvAdv + roomAdv + partial + final,
         advAdjdTotal: advAdjd,
         roomSales: roomSalesTotal,
-        miscSales: 0,
+        miscSales: miscSalesToday,
         // -- Nested structure (kept for CashSheetReport backward compat) --
         page1: {
           rooms: { checkIn: checkIns.length, checkOut: checkOuts.length, dayUse: dayUses.length },

@@ -152,13 +152,10 @@ export default function CashierDashboard() {
         <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
           <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
             <h3 className="font-semibold text-slate-800">Recent Transactions</h3>
-            <Link to="/admin/payments" className="text-xs text-amber-600 hover:text-amber-700 font-medium flex items-center gap-1">
-              View All <ArrowRight className="w-3 h-3" />
-            </Link>
           </div>
           <div className="p-5 text-center text-slate-400 text-sm py-10">
             <CreditCard className="w-10 h-10 mx-auto mb-2 opacity-30" />
-            <p>View detailed payment history in <Link to="/admin/payments" className="text-amber-600 underline">Payments</Link></p>
+            <p>Payments are listed on each guest's bill and in the Cashier shift ledger.</p>
           </div>
         </div>
       </div>

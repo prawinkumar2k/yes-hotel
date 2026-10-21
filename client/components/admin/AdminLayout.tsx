@@ -218,7 +218,6 @@ export default function AdminLayout({ children, title, hidePadding }: { children
     {
       title: "CASHIERING",
       items: [
-        { label: "Payments & Folios", to: "/admin/payments", icon: CreditCard, pageKey: "PAYMENTS" },
         { label: "Advance Deposits", to: "/admin/advances", icon: CreditCard, pageKey: "ADVANCES" },
         { label: "Cashier Shifts", to: "/admin/cashier-shifts", icon: DollarSign, pageKey: "CASHIER_SHIFTS" },
       ],

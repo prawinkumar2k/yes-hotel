@@ -105,7 +105,6 @@ export default function AdminCashierBilling() {
           </Link>
           <Link to="/admin/advances" className="px-3 py-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50">Advance Deposits</Link>
           <Link to="/admin/cashier-shifts" className="px-3 py-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50">Cashier Shift</Link>
-          <Link to="/admin/payments" className="px-3 py-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50">Payment History</Link>
         </div>
       </div>
 

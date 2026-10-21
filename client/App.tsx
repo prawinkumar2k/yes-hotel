@@ -108,7 +108,6 @@ const AdminFAQs = lazy(() => import("./pages/admin/AdminFAQs"));
 const AdminTestimonials = lazy(() => import("./pages/admin/AdminTestimonials"));
 const AdminContent = lazy(() => import("./pages/admin/AdminContent"));
 const AdminGuests = lazy(() => import("./pages/admin/AdminGuests"));
-const AdminPayments = lazy(() => import("./pages/admin/AdminPayments"));
 const AdminAdvances = lazy(() => import("./pages/admin/AdminAdvances"));
 const AdminBookingConfirmation = lazy(() => import("./pages/admin/AdminBookingConfirmation"));
 const AdminAdvanceReceipt = lazy(() => import("./pages/admin/AdminAdvanceReceipt"));
@@ -261,7 +260,6 @@ function App() {
                 <Route path="/admin/rate-plans" element={<PermissionRoute pageKey="RATE_PLANS"><AdminLayout title="Dynamic Rate Plans & Meal Packages"><AdminRatePlans /></AdminLayout></PermissionRoute>} />
                 <Route path="/admin/pricing" element={<PermissionRoute pageKey="PRICING"><AdminLayout title="Pricing"><AdminPricing /></AdminLayout></PermissionRoute>} />
                 <Route path="/admin/guests" element={<PermissionRoute pageKey="GUESTS"><AdminLayout title="Guests"><AdminGuests /></AdminLayout></PermissionRoute>} />
-                <Route path="/admin/payments" element={<PermissionRoute pageKey="PAYMENTS"><AdminLayout title="Payments"><AdminPayments /></AdminLayout></PermissionRoute>} />
                 <Route path="/admin/bookings/:id/booking-confirmation" element={<PermissionRoute pageKey="ADVANCES"><AdminLayout title="Booking Confirmation"><AdminBookingConfirmation /></AdminLayout></PermissionRoute>} />
                 <Route path="/admin/advances" element={<PermissionRoute pageKey="ADVANCES"><AdminLayout title="Advance Payments Ledger"><AdminAdvances /></AdminLayout></PermissionRoute>} />
                 <Route path="/admin/verifications" element={<PermissionRoute pageKey="VERIFICATIONS"><AdminLayout title="Verification Queue"><AdminVerificationQueue /></AdminLayout></PermissionRoute>} />
