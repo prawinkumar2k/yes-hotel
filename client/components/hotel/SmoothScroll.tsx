@@ -9,7 +9,9 @@ import { useReducedMotion } from "@/hooks/useReducedMotion";
 // weighted scroll feel actively hurts usability (and were explicitly out of
 // scope for this visual redesign). Matched by prefix, not by trying to
 // enumerate every public route.
-const NON_SMOOTH_PREFIXES = ["/admin", "/staff", "/customer", "/login", "/register", "/forgot-password", "/reset-password"];
+// Every staff area: the role dashboards (/front-desk, /housekeeping, /maintenance, /cashier, /finance, /events) too, or the
+// smooth-scroll library takes over the mouse wheel and those screens cannot be scrolled.
+const NON_SMOOTH_PREFIXES = ["/admin", "/staff", "/front-desk", "/housekeeping", "/maintenance", "/cashier", "/finance", "/events", "/customer", "/login", "/register", "/forgot-password", "/reset-password"];
 
 export default function SmoothScroll() {
   const location = useLocation();

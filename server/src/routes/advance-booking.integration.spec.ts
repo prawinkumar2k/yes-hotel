@@ -112,7 +112,7 @@ describe("reserve rooms with an advance", () => {
     groupId = r.json.data.groupId;
     primaryId = r.json.data.primaryBookingId;
     expect(r.json.data).toMatchObject({ rooms: 10, roundedTotal: 15000, balance: 11000, advance: { amount: 4000, method: "CASH" } });
-    expect(r.json.data.bookingNumber).toMatch(/^RES-\d{4}-\d{3}$/);
+    expect(r.json.data.bookingNumber).toMatch(/^YH-\d{4}-\d{3}$/);
 
     const rooms = await bookingsOf(groupId);
     expect(rooms).toHaveLength(10);

@@ -5,6 +5,7 @@ import { format, parseISO } from "date-fns";
 import { Loader2, Printer, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import ReportPrintHeader from "@/components/admin/ReportPrintHeader";
+import { usePrintLayout } from "@/lib/usePrintLayout";
 import { AgGridReact } from "ag-grid-react";
 import { ModuleRegistry, AllCommunityModule } from "ag-grid-community";
 import "ag-grid-community/styles/ag-grid.css";
@@ -13,6 +14,7 @@ import "ag-grid-community/styles/ag-theme-alpine.css";
 ModuleRegistry.registerModules([AllCommunityModule]);
 
 export default function AdminMonthlyMIS() {
+  usePrintLayout("landscape");
   const [month, setMonth] = useState(format(new Date(), "yyyy-MM"));
 
   const { data: reportData, isLoading } = useQuery({
@@ -132,7 +134,7 @@ export default function AdminMonthlyMIS() {
   }, [reportData]);
 
   return (
-    <div className="bg-white p-6 rounded shadow-sm border border-gray-200 overflow-hidden w-full h-[calc(100vh-100px)] flex flex-col report-print print:h-auto print:border-0 print:shadow-none print:p-0">
+    <div className="bg-white p-6 rounded shadow-sm border border-gray-200 overflow-hidden w-full h-[calc(100vh-190px)] min-h-[420px] flex flex-col report-print print:h-auto print:border-0 print:shadow-none print:p-0">
       <ReportPrintHeader title="Monthly MIS Report" period={month} />
       <div className="flex justify-between items-center mb-6 print:hidden">
         <div>

@@ -1,3 +1,5 @@
+import { advanceInfo, settlementKind } from "@/lib/advanceInfo";
+import { usePrintLayout } from "@/lib/usePrintLayout";
 import { useState, useMemo, useEffect } from "react";
 import { buildInvoiceRows } from "@/lib/invoiceRows";
 import HotelDocAddress from "@/components/admin/HotelDocAddress";
@@ -181,6 +183,15 @@ function BookingDocCard({
   const isGovt = !isAadhaar && !isDL && !isVoter;
   const advanceMethod = primaryAdvance?.method || (b.paymentMethod || "CASH").toUpperCase();
   const dailyTariff = b.ratePerNight ?? Math.round((b.totalAmount - (b.taxAmount || 0)) / nights);
+  // Same facts as the single GRC / bill pages: advance receipts, settlement box, extras, discount, stay total, balance.
+  const adv = advanceInfo({ advances: advancesList, lines, booking: b });
+  const settle = settlementKind(b.billingInstruction, advanceMethod, b.paymentStatus === "PAID");
+  const bookingTaxable = Math.max(0, Number(b.totalAmount || 0) - Number(b.taxAmount || 0));
+  const extrasAmount = Math.max(0, Math.round((bookingTaxable - Number(b.ratePerNight || 0) * nights) * 100) / 100);
+  const stayTotal = Number(b.totalAmount || 0);
+  const balanceDue = Math.max(0, stayTotal - adv.total);
+  const money = (n: number) => Number(n || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const planLabel: Record<string, string> = { EP: "Room only", CP: "Breakfast", MAP: "Breakfast + one meal", AP: "All meals" };
 
   return (
     <div className="space-y-8 print:space-y-0">
@@ -309,35 +320,53 @@ function BookingDocCard({
                       <span className="font-bold">Room No.</span>
                       <span className="font-black text-sm font-mono">{allRoomsStr}</span>
                       <span className="font-bold ml-2">Tariff</span>
-                      <span className="font-black font-mono">₹{dailyTariff}/-</span>
+                      <span className="font-black font-mono">₹{money(dailyTariff)}/-</span>
                     </div>
                     <div className="flex justify-between border-b border-dotted border-gray-400 pb-0.5">
                       <span className="font-bold">Extra Bed</span>
-                      <span className="font-mono">{b.extraPersonsWithBed || "—"}</span>
+                      <span className="font-mono">{Number(b.extraPersonsWithBed || 0) + Number(b.extraChildrenWithBed || 0) || "—"}</span>
                       <span className="font-bold ml-2">Bill No.</span>
                       <span className="font-mono">{billNo}</span>
                     </div>
                     <div className="flex justify-between border-b border-dotted border-gray-400 pb-0.5">
                       <span className="font-bold">Advance</span>
-                      <span className="font-black font-mono text-green-800">₹{advanceTotal}/-</span>
+                      <span className="font-black font-mono text-green-800">₹{money(adv.total || advanceTotal)}/-</span>
                       <span className="font-bold ml-2">Receipt No.</span>
-                      <span className="font-mono">{primaryAdvance?.advanceNumber?.slice(-6) || b.advanceReceiptNo || "—"}</span>
+                      <span className="font-mono text-right">{adv.numbers.join(", ") || b.advanceReceiptNo || "—"}</span>
                     </div>
+                    <div className="flex justify-between border-b border-dotted border-gray-400 pb-0.5">
+                      <span className="font-bold">Stay Total</span>
+                      <span className="font-black font-mono">₹{money(stayTotal)}/-</span>
+                      <span className="font-bold ml-2">Balance</span>
+                      <span className="font-black font-mono">₹{money(balanceDue)}/-</span>
+                    </div>
+                    {Number(b.discountAmount || 0) > 0 && (
+                      <div className="flex justify-between border-b border-dotted border-gray-400 pb-0.5">
+                        <span className="font-bold">Discount given{b.discountType === "PERCENT" ? ` (${b.discountValue}%)` : ""}</span>
+                        <span className="font-black font-mono text-green-800">− ₹{money(b.discountAmount)}/-</span>
+                      </div>
+                    )}
+                    {extrasAmount > 0 && (
+                      <div className="flex justify-between border-b border-dotted border-gray-400 pb-0.5">
+                        <span className="font-bold">Extra persons / children</span>
+                        <span className="font-mono">₹{money(extrasAmount)}/-</span>
+                      </div>
+                    )}
 
                     <div className="pt-1">
                       <div className="font-bold text-[9px] uppercase text-gray-700">Billing Instruction / Settlement :</div>
                       <div className="grid grid-cols-2 gap-1 mt-1 text-[10px]">
                         <span className="flex items-center gap-1">
-                          <input type="checkbox" checked={advanceMethod === "CASH"} readOnly className="accent-black w-3 h-3" /> Cash
+                          <input type="checkbox" checked={settle === "CASH"} readOnly className="accent-black w-3 h-3" /> Cash
                         </span>
                         <span className="flex items-center gap-1">
-                          <input type="checkbox" checked={advanceMethod === "CARD"} readOnly className="accent-black w-3 h-3" /> Card / DD
+                          <input type="checkbox" checked={settle === "CARD"} readOnly className="accent-black w-3 h-3" /> Card / DD
                         </span>
                         <span className="flex items-center gap-1">
-                          <input type="checkbox" checked={advanceMethod === "UPI"} readOnly className="accent-black w-3 h-3" /> UPI
+                          <input type="checkbox" checked={settle === "UPI"} readOnly className="accent-black w-3 h-3" /> UPI
                         </span>
                         <span className="flex items-center gap-1">
-                          <input type="checkbox" checked={b.paymentStatus === "PAID"} readOnly className="accent-black w-3 h-3" /> Net Pay
+                          <input type="checkbox" checked={settle === "NET"} readOnly className="accent-black w-3 h-3" /> Net Pay
                         </span>
                       </div>
                     </div>
@@ -362,7 +391,11 @@ function BookingDocCard({
 
                     <div className="pt-1 flex justify-between font-bold text-[10px]">
                       <span>B/ID No.</span>
-                      <span className="font-mono">{b.source || "Walk-In"}</span>
+                      <span className="font-mono">{b.otaBookingId || b.otaReference || b.otaConfirmationNumber || b.bookingReference}</span>
+                    </div>
+                    <div className="flex justify-between text-[10px]">
+                      <span className="font-bold">Booked through</span>
+                      <span className="font-mono">{String(b.source || "WALK_IN").replace(/_/g, " ")}{b.otaName ? ` (${b.otaName})` : ""}</span>
                     </div>
                   </div>
                 </div>
@@ -489,6 +522,18 @@ function BookingDocCard({
                     <span className="font-semibold">{guest.proceedingTo || "—"}</span>
                   </div>
                 </div>
+
+                <div className="grid grid-cols-3 gap-2 border-b border-gray-300 pb-1">
+                  <div><span className="text-[9px] uppercase font-bold text-gray-600 block">Room Type</span><span className="font-semibold">{b.roomCategory?.name || "—"}</span></div>
+                  <div><span className="text-[9px] uppercase font-bold text-gray-600 block">Meal Plan</span><span className="font-semibold">{b.mealPlan || "EP"} ({planLabel[b.mealPlan || "EP"] || ""})</span></div>
+                  <div><span className="text-[9px] uppercase font-bold text-gray-600 block">Rooms</span><span className="font-semibold">{groupBookings.length || 1}{allRoomsStr ? ` (${allRoomsStr})` : ""}</span></div>
+                </div>
+                {b.specialRequests && (
+                  <div className="border-b border-gray-300 pb-1">
+                    <span className="text-[9px] uppercase font-bold text-gray-600 block">Special requests / notes</span>
+                    <span className="font-medium">{b.specialRequests}</span>
+                  </div>
+                )}
 
                 {guest.gstin && (
                   <div className="pt-1 border-t border-gray-200">
@@ -617,14 +662,14 @@ function BookingDocCard({
 
             {/* INFO ROW 2 */}
             <div className="flex border-b border-black min-h-[6rem]">
-              <div className="w-1/2 p-1 border-r border-black relative">
-                <div className="grid grid-cols-[60px_1fr] gap-1 h-full">
+              <div className="w-1/2 p-1 border-r border-black">
+                <div className="grid grid-cols-[80px_1fr] gap-x-1 gap-y-0.5">
                   <div>Guest</div><div className="font-bold uppercase">MR/MS {guest.firstName} {guest.lastName}</div>
-                  <div>Address</div><div className="uppercase">{guest.address || "Bengaluru, Karnataka"}</div>
-                  <div className="absolute bottom-1 w-full grid grid-cols-[80px_1fr] gap-1 pr-2">
-                    <div>GSTIN / UIN</div><div className="truncate">: {guest.gstin || "—"}</div>
-                    <div>State</div><div>: KARNATAKA <span className="float-right mr-4">State Code 29</span></div>
-                  </div>
+                  <div>Address</div><div className="uppercase">{guest.address || "—"}</div>
+                  <div>Mobile</div><div>{String(guest.phone || guest.phoneNumber || "").replace(/^[^\d+]+/, "") || "—"}</div>
+                  <div>Email</div><div className="break-all">{guest.email && !/@yes-?hotels\.local$/i.test(guest.email) ? guest.email : "—"}</div>
+                  <div>GSTIN / UIN</div><div>: {guest.gstin || "—"}</div>
+                  <div>State</div><div>: KARNATAKA <span className="float-right mr-4">State Code 29</span></div>
                 </div>
               </div>
               <div className="w-1/2 p-1 grid grid-cols-[80px_1fr_80px_1fr] gap-1 content-start pb-2">
@@ -634,6 +679,8 @@ function BookingDocCard({
                 <div>Dept Date</div><div>: {format(checkOutDate, "dd-MMM-yy")}</div><div className="col-span-2"></div>
                 <div>Dept Time</div><div>: {b.departureTime || "11:00"}</div><div className="col-span-2"></div>
                 <div>Stay Days</div><div>: {nights}</div><div className="col-span-2"></div>
+                <div>Meal Plan</div><div>: {b.mealPlan || "EP"}</div><div className="col-span-2"></div>
+                <div>Rate/Night</div><div>: {Number(b.ratePerNight || 0).toFixed(2)}{b.pricesIncludeTax ? " (incl. GST)" : ""}</div><div className="col-span-2"></div>
                 <div className="col-span-4 mt-1 font-bold">M {b.adults || 1} F 0 C {b.children || 0}</div>
                 <StayExtensionNote booking={b} className="col-span-4" />
               </div>
@@ -720,12 +767,18 @@ function BookingDocCard({
                           <span key={i} className="mr-2">| {format(new Date(a.date), "dd.MM")}. Rs.{a.amount} ({a.paymentReference || "ADV"}): {a.paymentMode || "—"} </span>
                         ))
                       ) : advanceTotal > 0 ? (
-                        <span>| {format(new Date(b.checkInDate), "dd.MM")}. Rs.{advanceTotal} ({primaryAdvance?.advanceNumber?.slice(-6) || "ADV"}): {primaryAdvance?.method || primaryAdvance?.paymentMode || "—"} </span>
+                        <span>| {format(new Date(b.checkInDate), "dd.MM")}. Rs.{advanceTotal} ({primaryAdvance?.advanceNumber || "ADV"}): {primaryAdvance?.method || primaryAdvance?.paymentMode || "—"} </span>
                       ) : (
                         <span>-</span>
                       )}
                     </div>
                   </div>
+                  {Number(b.discountAmount || 0) > 0 && (
+                    <div className="flex font-bold mt-0.5 text-[9px]">
+                      <div className="w-20">Discount</div>
+                      <div className="flex-1 font-mono">Rs.{Number(b.discountAmount).toFixed(2)}{b.discountType === "PERCENT" ? ` (${b.discountValue}%)` : ""} given to the guest, already deducted from the tariff{b.discountReason ? ` — ${b.discountReason}` : ""}</div>
+                    </div>
+                  )}
                   {checkoutPaymentLines.length > 0 && (
                     <div className="flex font-bold mt-0.5 text-[9px]">
                       <div className="w-20 text-gray-700">Settlement</div>
@@ -823,6 +876,7 @@ function BookingDocCard({
 }
 
 export default function AdminBulkDocViewer() {
+  usePrintLayout("portrait", 8);
   const [docType, setDocType] = useState<"BOTH" | "GRC" | "GST">("BOTH");
   const [viewMode, setViewMode] = useState<"PAGED" | "ALL">("PAGED");
   const [statusFilter, setStatusFilter] = useState<string>("ALL");

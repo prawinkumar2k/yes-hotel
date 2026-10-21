@@ -1,4 +1,5 @@
-import { useState } from "react";
+import CheckInKycForm, { kycFromBooking, kycPayload, kycReady, type CheckInKyc } from "@/components/admin/CheckInKycForm";
+import { useEffect, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "../../context/AuthContext";
 import { useToast } from "@/components/ui/use-toast";
@@ -49,6 +50,8 @@ export default function AdminCheckIn() {
   });
 
   const [idProofPhoto, setIdProofPhoto] = useState<string>("");
+  const [kyc, setKyc] = useState<CheckInKyc | null>(null);
+  useEffect(() => { setKyc(selectedBooking ? kycFromBooking(selectedBooking) : null); }, [selectedBooking?._id]);
   const [viewProofModal, setViewProofModal] = useState<string | null>(null);
 
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -62,11 +65,7 @@ export default function AdminCheckIn() {
     mutationFn: ({ id, roomId }: { id: string; roomId: string }) =>
       apiFetch(`/api/bookings/${id}/check-in`, user?.token, "POST", {
         roomId,
-        idType,
-        idNumber: idNumber || undefined,
-        nationality: nationality || undefined,
-        emergencyPhone: emergencyPhone || undefined,
-        idProofPhoto: idProofPhoto || undefined,
+        ...(kyc ? kycPayload(kyc) : { idType, idNumber: idNumber || undefined, nationality: nationality || undefined, emergencyPhone: emergencyPhone || undefined, idProofPhoto: idProofPhoto || undefined }),
       }),
     onSuccess: (data) => {
       if (data.success) {
@@ -202,82 +201,10 @@ export default function AdminCheckIn() {
                     )}
                   </div>
 
-                  {/* KYC Identification Details & Proof Photo */}
-                  <div className="border border-gray-200 rounded-lg p-4 bg-gray-50/50 space-y-3">
-                    <p className="text-xs font-bold text-gray-700 uppercase tracking-wider">Guest Identity Verification (KYC)</p>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className="block text-xs text-gray-600 mb-1">ID Document Type</label>
-                        <select
-                          value={idType}
-                          onChange={e => setIdType(e.target.value)}
-                          className="w-full text-xs border border-gray-300 rounded p-2 focus:ring-1 focus:ring-green-500 outline-none"
-                        >
-                          <option value="AADHAAR">Aadhaar Card</option>
-                          <option value="PASSPORT">Passport</option>
-                          <option value="DRIVING_LICENSE">Driving License</option>
-                          <option value="VOTER_ID">Voter ID</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-xs text-gray-600 mb-1">ID / Document Number *</label>
-                        <input
-                          type="text"
-                          value={idNumber}
-                          onChange={e => setIdNumber(e.target.value)}
-                          placeholder="e.g. 1234-5678-9012"
-                          className="w-full text-xs border border-gray-300 rounded p-2 focus:ring-1 focus:ring-green-500 outline-none"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs text-gray-600 mb-1">Nationality</label>
-                        <input
-                          type="text"
-                          value={nationality}
-                          onChange={e => setNationality(e.target.value)}
-                          className="w-full text-xs border border-gray-300 rounded p-2 focus:ring-1 focus:ring-green-500 outline-none"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs text-gray-600 mb-1">Emergency Phone</label>
-                        <input
-                          type="text"
-                          value={emergencyPhone}
-                          onChange={e => setEmergencyPhone(e.target.value)}
-                          placeholder="+91 98765 43210"
-                          className="w-full text-xs border border-gray-300 rounded p-2 focus:ring-1 focus:ring-green-500 outline-none"
-                        />
-                      </div>
-                    </div>
-
-                    {/* ID Proof Photo Input & Lightbox Preview */}
-                    <div className="pt-2 border-t border-gray-200">
-                      <label className="block text-xs font-semibold text-gray-700 mb-1">📷 Upload / Snap ID Proof Photo *</label>
-                      <div className="flex items-center gap-3">
-                        <input
-                          type="file"
-                          accept="image/*"
-                          capture="environment"
-                          onChange={handlePhotoChange}
-                          className="text-xs text-gray-600 file:mr-2 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100 cursor-pointer"
-                        />
-                        {(idProofPhoto || selectedBooking?.idProofPhoto || selectedBooking?.guestDetails?.idProofPhoto) && (
-                          <button
-                            type="button"
-                            onClick={() => setViewProofModal(idProofPhoto || selectedBooking?.idProofPhoto || selectedBooking?.guestDetails?.idProofPhoto)}
-                            className="px-2.5 py-1 text-xs bg-indigo-50 text-indigo-700 border border-indigo-200 rounded font-semibold hover:bg-indigo-100 transition flex items-center gap-1 shrink-0"
-                          >
-                            👁️ View Proof Photo
-                          </button>
-                        )}
-                      </div>
-                      {idProofPhoto && (
-                        <div className="mt-2 flex items-center gap-2">
-                          <img src={idProofPhoto} alt="ID Proof Preview" className="h-14 w-20 object-cover rounded border border-gray-300" />
-                          <span className="text-[11px] text-emerald-600 font-semibold">✓ ID Proof Photo Ready</span>
-                        </div>
-                      )}
-                    </div>
+                  {/* Guest identity and registration details: the same as a walk-in registration */}
+                  <div className="border border-gray-200 rounded-lg p-4 bg-white">
+                    <p className="text-xs font-bold text-gray-700 uppercase tracking-wider mb-3">Guest details &amp; ID documents</p>
+                    {kyc && <CheckInKycForm value={kyc} onChange={setKyc} existingDocuments={selectedBooking?.guestDetails?.idProofImages?.length || 0} />}
                   </div>
 
                   {/* Special Requests */}
@@ -289,7 +216,7 @@ export default function AdminCheckIn() {
                   )}
 
                   <button
-                    disabled={!selectedRoomId || checkInMutation.isPending}
+                    disabled={!selectedRoomId || checkInMutation.isPending || (kyc ? !kycReady(kyc) : false)}
                     onClick={() => checkInMutation.mutate({ id: selectedBooking._id, roomId: selectedRoomId })}
                     className="w-full bg-green-600 text-white py-3 rounded font-semibold text-sm hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                   >

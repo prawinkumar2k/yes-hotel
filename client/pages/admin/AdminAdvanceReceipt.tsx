@@ -1,3 +1,4 @@
+import { usePrintLayout } from "@/lib/usePrintLayout";
 import { useParams, Link } from "react-router-dom";
 import HotelDocAddress from "@/components/admin/HotelDocAddress";
 import { useQuery } from "@tanstack/react-query";
@@ -9,6 +10,7 @@ import { nights as countNights } from "@shared/dates";
 
 /** Advance receipt, laid out like the GST invoice and GRC (same header, ruled sheet). */
 export default function AdminAdvanceReceipt() {
+  usePrintLayout("portrait", 8);
   const { id } = useParams();
   // Shown inside a pop-up: hide this page's own toolbar.
   const embedded = typeof window !== "undefined" && window.self !== window.top;

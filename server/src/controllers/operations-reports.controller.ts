@@ -98,6 +98,7 @@ export const getCheckInReport = async (req: Request, res: Response) => {
         source: sourceOf(b),
         otaConfirmation: b.otaConfirmationNumber ?? "",
         ratePerNight: b.ratePerNight ?? 0,
+        discount: r2(b.discountAmount ?? 0),
         totalAmount: b.totalAmount ?? 0,
         advance: r2(m?.advance ?? 0),
         status: b.status,
@@ -108,6 +109,7 @@ export const getCheckInReport = async (req: Request, res: Response) => {
       checkIns: rows.length,
       rooms: new Set(rows.map((r) => r.room).filter(Boolean)).size,
       pax: rows.reduce((t, r) => t + r.pax, 0),
+      discount: r2(rows.reduce((t, r) => t + r.discount, 0)),
       totalAmount: r2(rows.reduce((t, r) => t + r.totalAmount, 0)),
       advance: r2(rows.reduce((t, r) => t + r.advance, 0)),
     };
@@ -147,6 +149,7 @@ export const getCheckOutReport = async (req: Request, res: Response) => {
         source: sourceOf(b),
         arrival: toBusinessDate(b.checkedInAt ?? b.checkInDate),
         nights: b.stayType === "HOURLY" ? 0 : Math.max(1, countNights(b.checkedInAt ?? b.checkInDate, b.checkedOutAt)),
+        discount: r2(b.discountAmount ?? 0),
         billAmount: billed,
         tax: r2(f?.totalTax ?? b.taxAmount ?? 0),
         received: r2((m?.paid ?? 0) + (m?.advance ?? 0)),
@@ -158,6 +161,7 @@ export const getCheckOutReport = async (req: Request, res: Response) => {
     });
     const totals = {
       checkOuts: rows.length,
+      discount: r2(rows.reduce((t, r) => t + r.discount, 0)),
       billAmount: r2(rows.reduce((t, r) => t + r.billAmount, 0)),
       tax: r2(rows.reduce((t, r) => t + r.tax, 0)),
       received: r2(rows.reduce((t, r) => t + r.received, 0)),

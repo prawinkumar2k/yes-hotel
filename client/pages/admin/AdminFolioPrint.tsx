@@ -1,3 +1,4 @@
+import { usePrintLayout } from "@/lib/usePrintLayout";
 import { useEffect, useMemo, useState } from "react";
 import { buildInvoiceRows } from "@/lib/invoiceRows";
 import HotelDocAddress from "@/components/admin/HotelDocAddress";
@@ -27,6 +28,7 @@ function numberToWords(num: number): string {
 }
 
 export default function AdminFolioPrint() {
+  usePrintLayout("portrait", 8);
   // Shown inside the registration pop-up: hide this page's own toolbar.
   const embedded = typeof window !== "undefined" && window.self !== window.top;
   const { id } = useParams();

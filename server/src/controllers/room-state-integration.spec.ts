@@ -131,7 +131,7 @@ describe("check-in respects room status (previously unchecked entirely)", () => 
 
     const res = mockRes();
     await checkIn(
-      { params: { id: booking._id.toString() }, body: { roomId: room._id.toString() }, user: { id: STAFF_USER_ID, role: "ADMIN" } } as any,
+      { params: { id: booking._id.toString() }, body: { roomId: room._id.toString(), idType: "AADHAAR", idNumber: "123412341234" }, user: { id: STAFF_USER_ID, role: "ADMIN" } } as any,
       res
     );
 

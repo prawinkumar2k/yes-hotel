@@ -5,6 +5,7 @@ import { Loader2, Printer, Download } from "lucide-react";
 import { api } from "@/lib/api";
 import { todayBusinessDate, addDays } from "@shared/dates";
 import ReportPrintHeader from "@/components/admin/ReportPrintHeader";
+import { usePrintLayout } from "@/lib/usePrintLayout";
 
 // ─── Shared building blocks ──────────────────────────────────────────────────
 
@@ -63,6 +64,7 @@ function ReportShell(props: {
   children: ReactNode;
 }) {
   const { range } = props;
+  usePrintLayout(range.fixed ? "portrait" : "landscape");
   return (
     <div className="space-y-4 report-print">
       <div className={`flex flex-wrap items-end justify-between gap-3 ${range.fixed ? "" : "print:hidden"}`}>
@@ -101,7 +103,7 @@ function ReportShell(props: {
 
 function SummaryCards({ items }: { items: [string, string | number][] }) {
   return (
-    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+    <div className="report-cards grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
       {items.map(([k, v]) => (
         <div key={k} className="bg-white border border-gray-200 rounded-xl p-3 print:border-black print:rounded-none">
           <div className="text-[10px] uppercase tracking-wider font-bold text-gray-500">{k}</div>
@@ -112,14 +114,16 @@ function SummaryCards({ items }: { items: [string, string | number][] }) {
   );
 }
 
-function Table<T>({ cols, rows, empty, totals }: { cols: Col<T>[]; rows: T[]; empty: string; totals?: Record<string, string | number> }) {
+function Table<T>({ cols, rows, empty, totals, keepOnPrint }: { cols: Col<T>[]; rows: T[]; empty: string; totals?: Record<string, string | number>; keepOnPrint?: string[] }) {
+  // Under another report (Daily Summary) the page is narrow: print only the key columns there.
+  const hide = (k: string) => (keepOnPrint && !keepOnPrint.includes(k) ? " print:hidden" : "");
   return (
     <div className="bg-white border border-gray-200 rounded-xl overflow-x-auto print:border-black print:rounded-none">
       <table className="w-full text-xs">
         <thead className="bg-gray-50 print:bg-gray-100">
           <tr>
             {cols.map((c) => (
-              <th key={c.key} className={`px-3 py-2 font-bold text-gray-600 uppercase tracking-wide whitespace-nowrap border-b border-gray-200 ${c.align === "right" || c.money ? "text-right" : "text-left"}`}>{c.label}</th>
+              <th key={c.key} className={`px-3 py-2 font-bold text-gray-600 uppercase tracking-wide whitespace-nowrap border-b border-gray-200 ${c.align === "right" || c.money ? "text-right" : "text-left"}${hide(c.key)}`}>{c.label}</th>
             ))}
           </tr>
         </thead>
@@ -130,7 +134,7 @@ function Table<T>({ cols, rows, empty, totals }: { cols: Col<T>[]; rows: T[]; em
             rows.map((r, i) => (
               <tr key={i} className="border-b border-gray-100 last:border-0">
                 {cols.map((c) => (
-                  <td key={c.key} className={`px-3 py-2 whitespace-nowrap ${c.align === "right" || c.money ? "text-right tabular-nums" : ""}`}>{cell(c, r)}</td>
+                  <td key={c.key} className={`px-3 py-2 whitespace-nowrap ${c.align === "right" || c.money ? "text-right tabular-nums" : ""}${hide(c.key)}`}>{cell(c, r)}</td>
                 ))}
               </tr>
             ))
@@ -140,7 +144,7 @@ function Table<T>({ cols, rows, empty, totals }: { cols: Col<T>[]; rows: T[]; em
           <tfoot className="bg-gray-50 font-bold">
             <tr>
               {cols.map((c, i) => (
-                <td key={c.key} className={`px-3 py-2 whitespace-nowrap border-t border-gray-300 ${c.align === "right" || c.money ? "text-right tabular-nums" : ""}`}>
+                <td key={c.key} className={`px-3 py-2 whitespace-nowrap border-t border-gray-300 ${c.align === "right" || c.money ? "text-right tabular-nums" : ""}${hide(c.key)}`}>
                   {i === 0 ? "TOTAL" : totals[c.key] !== undefined ? (c.money ? inr(totals[c.key]) : totals[c.key]) : ""}
                 </td>
               ))}
@@ -178,6 +182,7 @@ export function CheckInReport({ day: fixedDay }: { day?: string } = {}) {
     { key: "source", label: "Source", value: (r) => r.source },
     { key: "otaConfirmation", label: "OTA Ref.", value: (r) => r.otaConfirmation },
     { key: "ratePerNight", label: "Rate/Night", value: (r) => r.ratePerNight, money: true },
+    { key: "discount", label: "Discount", value: (r) => r.discount, money: true },
     { key: "totalAmount", label: "Booking Value", value: (r) => r.totalAmount, money: true },
     { key: "advance", label: "Advance", value: (r) => r.advance, money: true },
     { key: "checkedInBy", label: "By", value: (r) => r.checkedInBy },
@@ -187,7 +192,7 @@ export function CheckInReport({ day: fixedDay }: { day?: string } = {}) {
     <ReportShell title="Check-in Report" subtitle="Guests checked in during the selected days" range={range} loading={isLoading} error={error}
       onCsv={data ? () => downloadCsv(`check-ins-${range.from}-to-${range.to}.csv`, toCsv(cols, data.rows)) : undefined}>
       {t && <SummaryCards items={[["Check-ins", t.checkIns], ["Rooms", t.rooms], ["Guests", t.pax], ["Booking Value", inr(t.totalAmount)], ["Advance Taken", inr(t.advance)]]} />}
-      <Table cols={cols} rows={data?.rows ?? []} empty="No check-ins in this period." totals={t ? { pax: t.pax, totalAmount: t.totalAmount, advance: t.advance } : undefined} />
+      <Table cols={cols} rows={data?.rows ?? []} empty="No check-ins in this period." keepOnPrint={range.fixed ? ["checkedInAt","bookingReference","guest","room","source","pax","totalAmount","advance"] : undefined} totals={t ? { pax: t.pax, discount: t.discount, totalAmount: t.totalAmount, advance: t.advance } : undefined} />
     </ReportShell>
   );
 }
@@ -206,6 +211,7 @@ export function CheckOutReport({ day: fixedDay }: { day?: string } = {}) {
     { key: "source", label: "Source", value: (r) => r.source },
     { key: "arrival", label: "Arrived", value: (r) => day(r.arrival) },
     { key: "nights", label: "Nights", value: (r) => r.nights, align: "right" },
+    { key: "discount", label: "Discount", value: (r) => r.discount, money: true },
     { key: "billAmount", label: "Bill Amount", value: (r) => r.billAmount, money: true },
     { key: "tax", label: "GST", value: (r) => r.tax, money: true },
     { key: "received", label: "Received", value: (r) => r.received, money: true },
@@ -219,7 +225,7 @@ export function CheckOutReport({ day: fixedDay }: { day?: string } = {}) {
     <ReportShell title="Check-out Report" subtitle="Guests checked out during the selected days, with the bill and how it was paid" range={range} loading={isLoading} error={error}
       onCsv={data ? () => downloadCsv(`check-outs-${range.from}-to-${range.to}.csv`, toCsv(cols, data.rows)) : undefined}>
       {t && <SummaryCards items={[["Check-outs", t.checkOuts], ["Billed", inr(t.billAmount)], ["GST", inr(t.tax)], ["Received", inr(t.received)], ["Refunded", inr(t.refunded)], ["Balance", inr(t.balance)]]} />}
-      <Table cols={cols} rows={data?.rows ?? []} empty="No check-outs in this period." totals={t ? { billAmount: t.billAmount, tax: t.tax, received: t.received, refunded: t.refunded, balance: t.balance } : undefined} />
+      <Table cols={cols} rows={data?.rows ?? []} empty="No check-outs in this period." keepOnPrint={range.fixed ? ["checkedOutAt","bookingReference","guest","room","source","billAmount","received","balance"] : undefined} totals={t ? { discount: t.discount, billAmount: t.billAmount, tax: t.tax, received: t.received, refunded: t.refunded, balance: t.balance } : undefined} />
     </ReportShell>
   );
 }
@@ -261,7 +267,7 @@ export function DayUseSalesReport({ day: fixedDay }: { day?: string } = {}) {
       <h3 className="text-sm font-bold text-gray-700 pt-2">Day-wise summary</h3>
       <Table cols={dayCols} rows={data?.byDay ?? []} empty="No day-use stays in this period." totals={t ? { stays: t.stays, hours: t.hours, taxable: t.taxable, tax: Math.round((t.cgst + t.sgst) * 100) / 100, total: t.total } : undefined} />
       <h3 className="text-sm font-bold text-gray-700 pt-2">Stays</h3>
-      <Table cols={cols} rows={data?.rows ?? []} empty="No day-use stays in this period." totals={t ? { hours: t.hours, taxable: t.taxable, cgst: t.cgst, sgst: t.sgst, total: t.total, received: t.received } : undefined} />
+      <Table cols={cols} keepOnPrint={range.fixed ? ["date","timeIn","bookingReference","guest","room","hours","total","received","status"] : undefined} rows={data?.rows ?? []} empty="No day-use stays in this period." totals={t ? { hours: t.hours, taxable: t.taxable, cgst: t.cgst, sgst: t.sgst, total: t.total, received: t.received } : undefined} />
     </ReportShell>
   );
 }

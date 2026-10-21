@@ -188,6 +188,12 @@ export default function CustomerBookingDetails() {
                   <span>Room Charges</span>
                   <span>₹{(booking.totalAmount - booking.taxAmount).toLocaleString("en-IN")}</span>
                 </div>
+                {Number(booking.discountAmount || 0) > 0 && (
+                  <div className="flex justify-between text-emerald-300">
+                    <span>Discount given{booking.discountType === "PERCENT" ? ` (${booking.discountValue}%)` : ""}</span>
+                    <span>− ₹{Number(booking.discountAmount).toLocaleString("en-IN")}</span>
+                  </div>
+                )}
                 <div className="flex justify-between">
                   <span>Taxes (GST)</span>
                   <span>₹{booking.taxAmount.toLocaleString("en-IN")}</span>

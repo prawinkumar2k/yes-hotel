@@ -1,3 +1,4 @@
+import { usePrintLayout } from "@/lib/usePrintLayout";
 import { advanceInfo, settlementKind } from "@/lib/advanceInfo";
 import { useEffect, useState } from "react";
 import { hotelContactFrom, useHotelSettings } from "@/hooks/usePublicData";
@@ -10,6 +11,7 @@ import { nights as countNights } from "@shared/dates";
 import { Loader2, Printer, ArrowLeft, ShieldCheck, FileCheck2, Eye, X } from "lucide-react";
 
 export default function AdminGRCPrint() {
+  usePrintLayout("portrait", 5);
   const { data: hotelSettings } = useHotelSettings();
   const hotelContact = hotelContactFrom(hotelSettings);
   // Shown inside the registration pop-up: hide this page's own toolbar.

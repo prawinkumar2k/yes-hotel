@@ -1,3 +1,4 @@
+import CheckInKycForm, { kycFromBooking, kycPayload, kycReady, type CheckInKyc } from "@/components/admin/CheckInKycForm";
 import React, { useState, useEffect } from "react";
 import { useHotelSettings } from "@/hooks/usePublicData";
 import { Link, useNavigate } from "react-router-dom";
@@ -54,6 +55,7 @@ export default function AdminFrontDesk() {
   const [selectedRoomId, setSelectedRoomId] = useState<string>("");
   const [idType, setIdType] = useState("Passport / Govt ID");
   const [idNumber, setIdNumber] = useState("");
+  const [kyc, setKyc] = useState<CheckInKyc | null>(null);
   const [submittingAction, setSubmittingAction] = useState(false);
 
   const [checkOutModal, setCheckOutModal] = useState<{ open: boolean; booking: any | null; preview: any | null }>({ open: false, booking: null, preview: null });
@@ -141,6 +143,7 @@ export default function AdminFrontDesk() {
   const openCheckIn = (booking: any) => {
     setSelectedRoomId(booking.assignedRoom?._id || booking.assignedRoom || "");
     setIdNumber(booking.guestDetails?.idNumber || "");
+    setKyc(kycFromBooking(booking));
     setCheckInModal({ open: true, booking });
   };
 
@@ -158,8 +161,7 @@ export default function AdminFrontDesk() {
         },
         body: JSON.stringify({
           roomId: selectedRoomId || checkInModal.booking.assignedRoom?._id || checkInModal.booking.assignedRoom,
-          idType,
-          idNumber,
+          ...(kyc ? kycPayload(kyc) : { idType, idNumber }),
           notes: "In-line Front Desk Check-In",
         }),
       });
@@ -1482,8 +1484,8 @@ export default function AdminFrontDesk() {
 
       {/* MODAL 1: CHECK-IN */}
       {checkInModal.open && checkInModal.booking && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white border border-gray-200 rounded-2xl w-full max-w-xl p-6 shadow-2xl space-y-5 text-gray-800">
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-start justify-center p-4 overflow-y-auto">
+          <div className="bg-white border border-gray-200 rounded-2xl w-full max-w-3xl p-6 shadow-2xl space-y-5 text-gray-800 my-4">
             <div className="flex items-center justify-between border-b border-gray-200 pb-4">
               <div className="flex items-center gap-2">
                 <LogIn className="text-emerald-400" size={20} />
@@ -1540,31 +1542,7 @@ export default function AdminFrontDesk() {
                 </select>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-gray-600 mb-1">ID Type / Document</label>
-                  <select
-                    value={idType}
-                    onChange={(e) => setIdType(e.target.value)}
-                    className="w-full bg-gray-100 border border-gray-200 text-sm text-gray-800 rounded-xl p-2.5 focus:border-[#c9a227]"
-                  >
-                    <option>Passport / Govt ID</option>
-                    <option>Aadhaar Card</option>
-                    <option>Driver's License</option>
-                    <option>Voter ID</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-gray-600 mb-1">ID Number / Reg Ref</label>
-                  <input
-                    type="text"
-                    placeholder="Enter ID number"
-                    value={idNumber}
-                    onChange={(e) => setIdNumber(e.target.value)}
-                    className="w-full bg-gray-100 border border-gray-200 text-sm text-gray-800 rounded-xl p-2.5 focus:border-[#c9a227]"
-                  />
-                </div>
-              </div>
+              {kyc && <CheckInKycForm value={kyc} onChange={setKyc} existingDocuments={checkInModal.booking?.guestDetails?.idProofImages?.length || 0} />}
             </div>
 
             <div className="flex justify-end gap-3 border-t border-gray-200 pt-4">
@@ -1575,7 +1553,7 @@ export default function AdminFrontDesk() {
                 Cancel
               </button>
               <button
-                disabled={submittingAction || !selectedRoomId}
+                disabled={submittingAction || !selectedRoomId || (kyc ? !kycReady(kyc) : false)}
                 onClick={handleProcessCheckIn}
                 className="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-gray-800 rounded-xl text-xs font-bold shadow-lg disabled:opacity-50"
               >

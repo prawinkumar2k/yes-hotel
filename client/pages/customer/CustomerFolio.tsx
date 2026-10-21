@@ -1,3 +1,4 @@
+import { usePrintLayout } from "@/lib/usePrintLayout";
 import { useParams, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "../../context/AuthContext";
@@ -17,6 +18,7 @@ async function apiFetch(url: string, token?: string) {
 }
 
 export default function CustomerFolio() {
+  usePrintLayout("portrait", 8);
   const { id } = useParams();
   const { user } = useAuth();
 

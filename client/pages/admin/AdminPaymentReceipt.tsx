@@ -1,3 +1,4 @@
+import { usePrintLayout } from "@/lib/usePrintLayout";
 import { useParams, Link } from "react-router-dom";
 import HotelDocAddress from "@/components/admin/HotelDocAddress";
 import { useQuery } from "@tanstack/react-query";
@@ -8,6 +9,7 @@ import { amountInWords } from "@/lib/amount-in-words";
 
 /** Payment receipt, laid out like the GST invoice and advance receipt. */
 export default function AdminPaymentReceipt() {
+  usePrintLayout("portrait", 8);
   const { id } = useParams();
   const embedded = typeof window !== "undefined" && window.self !== window.top;
   const { data, isLoading } = useQuery({

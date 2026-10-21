@@ -1,3 +1,4 @@
+import { usePrintLayout } from "@/lib/usePrintLayout";
 import { useParams, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { Loader2, Printer, ArrowLeft } from "lucide-react";
@@ -16,6 +17,7 @@ const MEAL: Record<string, string> = { EP: "Room only", CP: "Breakfast", MAP: "B
 
 /** Booking Confirmation for an advance reservation — same ruled-sheet layout as the advance receipt, invoice and GRC. */
 export default function AdminBookingConfirmation() {
+  usePrintLayout("portrait", 8);
   const { id } = useParams();
   const embedded = typeof window !== "undefined" && window.self !== window.top;
   const { data: d, isLoading, error } = useQuery({

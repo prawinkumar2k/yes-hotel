@@ -132,6 +132,14 @@ Day Summary, Check-in, Check-out and Day-use reports count what actually happene
 
 Website bookings are **on hold** unless **Admin → Settings → Online booking on the website** is ticked. While on hold, guests see "Online booking is temporarily on hold — call us" on the search, guest-details and payment pages, and the server refuses a booking even if someone calls it directly. Reception walk-ins, advances and reservations are not affected. Tick the box and save to reopen.
 
+## 7g. Booking numbers, check-in details, discount and OTA commission
+
+- **One booking number format for every booking:** `YH-MMDD-NNN` (for example YH-1021-004), whatever the source (walk-in, phone, website, OTA, advance reservation, group). The source is shown separately ("Booked through"; for OTA the OTA name and its confirmation number). Bookings made before this change keep the number they already have.
+- **Check-in of a reserved booking** (advance reservation, website, phone) asks for the same details as a walk-in: ID type and number (required), ID photos or documents (several), nationality, address, date of birth, gender, email, emergency phone, company, designation, purpose of visit, proceeding to, vehicle number, company GSTIN, and passport and visa details for foreign guests. They are saved on the booking and appear on the GRC and the bill.
+- **Discount to the customer:** in New Walk-In, give a discount as a flat amount or a percentage (with an optional reason). It comes off the bill before GST is worked out, is shared across rooms in proportion, and is shown on the booking, the GRC, the bill, the in-house register and the check-in and check-out reports.
+- **OTA commission:** enter it as a percentage of the pre-tax room amount or as a flat amount.
+- **Printing:** every report, the GRC, bill, receipts and confirmation print on one clean A4 sheet (reports landscape, documents portrait) without menus or the browser header and footer.
+
 ## 8. Daily checks
 
 - Admin → **Audit Log**: look for unexpected `master_password_login` or failed logins.

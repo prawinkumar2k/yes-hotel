@@ -2,6 +2,8 @@ import { useState } from "react";
 import { getStoredAuthToken } from "@/lib/authStorage";
 import { useQuery } from "@tanstack/react-query";
 import { todayBusinessDate } from "@shared/dates";
+import { usePrintLayout } from "@/lib/usePrintLayout";
+import HotelDocAddress from "@/components/admin/HotelDocAddress";
 import { CheckInReport, CheckOutReport, DayUseSalesReport } from "./OperationsReports";
 
 const formatAmount = (val: any) => {
@@ -12,6 +14,7 @@ const formatAmount = (val: any) => {
 };
 
 export default function DaySummaryReport() {
+  usePrintLayout("portrait");
   const [date, setDate] = useState(todayBusinessDate());
 
   const { data, isLoading } = useQuery({
@@ -50,12 +53,17 @@ export default function DaySummaryReport() {
       {/* PAGE 1 - DAILY HOTEL SUMMARY */}
       <div 
         className="print:m-0 p-6 border-2 border-gray-900 text-black text-sm bg-white print:border-2 print:border-black" 
-        style={{ fontFamily: "'Courier New', Courier, monospace" }}
+        style={{ fontFamily: "Inter, 'Segoe UI', Arial, sans-serif" }}
       >
-        <div className="flex justify-between items-center mb-4 border-b-2 border-gray-900 pb-2 font-bold">
-          <div className="text-base tracking-wide">YH - Day Sales Summary</div>
-          <div>Day: {new Date(date).toLocaleDateString('en-US', { weekday: 'short' })}</div>
-          <div>Date: {date}</div>
+        <div className="flex items-start justify-between gap-4 mb-5 border-b-2 border-gray-900 pb-3">
+          <div className="flex items-center gap-3">
+            <img src="/brand/yes-hotels-logo-sm.png" alt="" className="h-14 w-auto" />
+            <div className="text-[10px] leading-snug"><HotelDocAddress withEmailAndWeb={false} /></div>
+          </div>
+          <div className="text-right">
+            <div className="text-lg font-bold uppercase tracking-wide">Day Sales Summary</div>
+            <div className="text-xs">{new Date(date).toLocaleDateString('en-GB', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })}</div>
+          </div>
         </div>
 
         {isLoading ? (
@@ -67,29 +75,29 @@ export default function DaySummaryReport() {
               {/* Rooms Section */}
               <table className="w-full table-fixed border-collapse">
                 <tbody>
-                  <tr className="border-b border-gray-900">
-                    <td className="font-bold py-1 w-7/12 text-left">Rooms</td>
+                  <tr className="border-b-2 border-gray-800 bg-gray-100">
+                    <td className="font-bold py-1.5 px-2 w-7/12 text-left uppercase tracking-wide text-[11px]">Rooms</td>
                     <td className="py-1 w-5/12 text-right"></td>
                   </tr>
                   <tr>
                     <td className="py-1 pl-4 text-left">Check In</td>
-                    <td className="py-1 text-right font-mono border-b border-gray-300">{data?.checkIn ?? 0}</td>
+                    <td className="py-1 text-right tabular-nums border-b border-gray-300">{data?.checkIn ?? 0}</td>
                   </tr>
                   <tr>
                     <td className="py-1 pl-4 text-left">Check Out</td>
-                    <td className="py-1 text-right font-mono border-b border-gray-300">{data?.checkOut ?? 0}</td>
+                    <td className="py-1 text-right tabular-nums border-b border-gray-300">{data?.checkOut ?? 0}</td>
                   </tr>
                   <tr>
                     <td className="py-1 pl-4 text-left">Day Use</td>
-                    <td className="py-1 text-right font-mono border-b border-gray-300">{data?.dayUse ?? 0}</td>
+                    <td className="py-1 text-right tabular-nums border-b border-gray-300">{data?.dayUse ?? 0}</td>
                   </tr>
                   <tr>
                     <td className="py-1 pl-4 text-left">Occupancy Room</td>
-                    <td className="py-1 text-right font-mono border-b border-gray-300">{data?.occupancy ?? 0}</td>
+                    <td className="py-1 text-right tabular-nums border-b border-gray-300">{data?.occupancy ?? 0}</td>
                   </tr>
                   <tr>
                     <td className="py-1 pl-4 text-left">Pax</td>
-                    <td className="py-1 text-right font-mono border-b border-gray-300">{data?.pax ?? 0}</td>
+                    <td className="py-1 text-right tabular-nums border-b border-gray-300">{data?.pax ?? 0}</td>
                   </tr>
                 </tbody>
               </table>
@@ -97,21 +105,21 @@ export default function DaySummaryReport() {
               {/* Status Section */}
               <table className="w-full table-fixed border-collapse">
                 <tbody>
-                  <tr className="border-b border-gray-900">
-                    <td className="font-bold py-1 w-7/12 text-left">Status</td>
+                  <tr className="border-b-2 border-gray-800 bg-gray-100">
+                    <td className="font-bold py-1.5 px-2 w-7/12 text-left uppercase tracking-wide text-[11px]">Status</td>
                     <td className="py-1 w-5/12 text-right"></td>
                   </tr>
                   <tr>
                     <td className="py-1 pl-4 text-left">Cancelled</td>
-                    <td className="py-1 text-right font-mono border-b border-gray-300">{data?.cancelled ?? 0}</td>
+                    <td className="py-1 text-right tabular-nums border-b border-gray-300">{data?.cancelled ?? 0}</td>
                   </tr>
                   <tr>
                     <td className="py-1 pl-4 text-left">No Show</td>
-                    <td className="py-1 text-right font-mono border-b border-gray-300">{data?.noShow ?? 0}</td>
+                    <td className="py-1 text-right tabular-nums border-b border-gray-300">{data?.noShow ?? 0}</td>
                   </tr>
                   <tr>
                     <td className="py-1 pl-4 text-left">No. of Inquiry</td>
-                    <td className="py-1 text-right font-mono border-b border-gray-300">{data?.inquiries ?? 0}</td>
+                    <td className="py-1 text-right tabular-nums border-b border-gray-300">{data?.inquiries ?? 0}</td>
                   </tr>
                 </tbody>
               </table>
@@ -119,41 +127,41 @@ export default function DaySummaryReport() {
               {/* Reserved Through Section */}
               <table className="w-full table-fixed border-collapse">
                 <tbody>
-                  <tr className="border-b border-gray-900">
-                    <td className="font-bold py-1 w-7/12 text-left">Reserved Through</td>
+                  <tr className="border-b-2 border-gray-800 bg-gray-100">
+                    <td className="font-bold py-1.5 px-2 w-7/12 text-left uppercase tracking-wide text-[11px]">Reserved Through</td>
                     <td className="py-1 w-5/12 text-right"></td>
                   </tr>
                   <tr>
                     <td className="py-1 pl-4 text-left">Walkin</td>
-                    <td className="py-1 text-right font-mono border-b border-gray-300">{data?.walkin ?? 0}</td>
+                    <td className="py-1 text-right tabular-nums border-b border-gray-300">{data?.walkin ?? 0}</td>
                   </tr>
                   <tr>
                     <td className="py-1 pl-4 text-left">OTA (Total)</td>
-                    <td className="py-1 text-right font-mono border-b border-gray-300">{data?.ota ?? 0}</td>
+                    <td className="py-1 text-right tabular-nums border-b border-gray-300">{data?.ota ?? 0}</td>
                   </tr>
                   <tr>
                     <td className="py-1 pl-8 text-xs text-gray-700 text-left">- Agoda</td>
-                    <td className="py-1 text-right text-xs font-mono border-b border-gray-300">{data?.otaAgoda ?? 0}</td>
+                    <td className="py-1 text-right text-xs tabular-nums border-b border-gray-300">{data?.otaAgoda ?? 0}</td>
                   </tr>
                   <tr>
                     <td className="py-1 pl-8 text-xs text-gray-700 text-left">- MakeMyTrip (MMT)</td>
-                    <td className="py-1 text-right text-xs font-mono border-b border-gray-300">{data?.otaMmt ?? 0}</td>
+                    <td className="py-1 text-right text-xs tabular-nums border-b border-gray-300">{data?.otaMmt ?? 0}</td>
                   </tr>
                   <tr>
                     <td className="py-1 pl-8 text-xs text-gray-700 text-left">- Booking.com</td>
-                    <td className="py-1 text-right text-xs font-mono border-b border-gray-300">{data?.otaBooking ?? 0}</td>
+                    <td className="py-1 text-right text-xs tabular-nums border-b border-gray-300">{data?.otaBooking ?? 0}</td>
                   </tr>
                   <tr>
                     <td className="py-1 pl-8 text-xs text-gray-700 text-left">- Goibibo</td>
-                    <td className="py-1 text-right text-xs font-mono border-b border-gray-300">{data?.otaGoibibo ?? 0}</td>
+                    <td className="py-1 text-right text-xs tabular-nums border-b border-gray-300">{data?.otaGoibibo ?? 0}</td>
                   </tr>
                   <tr>
                     <td className="py-1 pl-4 text-left">Agency</td>
-                    <td className="py-1 text-right font-mono border-b border-gray-300">{data?.agency ?? 0}</td>
+                    <td className="py-1 text-right tabular-nums border-b border-gray-300">{data?.agency ?? 0}</td>
                   </tr>
                   <tr>
                     <td className="py-1 pl-4 text-left">Auto</td>
-                    <td className="py-1 text-right font-mono border-b border-gray-300">{data?.auto ?? 0}</td>
+                    <td className="py-1 text-right tabular-nums border-b border-gray-300">{data?.auto ?? 0}</td>
                   </tr>
                 </tbody>
               </table>
@@ -164,29 +172,29 @@ export default function DaySummaryReport() {
               {/* Receipts Section */}
               <table className="w-full table-fixed border-collapse">
                 <tbody>
-                  <tr className="border-b border-gray-900">
-                    <td className="font-bold py-1 w-7/12 text-left">Receipts</td>
+                  <tr className="border-b-2 border-gray-800 bg-gray-100">
+                    <td className="font-bold py-1.5 px-2 w-7/12 text-left uppercase tracking-wide text-[11px]">Receipts</td>
                     <td className="py-1 w-5/12 text-right"></td>
                   </tr>
                   <tr>
                     <td className="py-1 pl-4 text-left">Resrv. Adv.</td>
-                    <td className="py-1 text-right font-mono border-b border-gray-300">{formatAmount(data?.resrvAdv)}</td>
+                    <td className="py-1 text-right tabular-nums border-b border-gray-300">{formatAmount(data?.resrvAdv)}</td>
                   </tr>
                   <tr>
                     <td className="py-1 pl-4 text-left">Room Adv.</td>
-                    <td className="py-1 text-right font-mono border-b border-gray-300">{formatAmount(data?.roomAdv)}</td>
+                    <td className="py-1 text-right tabular-nums border-b border-gray-300">{formatAmount(data?.roomAdv)}</td>
                   </tr>
                   <tr>
                     <td className="py-1 pl-4 text-left">Partial</td>
-                    <td className="py-1 text-right font-mono border-b border-gray-300">{formatAmount(data?.partial)}</td>
+                    <td className="py-1 text-right tabular-nums border-b border-gray-300">{formatAmount(data?.partial)}</td>
                   </tr>
                   <tr>
                     <td className="py-1 pl-4 text-left">Final</td>
-                    <td className="py-1 text-right font-mono border-b border-gray-300">{formatAmount(data?.final)}</td>
+                    <td className="py-1 text-right tabular-nums border-b border-gray-300">{formatAmount(data?.final)}</td>
                   </tr>
                   <tr>
                     <td className="py-1 pl-4 text-left">Adv. Adjd.</td>
-                    <td className="py-1 text-right font-mono border-b border-gray-300">{formatAmount(data?.advAdjd)}</td>
+                    <td className="py-1 text-right tabular-nums border-b border-gray-300">{formatAmount(data?.advAdjd)}</td>
                   </tr>
                 </tbody>
               </table>
@@ -194,25 +202,25 @@ export default function DaySummaryReport() {
               {/* Mode Section */}
               <table className="w-full table-fixed border-collapse">
                 <tbody>
-                  <tr className="border-b border-gray-900">
-                    <td className="font-bold py-1 w-7/12 text-left">Mode</td>
+                  <tr className="border-b-2 border-gray-800 bg-gray-100">
+                    <td className="font-bold py-1.5 px-2 w-7/12 text-left uppercase tracking-wide text-[11px]">Mode</td>
                     <td className="py-1 w-5/12 text-right"></td>
                   </tr>
                   <tr>
                     <td className="py-1 pl-4 text-left">Cash</td>
-                    <td className="py-1 text-right font-mono border-b border-gray-300">{formatAmount(data?.cash)}</td>
+                    <td className="py-1 text-right tabular-nums border-b border-gray-300">{formatAmount(data?.cash)}</td>
                   </tr>
                   <tr>
                     <td className="py-1 pl-4 text-left">Paytm Card</td>
-                    <td className="py-1 text-right font-mono border-b border-gray-300">{formatAmount(data?.paytm)}</td>
+                    <td className="py-1 text-right tabular-nums border-b border-gray-300">{formatAmount(data?.paytm)}</td>
                   </tr>
                   <tr>
                     <td className="py-1 pl-4 text-left">HDFC UPI</td>
-                    <td className="py-1 text-right font-mono border-b border-gray-300">{formatAmount(data?.hdfcUpi)}</td>
+                    <td className="py-1 text-right tabular-nums border-b border-gray-300">{formatAmount(data?.hdfcUpi)}</td>
                   </tr>
                   <tr>
                     <td className="py-1 pl-4 text-left">OTA Credit</td>
-                    <td className="py-1 text-right font-mono border-b border-gray-300">{formatAmount(data?.otaCredit)}</td>
+                    <td className="py-1 text-right tabular-nums border-b border-gray-300">{formatAmount(data?.otaCredit)}</td>
                   </tr>
                 </tbody>
               </table>
@@ -220,17 +228,17 @@ export default function DaySummaryReport() {
               {/* Sales Section */}
               <table className="w-full table-fixed border-collapse">
                 <tbody>
-                  <tr className="border-b border-gray-900">
-                    <td className="font-bold py-1 w-7/12 text-left">Sales</td>
+                  <tr className="border-b-2 border-gray-800 bg-gray-100">
+                    <td className="font-bold py-1.5 px-2 w-7/12 text-left uppercase tracking-wide text-[11px]">Sales</td>
                     <td className="py-1 w-5/12 text-right"></td>
                   </tr>
                   <tr>
                     <td className="py-1 pl-4 text-left">Room</td>
-                    <td className="py-1 text-right font-mono border-b border-gray-300">{formatAmount(data?.roomSales)}</td>
+                    <td className="py-1 text-right tabular-nums border-b border-gray-300">{formatAmount(data?.roomSales)}</td>
                   </tr>
                   <tr>
                     <td className="py-1 pl-4 text-left">Misc.</td>
-                    <td className="py-1 text-right font-mono border-b border-gray-300">{formatAmount(data?.miscSales)}</td>
+                    <td className="py-1 text-right tabular-nums border-b border-gray-300">{formatAmount(data?.miscSales)}</td>
                   </tr>
                 </tbody>
               </table>
@@ -238,9 +246,9 @@ export default function DaySummaryReport() {
               {/* Credits Section */}
               <table className="w-full table-fixed border-collapse">
                 <tbody>
-                  <tr className="border-b border-gray-900">
-                    <td className="font-bold py-1 w-7/12 text-left">Credits</td>
-                    <td className="py-1 text-right font-mono border-b border-gray-300">{formatAmount(data?.credits)}</td>
+                  <tr className="border-b-2 border-gray-800 bg-gray-100">
+                    <td className="font-bold py-1.5 px-2 w-7/12 text-left uppercase tracking-wide text-[11px]">Credits</td>
+                    <td className="py-1 text-right tabular-nums border-b border-gray-300">{formatAmount(data?.credits)}</td>
                   </tr>
                 </tbody>
               </table>
@@ -262,12 +270,17 @@ export default function DaySummaryReport() {
       {/* PAGE 2 - CASH SHEET */}
       <div 
         className="print:m-0 mt-8 p-6 border-2 border-gray-900 text-black text-sm bg-white print:break-before-page print:border-2 print:border-black" 
-        style={{ fontFamily: "'Courier New', Courier, monospace" }}
+        style={{ fontFamily: "Inter, 'Segoe UI', Arial, sans-serif" }}
       >
-        <div className="flex justify-between items-center mb-4 border-b-2 border-gray-900 pb-2 font-bold">
-          <div className="text-base tracking-wide">CASH Sheet</div>
-          <div>Day: {new Date(date).toLocaleDateString('en-US', { weekday: 'short' })}</div>
-          <div>Date: {date}</div>
+        <div className="flex items-start justify-between gap-4 mb-5 border-b-2 border-gray-900 pb-3">
+          <div className="flex items-center gap-3">
+            <img src="/brand/yes-hotels-logo-sm.png" alt="" className="h-14 w-auto" />
+            <div className="text-[10px] leading-snug"><HotelDocAddress withEmailAndWeb={false} /></div>
+          </div>
+          <div className="text-right">
+            <div className="text-lg font-bold uppercase tracking-wide">Cash Sheet</div>
+            <div className="text-xs">{new Date(date).toLocaleDateString('en-GB', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })}</div>
+          </div>
         </div>
 
         <table className="w-full mb-8 border-collapse table-fixed">
@@ -285,39 +298,39 @@ export default function DaySummaryReport() {
               <td className="py-2 border-b border-gray-300"></td>
               <td className="py-2 border-b border-gray-300 font-bold">Opening Balance (B/d)</td>
               <td className="py-2 border-b border-gray-300"></td>
-              <td className="py-2 border-b border-gray-300 text-right font-mono">0.00</td>
-              <td className="py-2 border-b border-gray-300 text-right font-mono"></td>
+              <td className="py-2 border-b border-gray-300 text-right tabular-nums">0.00</td>
+              <td className="py-2 border-b border-gray-300 text-right tabular-nums"></td>
             </tr>
             <tr>
               <td className="py-2 border-b border-gray-300"></td>
               <td className="py-2 border-b border-gray-300 font-bold">Today Cash Inward</td>
               <td className="py-2 border-b border-gray-300"></td>
-              <td className="py-2 border-b border-gray-300 text-right font-mono">{formatAmount(data?.cash)}</td>
-              <td className="py-2 border-b border-gray-300 text-right font-mono"></td>
+              <td className="py-2 border-b border-gray-300 text-right tabular-nums">{formatAmount(data?.cash)}</td>
+              <td className="py-2 border-b border-gray-300 text-right tabular-nums"></td>
             </tr>
             {/* Blank rows 1 to 10 */}
             {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((num) => (
               <tr key={num}>
-                <td className="py-2 border-b border-gray-200 font-mono">{num}</td>
+                <td className="py-2 border-b border-gray-200 tabular-nums">{num}</td>
                 <td className="py-2 border-b border-gray-200"></td>
                 <td className="py-2 border-b border-gray-200"></td>
-                <td className="py-2 border-b border-gray-200 font-mono text-right"></td>
-                <td className="py-2 border-b border-gray-200 font-mono text-right"></td>
+                <td className="py-2 border-b border-gray-200 tabular-nums text-right"></td>
+                <td className="py-2 border-b border-gray-200 tabular-nums text-right"></td>
               </tr>
             ))}
             <tr>
               <td className="py-2 border-b border-gray-300"></td>
               <td className="py-2 border-b border-gray-300 font-bold">Total</td>
               <td className="py-2 border-b border-gray-300"></td>
-              <td className="py-2 border-b border-gray-300 text-right font-mono">{formatAmount(data?.cash)}</td>
-              <td className="py-2 border-b border-gray-300 text-right font-mono">{formatAmount(data?.cash)}</td>
+              <td className="py-2 border-b border-gray-300 text-right tabular-nums">{formatAmount(data?.cash)}</td>
+              <td className="py-2 border-b border-gray-300 text-right tabular-nums">{formatAmount(data?.cash)}</td>
             </tr>
             <tr>
               <td className="py-2 border-b-2 border-gray-900"></td>
               <td className="py-2 border-b-2 border-gray-900 font-bold">Closing Balance (C/f)</td>
               <td className="py-2 border-b-2 border-gray-900"></td>
-              <td className="py-2 border-b-2 border-gray-900 text-right font-mono"></td>
-              <td className="py-2 border-b-2 border-gray-900 text-right font-mono">{formatAmount(data?.cash)}</td>
+              <td className="py-2 border-b-2 border-gray-900 text-right tabular-nums"></td>
+              <td className="py-2 border-b-2 border-gray-900 text-right tabular-nums">{formatAmount(data?.cash)}</td>
             </tr>
           </tbody>
         </table>

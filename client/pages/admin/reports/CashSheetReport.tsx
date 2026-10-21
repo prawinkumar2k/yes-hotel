@@ -2,8 +2,11 @@ import { useState } from "react";
 import { getStoredAuthToken } from "@/lib/authStorage";
 import { useQuery } from "@tanstack/react-query";
 import { todayBusinessDate } from "@shared/dates";
+import HotelDocAddress from "@/components/admin/HotelDocAddress";
+import { usePrintLayout } from "@/lib/usePrintLayout";
 
 export default function CashSheetReport() {
+  usePrintLayout("portrait");
   const [date, setDate] = useState(todayBusinessDate());
 
   const { data, isLoading } = useQuery({
@@ -69,16 +72,21 @@ export default function CashSheetReport() {
       {/* Printable Area - EXACT FORMAT */}
       <div 
         className="print:m-0 p-6 border-2 border-gray-900 text-black text-sm bg-white print:border-2 print:border-black" 
-        style={{ fontFamily: "'Courier New', Courier, monospace" }}
+        style={{ fontFamily: "Inter, 'Segoe UI', Arial, sans-serif" }}
       >
-        <div className="flex justify-between items-center mb-4 border-b-2 border-gray-900 pb-2 font-bold">
-          <div className="text-base tracking-wide">CASH Sheet</div>
-          <div>Day: {new Date(date).toLocaleDateString('en-US', { weekday: 'short' })}</div>
-          <div>Date: {date}</div>
+        <div className="flex items-start justify-between gap-4 mb-5 border-b-2 border-gray-900 pb-3">
+          <div className="flex items-center gap-3">
+            <img src="/brand/yes-hotels-logo-sm.png" alt="" className="h-14 w-auto" />
+            <div className="text-[10px] leading-snug"><HotelDocAddress withEmailAndWeb={false} /></div>
+          </div>
+          <div className="text-right">
+            <div className="text-lg font-bold uppercase tracking-wide">Cash Sheet</div>
+            <div className="text-xs">{new Date(date).toLocaleDateString('en-GB', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })}</div>
+          </div>
         </div>
 
         {isLoading ? (
-          <div className="h-64 flex items-center justify-center font-mono">Loading Data...</div>
+          <div className="h-64 flex items-center justify-center tabular-nums">Loading Data...</div>
         ) : (
           <div>
             <table className="w-full mb-8 border-collapse table-fixed">
@@ -94,11 +102,11 @@ export default function CashSheetReport() {
               <tbody>
                 {displayRows.map((row, index) => (
                   <tr key={index} className="border-b border-gray-300">
-                    <td className="py-2 text-left font-mono">{row.sNo || index + 1}</td>
+                    <td className="py-2 text-left tabular-nums">{row.sNo || index + 1}</td>
                     <td className="py-2 text-left truncate">{row.party}</td>
                     <td className="py-2 text-left truncate">{row.description}</td>
-                    <td className="py-2 text-right font-mono">{row.debit}</td>
-                    <td className="py-2 text-right font-mono">{row.credit}</td>
+                    <td className="py-2 text-right tabular-nums">{row.debit}</td>
+                    <td className="py-2 text-right tabular-nums">{row.credit}</td>
                   </tr>
                 ))}
                 {/* Totals Row */}
@@ -106,8 +114,8 @@ export default function CashSheetReport() {
                   <td className="py-2"></td>
                   <td className="py-2">Total</td>
                   <td className="py-2"></td>
-                  <td className="py-2 text-right font-mono">{totalDebit}</td>
-                  <td className="py-2 text-right font-mono">{totalCredit}</td>
+                  <td className="py-2 text-right tabular-nums">{totalDebit}</td>
+                  <td className="py-2 text-right tabular-nums">{totalCredit}</td>
                 </tr>
               </tbody>
             </table>
@@ -118,15 +126,15 @@ export default function CashSheetReport() {
                   <tbody>
                     <tr>
                       <td className="py-2 font-bold w-48 text-left">Opening Balance (B/d)</td>
-                      <td className="py-2 border-b border-gray-400 font-mono text-right">0.00</td>
+                      <td className="py-2 border-b border-gray-400 tabular-nums text-right">0.00</td>
                     </tr>
                     <tr>
                       <td className="py-2 font-bold w-48 text-left">Today Cash Inward</td>
-                      <td className="py-2 border-b border-gray-400 font-mono text-right">{cashInward}</td>
+                      <td className="py-2 border-b border-gray-400 tabular-nums text-right">{cashInward}</td>
                     </tr>
                     <tr>
                       <td className="py-2 font-bold w-48 text-left">Closing Balance (C/f)</td>
-                      <td className="py-2 border-b border-gray-400 font-mono text-right">{closingBalance}</td>
+                      <td className="py-2 border-b border-gray-400 tabular-nums text-right">{closingBalance}</td>
                     </tr>
                   </tbody>
                 </table>
@@ -134,7 +142,7 @@ export default function CashSheetReport() {
               
               <div>
                 <div className="font-bold mb-2">Remarks, If any</div>
-                <div className="border border-gray-400 h-24 p-2 w-full font-mono text-sm">{data?.remarks || ''}</div>
+                <div className="border border-gray-400 h-24 p-2 w-full tabular-nums text-sm">{data?.remarks || ''}</div>
               </div>
             </div>
 

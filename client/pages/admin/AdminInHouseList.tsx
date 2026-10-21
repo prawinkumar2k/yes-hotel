@@ -1,3 +1,4 @@
+import { usePrintLayout } from "@/lib/usePrintLayout";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
@@ -13,6 +14,7 @@ const formatAmount = (val: any) => {
 };
 
 export default function AdminInHouseList() {
+  usePrintLayout("landscape", 6);
   const [selectedDate, setSelectedDate] = useState<string>(format(new Date(), "yyyy-MM-dd"));
 
   const { data = [], isLoading } = useQuery({
@@ -175,7 +177,7 @@ export default function AdminInHouseList() {
                   return (
                     <tr
                       key={row._id}
-                      className={`hover:bg-yellow-50/50 print:hover:bg-transparent border-b border-gray-400 h-7 text-[10.5px] ${isCheckedOut ? "bg-gray-50/70" : ""}`}
+                      className={`hover:bg-yellow-50/50 print:hover:bg-transparent border-b border-gray-400 h-7 print:h-[5.2mm] text-[10.5px] ${isCheckedOut ? "bg-gray-50/70" : ""}`}
                     >
                       <td className="border border-black p-1 font-bold">{i + 1}</td>
                       <td className="border border-black p-1 font-semibold truncate text-[10px]" title={row.grcNo}>
@@ -227,7 +229,7 @@ export default function AdminInHouseList() {
 
                 {/* Blank rows up to 25 rows exactly matching physical ledger */}
                 {Array.from({ length: Math.max(0, 25 - data.length) }).map((_, i) => (
-                  <tr key={`empty-${i}`} className="h-7 border-b border-gray-400">
+                  <tr key={`empty-${i}`} className="h-7 print:h-[5.2mm] border-b border-gray-400">
                     <td className="border border-black p-1 text-gray-400">{data.length + i + 1}</td>
                     <td className="border border-black p-1"></td>
                     <td className="border border-black p-1"></td>
@@ -271,11 +273,12 @@ export default function AdminInHouseList() {
       {/* Global Landscape Print Styles Injection */}
       <style>{`
         @media print {
-          @page { size: landscape; margin: 4mm; }
           body { -webkit-print-color-adjust: exact; print-color-adjust: exact; background: white !important; }
           .print\\:hidden { display: none !important; }
           table { width: 100% !important; min-width: 100% !important; font-size: 8px !important; table-layout: auto !important; }
-          th, td { padding: 1.5px 2px !important; }
+          th, td { padding: 1.5px 2px !important; white-space: nowrap !important; line-height: 1.1 !important; }
+          td span.block { display: inline !important; margin-left: 3px; }
+          td.truncate, td[title] { overflow: hidden; text-overflow: ellipsis; max-width: 90px; }
         }
       `}</style>
     </div>

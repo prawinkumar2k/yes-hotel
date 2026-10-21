@@ -1,3 +1,4 @@
+import { applyCheckInDetails, assertIdentity, CheckInDetailsError } from "../services/checkin-details.service";
 import { SELLABLE_ROOM_FILTER } from "../services/maintenance.service";
 import { Request, Response } from "express";
 import mongoose from "mongoose";
@@ -735,10 +736,8 @@ export const checkIn = async (req: Request, res: Response) => {
         // KYC capture at check-in. Previously collected by the frontend
         // form but never wired to any state or sent to this endpoint at
         // all — filled in, then silently discarded on submit.
-        if (idType) booking.guestDetails.idType = idType;
-        if (idNumber) booking.guestDetails.idNumber = idNumber;
-        if (nationality) booking.guestDetails.nationality = nationality;
-        if (emergencyPhone) booking.guestDetails.emergencyPhone = emergencyPhone;
+        applyCheckInDetails(booking, req.body);
+        assertIdentity(booking);
 
         // Room state update
         targetRoom.status = RoomStatus.OCCUPIED;
@@ -831,6 +830,9 @@ export const checkIn = async (req: Request, res: Response) => {
     } catch (error: any) {
       if (error instanceof RoomUnavailableError) {
         return res.status(409).json({ success: false, code: "ROOM_UNAVAILABLE", message: error.message });
+      }
+      if (error instanceof CheckInDetailsError) {
+        return res.status(400).json({ success: false, message: error.message });
       }
       if (error instanceof IllegalCheckInTransitionError) {
         return res.status(400).json({ success: false, message: "Booking must be CONFIRMED before check-in" });

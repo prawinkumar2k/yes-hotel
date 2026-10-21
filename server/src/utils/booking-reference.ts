@@ -2,13 +2,17 @@ import { ClientSession } from "mongoose";
 import { Booking } from "../models/Booking";
 import { todayBusinessDate } from "../../../shared/dates";
 
-export async function generateBookingReference(source: string, session?: ClientSession): Promise<string> {
+/**
+ * One booking number format for every booking, whatever its source (walk-in, phone, website, OTA, advance
+ * reservation, group): YH-MMDD-NNN, e.g. YH-1021-004. The source is a field on the booking, not part of the number.
+ * `_source` is accepted for older callers and ignored. Numbers already issued with an old prefix are not changed.
+ */
+export const BOOKING_NUMBER_PREFIX = "YH";
+
+export async function generateBookingReference(_source?: string, session?: ClientSession): Promise<string> {
   // MMDD of the business date at the property (Asia/Kolkata).
   const [, month, date] = todayBusinessDate().split("-");
-  
-  // Format source (e.g. WALK_IN -> WALKIN)
-  const formattedSource = source.replace(/[^a-zA-Z]/g, "").toUpperCase();
-  const prefix = `${formattedSource}-${month}${date}`;
+  const prefix = `${BOOKING_NUMBER_PREFIX}-${month}${date}`;
 
   // Query within the session if provided
   const query = Booking.countDocuments({ bookingReference: { $regex: `^${prefix}-` } });
