@@ -1,3 +1,4 @@
+import { COUNTER_ITEMS, counterItemLabel } from "@/lib/counterItems";
 import CheckInKycForm, { kycFromBooking, kycPayload, kycReady, type CheckInKyc } from "@/components/admin/CheckInKycForm";
 import React, { useState, useEffect } from "react";
 import { useHotelSettings } from "@/hooks/usePublicData";
@@ -596,7 +597,9 @@ export default function AdminFrontDesk() {
         body: JSON.stringify({
           description: newChargeDesc,
           amount: parseFloat(newChargeAmount),
-          lineType: newChargeType || "ADDON",
+          lineType: newChargeType.startsWith("ITEM:") ? "ADDON" : newChargeType || "ADDON",
+          // A named item (water bottle, dental kit …) is counted per item in the MIS.
+          ...(newChargeType.startsWith("ITEM:") ? { notes: `item:${newChargeType.slice(5)}` } : {}),
         }),
       });
       const json = await res.json();
@@ -2438,10 +2441,14 @@ export default function AdminFrontDesk() {
                     />
                     <select
                       value={newChargeType}
-                      onChange={(e) => setNewChargeType(e.target.value)}
+                      onChange={(e) => {
+                        setNewChargeType(e.target.value);
+                        if (e.target.value.startsWith("ITEM:") && !newChargeDesc) setNewChargeDesc(counterItemLabel(e.target.value.slice(5)));
+                      }}
                       className="bg-white border border-gray-300 text-xs text-gray-900 rounded-xl p-2.5"
                     >
                       <option value="ADDON">Other / Add-on</option>
+                      {COUNTER_ITEMS.filter((i) => i.category !== "EARLY_CHECK_IN" && i.category !== "OTHER").map((i) => <option key={i.category} value={`ITEM:${i.category}`}>{i.label}</option>)}
                       <option value="EARLY_CHECK_IN">Early Check-in</option>
                       <option value="LATE_CHECK_OUT">Late Check-out</option>
                       <option value="EXTRA_BED">Extra Bed</option>

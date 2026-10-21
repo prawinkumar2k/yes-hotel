@@ -1,6 +1,6 @@
 import { format } from "date-fns";
 
-export type InvoiceRow = { description: string; tariff: number; extBed: number; disc: number; cgst: number; sgst: number; fnb: number; others: number };
+export type InvoiceRow = { description: string; tariff: number; extBed: number; disc: number; cgst: number; sgst: number; fnb: number; others: number; items: { description: string; amount: number }[] };
 
 const r2 = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
 
@@ -16,7 +16,7 @@ export function buildInvoiceRows(debitLines: any[], defaultRoomNum: string): Inv
   const taxByDay = new Map<string, { cgst: number; sgst: number }>();
   const row = (room: string, day: Date) => {
     const key = `${room}_${format(day, "yyyy-MM-dd")}`;
-    if (!rows.has(key)) rows.set(key, { description: `${room} ${format(day, "dd-MMM")}`, tariff: 0, extBed: 0, disc: 0, cgst: 0, sgst: 0, fnb: 0, others: 0, sort: key });
+    if (!rows.has(key)) rows.set(key, { description: `${room} ${format(day, "dd-MMM")}`, tariff: 0, extBed: 0, disc: 0, cgst: 0, sgst: 0, fnb: 0, others: 0, items: [], sort: key });
     return { key, entry: rows.get(key)! };
   };
 
@@ -44,6 +44,8 @@ export function buildInvoiceRows(debitLines: any[], defaultRoomNum: string): Inv
       else if (line.lineType === "FOOD_AND_BEVERAGE" || line.lineType === "RESTAURANT") entry.fnb += part;
       else if (line.lineType === "DISCOUNT") entry.disc += part;
       else entry.others += part;
+      // Name what was charged (water bottle, laundry, early check-in …) so the invoice says it specifically.
+      if (!["ROOM_CHARGE", "DISCOUNT"].includes(line.lineType) && line.description) entry.items.push({ description: String(line.description), amount: part });
       // Taxed lines: room, extra bed, early check-in / late check-out (accommodation).
       if (["ROOM_CHARGE", "EXTRA_BED", "EARLY_CHECK_IN", "LATE_CHECK_OUT"].includes(line.lineType)) {
         const m = contrib.get(posted) ?? new Map<string, number>();

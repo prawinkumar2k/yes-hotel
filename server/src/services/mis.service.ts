@@ -139,7 +139,7 @@ export async function computeMis(month: string, scope: Record<string, unknown> =
   }
 
   // Sales from the bills: room charges spread over the nights they cover; other charges on their date.
-  const lines: any[] = await FolioLine.find({ date: inRange, direction: FolioLineDirection.DEBIT, lineType: { $nin: TAX_TYPES } } as any).select("lineType amount date coversNights postedBy").lean();
+  const lines: any[] = await FolioLine.find({ date: inRange, direction: FolioLineDirection.DEBIT, lineType: { $nin: TAX_TYPES } } as any).select("lineType amount date coversNights postedBy notes").lean();
   const reversed = new Set(
     (await FolioLine.find({ lineType: FolioLineType.REVERSAL, reversedLineId: { $in: lines.map((l) => l._id) } } as any).select("reversedLineId").lean()).map((x: any) => String(x.reversedLineId)),
   );
@@ -153,7 +153,12 @@ export async function computeMis(month: string, scope: Record<string, unknown> =
         for (const n of nightsList) rows.get(n)!.roomSales += share;
       } else { const r = row(l.date); if (r) r.roomSales += amount; }
     } else if (l.lineType === FolioLineType.RESTAURANT) { const r = row(l.date); if (r) r.fbSales += amount; }
-    else if (l.postedBy !== "COUNTER_SALE") { const r = row(l.date); if (r) r.misc += amount; } // counter sales are counted from the shifts
+    else if (l.postedBy !== "COUNTER_SALE") {
+      const r = row(l.date); if (!r) continue; // counter sales posted by the cashier are counted from the shifts
+      const item = /^item:([A-Z_]+)$/.exec(String(l.notes ?? ""))?.[1];
+      if (item) { (r[RS_FIELD[item] ?? "rsOther"] as number) += amount; r.rsTotal += amount; } // an item posted straight to a room bill
+      else r.misc += amount;
+    }
   }
 
   // Totals per day

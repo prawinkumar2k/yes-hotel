@@ -357,7 +357,12 @@ export default function AdminFolioPrint() {
                   : "0%";
                 return (
                   <tr key={i} className="align-top h-8">
-                    <td className="border-r border-black p-1 text-left font-mono font-bold">{row.description}</td>
+                    <td className="border-r border-black p-1 text-left font-mono font-bold">
+                      {row.description}
+                      {(row.items ?? []).map((it: any, k: number) => (
+                        <div key={k} className="font-sans font-normal text-[9px] leading-tight text-gray-800">↳ {it.description} — ₹{Number(it.amount).toFixed(2)}</div>
+                      ))}
+                    </td>
                     <td className="border-r border-black p-1 text-right">{row.tariff ? row.tariff.toFixed(2) : "-"}</td>
                     <td className="border-r border-black p-1 text-right">{row.extBed ? row.extBed.toFixed(2) : "-"}</td>
                     <td className="border-r border-black p-1 text-right">{row.disc ? row.disc.toFixed(2) : "-"}</td>

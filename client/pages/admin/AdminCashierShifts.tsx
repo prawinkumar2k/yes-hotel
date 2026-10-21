@@ -1,3 +1,4 @@
+import { COUNTER_ITEMS } from "@/lib/counterItems";
 import React, { useState, useEffect } from "react";
 import {
   DollarSign, Plus, RefreshCw, Lock, CheckCircle2, AlertTriangle, Clock,
@@ -262,7 +263,7 @@ export default function AdminCashierShifts() {
           quantity: Number(sale.quantity) || 1,
           mode: sale.mode,
           reference: sale.reference || undefined,
-          roomNumber: sale.roomNumber || undefined,
+          roomNumber: sale.roomNumber.trim(),
           reason: sale.reason || undefined,
         }),
       });
@@ -1109,16 +1110,11 @@ export default function AdminCashierShifts() {
               </h3>
               <button type="button" onClick={() => setShowSaleModal(false)} className="text-gray-400 hover:text-gray-700"><X size={20} /></button>
             </div>
-            <p className="text-xs text-gray-500">Money the guest pays the desk. Cash is added to the drawer; UPI and card go to their own totals.</p>
+            <p className="text-xs text-gray-500">Money the guest pays the desk, for a room. It is added to that room's bill (named on the invoice) and to the drawer: cash into the drawer, UPI and card to their own totals.</p>
             <div>
               <label className="block text-xs font-semibold text-gray-600 mb-1">Item *</label>
               <select value={sale.category} onChange={(e: any) => setSale({ ...sale, category: e.target.value })} className={`w-full bg-gray-50 border border-gray-200 text-sm text-gray-900 rounded-lg p-2.5 outline-none font-semibold`}>
-                <option value="EARLY_CHECK_IN">Early Check-in</option>
-                <option value="WATER_BOTTLE">Water Bottle</option>
-                <option value="DENTAL_KIT">Dental Kit</option>
-                <option value="TEA_COFFEE_SHOP">Tea / Coffee Shop</option>
-                <option value="KOVAI_KONGU_MESS">Kovai Kongu Mess</option>
-                <option value="OTHER">Others</option>
+                {COUNTER_ITEMS.map((i) => <option key={i.category} value={i.category}>{i.label}</option>)}
               </select>
             </div>
             <div className="grid grid-cols-2 gap-3">
@@ -1139,8 +1135,8 @@ export default function AdminCashierShifts() {
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-semibold text-gray-600 mb-1">Room No. (optional)</label>
-                <input value={sale.roomNumber} onChange={(e) => setSale({ ...sale, roomNumber: e.target.value })} placeholder="101" className={`w-full bg-gray-50 border border-gray-200 text-sm text-gray-900 rounded-lg p-2.5 outline-none`} />
+                <label className="block text-xs font-semibold text-gray-600 mb-1">Room No. * (the sale goes on this room's bill)</label>
+                <input required value={sale.roomNumber} onChange={(e) => setSale({ ...sale, roomNumber: e.target.value })} placeholder="101" className={`w-full bg-gray-50 border border-gray-200 text-sm text-gray-900 rounded-lg p-2.5 outline-none`} />
               </div>
             </div>
             {sale.mode !== "CASH" && (

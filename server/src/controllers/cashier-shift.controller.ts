@@ -267,7 +267,7 @@ export const recordCounterSale = async (req: Request, res: Response) => {
         quantity: z.coerce.number().int().min(1).max(999).default(1),
         mode: z.enum(["CASH", "UPI", "CARD"]).default("CASH"),
         reference: z.string().trim().max(60).optional(),
-        roomNumber: z.string().trim().max(20).optional(),
+        roomNumber: z.string("Enter the room number: the sale is added to that room's bill").trim().min(1, "Enter the room number: the sale is added to that room's bill").max(20),
         reason: z.string().trim().max(200).optional(),
       })
       .safeParse(req.body);
@@ -288,6 +288,25 @@ export const recordCounterSale = async (req: Request, res: Response) => {
     }
 
     const description = d.category === "OTHER" ? d.reason! : (d.reason ? `${PAID_OUT_LABELS[d.category]} — ${d.reason}` : PAID_OUT_LABELS[d.category]);
+
+    // The room's bill: the guest in that room right now. The item is posted as a charge and the money taken at the
+    // desk as a payment against it, so the room balance is unchanged and the invoice names the item and how it was paid.
+    const { Room } = await import("../models/Room");
+    const { Booking, BookingStatus } = await import("../models/Booking");
+    const { postCharge, findFolioForBooking } = await import("../services/folio.service");
+    const { FolioLineType } = await import("../models/FolioLine");
+    const { resolvePaymentChannel } = await import("../utils/payment-channel.resolver");
+    const room: any = await Room.findOne({ roomNumber: d.roomNumber, ...(shift.propertyId ? { propertyId: shift.propertyId } : {}) }).select("_id roomNumber").lean();
+    const stay: any = room ? await Booking.findOne({ assignedRoom: room._id, status: BookingStatus.CHECKED_IN }).sort({ checkedInAt: -1 }).select("_id").lean() : null;
+    if (!stay) return res.status(400).json({ success: false, message: `Room ${d.roomNumber} has no checked-in guest: the sale is added to the room's bill` });
+    const folio: any = await findFolioForBooking(stay._id);
+    if (!folio || folio.status !== "OPEN") return res.status(400).json({ success: false, message: `Room ${d.roomNumber} has no open bill to add this sale to` });
+    const label = `${description}${d.quantity > 1 ? ` × ${d.quantity}` : ""}`;
+    const channel = await resolvePaymentChannel(d.mode, undefined).catch(() => undefined);
+    const now = new Date();
+    await postCharge({ folioId: String(folio._id), bookingId: String(stay._id), lineType: FolioLineType.ADDON, description: label, amount: d.amount, quantity: d.quantity, date: now, postedBy: "COUNTER_SALE", notes: `item:${d.category}` }, { req });
+    await postCharge({ folioId: String(folio._id), bookingId: String(stay._id), lineType: FolioLineType.PAYMENT, description: `${label} paid at the desk (${d.mode})`, amount: d.amount, date: now, postedBy: "COUNTER_SALE", paymentChannelId: channel ? String(channel) : undefined, notes: d.reference || undefined }, { req });
+
     (shift as any).counterSales.push({ category: d.category, description, quantity: d.quantity, amount: d.amount, mode: d.mode, reference: d.reference, roomNumber: d.roomNumber, recordedBy: actorId, createdAt: new Date() });
     (shift as any).totalCounterSales = (shift as any).counterSales.reduce((t: number, c: any) => t + (Number(c.amount) || 0), 0);
     await shift.save();
