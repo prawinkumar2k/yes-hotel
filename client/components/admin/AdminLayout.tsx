@@ -1,3 +1,5 @@
+import { useQueryClient } from "@tanstack/react-query";
+import { todayBusinessDate } from "@shared/dates";
 import React, { ReactNode, useState, useEffect, useRef } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
@@ -46,6 +48,19 @@ export default function AdminLayout({ children, title, hidePadding }: { children
   const navigate = useNavigate();
   const location = useLocation();
   const mainRef = useRef<HTMLElement>(null);
+  // Midnight: when the calendar day changes, every screen is refreshed for the new day (no stale "today" figures).
+  const dayQueryClient = useQueryClient();
+  const [today, setToday] = useState(todayBusinessDate());
+  useEffect(() => {
+    const t = window.setInterval(() => {
+      const now = todayBusinessDate();
+      if (now === today) return;
+      setToday(now);
+      dayQueryClient.invalidateQueries();
+      window.dispatchEvent(new CustomEvent("yes:new-business-day", { detail: { date: now } }));
+    }, 30_000);
+    return () => window.clearInterval(t);
+  }, [today, dayQueryClient]);
   // Every page opens at its top (the content area keeps its own scroll position otherwise).
   useEffect(() => {
     mainRef.current?.scrollTo({ top: 0 });
@@ -462,7 +477,7 @@ export default function AdminLayout({ children, title, hidePadding }: { children
             {/* Business Date Pill */}
             <div className="hidden xl:flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-mono">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              <span>BD: {new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}</span>
+              <span>BD: {new Date(`${today}T12:00:00`).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}</span>
             </div>
 
             {/* Prominent Walk-In / Reservation Button */}

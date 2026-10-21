@@ -40,6 +40,8 @@ const settingsSchema = z.object({
   /** Room prices include GST: the rate is what the guest pays and the GST is inside it. */
   taxInclusiveRates: z.boolean().optional(),
   onlineBookingOpen: z.boolean().optional(),
+  autoNightAuditEnabled: z.boolean().optional(),
+  autoNightAuditTime: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Night audit time must look like 00:05").optional(),
   cancellationPolicy: z.string().min(10),
   instagramUrl: z.string().optional(),
   facebookUrl: z.string().optional(),

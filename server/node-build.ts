@@ -1,3 +1,4 @@
+import { startNightAuditScheduler } from "./src/jobs/nightAudit.job";
 import path from "node:path";
 import fs from "node:fs";
 import mongoose from "mongoose";
@@ -52,6 +53,8 @@ const server = app.listen(port, () => {
 });
 // Live chat and other real-time updates share the same port (path /socket.io).
 attachRealtime(server);
+// The day is closed automatically after midnight (Admin → Settings to change or switch off).
+startNightAuditScheduler();
 
 // Real graceful shutdown: stop accepting new connections, let in-flight
 // requests (e.g. a booking transaction, a payment verification) finish,

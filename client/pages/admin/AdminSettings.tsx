@@ -45,6 +45,8 @@ export default function AdminSettings() {
       gstNumber: String(rawData.gstNumber ?? "").trim().toUpperCase(),
       taxInclusiveRates: fd.get("taxInclusiveRates") === "on",
       onlineBookingOpen: fd.get("onlineBookingOpen") === "on",
+      autoNightAuditEnabled: fd.get("autoNightAuditEnabled") === "on",
+      autoNightAuditTime: String(fd.get("autoNightAuditTime") || "00:05"),
       extraPersonRate: Number(rawData.extraPersonRate),
       extraBedRate: Number(rawData.extraBedRate),
       earlyCheckInFee: Number(rawData.earlyCheckInFee) || 0,
@@ -144,6 +146,15 @@ export default function AdminSettings() {
                   The rate is what the guest pays — GST (CGST + SGST) is worked out inside it, not added on top.
                 </label>
                 <p className="text-xs text-gray-600">Applies to new bookings; existing bookings keep the rule they were made with.</p>
+              </div>
+              <div className="space-y-2 col-span-2">
+                <label className="text-sm font-bold text-black block">Automatic night audit (end of day)</label>
+                <label className="flex min-h-[40px] items-center gap-2 text-sm text-black">
+                  <input type="checkbox" name="autoNightAuditEnabled" defaultChecked={settings?.autoNightAuditEnabled !== false} className="h-4 w-4 accent-[#c9a227]" />
+                  Close the day automatically after midnight at
+                  <input type="time" name="autoNightAuditTime" defaultValue={settings?.autoNightAuditTime || "00:05"} className="border border-gray-300 rounded px-2 py-1 text-sm" />
+                </label>
+                <p className="text-xs text-gray-600">The business date moves to the new day, overstay nights are charged and arrivals that never came are marked no-show. Late arrivals after this time are booked on the new day.</p>
               </div>
               <div className="space-y-2 col-span-2">
                 <label className="text-sm font-bold text-black block">Online booking on the website</label>

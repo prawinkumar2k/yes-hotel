@@ -79,6 +79,8 @@ export interface IHotelSettings extends Document {
 
   // Night Audit
   businessDateEnabled: boolean; // if false, calendar date = business date
+  autoNightAuditEnabled?: boolean; // close the day automatically after midnight
+  autoNightAuditTime?: string;     // "HH:MM" property time, default 00:05
   nightAuditTime: string;      // e.g. "02:00" — when auto-audit runs if enabled
   allowBackdatedCorrections: boolean; // if true, managers can correct closed-date transactions
 
@@ -170,6 +172,8 @@ const HotelSettingsSchema = new Schema<IHotelSettings>(
     // ── NIGHT AUDIT ──
     businessDateEnabled: { type: Boolean, default: false },
     nightAuditTime: { type: String, default: "02:00" },
+    autoNightAuditEnabled: { type: Boolean, default: true },
+    autoNightAuditTime: { type: String, default: "00:05" },
     allowBackdatedCorrections: { type: Boolean, default: false },
 
     // ── HOUSEKEEPING ──
