@@ -846,133 +846,39 @@ export const getDaySummary = async (req: Request, res: Response) => {
 export const getMonthlyMIS = async (req: Request, res: Response) => {
   try {
     const month = /^\d{4}-\d{2}$/.test(String(req.query.month)) ? String(req.query.month) : todayBusinessDate().slice(0, 7);
-    const [year, m] = month.split('-');
+    const { computeMis } = await import("../services/mis.service");
+    const scope = (req as any).propertyId ? { propertyId: (req as any).propertyId } : {};
+    const days = await computeMis(month, scope);
+    // The live grid's column names (kept) built from the shared calculation.
+    const data = days.map((d) => ({
+      date: d.date, day: d.day,
+      cash: d.cash, card: d.card, upi: d.upi, paytm: 0, other: d.other, kkm: d.kkm,
+      ota: d.otaPayment, otaMmt: d.otaMmt, otaAgoda: d.otaAgoda, otaBooking: d.otaBooking, otaGoibibo: d.otaGoibibo,
+      refunds: d.refunds, expenses: d.expenses, credit: d.credit,
+      salesRoom: d.roomSales, salesFb: d.fbSales,
+      advances: d.recAdvance, advancesAdj: d.advancesAdj, advancesUnadj: Math.round((d.recAdvance - d.advancesAdj) * 100) / 100,
+      rsEarlyCheckIn: d.rsEarlyCheckIn, rsWater: d.rsWater, rsDental: d.rsDental, rsTeaCoffee: d.rsTeaCoffee, rsKovaiMess: d.rsKovaiMess, rsOther: d.rsOther,
+      salesRoomService: d.rsTotal, salesTotal: d.salesTotal,
+      dayTotal: d.modeTotal, grandTotal: d.netCollection,
+      difference: Math.round((d.netCollection - d.salesTotal) * 100) / 100,
+    }));
+    return res.json({ success: true, data });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
 
-    // Month boundaries at the property (Asia/Kolkata).
-    const monthRange = businessMonthRange(month);
-    const startOfMonth = monthRange.start;
-    const endOfMonth = new Date(monthRange.end.getTime() - 1);
-
-    const daysInMonth = Number(endOfBusinessMonth(`${month}-01`).slice(8, 10));
-    const query = { createdAt: { $gte: startOfMonth, $lte: endOfMonth } };
-
-    // Grouping by day mapping
-    const dailyData: Record<number, any> = {};
-    for (let i = 1; i <= daysInMonth; i++) {
-      const ymd = `${month}-${String(i).padStart(2, "0")}`;
-      dailyData[i] = {
-        date: ymd, // business date (YYYY-MM-DD)
-        day: new Date(`${ymd}T12:00:00+05:30`).toLocaleDateString("en-US", { weekday: "short", timeZone: PROPERTY_TIMEZONE }),
-        cash: 0,
-        card: 0,
-        upi: 0,
-        paytm: 0,
-        ota: 0,
-        otaMmt: 0,
-        otaAgoda: 0,
-        otaBooking: 0,
-        otaGoibibo: 0,
-        refunds: 0,
-        expenses: 0,
-        salesRoom: 0,
-        salesFb: 0,
-        advances: 0,
-        advancesAdj: 0,
-        advancesUnadj: 0,
-        // Room service / counter sales by item
-        rsEarlyCheckIn: 0,
-        rsWater: 0,
-        rsDental: 0,
-        rsTeaCoffee: 0,
-        rsKovaiMess: 0,
-        rsOther: 0,
-        salesRoomService: 0,
-      };
-    }
-
-    const payments = await Payment.find(query).populate("booking");
-    payments.forEach(p => {
-      const anyP = p as any;
-      const day = bizDayOfMonth(anyP.createdAt);
-      const amount = p.amount;
-      
-      const method = (p.method || "").toUpperCase();
-      if (method.includes("CASH")) dailyData[day].cash += amount;
-      else if (method.includes("CARD")) dailyData[day].card += amount;
-      else if (method.includes("UPI")) dailyData[day].upi += amount;
-      else if (method.includes("PAYTM")) dailyData[day].paytm += amount;
-      else {
-        dailyData[day].ota += amount;
-        // Check what OTA it is
-        const otaName = (anyP.booking?.otaName || "").toUpperCase();
-        if (otaName.includes("MAKEMYTRIP") || otaName.includes("MMT")) dailyData[day].otaMmt += amount;
-        else if (otaName.includes("AGODA")) dailyData[day].otaAgoda += amount;
-        else if (otaName.includes("BOOKING")) dailyData[day].otaBooking += amount;
-        else if (otaName.includes("GOIBIBO")) dailyData[day].otaGoibibo += amount;
-      }
-
-      if (anyP.purpose === "ADVANCE") {
-        dailyData[day].advances += amount;
-        dailyData[day].advancesUnadj += amount; // We'll assume unadjusted for raw Payment advances unless updated below
-      }
-    });
-
-    const advances = await AdvancePayment.find({ receivedAt: { $gte: startOfMonth, $lte: endOfMonth } });
-    advances.forEach(a => {
-      const day = bizDayOfMonth(a.receivedAt);
-      const amt = a.amount;
-      const adj = a.totalAdjusted || 0;
-      dailyData[day].advances += amt;
-      dailyData[day].advancesAdj += adj;
-      dailyData[day].advancesUnadj += (amt - adj);
-    });
-
-    const folios = await FolioLine.find({ ...query, direction: FolioLineDirection.DEBIT });
-    folios.forEach(f => {
-      const anyF = f as any;
-      const day = bizDayOfMonth(anyF.createdAt);
-      if (anyF.lineType === "ROOM_CHARGE") dailyData[day].salesRoom += f.amount;
-      else if (anyF.lineType === "RESTAURANT") dailyData[day].salesFb += f.amount;
-    });
-
-    // Room service / counter sales recorded on cashier shifts (income), and petty-cash expenses.
-    const { CashierShift } = await import("../models/CashierShift");
-    const RS_FIELD: Record<string, string> = { EARLY_CHECK_IN: "rsEarlyCheckIn", WATER_BOTTLE: "rsWater", DENTAL_KIT: "rsDental", TEA_COFFEE_SHOP: "rsTeaCoffee", KOVAI_KONGU_MESS: "rsKovaiMess", OTHER: "rsOther" };
-    const shifts = await CashierShift.find({
-      $or: [
-        { counterSales: { $elemMatch: { createdAt: { $gte: startOfMonth, $lte: endOfMonth } } } },
-        { paidOuts: { $elemMatch: { createdAt: { $gte: startOfMonth, $lte: endOfMonth } } } },
-      ],
-    }).select("counterSales paidOuts").lean();
-    for (const sh of shifts as any[]) {
-      for (const c of sh.counterSales || []) {
-        if (c.createdAt < startOfMonth || c.createdAt > endOfMonth) continue;
-        const row = dailyData[bizDayOfMonth(c.createdAt)];
-        const amount = Number(c.amount) || 0;
-        row[RS_FIELD[c.category] ?? "rsOther"] += amount;
-        row.salesRoomService += amount;
-        if (c.mode === "CASH") row.cash += amount;
-        else if (c.mode === "CARD") row.card += amount;
-        else if (c.mode === "UPI") row.upi += amount;
-      }
-      for (const p of sh.paidOuts || []) {
-        if (p.createdAt < startOfMonth || p.createdAt > endOfMonth || p.category !== "PETTY_CASH") continue;
-        dailyData[bizDayOfMonth(p.createdAt)].expenses += Number(p.amount) || 0;
-      }
-    }
-
-    // Compute totals per row
-    Object.values(dailyData).forEach(row => {
-      row.dayTotal = row.cash + row.card + row.upi + row.paytm + row.ota;
-      row.grandTotal = row.dayTotal - row.refunds - row.expenses;
-      row.salesTotal = row.salesRoom + row.salesFb + row.salesRoomService;
-      row.difference = row.grandTotal - row.salesTotal;
-    });
-
-    return res.json({
-      success: true,
-      data: Object.values(dailyData)
-    });
+/**
+ * GET /api/reports/mis-sheet?month=YYYY-MM
+ * The daily MIS sheet in the hotel's Excel layout (rooms, receipts, reserved-through, sales, money by mode), with the month's totals.
+ */
+export const getMisSheet = async (req: Request, res: Response) => {
+  try {
+    const month = /^\d{4}-\d{2}$/.test(String(req.query.month)) ? String(req.query.month) : todayBusinessDate().slice(0, 7);
+    const { computeMis, misTotals } = await import("../services/mis.service");
+    const scope = (req as any).propertyId ? { propertyId: (req as any).propertyId } : {};
+    const days = await computeMis(month, scope);
+    return res.json({ success: true, data: { month, days, totals: misTotals(days) } });
   } catch (error: any) {
     return res.status(500).json({ success: false, message: error.message });
   }

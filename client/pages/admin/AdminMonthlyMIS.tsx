@@ -38,7 +38,9 @@ export default function AdminMonthlyMIS() {
     { field: "cash", headerName: "CASH", width: 120 },
     { field: "card", headerName: "Card", width: 120 },
     { field: "paytm", headerName: "PAYTM", width: 120 },
-    { field: "upi", headerName: "UPI", width: 120 },
+    { field: "upi", headerName: "UPI / QR", width: 120 },
+    { field: "other", headerName: "Bank / Other", width: 130 },
+    { field: "kkm", headerName: "KKM (Mess)", width: 130 },
     { field: "ota", headerName: "All OTAs", width: 120 },
     { field: "otaMmt", headerName: "MakeMyTrip", width: 120 },
     { field: "otaAgoda", headerName: "Agoda", width: 120 },
@@ -47,6 +49,7 @@ export default function AdminMonthlyMIS() {
     { field: "dayTotal", headerName: "Day Total", width: 140, cellStyle: { backgroundColor: '#fef3c7', fontWeight: 'bold' } },
     { field: "refunds", headerName: "Refunds", width: 130, cellStyle: { color: 'red' } },
     { field: "expenses", headerName: "Expenses", width: 130, cellStyle: { color: 'red' } },
+    { field: "credit", headerName: "Credit (Kadan)", width: 140 },
     { field: "grandTotal", headerName: "Grand Total", width: 140, cellStyle: { backgroundColor: '#dcfce7', fontWeight: 'bold' } },
     { field: "salesRoom", headerName: "Room Sales", width: 140 },
     { field: "salesFb", headerName: "F&B Sales", width: 140 },
@@ -74,6 +77,7 @@ export default function AdminMonthlyMIS() {
   ], []);
 
   const defaultColDef = useMemo(() => ({
+    valueFormatter: (p: any) => (typeof p.value === "number" ? p.value.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : p.value),
     sortable: true,
     filter: true,
     resizable: true,
@@ -98,39 +102,15 @@ export default function AdminMonthlyMIS() {
     URL.revokeObjectURL(url);
   };
 
+  // Total row: every money column summed (so a new column is never left out).
   const totalsRow = useMemo(() => {
-    if (!reportData) return [];
-    return [{
-      date: "",
-      day: "TOTAL",
-      cash: reportData.reduce((s: number, r: any) => s + r.cash, 0),
-      card: reportData.reduce((s: number, r: any) => s + r.card, 0),
-      paytm: reportData.reduce((s: number, r: any) => s + r.paytm, 0),
-      upi: reportData.reduce((s: number, r: any) => s + r.upi, 0),
-      ota: reportData.reduce((s: number, r: any) => s + r.ota, 0),
-      otaMmt: reportData.reduce((s: number, r: any) => s + r.otaMmt, 0),
-      otaAgoda: reportData.reduce((s: number, r: any) => s + r.otaAgoda, 0),
-      otaBooking: reportData.reduce((s: number, r: any) => s + r.otaBooking, 0),
-      otaGoibibo: reportData.reduce((s: number, r: any) => s + r.otaGoibibo, 0),
-      dayTotal: reportData.reduce((s: number, r: any) => s + r.dayTotal, 0),
-      refunds: reportData.reduce((s: number, r: any) => s + r.refunds, 0),
-      expenses: reportData.reduce((s: number, r: any) => s + r.expenses, 0),
-      rsEarlyCheckIn: reportData.reduce((s: number, r: any) => s + (r.rsEarlyCheckIn || 0), 0),
-      rsWater: reportData.reduce((s: number, r: any) => s + (r.rsWater || 0), 0),
-      rsDental: reportData.reduce((s: number, r: any) => s + (r.rsDental || 0), 0),
-      rsTeaCoffee: reportData.reduce((s: number, r: any) => s + (r.rsTeaCoffee || 0), 0),
-      rsKovaiMess: reportData.reduce((s: number, r: any) => s + (r.rsKovaiMess || 0), 0),
-      rsOther: reportData.reduce((s: number, r: any) => s + (r.rsOther || 0), 0),
-      salesRoomService: reportData.reduce((s: number, r: any) => s + (r.salesRoomService || 0), 0),
-      grandTotal: reportData.reduce((s: number, r: any) => s + r.grandTotal, 0),
-      salesRoom: reportData.reduce((s: number, r: any) => s + r.salesRoom, 0),
-      salesFb: reportData.reduce((s: number, r: any) => s + r.salesFb, 0),
-      salesTotal: reportData.reduce((s: number, r: any) => s + r.salesTotal, 0),
-      advances: reportData.reduce((s: number, r: any) => s + r.advances, 0),
-      advancesAdj: reportData.reduce((s: number, r: any) => s + r.advancesAdj, 0),
-      advancesUnadj: reportData.reduce((s: number, r: any) => s + r.advancesUnadj, 0),
-      difference: reportData.reduce((s: number, r: any) => s + r.difference, 0),
-    }];
+    if (!reportData?.length) return [];
+    const t: Record<string, any> = { date: "", day: "TOTAL" };
+    for (const k of Object.keys(reportData[0])) {
+      if (k === "date" || k === "day") continue;
+      t[k] = Math.round(reportData.reduce((sum: number, r: any) => sum + (Number(r[k]) || 0), 0) * 100) / 100;
+    }
+    return [t];
   }, [reportData]);
 
   return (

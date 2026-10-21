@@ -1,3 +1,4 @@
+import MisSheetReport from "./reports/MisSheetReport";
 import { useState } from "react";
 import { Link, Routes, Route, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -21,6 +22,7 @@ const CATEGORIES = [
   { id: "advance-report", name: "Advance Report", path: "/admin/reports/advance-report" },
   { id: "bulk-docs", name: "GRC & GST Invoices (Bulk)", path: "/admin/reports/bulk-docs" },
   { id: "monthly-mis", name: "Monthly MIS Report", path: "/admin/reports/monthly-mis" },
+  { id: "mis-sheet", name: "MIS Daily Sheet", path: "/admin/reports/mis-sheet" },
 ];
 
 export default function AdminReportsLayout() {
@@ -62,6 +64,7 @@ export default function AdminReportsLayout() {
           <Route path="in-house-list" element={<AdminInHouseList />} />
           <Route path="bulk-docs" element={<AdminBulkDocViewer />} />
           <Route path="monthly-mis" element={<AdminMonthlyMIS />} />
+          <Route path="mis-sheet" element={<MisSheetReport />} />
           <Route path="daily-summary" element={<DaySummaryReport />} />
           <Route path="cash-sheet" element={<CashSheetReport />} />
           <Route path="check-in-report" element={<CheckInReport />} />
