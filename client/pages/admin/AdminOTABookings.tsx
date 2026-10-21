@@ -117,7 +117,7 @@ export default function AdminOTABookings() {
                       <td className="px-4 py-3 text-right text-gray-500">₹{(b.taxAmount || 0).toLocaleString("en-IN")}</td>
                       <td className="px-4 py-3 text-right font-bold text-gray-900">₹{(b.totalAmount || 0).toLocaleString("en-IN")}</td>
                       <td className="px-4 py-3 text-right text-gray-700">
-                        {b.otaCommissionPercent != null ? <>₹{(b.otaCommissionAmount || 0).toLocaleString("en-IN")} <span className="text-gray-400">({b.otaCommissionPercent}%)</span></> : <span className="text-amber-600">Terms missing</span>}
+                        {b.otaCommissionPercent != null ? <>₹{(b.otaCommissionAmount || 0).toLocaleString("en-IN")} <span className="text-gray-400">({b.otaCommissionType === "FLAT" ? `flat · ${b.otaCommissionPercent}%` : `${b.otaCommissionPercent}%`})</span></> : <span className="text-amber-600">Terms missing</span>}
                       </td>
                       <td className="px-4 py-3 text-right text-gray-700">
                         {b.otaPaymentModel === "OTA_PREPAID"

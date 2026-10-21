@@ -235,6 +235,12 @@ export default function AdminGRCPrint() {
                   <span className="font-bold ml-2">Balance</span>
                   <span className="font-black font-mono">₹{inr(balanceDue)}/-</span>
                 </div>
+                {Number(booking.discountAmount || 0) > 0 && (
+                  <div className="flex justify-between border-b border-dotted border-gray-400 pb-0.5">
+                    <span className="font-bold">Discount given{booking.discountType === "PERCENT" ? ` (${booking.discountValue}%)` : ""}</span>
+                    <span className="font-black font-mono text-green-800">− ₹{inr(booking.discountAmount)}/-</span>
+                  </div>
+                )}
                 {extrasAmount > 0 && (
                   <div className="flex justify-between border-b border-dotted border-gray-400 pb-0.5">
                     <span className="font-bold">Extra persons / children</span>

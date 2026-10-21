@@ -28,7 +28,7 @@ const publicEnquirySchema = z.object({
   children: z.coerce.number().int().min(0).max(20).default(0),
   childAges: z.array(z.coerce.number().int().min(0).max(17)).max(20).default([]),
   rooms: z.coerce.number().int().min(1).max(20).default(1),
-  roomType: z.string().trim().min(1).max(120).default("Deluxe Room"),
+  roomType: z.string().trim().max(120).default("Not chosen yet").transform((v) => v || "Not chosen yet"),
   roomCategoryId: z.string().trim().optional(),
   pricePerNight: z.coerce.number().nonnegative().optional(),
   roomSubtotal: z.coerce.number().nonnegative().optional(),
@@ -55,7 +55,7 @@ const adminEnquirySchema = z.object({
   children: z.coerce.number().int().min(0).max(20).default(0),
   childAges: z.array(z.coerce.number()).default([]),
   rooms: z.coerce.number().int().min(1).max(50).default(1),
-  roomType: z.string().trim().min(1).max(120),
+  roomType: z.string().trim().max(120).transform((v) => v || "Not chosen yet"),
   roomCategoryId: z.string().trim().optional(),
   mealPlan: z.string().trim().optional(),
   expectedBudget: z.coerce.number().nonnegative().optional(),
@@ -125,7 +125,7 @@ export const submitBookingEnquiry = async (req: Request, res: Response) => {
       existing.children = data.children;
       existing.childAges = data.childAges;
       existing.rooms = data.rooms;
-      existing.roomType = data.roomType;
+      if (data.roomType !== "Not chosen yet" || !existing.roomType) existing.roomType = data.roomType; // never replace a chosen room with the placeholder
       if (data.roomCategoryId && mongoose.Types.ObjectId.isValid(data.roomCategoryId)) {
         existing.roomCategoryId = new mongoose.Types.ObjectId(data.roomCategoryId);
       }

@@ -231,6 +231,24 @@ export const getAvailableRoomsForRegistration = async (req: Request, res: Respon
 // what the server returns; it must never compute a final total independently.
 // ─────────────────────────────────────────────────────────────────────────────
 
+const money2 = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
+
+/**
+ * The discount given to the customer, as a % of the bill or a flat amount (before GST is worked out).
+ * `legacyAmount` is the old single field (a flat amount).
+ */
+export function walkInDiscount(input: { type?: unknown; value?: unknown; legacyAmount?: unknown }, subtotal: number) {
+  const hasValue = input.value !== undefined && input.value !== null && String(input.value) !== "";
+  const type = String(input.type ?? "FLAT").toUpperCase() === "PERCENT" ? "PERCENT" : "FLAT";
+  const raw = hasValue ? Number(input.value) : Number(input.legacyAmount ?? 0);
+  if (!Number.isFinite(raw) || raw < 0) throw new Error("Enter a discount of 0 or more");
+  if (raw === 0) return { type: type as "PERCENT" | "FLAT", value: 0, amount: 0 };
+  if (type === "PERCENT" && raw > 100) throw new Error("A discount cannot be more than 100%");
+  const amount = money2(type === "PERCENT" ? (subtotal * raw) / 100 : raw);
+  if (amount > subtotal + 0.01) throw new Error("The discount cannot be more than the bill amount");
+  return { type: type as "PERCENT" | "FLAT", value: raw, amount };
+}
+
 export const calculateRegistrationRate = async (req: Request, res: Response) => {
   try {
     const {
@@ -246,6 +264,8 @@ export const calculateRegistrationRate = async (req: Request, res: Response) => 
       extraChildrenWithBed = 0,
       kidsUnder3 = 0,
       discountAmount = 0,
+      discountType,
+      discountValue,
       otherCharges = 0,
       mealPlan = "EP",
       adults = 1,
@@ -303,7 +323,9 @@ export const calculateRegistrationRate = async (req: Request, res: Response) => 
     const childNoBedTotal = Number(extraChildrenNoBed) * childRateNoBed * nights;
     const childWithBedTotal = Number(extraChildrenWithBed) * childRateWithBed * nights;
     
-    const subtotal = roomCharges + extraPersonTotal + extraBedTotal + childNoBedTotal + childWithBedTotal + mealPlanTotal + Number(otherCharges) - Number(discountAmount);
+    const preDiscount = roomCharges + extraPersonTotal + extraBedTotal + childNoBedTotal + childWithBedTotal + mealPlanTotal + Number(otherCharges);
+    const disc = walkInDiscount({ type: discountType, value: discountValue, legacyAmount: discountAmount }, preDiscount);
+    const subtotal = preDiscount - disc.amount;
     const taxableAmount = Math.max(0, subtotal);
 
     // Extras, meal plan, other charges and the discount sit on the primary room (as on create).
@@ -343,7 +365,9 @@ export const calculateRegistrationRate = async (req: Request, res: Response) => 
         childWithBedTotal,
         mealPlanTotal,
         otherCharges: Number(otherCharges),
-        discountAmount: Number(discountAmount),
+        discountAmount: disc.amount,
+        discountType: disc.type,
+        discountValue: disc.value,
         subtotal,
         tax: taxBreakdown,
         dailyTax: taxBreakdown.daily,
@@ -438,7 +462,15 @@ export const walkInArrivalRegistration = async (req: Request, res: Response) => 
         otaName,
         otaConfirmationNumber,
         otaCommissionPercent,
+        otaCommissionType,
+        otaCommissionValue,
         otaPaymentModel,
+
+        // Discount given to the customer (a % or a flat amount)
+        discountType: bookDiscountType,
+        discountValue: bookDiscountValue,
+        discountAmount: bookDiscountLegacy,
+        discountReason,
 
         // Section E — Billing
         billingInstruction,
@@ -473,15 +505,19 @@ export const walkInArrivalRegistration = async (req: Request, res: Response) => 
       if (sourceCode === "OTA") {
         const name = String(otaName || "").trim();
         const confirmation = String(otaConfirmationNumber || "").trim();
-        const pct = Number(otaCommissionPercent);
+        const flatCommission = String(otaCommissionType || "").toUpperCase() === "FLAT";
+        const typed = otaCommissionValue !== undefined && otaCommissionValue !== "" ? otaCommissionValue : otaCommissionPercent;
+        const pct = Number(typed);
         const model = String(otaPaymentModel || "");
         if (!name) throw new Error("Select the OTA (e.g. MakeMyTrip, Booking.com)");
         if (!confirmation) throw new Error("Enter the OTA booking / confirmation number");
-        if (otaCommissionPercent === undefined || otaCommissionPercent === "" || !Number.isFinite(pct) || pct < 0 || pct > 100) {
-          throw new Error("Enter the OTA commission % (0–100)");
+        if (typed === undefined || typed === "" || !Number.isFinite(pct) || pct < 0 || (!flatCommission && pct > 100)) {
+          throw new Error(flatCommission ? "Enter the OTA commission amount (₹)" : "Enter the OTA commission % (0–100)");
         }
         if (!["OTA_PREPAID", "PAY_AT_HOTEL"].includes(model)) throw new Error("Choose who collects the money: OTA prepaid or pay at hotel");
-        otaFields = { otaName: name, otaConfirmationNumber: confirmation, otaCommissionPercent: pct, otaPaymentModel: model };
+        otaFields = flatCommission
+          ? { otaName: name, otaConfirmationNumber: confirmation, otaCommissionType: "FLAT", otaCommissionFlat: pct, otaPaymentModel: model }
+          : { otaName: name, otaConfirmationNumber: confirmation, otaCommissionType: "PERCENT", otaCommissionPercent: pct, otaPaymentModel: model };
       }
 
       const allRoomIds: string[] = (Array.isArray(roomIds) && roomIds.length > 0)
@@ -601,6 +637,20 @@ export const walkInArrivalRegistration = async (req: Request, res: Response) => 
       }
 
       const pricing = await loadRoomPricing();
+
+      // The discount is worked out on the whole booking and shared across the rooms in proportion to their charges.
+      const preSubtotals = rooms.map((rm, i) => {
+        const category = rm.category as any;
+        const baseRate = bookingType === "HOURLY" ? (category?.hourlyPrice ?? 0) * Number(hours) : (category?.basePrice ?? 0);
+        const rate = walkInRoomRate(rm._id, baseRate, roomRates, rateOverrideAmount);
+        const charges = rate * (bookingType === "HOURLY" ? 1 : nights);
+        return charges + (i === 0 ? extraPersonTotal + extraBedTotal + childNoBedTotal + childWithBedTotal + mealPlanTotal + Number(otherCharges) : 0);
+      });
+      const preTotal = preSubtotals.reduce((t, x) => t + x, 0);
+      const bookDiscount = walkInDiscount({ type: bookDiscountType, value: bookDiscountValue, legacyAmount: bookDiscountLegacy }, preTotal);
+      const discountShares = preSubtotals.map((x) => (preTotal > 0 ? money2((bookDiscount.amount * x) / preTotal) : 0));
+      if (discountShares.length > 1) discountShares[discountShares.length - 1] = money2(bookDiscount.amount - discountShares.slice(0, -1).reduce((t, x) => t + x, 0));
+
       for (let i = 0; i < rooms.length; i++) {
         const rm = rooms[i];
         const category = rm.category as any;
@@ -617,7 +667,8 @@ export const walkInArrivalRegistration = async (req: Request, res: Response) => 
         const rmOtherCharges = i === 0 ? Number(otherCharges) : 0;
 
         const rmSubtotal = rmRoomCharges + rmExtraPersonTotal + rmExtraBedTotal + rmChildNoBedTotal + rmChildWithBedTotal + rmMealPlanTotal + rmOtherCharges;
-        const rmTaxableAmount = Math.max(0, rmSubtotal);
+        const rmDiscount = discountShares[i] ?? 0;
+        const rmTaxableAmount = Math.max(0, rmSubtotal - rmDiscount);
         const rmTaxBreakdown = await walkInStayTax([rmTaxableAmount], checkInDate, checkOutDate, nights, pricing.inclusive);
         const rmTotalAmount = pricing.inclusive ? rmTaxableAmount : rmTaxableAmount + rmTaxBreakdown.totalTax;
 
@@ -681,7 +732,8 @@ export const walkInArrivalRegistration = async (req: Request, res: Response) => 
               taxAmount: rmTaxBreakdown.totalTax,
               cgstAmount: rmTaxBreakdown.cgst,
               sgstAmount: rmTaxBreakdown.sgst,
-              discountAmount: 0,
+              discountAmount: rmDiscount,
+              ...(bookDiscount.amount > 0 ? { discountType: bookDiscount.type, discountValue: bookDiscount.value, discountReason: String(discountReason ?? "").trim() || undefined } : {}),
               specialRequests: (i === 0 && otherCharges > 0) ? `Other Charges (₹${otherCharges}): ${otherChargesDesc || 'Additional items'}` : undefined,
               paymentStatus: PaymentStatus.UNPAID,
               source: sourceCode as BookingSource,

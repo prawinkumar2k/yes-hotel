@@ -201,6 +201,9 @@ export interface IBooking extends Document {
   specialRequests?: string;
   appliedCoupon?: string;
   discountAmount: number;
+  discountType?: "PERCENT" | "FLAT"; // how the discount was given
+  discountValue?: number;               // the % or the flat amount as entered (for the whole booking)
+  discountReason?: string;
   couponRedeemed: boolean;
 
   // ── BOOKING SOURCE / TYPE ──
@@ -223,6 +226,8 @@ export interface IBooking extends Document {
   otaConfirmationNumber?: string;
   // OTA terms (computed by ota.service.computeOtaSettlement on save)
   otaCommissionPercent?: number;
+  otaCommissionType?: "PERCENT" | "FLAT"; // how the commission was entered
+  otaCommissionFlat?: number;                // the flat amount, when entered as an amount
   otaPaymentModel?: OtaPaymentModel;
   otaCommissionBase?: number;
   otaCommissionAmount?: number;
@@ -402,6 +407,9 @@ const BookingSchema = new Schema<IBooking>(
     specialRequests: { type: String },
     appliedCoupon: { type: String },
     discountAmount: { type: Number, default: 0 },
+    discountType: { type: String, enum: ["PERCENT", "FLAT"] },
+    discountValue: { type: Number, min: 0 },
+    discountReason: { type: String },
     couponRedeemed: { type: Boolean, default: false },
 
     // ── BOOKING SOURCE / TYPE ──
@@ -430,6 +438,8 @@ const BookingSchema = new Schema<IBooking>(
     otaName: { type: String },
     otaConfirmationNumber: { type: String },
     otaCommissionPercent: { type: Number, min: 0, max: 100 },
+    otaCommissionType: { type: String, enum: ["PERCENT", "FLAT"] },
+    otaCommissionFlat: { type: Number, min: 0 },
     otaPaymentModel: { type: String, enum: Object.values(OtaPaymentModel) },
     otaCommissionBase: { type: Number },
     otaCommissionAmount: { type: Number },
@@ -508,8 +518,9 @@ BookingSchema.index({ registrationStatus: 1, checkInDate: -1 }, { sparse: true }
 // OTA settlement figures always follow the booking amount and the OTA terms (one rule).
 BookingSchema.pre("validate", function () {
   const b = this as any;
-  if (b.source === BookingSource.OTA && b.otaCommissionPercent != null && b.otaPaymentModel) {
-    Object.assign(b, computeOtaSettlement({ totalAmount: b.totalAmount, taxAmount: b.taxAmount, commissionPercent: b.otaCommissionPercent, paymentModel: b.otaPaymentModel }));
+  if (b.source === BookingSource.OTA && (b.otaCommissionPercent != null || b.otaCommissionFlat != null) && b.otaPaymentModel) {
+    const flat = b.otaCommissionType === "FLAT" && b.otaCommissionFlat != null;
+    Object.assign(b, computeOtaSettlement({ totalAmount: b.totalAmount, taxAmount: b.taxAmount, ...(flat ? { commissionFlat: b.otaCommissionFlat } : { commissionPercent: b.otaCommissionPercent }), paymentModel: b.otaPaymentModel }));
   }
 });
 

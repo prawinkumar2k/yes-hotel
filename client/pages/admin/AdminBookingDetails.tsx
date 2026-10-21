@@ -299,6 +299,12 @@ export default function AdminBookingDetails() {
                  <span className="text-gray-500">Room Charges</span>
                  <span className="text-gray-900">₹{(booking.totalAmount - booking.taxAmount).toLocaleString("en-IN")}</span>
                </div>
+               {Number(booking.discountAmount || 0) > 0 && (
+                 <div className="flex justify-between text-sm">
+                   <span className="text-gray-500">Discount given{booking.discountType === "PERCENT" ? ` (${booking.discountValue}%)` : ""}{booking.discountReason ? ` — ${booking.discountReason}` : ""}</span>
+                   <span className="text-green-700 font-medium">− ₹{Number(booking.discountAmount).toLocaleString("en-IN")}</span>
+                 </div>
+               )}
                <div className="flex justify-between text-sm">
                  <span className="text-gray-500">Tax Amount</span>
                  <span className="text-gray-900">₹{booking.taxAmount.toLocaleString("en-IN")}</span>

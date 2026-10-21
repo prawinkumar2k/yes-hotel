@@ -17,7 +17,7 @@
  *   POST /api/chat/staff/conversations/:id/assign | resolve | reopen
  */
 import { Router, Request, Response } from "express";
-import rateLimit from "express-rate-limit";
+import rateLimit, { ipKeyGenerator } from "express-rate-limit";
 import { z } from "zod";
 import mongoose from "mongoose";
 import jwt from "jsonwebtoken";
@@ -38,9 +38,15 @@ const fail = (res: Response, e: any) =>
   e instanceof ChatRuleError ? res.status(e.status).json({ success: false, message: e.message }) : res.status(500).json({ success: false, message: e.message });
 
 // Guests share no login, so limit chat traffic per IP generously (a busy conversation is still fine).
+// Counted per conversation (its chat token), not per IP: many guests share one mobile-network or hotel Wi-Fi
+// address, and each line of the conversation (guest + bot) is one request.
 const guestLimiter = rateLimit({
   windowMs: 60 * 1000,
-  max: Number(process.env.RATE_LIMIT_CHAT_MAX) || (process.env.NODE_ENV === "production" ? 60 : 1000),
+  max: Number(process.env.RATE_LIMIT_CHAT_MAX) || (process.env.NODE_ENV === "production" ? 120 : 1000),
+  keyGenerator: (req) => {
+    const t = String(req.headers["x-chat-token"] || "").slice(0, 80);
+    return t ? `chat:${t}` : ipKeyGenerator(req.ip || "");
+  },
   standardHeaders: true,
   legacyHeaders: false,
   message: { success: false, message: "You're sending messages too fast. Please wait a moment." },

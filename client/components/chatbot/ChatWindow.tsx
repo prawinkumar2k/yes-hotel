@@ -7,6 +7,7 @@ import { checkRoomAvailability, type AvailableRoom } from "@/services/availabili
 import { submitBookingEnquiry } from "@/services/bookingEnquiryService";
 import { contactDetails, getHotelInformation } from "@/services/chatService";
 import { useHotelContact } from "@/hooks/usePublicData";
+import { HOTEL } from "@shared/hotel-info";
 import { saveBookingDetails, splitFullName } from "@/lib/bookingSession";
 import BookingFlow from "./BookingFlow";
 import BookingSummary from "./BookingSummary";
@@ -107,13 +108,27 @@ export default function ChatWindow({ onMinimize, onClose }: { onMinimize: () => 
     }
   }
 
+  /** A typed question gets an answer from the hotel's real facts (settings + shared/hotel-info), or a pointer to the options. */
+  function replyToText(raw: string) {
+    const t = raw.toLowerCase();
+    const has = (...w: string[]) => w.some((x) => t.includes(x));
+    if (has("reception", "front desk", "human", "staff", "someone", "agent", "talk to")) return handleAction("Talk to Reception");
+    if (has("available", "availability", "book", "room for", "vacan", "stay on")) { say("I can check live availability for you."); return void beginAvailability(); }
+    if (has("check-in", "check in", "checkin", "check-out", "check out", "checkout", "timing", "time")) { say(`Check-in is from ${contact.checkIn} and check-out is by ${contact.checkOut}. ${HOTEL.frontDesk}.`); return; }
+    if (has("phone", "call", "contact", "email", "whatsapp", "number", "address", "where", "location", "map", "metro", "reach")) { say(contactDetails(contact)); return; }
+    if (has("wifi", "wi-fi", "parking", "lift", "elevator", "ac ", "air", "amenit", "facilit", "breakfast", "food", "about", "hotel", "info")) { say(getHotelInformation(contact)); return; }
+    if (has("price", "rate", "tariff", "cost", "charge", "how much", "cheap")) { say("Rates depend on your dates and the room type. Tap Check Room Availability below to see the live rate for your dates, or call " + contact.phone + "."); return; }
+    if (has("cancel", "refund", "policy")) { say("You can read our cancellation and refund policy at /cancellation-and-refund, or call " + contact.phone + " and we will help."); return; }
+    say("I can help with room availability, hotel information and our contact details. Please choose an option below, or tap \"Talk to Reception\" to chat with our front desk.");
+  }
+
   function handleAction(action: string) {
     if (action === "Talk to Reception") {
       return beginActionWithContact(action);
     }
-    if (action === "Check Room Availability" || action === "Hotel Information" || action === "Contact YES Hotels") {
-      return beginActionWithContact(action);
-    }
+    // Answers and dates need no personal details; they are asked for only when the guest picks a room or wants Reception.
+    if (action === "Check Room Availability") return beginAvailability();
+    if (action === "Hotel Information" || action === "Contact YES Hotels") { userSays(action); processPendingAction(action); return; }
     if (action === "Book on Website" || action === "Continue to Booking & Payment") { goToPayment(); return; }
     if (action === "Change Dates") { say("Let’s start again. Please select your check-in date."); setStep("checkin"); return; }
     if (action === "Try Another Room") { say("I’ll check the current inventory for the same dates again."); void checkAvailability(); return; }
@@ -329,6 +344,6 @@ export default function ChatWindow({ onMinimize, onClose }: { onMinimize: () => 
     {live.staffTyping && <p className="border-t border-hotel-black/10 bg-hotel-white px-4 py-2 text-[11px] italic text-hotel-black/60">Reception is typing…</p>}
     {live.withStaff && <p className="border-t border-hotel-black/10 bg-amber-50 px-4 py-2 text-[11px] text-hotel-black/70">{live.status === "ASSIGNED" ? "You're chatting with our front desk." : "Waiting for the front desk to reply…"}{!live.connected && " (reconnecting…)"}</p>}
     {showQuick && !live.withStaff && <QuickActions onAction={handleAction} unavailable={booking.availabilityStatus === "unavailable"} />}
-    {step === "idle" && (!showQuick || live.withStaff) && <form className="flex gap-2 border-t border-hotel-black/10 bg-hotel-white p-3" onSubmit={(event) => { event.preventDefault(); if (input.trim()) { userSays(input.trim()); if (!live.withStaff) say("Please choose one of the options above, or tap \"Talk to Reception\" to chat with our front desk."); setInput(""); } }}><input value={input} onChange={(event) => setInput(event.target.value)} placeholder={live.withStaff ? "Message the front desk" : "Ask your concierge"} className="min-w-0 flex-1 bg-hotel-ivory px-3 py-2 text-sm outline-none" aria-label="Message YES Hotels concierge" /><button type="submit" aria-label="Send message" className="bg-hotel-black p-2 text-hotel-gold hover:bg-hotel-gold hover:text-hotel-black"><ArrowUp size={17} /></button></form>}
+    {step === "idle" && <form className="flex gap-2 border-t border-hotel-black/10 bg-hotel-white p-3" onSubmit={(event) => { event.preventDefault(); const text = input.trim(); if (text) { userSays(text); if (!live.withStaff) replyToText(text); setInput(""); } }}><input value={input} onChange={(event) => setInput(event.target.value)} placeholder={live.withStaff ? "Message the front desk" : "Ask your concierge"} className="min-w-0 flex-1 bg-hotel-ivory px-3 py-2 text-sm outline-none" aria-label="Message YES Hotels concierge" /><button type="submit" aria-label="Send message" className="bg-hotel-black p-2 text-hotel-gold hover:bg-hotel-gold hover:text-hotel-black"><ArrowUp size={17} /></button></form>}
   </section>;
 }

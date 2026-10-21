@@ -152,6 +152,9 @@ export default function AdminGuestRegistration() {
     kidsUnder3: 0,
     otherCharges: 0,
     otherChargesDesc: "",
+    discountType: "FLAT",
+    discountValue: "",
+    discountReason: "",
     rateOverrideAmount: "",
   });
 
@@ -186,7 +189,7 @@ export default function AdminGuestRegistration() {
   // Booking source. OTA bookings are typed in by hand from the OTA extranet / voucher (no online fetching).
   const [sourceDetails, setSourceDetails] = useState(() => {
     const q = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("source") : null;
-    return { bookingSource: q === "OTA" ? "OTA" : "WALK_IN", otaName: "", otaConfirmationNumber: "", otaCommissionPercent: "", otaPaymentModel: "OTA_PREPAID" };
+    return { bookingSource: q === "OTA" ? "OTA" : "WALK_IN", otaName: "", otaConfirmationNumber: "", otaCommissionType: "PERCENT", otaCommissionPercent: "", otaPaymentModel: "OTA_PREPAID" };
   });
 
   const [billingDetails, setBillingDetails] = useState({
@@ -383,7 +386,8 @@ export default function AdminGuestRegistration() {
           extraChildrenWithBed: stayDetails.extraChildrenWithBed,
           kidsUnder3: stayDetails.kidsUnder3,
           otherCharges: stayDetails.otherCharges,
-          discountAmount: 0,
+          discountType: stayDetails.discountType,
+          discountValue: stayDetails.discountValue,
           roomRates: roomRatesPayload(roomsToBook),
           extraRates: extraRatesPayload(),
         }),
@@ -434,7 +438,9 @@ export default function AdminGuestRegistration() {
         roomIds: roomsToBook.map(r => r._id),
         ...billingDetails,
         ...sourceDetails,
-        otaCommissionPercent: sourceDetails.bookingSource === "OTA" ? sourceDetails.otaCommissionPercent : undefined,
+        otaCommissionType: sourceDetails.bookingSource === "OTA" ? sourceDetails.otaCommissionType : undefined,
+        otaCommissionValue: sourceDetails.bookingSource === "OTA" ? sourceDetails.otaCommissionPercent : undefined,
+        otaCommissionPercent: undefined,
       };
 
       const res = await fetch(`/api/front-desk/registration/walk-in`, {
@@ -901,6 +907,17 @@ export default function AdminGuestRegistration() {
                 <div><label className="block text-xs font-bold text-gray-500 mb-1">Child 3-12 (No Bed)</label><div className="flex gap-2"><input type="number" min="0" aria-label="Child 3-12 (No Bed) count" title="Persons" className="w-20 px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm" value={stayDetails.extraChildrenNoBed} onChange={e => setStayDetails({...stayDetails, extraChildrenNoBed: parseInt(e.target.value)||0})} /><div className="relative flex-1"><span className="absolute left-2 top-2 text-xs text-gray-400">₹</span><input type="number" min="0" aria-label="Child 3-12 (No Bed) rate per person per night" className="w-full pl-5 pr-2 py-2 bg-[#fdfaf2] border border-[#e5c76b] rounded-lg text-sm" value={extraRates.childRateNoBed} onChange={e => setExtraRates({...extraRates, childRateNoBed: e.target.value})} /></div></div><p className="text-[10px] text-gray-500 mt-0.5">persons · ₹ per person / night</p></div>
                 <div><label className="block text-xs font-bold text-gray-500 mb-1">Child 3-12 (With Bed)</label><div className="flex gap-2"><input type="number" min="0" aria-label="Child 3-12 (With Bed) count" title="Persons" className="w-20 px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm" value={stayDetails.extraChildrenWithBed} onChange={e => setStayDetails({...stayDetails, extraChildrenWithBed: parseInt(e.target.value)||0})} /><div className="relative flex-1"><span className="absolute left-2 top-2 text-xs text-gray-400">₹</span><input type="number" min="0" aria-label="Child 3-12 (With Bed) rate per person per night" className="w-full pl-5 pr-2 py-2 bg-[#fdfaf2] border border-[#e5c76b] rounded-lg text-sm" value={extraRates.childRateWithBed} onChange={e => setExtraRates({...extraRates, childRateWithBed: e.target.value})} /></div></div><p className="text-[10px] text-gray-500 mt-0.5">persons · ₹ per person / night</p></div>
                 <div><label className="block text-xs font-bold text-gray-500 mb-1">Other Charges (₹)</label><input type="number" min="0" className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm" value={stayDetails.otherCharges} onChange={e => setStayDetails({...stayDetails, otherCharges: parseInt(e.target.value)||0})} /></div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 mb-1">Discount to customer</label>
+                  <div className="flex gap-2">
+                    <select aria-label="Discount type" className="px-2 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm font-bold" value={stayDetails.discountType} onChange={e => setStayDetails({ ...stayDetails, discountType: e.target.value, discountValue: "" })}>
+                      <option value="FLAT">₹ flat</option>
+                      <option value="PERCENT">%</option>
+                    </select>
+                    <input type="number" min="0" max={stayDetails.discountType === "PERCENT" ? 100 : undefined} step="0.01" className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm" placeholder={stayDetails.discountType === "PERCENT" ? "e.g. 10" : "e.g. 200"} value={stayDetails.discountValue} onChange={e => setStayDetails({ ...stayDetails, discountValue: e.target.value })} />
+                  </div>
+                </div>
+                <div><label className="block text-xs font-bold text-gray-500 mb-1">Discount reason</label><input type="text" placeholder="e.g. Regular guest" className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm" value={stayDetails.discountReason} onChange={e => setStayDetails({ ...stayDetails, discountReason: e.target.value })} /></div>
                 <div><label className="block text-xs font-bold text-gray-500 mb-1">Other Charges Desc</label><input type="text" placeholder="e.g. Early Check-in" className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm" value={stayDetails.otherChargesDesc} onChange={e => setStayDetails({...stayDetails, otherChargesDesc: e.target.value})} /></div>
               </div>
             </div>
@@ -933,8 +950,14 @@ export default function AdminGuestRegistration() {
                       <input required className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm font-mono" placeholder="e.g. NH7012345678" value={sourceDetails.otaConfirmationNumber} onChange={e => setSourceDetails({ ...sourceDetails, otaConfirmationNumber: e.target.value })} />
                     </div>
                     <div>
-                      <label className="block text-xs font-bold text-gray-500 mb-1">Commission % *</label>
-                      <input required type="number" min="0" max="100" step="0.01" className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm" placeholder="18" value={sourceDetails.otaCommissionPercent} onChange={e => setSourceDetails({ ...sourceDetails, otaCommissionPercent: e.target.value })} />
+                      <label className="block text-xs font-bold text-gray-500 mb-1">Commission *</label>
+                      <div className="flex gap-2">
+                        <select aria-label="Commission type" className="px-2 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm font-bold" value={sourceDetails.otaCommissionType} onChange={e => setSourceDetails({ ...sourceDetails, otaCommissionType: e.target.value, otaCommissionPercent: "" })}>
+                          <option value="PERCENT">%</option>
+                          <option value="FLAT">₹ flat</option>
+                        </select>
+                        <input required type="number" min="0" max={sourceDetails.otaCommissionType === "PERCENT" ? 100 : undefined} step="0.01" className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm" placeholder={sourceDetails.otaCommissionType === "PERCENT" ? "18" : "e.g. 450"} value={sourceDetails.otaCommissionPercent} onChange={e => setSourceDetails({ ...sourceDetails, otaCommissionPercent: e.target.value })} />
+                      </div>
                     </div>
                     <div>
                       <label className="block text-xs font-bold text-gray-500 mb-1">Who collects the money *</label>
@@ -943,7 +966,7 @@ export default function AdminGuestRegistration() {
                         <option value="PAY_AT_HOTEL">Pay at hotel (guest pays here)</option>
                       </select>
                     </div>
-                    <p className="md:col-span-4 text-xs text-gray-500">Enter these from the OTA voucher or extranet. Commission is worked out on the pre-tax room amount and shown on the OTA Bookings page.</p>
+                    <p className="md:col-span-4 text-xs text-gray-500">Enter these from the OTA voucher or extranet. A % commission is worked out on the pre-tax room amount; a flat commission is the amount you enter. Both are shown on the OTA Bookings page.</p>
                   </div>
                 )}
               </div>
@@ -1356,6 +1379,13 @@ export default function AdminGuestRegistration() {
                                 <td className="p-2.5 border-r border-gray-200 font-sans font-semibold">Meal Plan ({stayDetails.mealPlan})</td>
                                 <td colSpan={5} className="p-2.5 text-right border-r border-gray-200">Applicable food package</td>
                                 <td className="p-2.5 text-right font-bold">₹{rateBreakdown.mealPlanTotal.toLocaleString("en-IN")}</td>
+                              </tr>
+                            )}
+                            {rateBreakdown.discountAmount > 0 && (
+                              <tr className="bg-green-50 text-green-800">
+                                <td className="p-2.5 border-r border-gray-200 font-sans font-semibold">Discount given{rateBreakdown.discountType === "PERCENT" ? ` (${rateBreakdown.discountValue}%)` : ""}</td>
+                                <td colSpan={5} className="p-2.5 text-right border-r border-gray-200">{stayDetails.discountReason || "Reduces the amount GST is worked out on"}</td>
+                                <td className="p-2.5 text-right font-bold">− ₹{rateBreakdown.discountAmount.toLocaleString("en-IN")}</td>
                               </tr>
                             )}
                             {rateBreakdown.otherCharges > 0 && (

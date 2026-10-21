@@ -67,6 +67,20 @@ describe("Website / chatbot enquiry stages", () => {
     expect(enq.lastActivityAt).toBeInstanceOf(Date);
   });
 
+  it("a chatbot lead who has not picked a room yet (empty room type) is still recorded, and a later empty one never erases a chosen room", async () => {
+    const chatPhone = `${phone.slice(0, -1)}${phone.endsWith("9") ? "8" : "9"}`;
+    const chat = (extra: Record<string, unknown>) => ({ ...lead({ phone: chatPhone, email: `chat-${email}`, source: "CHATBOT" }), ...extra });
+    const a = await post(chat({ bookingStage: "CHATBOT_CONTACT_COLLECTED", roomType: "" }));
+    expect(a.status, JSON.stringify(a.json)).toBe(201);
+    const picked = await post(chat({ bookingStage: "CHATBOT_ROOM_SELECTED", roomCategoryId: String(categoryId), roomType: "Room" }));
+    expect(picked.status).toBe(200);
+    const again = await post(chat({ bookingStage: "CHATBOT_AVAILABILITY_CHECKED", roomType: "" }));
+    expect(again.status).toBe(200);
+    const enq: any = await db().collection("bookingenquiries").findOne({ phone: chatPhone });
+    expect(enq.roomType).toBe(`Executive ${tag}`);
+    await db().collection("bookingenquiries").deleteMany({ phone: chatPhone });
+  });
+
   it("the same stage again doesn't repeat in the history", async () => {
     await post(lead({ bookingStage: "WEBSITE_BOOKING_FAILED" }));
     const enq: any = await db().collection("bookingenquiries").findOne({ phone });

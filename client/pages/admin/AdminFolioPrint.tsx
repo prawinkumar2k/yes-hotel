@@ -409,6 +409,12 @@ export default function AdminFolioPrint() {
                      )}
                    </div>
                  </div>
+                 {Number(booking.discountAmount || 0) > 0 && (
+                   <div className="flex font-bold mt-0.5 text-[9px]">
+                     <div className="w-20">Discount</div>
+                     <div className="flex-1 font-mono">Rs.{Number(booking.discountAmount).toFixed(2)}{booking.discountType === "PERCENT" ? ` (${booking.discountValue}%)` : ""} given to the guest, already deducted from the tariff{booking.discountReason ? ` — ${booking.discountReason}` : ""}</div>
+                   </div>
+                 )}
                  {checkoutPaymentLines.length > 0 && (
                    <div className="flex font-bold mt-0.5 text-[9px]">
                      <div className="w-20 text-gray-700">Settlement</div>
