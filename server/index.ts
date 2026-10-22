@@ -137,7 +137,7 @@ export function createServer() {
   // exists in the production bundle (verified: dist/server/node-build.mjs
   // serves the prebuilt dist/spa assets with no Vite runtime involved), so
   // production does not need 'unsafe-inline'/'unsafe-eval' for scripts.
-  const RAZORPAY_ORIGINS = ["https://checkout.razorpay.com", "https://api.razorpay.com", "https://lumberjack.razorpay.com"];
+  const RAZORPAY_ORIGINS = ["https://checkout.razorpay.com", "https://api.razorpay.com", "https://lumberjack.razorpay.com", "https://cdn.razorpay.com"];
   // Google Analytics (GA4) is allowed only when GA_MEASUREMENT_ID is set on the server.
   const GA_ON = /^G-[A-Z0-9]{6,}$/.test(String(process.env.GA_MEASUREMENT_ID ?? "").trim());
   const GA_SCRIPT = GA_ON ? ["https://www.googletagmanager.com"] : [];
