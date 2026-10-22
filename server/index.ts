@@ -184,7 +184,9 @@ export function createServer() {
     // COOP/OAC only need to be off in dev (they warn on non-HTTPS
     // localhost); a real production deployment is served over HTTPS and
     // should have them on.
-    crossOriginOpenerPolicy: (isProduction && process.env.COOKIE_SECURE !== "false") ? undefined : false,
+    // "same-origin-allow-popups" (not the default "same-origin"): Razorpay opens its bank / 3-D Secure page in a popup
+    // and talks back to the checkout; with "same-origin" that popup stays blank and the payment cannot finish.
+    crossOriginOpenerPolicy: (isProduction && process.env.COOKIE_SECURE !== "false") ? { policy: "same-origin-allow-popups" } : false,
     originAgentCluster: (isProduction && process.env.COOKIE_SECURE !== "false") ? undefined : false,
   }));
   app.use(
