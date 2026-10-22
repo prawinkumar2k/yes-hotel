@@ -17,6 +17,13 @@ export interface IGuest extends Document {
   idType?: string;
   idNumber?: string;
   notes?: string;
+  emergencyPhone?: string;
+  organization?: string;
+  designation?: string;
+  gstin?: string;
+  vehicleNumber?: string;
+  /** ID proofs and other papers added in the directory (photos / PDFs), kept with the guest. */
+  documents?: { _id: mongoose.Types.ObjectId; kind: string; label?: string; image: string; at: Date; by?: mongoose.Types.ObjectId }[];
   totalBookings: number;
   totalSpend: number;
   firstStay?: Date;
@@ -44,6 +51,20 @@ const GuestSchema = new Schema<IGuest>(
     idType: { type: String },
     idNumber: { type: String },
     notes: { type: String },
+    emergencyPhone: { type: String },
+    organization: { type: String },
+    designation: { type: String },
+    gstin: { type: String },
+    vehicleNumber: { type: String },
+    documents: [
+      {
+        kind: { type: String, enum: ["ID_FRONT", "ID_BACK", "PHOTO", "OTHER"], default: "OTHER" },
+        label: { type: String },
+        image: { type: String, required: true },
+        at: { type: Date, default: Date.now },
+        by: { type: Schema.Types.ObjectId, ref: "User" },
+      },
+    ],
     totalBookings: { type: Number, default: 0 },
     totalSpend: { type: Number, default: 0 },
     firstStay: { type: Date },

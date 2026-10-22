@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { Link } from "react-router-dom";
+import { DocumentPicker, ProofGallery, type GuestDoc } from "@/components/admin/GuestDocuments";
 
 export default function AdminGuests() {
   const { toast } = useToast();
@@ -20,6 +21,8 @@ export default function AdminGuests() {
   const [editingGuest, setEditingGuest] = useState<any>(null);
   const [isViewOpen, setIsViewOpen] = useState(false);
   const [viewingGuest, setViewingGuest] = useState<any>(null);
+  const [createDocs, setCreateDocs] = useState<GuestDoc[]>([]);
+  const [editDocs, setEditDocs] = useState<GuestDoc[]>([]);
 
   const { data, isLoading } = useQuery({
     queryKey: ["guests", page, searchTerm],
@@ -48,6 +51,7 @@ export default function AdminGuests() {
       queryClient.invalidateQueries({ queryKey: ["guests"] });
       toast({ title: "Success", description: "New guest registered successfully" });
       setIsCreateOpen(false);
+      setCreateDocs([]);
     },
     onError: (error: any) => {
       toast({ title: "Registration Failed", description: error.response?.data?.message || "Failed to create guest profile", variant: "destructive" });
@@ -64,6 +68,7 @@ export default function AdminGuests() {
       queryClient.invalidateQueries({ queryKey: ["guestDetails"] });
       toast({ title: "Success", description: "Guest updated successfully" });
       setIsOpen(false);
+      setEditDocs([]);
     },
     onError: (error: any) => {
       toast({ title: "Error", description: error.response?.data?.message || "Failed to update", variant: "destructive" });
@@ -108,7 +113,7 @@ export default function AdminGuests() {
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
           <Input 
-            placeholder="Search by name, email, or phone..." 
+            placeholder="Search by name, phone, email, ID number, company or vehicle..." 
             value={searchTerm}
             onChange={(e) => { setSearchTerm(e.target.value); setPage(1); }}
             className="pl-10 text-black font-medium"
@@ -139,9 +144,10 @@ export default function AdminGuests() {
                   <td className="px-4 py-3">
                     <div className="font-medium text-hotel-black">{guest.fullName}</div>
                     {guest.isVip && <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200 mt-1">VIP</Badge>}
+                    {guest.documentCount > 0 && <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 mt-1 ml-1">{guest.documentCount} doc{guest.documentCount > 1 ? "s" : ""}</Badge>}
                   </td>
                   <td className="px-4 py-3">
-                    <div className="text-gray-900">{guest.email}</div>
+                    <div className="text-gray-900">{guest.email || <span className="text-gray-400">No email</span>}</div>
                     <div className="text-gray-500 text-xs">{guest.phone}</div>
                   </td>
                   <td className="px-4 py-3">{guest.totalBookings}</td>
@@ -187,46 +193,75 @@ export default function AdminGuests() {
       </div>
 
       {/* Edit Dialog */}
-      <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogContent>
+      <Dialog open={isOpen} onOpenChange={(o) => { setIsOpen(o); if (!o) setEditDocs([]); }}>
+        <DialogContent className="max-w-2xl max-h-[92vh] overflow-y-auto">
           <DialogHeader><DialogTitle>Edit Guest</DialogTitle></DialogHeader>
           {editingGuest && (
             <form onSubmit={(e) => {
               e.preventDefault();
               const fd = new FormData(e.currentTarget);
+              const v = (k: string) => String(fd.get(k) ?? "").trim();
               updateMutation.mutate({
                 id: editingGuest._id,
                 data: {
-                  fullName: fd.get("fullName"),
-                  phone: fd.get("phone"),
-                  address: fd.get("address"),
-                  city: fd.get("city"),
-                  country: fd.get("country"),
-                  notes: fd.get("notes"),
-                  isVip: fd.get("isVip") === "true",
-                }
+                  fullName: v("fullName"), phone: v("phone"), alternatePhone: v("alternatePhone"), emergencyPhone: v("emergencyPhone"),
+                  ...(editingGuest.email ? {} : { email: v("email") }),
+                  gender: v("gender"), nationality: v("nationality"), dateOfBirth: v("dateOfBirth") || undefined,
+                  address: v("address"), city: v("city"), state: v("state"), country: v("country"),
+                  idType: v("idType"), idNumber: v("idNumber"),
+                  organization: v("organization"), designation: v("designation"), gstin: v("gstin"), vehicleNumber: v("vehicleNumber"),
+                  notes: v("notes"), isVip: v("isVip") === "true",
+                  ...(editDocs.length ? { addDocuments: editDocs } : {}),
+                },
               });
             }} className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2"><label className="text-sm">Full Name</label><Input name="fullName" defaultValue={editingGuest.fullName} required /></div>
-                <div className="space-y-2"><label className="text-sm">Phone</label><Input name="phone" defaultValue={editingGuest.phone} required /></div>
+                <div className="space-y-1"><label className="text-sm">Full Name *</label><Input name="fullName" defaultValue={editingGuest.fullName} required /></div>
+                <div className="space-y-1"><label className="text-sm">Phone *</label><Input name="phone" defaultValue={editingGuest.phone} required /></div>
+                <div className="space-y-1"><label className="text-sm">Alternate phone</label><Input name="alternatePhone" defaultValue={editingGuest.alternatePhone} /></div>
+                <div className="space-y-1"><label className="text-sm">Emergency contact</label><Input name="emergencyPhone" defaultValue={editingGuest.emergencyPhone} /></div>
               </div>
-              <div className="space-y-2"><label className="text-sm">Email (Read-only)</label><Input value={editingGuest.email} disabled /></div>
-              <div className="space-y-2"><label className="text-sm">Address</label><Input name="address" defaultValue={editingGuest.address} /></div>
+              {editingGuest.email
+                ? <div className="space-y-1"><label className="text-sm">Email (cannot be changed)</label><Input value={editingGuest.email} disabled /></div>
+                : <div className="space-y-1"><label className="text-sm">Email (none on file: add one)</label><Input name="email" type="email" placeholder="name@example.com" /></div>}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="space-y-1"><label className="text-sm">Gender</label>
+                  <select name="gender" defaultValue={editingGuest.gender || ""} className="w-full border rounded-md p-2 text-sm"><option value="">-</option><option value="MALE">Male</option><option value="FEMALE">Female</option><option value="OTHER">Other</option></select></div>
+                <div className="space-y-1"><label className="text-sm">Date of birth</label><Input name="dateOfBirth" type="date" defaultValue={editingGuest.dateOfBirth ? String(editingGuest.dateOfBirth).slice(0, 10) : ""} /></div>
+                <div className="space-y-1"><label className="text-sm">Nationality</label><Input name="nationality" defaultValue={editingGuest.nationality} /></div>
+              </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2"><label className="text-sm">City</label><Input name="city" defaultValue={editingGuest.city} /></div>
-                <div className="space-y-2"><label className="text-sm">Country</label><Input name="country" defaultValue={editingGuest.country} /></div>
+                <div className="space-y-1"><label className="text-sm">ID type</label>
+                  <select name="idType" defaultValue={editingGuest.idType || "Aadhaar"} className="w-full border rounded-md p-2 text-sm"><option>Aadhaar</option><option>Passport</option><option>Driving License</option><option>Voter ID</option><option>PAN</option><option>Other</option></select></div>
+                <div className="space-y-1"><label className="text-sm">ID number</label><Input name="idNumber" defaultValue={editingGuest.idNumber} /></div>
               </div>
-              <div className="space-y-2"><label className="text-sm">Notes</label><Input name="notes" defaultValue={editingGuest.notes} /></div>
-              <div className="space-y-2">
+              <div className="space-y-1"><label className="text-sm">Address</label><Input name="address" defaultValue={editingGuest.address} /></div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="space-y-1"><label className="text-sm">City</label><Input name="city" defaultValue={editingGuest.city} /></div>
+                <div className="space-y-1"><label className="text-sm">State</label><Input name="state" defaultValue={editingGuest.state} /></div>
+                <div className="space-y-1"><label className="text-sm">Country</label><Input name="country" defaultValue={editingGuest.country} /></div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1"><label className="text-sm">Company</label><Input name="organization" defaultValue={editingGuest.organization} /></div>
+                <div className="space-y-1"><label className="text-sm">Designation</label><Input name="designation" defaultValue={editingGuest.designation} /></div>
+                <div className="space-y-1"><label className="text-sm">GSTIN</label><Input name="gstin" defaultValue={editingGuest.gstin} maxLength={15} /></div>
+                <div className="space-y-1"><label className="text-sm">Vehicle number</label><Input name="vehicleNumber" defaultValue={editingGuest.vehicleNumber} /></div>
+              </div>
+              <div className="space-y-1"><label className="text-sm">Notes</label><Input name="notes" defaultValue={editingGuest.notes} /></div>
+              <div className="space-y-1">
                 <label className="text-sm block">VIP Status</label>
                 <select name="isVip" defaultValue={editingGuest.isVip ? "true" : "false"} className="w-full border rounded-md p-2">
                   <option value="true">Yes</option>
                   <option value="false">No</option>
                 </select>
               </div>
+              <div className="space-y-1">
+                <label className="text-sm font-semibold">Add documents (ID proof, photo…)</label>
+                <DocumentPicker value={editDocs} onChange={setEditDocs} />
+                <p className="text-[11px] text-gray-500">Existing documents are shown, and can be removed, in the guest's profile (eye icon).</p>
+              </div>
               <DialogFooter>
-                <Button type="submit" disabled={updateMutation.isPending}>Save Changes</Button>
+                <Button type="submit" disabled={updateMutation.isPending}>{updateMutation.isPending ? "Saving…" : "Save Changes"}</Button>
               </DialogFooter>
             </form>
           )}
@@ -281,24 +316,28 @@ export default function AdminGuests() {
                 </div>
               )}
 
-              {/* ID Proof Photo Verification */}
-              {(viewData.guest?.idProofPhoto || viewData.bookings?.some((b: any) => b.idProofPhoto)) && (
-                <div className="bg-emerald-50 border border-emerald-200 p-4 rounded-lg flex items-center justify-between">
-                  <div>
-                    <p className="font-bold text-sm text-emerald-900 flex items-center gap-1.5">📷 Verified ID Proof Photo Attached</p>
-                    <p className="text-xs text-emerald-700">Official identity verification document collected at check-in</p>
-                  </div>
-                  <button
-                    onClick={() => {
-                      const proofUrl = viewData.guest?.idProofPhoto || viewData.bookings?.find((b: any) => b.idProofPhoto)?.idProofPhoto;
-                      if (proofUrl) window.open(proofUrl, "_blank");
-                    }}
-                    className="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded text-xs font-bold transition shadow-sm"
-                  >
-                    View ID Proof Photo
-                  </button>
+              <div className="bg-gray-50 border border-gray-100 rounded-xl p-4 grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-3 text-sm">
+                {[
+                  ["Alternate phone", viewData.guest.alternatePhone], ["Emergency contact", viewData.guest.emergencyPhone], ["Gender", viewData.guest.gender],
+                  ["Date of birth", viewData.guest.dateOfBirth ? format(new Date(viewData.guest.dateOfBirth), "dd MMM yyyy") : ""], ["Nationality", viewData.guest.nationality],
+                  ["ID type", viewData.guest.idType], ["ID number", viewData.guest.idNumber],
+                  ["Address", [viewData.guest.address, viewData.guest.city, viewData.guest.state, viewData.guest.country].filter(Boolean).join(", ")],
+                  ["Company", viewData.guest.organization], ["Designation", viewData.guest.designation], ["GSTIN", viewData.guest.gstin], ["Vehicle", viewData.guest.vehicleNumber],
+                ].filter(([, v]) => v).map(([k, v]) => (
+                  <div key={String(k)}><p className="text-[11px] text-gray-500 font-semibold uppercase tracking-wider">{k}</p><p className="font-medium break-words">{v}</p></div>
+                ))}
+              </div>
+
+              <div>
+                <div className="flex justify-between items-center mb-3 border-b pb-2">
+                  <h3 className="font-bold text-base font-serif text-gray-900">Documents &amp; ID proofs ({viewData.proofs?.length ?? 0})</h3>
+                  <Button size="sm" variant="outline" onClick={() => { setViewingGuest(null); setIsViewOpen(false); handleEdit(viewData.guest); }}><Plus className="w-3 h-3 mr-1" /> Add</Button>
                 </div>
-              )}
+                <ProofGallery
+                  proofs={viewData.proofs ?? []}
+                  onRemove={(id) => updateMutation.mutate({ id: viewData.guest._id, data: { removeDocumentIds: [id] } })}
+                />
+              </div>
 
               <div>
                 <div className="flex justify-between items-center mb-3 border-b pb-2">
@@ -411,7 +450,7 @@ export default function AdminGuests() {
 
       {/* Manual Guest Registration Dialog */}
       <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-2xl max-h-[92vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <UserPlus className="w-5 h-5 text-hotel-gold" />
@@ -422,17 +461,15 @@ export default function AdminGuests() {
             onSubmit={(e) => {
               e.preventDefault();
               const fd = new FormData(e.currentTarget);
+              const v = (k: string) => String(fd.get(k) ?? "").trim();
               createMutation.mutate({
-                fullName: fd.get("fullName"),
-                email: fd.get("email"),
-                phone: fd.get("phone"),
-                address: fd.get("address"),
-                city: fd.get("city"),
-                country: fd.get("country"),
-                idType: fd.get("idType"),
-                idNumber: fd.get("idNumber"),
-                notes: fd.get("notes"),
-                isVip: fd.get("isVip") === "true",
+                fullName: v("fullName"), email: v("email"), phone: v("phone"), alternatePhone: v("alternatePhone"), emergencyPhone: v("emergencyPhone"),
+                gender: v("gender") || undefined, dateOfBirth: v("dateOfBirth") || undefined, nationality: v("nationality"),
+                address: v("address"), city: v("city"), state: v("state"), country: v("country"),
+                idType: v("idType"), idNumber: v("idNumber"),
+                organization: v("organization"), designation: v("designation"), gstin: v("gstin"), vehicleNumber: v("vehicleNumber"),
+                notes: v("notes"), isVip: v("isVip") === "true",
+                documents: createDocs,
               });
             }}
             className="space-y-4 pt-2"
@@ -449,8 +486,8 @@ export default function AdminGuests() {
             </div>
 
             <div className="space-y-2">
-              <label className="text-xs font-semibold uppercase text-gray-600">Email Address *</label>
-              <Input name="email" type="email" placeholder="rahul@example.com" required />
+              <label className="text-xs font-semibold uppercase text-gray-600">Email (optional)</label>
+              <Input name="email" type="email" placeholder="rahul@example.com" />
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -461,6 +498,8 @@ export default function AdminGuests() {
                   <option value="Passport">Passport</option>
                   <option value="Driving License">Driving License</option>
                   <option value="Voter ID">Voter ID</option>
+                  <option value="PAN">PAN</option>
+                  <option value="Other">Other</option>
                 </select>
               </div>
               <div className="space-y-2">
@@ -478,6 +517,28 @@ export default function AdminGuests() {
                 <label className="text-xs font-semibold uppercase text-gray-600">Country</label>
                 <Input name="country" defaultValue="India" />
               </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2"><label className="text-xs font-semibold uppercase text-gray-600">Alternate phone</label><Input name="alternatePhone" /></div>
+              <div className="space-y-2"><label className="text-xs font-semibold uppercase text-gray-600">Emergency contact</label><Input name="emergencyPhone" /></div>
+              <div className="space-y-2"><label className="text-xs font-semibold uppercase text-gray-600">Gender</label>
+                <select name="gender" className="w-full border rounded-md p-2 text-sm"><option value="">-</option><option value="MALE">Male</option><option value="FEMALE">Female</option><option value="OTHER">Other</option></select></div>
+              <div className="space-y-2"><label className="text-xs font-semibold uppercase text-gray-600">Date of birth</label><Input name="dateOfBirth" type="date" /></div>
+              <div className="space-y-2"><label className="text-xs font-semibold uppercase text-gray-600">Nationality</label><Input name="nationality" defaultValue="Indian" /></div>
+              <div className="space-y-2"><label className="text-xs font-semibold uppercase text-gray-600">State</label><Input name="state" placeholder="Karnataka" /></div>
+            </div>
+            <div className="space-y-2"><label className="text-xs font-semibold uppercase text-gray-600">Address</label><Input name="address" /></div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2"><label className="text-xs font-semibold uppercase text-gray-600">Company</label><Input name="organization" /></div>
+              <div className="space-y-2"><label className="text-xs font-semibold uppercase text-gray-600">Designation</label><Input name="designation" /></div>
+              <div className="space-y-2"><label className="text-xs font-semibold uppercase text-gray-600">GSTIN</label><Input name="gstin" maxLength={15} /></div>
+              <div className="space-y-2"><label className="text-xs font-semibold uppercase text-gray-600">Vehicle number</label><Input name="vehicleNumber" /></div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-xs font-semibold uppercase text-gray-600">ID proofs and documents</label>
+              <DocumentPicker value={createDocs} onChange={setCreateDocs} />
             </div>
 
             <div className="space-y-2">

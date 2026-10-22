@@ -9,7 +9,7 @@ const MAX_IMAGE_CHARS = 4_000_000; // about 3 MB of photo (the screen scales pho
 
 export class CheckInDetailsError extends Error {}
 
-const isImage = (s: unknown): s is string =>
+export const isStoredDocument = (s: unknown): s is string =>
   typeof s === "string" && s.length <= MAX_IMAGE_CHARS && (/^data:(image\/(jpeg|png|webp)|application\/pdf);base64,/i.test(s) || /^https:\/\//i.test(s));
 
 /** Copies the supplied details onto booking.guestDetails (blank values never erase what is already there). */
@@ -49,7 +49,7 @@ export function applyCheckInDetails(booking: any, body: Record<string, any>) {
     ...(Array.isArray(body.idProofImages) ? body.idProofImages : []),
     ...(body.idProofPhoto ? [body.idProofPhoto] : []),
   ];
-  const bad = incoming.filter((x) => !isImage(x));
+  const bad = incoming.filter((x) => !isStoredDocument(x));
   if (bad.length) throw new CheckInDetailsError("An ID document is not a supported image (JPEG, PNG, WebP) or is too large");
   if (incoming.length) {
     const merged = [...new Set([...(g.idProofImages ?? []), ...incoming])];
