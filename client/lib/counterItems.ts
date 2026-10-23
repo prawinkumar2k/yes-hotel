@@ -7,7 +7,7 @@ export const COUNTER_ITEMS: { category: string; label: string; defaultAmount?: n
   { category: "EARLY_CHECK_IN", label: "Early Check-in" },
   { category: "WATER_BOTTLE", label: "Water Bottle", defaultAmount: 20, variants: [{ label: "1 L", amount: 20 }, { label: "½ L", amount: 10 }] },
   { category: "DENTAL_KIT", label: "Dental Kit" },
-  { category: "TEA_COFFEE_SHOP", label: "Tea / Coffee Shop", defaultAmount: 30 },
+  { category: "TEA_COFFEE_SHOP", label: "Tea / Coffee Shop (₹30 per head)", defaultAmount: 30 },
   { category: "KOVAI_KONGU_MESS", label: "Kovai Kongu Mess" },
   { category: "OTHER", label: "Others" },
 ];

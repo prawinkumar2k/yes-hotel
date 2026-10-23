@@ -199,7 +199,7 @@ export default function AdminGuestRegistration() {
   // Booking source. OTA bookings are typed in by hand from the OTA extranet / voucher (no online fetching).
   const [sourceDetails, setSourceDetails] = useState(() => {
     const q = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("source") : null;
-    return { bookingSource: q === "OTA" ? "OTA" : "WALK_IN", otaName: "", otaConfirmationNumber: "", otaCommissionType: "PERCENT", otaCommissionPercent: "", otaPaymentModel: "OTA_PREPAID" };
+    return { bookingSource: q === "OTA" ? "OTA" : "WALK_IN", otaName: "", otaConfirmationNumber: "", otaCommissionType: "PERCENT", otaCommissionPercent: "", otaCommissionGstPercent: "18", otaPaymentModel: "OTA_PREPAID" };
   });
 
   const [billingDetails, setBillingDetails] = useState({
@@ -455,6 +455,7 @@ export default function AdminGuestRegistration() {
         otaCommissionType: sourceDetails.bookingSource === "OTA" ? sourceDetails.otaCommissionType : undefined,
         otaCommissionValue: sourceDetails.bookingSource === "OTA" ? sourceDetails.otaCommissionPercent : undefined,
         otaCommissionPercent: undefined,
+        otaCommissionGstPercent: sourceDetails.bookingSource === "OTA" ? sourceDetails.otaCommissionGstPercent : undefined,
       };
 
       const res = await fetch(`/api/front-desk/registration/walk-in`, {
@@ -985,6 +986,11 @@ export default function AdminGuestRegistration() {
                         </select>
                         <input required type="number" min="0" max={sourceDetails.otaCommissionType === "PERCENT" ? 100 : undefined} step="0.01" className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm" placeholder={sourceDetails.otaCommissionType === "PERCENT" ? "18" : "e.g. 450"} value={sourceDetails.otaCommissionPercent} onChange={e => setSourceDetails({ ...sourceDetails, otaCommissionPercent: e.target.value })} />
                       </div>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-gray-500 mb-1">GST on commission (%)</label>
+                      <input type="number" min="0" max="100" step="0.01" className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm" value={sourceDetails.otaCommissionGstPercent} onChange={e => setSourceDetails({ ...sourceDetails, otaCommissionGstPercent: e.target.value })} />
+                      <p className="text-[10px] text-gray-500 mt-0.5">The OTA takes it with its commission (18%).</p>
                     </div>
                     <div>
                       <label className="block text-xs font-bold text-gray-500 mb-1">Who collects the money *</label>

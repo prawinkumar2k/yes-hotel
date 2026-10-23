@@ -194,7 +194,11 @@ export default function AdvanceBookingDialog({ open, onClose, onSaved, initial }
 
             <section className="grid sm:grid-cols-3 gap-3">
               <div><label className={lbl}>Advance amount (₹)</label><input className={inp} type="number" min={0} value={f.amount ?? ""} onChange={(e) => set("amount", e.target.value)} />
-                {tooMuch && <p className="text-xs text-red-600 mt-1">Advance is more than the total ({inr(quote.roundedTotal)})</p>}</div>
+                {tooMuch && <p className="text-xs text-red-600 mt-1">Advance is more than the total ({inr(quote.roundedTotal)})</p>}
+                <p className="text-[11px] text-gray-500 mt-1">
+                  Corporate, long-stay and regular guests: take 100% in advance (credit-based accounts: no advance).
+                  {quote?.roundedTotal > 0 && <> <button type="button" className="underline text-blue-700" onClick={() => set("amount", String(quote.roundedTotal))}>Fill 100%</button></>}
+                </p></div>
               <div><label className={lbl}>Payment channel</label>
                 <select className={inp} value={f.channelId ?? ""} onChange={(e) => set("channelId", e.target.value)}>{channels.map((c) => <option key={c._id} value={c._id}>{c.name}</option>)}</select></div>
               <div><label className={lbl}>Reference / UTR</label><input className={inp} value={f.reference ?? ""} onChange={(e) => set("reference", e.target.value)} /></div>

@@ -234,6 +234,8 @@ export interface IBooking extends Document {
   otaPaymentModel?: OtaPaymentModel;
   otaCommissionBase?: number;
   otaCommissionAmount?: number;
+  otaCommissionGstPercent?: number; // GST the OTA charges on its commission
+  otaCommissionGst?: number;
   otaReceivable?: number;    // OTA owes the hotel (OTA_PREPAID)
   otaPayable?: number;       // hotel owes the OTA (PAY_AT_HOTEL)
 
@@ -448,6 +450,8 @@ const BookingSchema = new Schema<IBooking>(
     otaPaymentModel: { type: String, enum: Object.values(OtaPaymentModel) },
     otaCommissionBase: { type: Number },
     otaCommissionAmount: { type: Number },
+    otaCommissionGstPercent: { type: Number, min: 0, max: 100 },
+    otaCommissionGst: { type: Number },
     otaReceivable: { type: Number },
     otaPayable: { type: Number },
 
@@ -525,7 +529,7 @@ BookingSchema.pre("validate", function () {
   const b = this as any;
   if (b.source === BookingSource.OTA && (b.otaCommissionPercent != null || b.otaCommissionFlat != null) && b.otaPaymentModel) {
     const flat = b.otaCommissionType === "FLAT" && b.otaCommissionFlat != null;
-    Object.assign(b, computeOtaSettlement({ totalAmount: b.totalAmount, taxAmount: b.taxAmount, ...(flat ? { commissionFlat: b.otaCommissionFlat } : { commissionPercent: b.otaCommissionPercent }), paymentModel: b.otaPaymentModel }));
+    Object.assign(b, computeOtaSettlement({ totalAmount: b.totalAmount, taxAmount: b.taxAmount, ...(flat ? { commissionFlat: b.otaCommissionFlat } : { commissionPercent: b.otaCommissionPercent }), commissionGstPercent: b.otaCommissionGstPercent, paymentModel: b.otaPaymentModel }));
   }
 });
 

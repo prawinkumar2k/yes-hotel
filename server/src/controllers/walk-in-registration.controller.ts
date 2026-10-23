@@ -473,6 +473,7 @@ export const walkInArrivalRegistration = async (req: Request, res: Response) => 
         otaCommissionPercent,
         otaCommissionType,
         otaCommissionValue,
+        otaCommissionGstPercent,
         otaPaymentModel,
 
         // Discount given to the customer (a % or a flat amount)
@@ -524,9 +525,11 @@ export const walkInArrivalRegistration = async (req: Request, res: Response) => 
           throw new Error(flatCommission ? "Enter the OTA commission amount (₹)" : "Enter the OTA commission % (0–100)");
         }
         if (!["OTA_PREPAID", "PAY_AT_HOTEL"].includes(model)) throw new Error("Choose who collects the money: OTA prepaid or pay at hotel");
+        const gstTyped = otaCommissionGstPercent === undefined || otaCommissionGstPercent === "" ? 0 : Number(otaCommissionGstPercent);
+        if (!Number.isFinite(gstTyped) || gstTyped < 0 || gstTyped > 100) throw new Error("Enter the GST on the OTA commission as 0–100%");
         otaFields = flatCommission
-          ? { otaName: name, otaConfirmationNumber: confirmation, otaCommissionType: "FLAT", otaCommissionFlat: pct, otaPaymentModel: model }
-          : { otaName: name, otaConfirmationNumber: confirmation, otaCommissionType: "PERCENT", otaCommissionPercent: pct, otaPaymentModel: model };
+          ? { otaName: name, otaConfirmationNumber: confirmation, otaCommissionType: "FLAT", otaCommissionFlat: pct, otaCommissionGstPercent: gstTyped, otaPaymentModel: model }
+          : { otaName: name, otaConfirmationNumber: confirmation, otaCommissionType: "PERCENT", otaCommissionPercent: pct, otaCommissionGstPercent: gstTyped, otaPaymentModel: model };
       }
 
       const allRoomIds: string[] = (Array.isArray(roomIds) && roomIds.length > 0)

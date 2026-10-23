@@ -18,11 +18,14 @@ export interface OtaSettlement {
   otaCommissionPercent?: number;
   otaCommissionBase: number;
   otaCommissionAmount: number;
+  /** GST the OTA charges on its commission (taken with it): the % and the amount. */
+  otaCommissionGstPercent?: number;
+  otaCommissionGst?: number;
   otaReceivable: number; // OTA → hotel
   otaPayable: number; // hotel → OTA
 }
 
-export function computeOtaSettlement(p: { totalAmount: number; taxAmount?: number; commissionPercent?: number; commissionFlat?: number; paymentModel: OtaPaymentModel | string }): OtaSettlement {
+export function computeOtaSettlement(p: { totalAmount: number; taxAmount?: number; commissionPercent?: number; commissionFlat?: number; commissionGstPercent?: number; paymentModel: OtaPaymentModel | string }): OtaSettlement {
   const base = r2(Math.max(0, (p.totalAmount || 0) - (p.taxAmount || 0)));
   const flat = p.commissionFlat != null && Number.isFinite(Number(p.commissionFlat));
   let commission: number;
@@ -37,12 +40,16 @@ export function computeOtaSettlement(p: { totalAmount: number; taxAmount?: numbe
     if (!(pct >= 0 && pct <= 100)) throw new Error("OTA commission must be between 0% and 100%");
     commission = r2((base * pct) / 100);
   }
+  const gstPct = Number(p.commissionGstPercent) || 0;
+  if (!(gstPct >= 0 && gstPct <= 100)) throw new Error("GST on the OTA commission must be between 0% and 100%");
+  const gst = r2((commission * gstPct) / 100);
   const prepaid = p.paymentModel === OtaPaymentModel.OTA_PREPAID;
   return {
     ...(derivedPercent !== undefined ? { otaCommissionPercent: derivedPercent } : {}),
     otaCommissionBase: base,
     otaCommissionAmount: commission,
-    otaReceivable: prepaid ? r2((p.totalAmount || 0) - commission) : 0,
-    otaPayable: prepaid ? 0 : commission,
+    ...(gstPct > 0 ? { otaCommissionGstPercent: gstPct, otaCommissionGst: gst } : {}),
+    otaReceivable: prepaid ? r2((p.totalAmount || 0) - commission - gst) : 0,
+    otaPayable: prepaid ? 0 : r2(commission + gst),
   };
 }

@@ -70,7 +70,10 @@ export async function quoteTimeCharge(p: { bookingId: string; kind: TimeChargeKi
   const flatFee = Number(late ? settings.lateCheckOutFee : settings.earlyCheckInFee) || 0;
   // The hotel's flat early / late fee by occupancy (up to its hour limit), else the room type's hourly price, else the flat fee.
   const occupancyFee = earlyLateFlatFee(settings, booking.adults, hours);
-  const suggested = occupancyFee ?? (hourlyPrice > 0 ? r2(hourlyPrice * hours) : flatFee);
+  // Beyond the flat-fee hours (6): no suggestion, the desk types the amount.
+  const flatConfigured = (Number(settings.earlyLateFeeSingle) || 0) > 0 || (Number(settings.earlyLateFeeDouble) || 0) > 0;
+  const manualEntryRequired = flatConfigured && occupancyFee === undefined;
+  const suggested = manualEntryRequired ? 0 : occupancyFee ?? (hourlyPrice > 0 ? r2(hourlyPrice * hours) : flatFee);
   const given = p.amount === undefined || p.amount === null || (p.amount as any) === "" ? undefined : Number(p.amount);
   if (given !== undefined && !(given >= 0)) throw new TimeChargeError("Enter a valid amount");
   const amount = r2(given ?? suggested);
@@ -88,6 +91,8 @@ export async function quoteTimeCharge(p: { bookingId: string; kind: TimeChargeKi
     hourlyPrice,
     flatFee,
     suggestedAmount: suggested,
+    manualEntryRequired,
+    maxFlatHours: Number(settings.earlyLateMaxHours) || 6,
     amount,
     pricesIncludeTax: inclusive,
     taxable: tax.taxable,
@@ -101,6 +106,9 @@ export async function quoteTimeCharge(p: { bookingId: string; kind: TimeChargeKi
 
 export async function postTimeCharge(p: { bookingId: string; kind: TimeChargeKind; hours: number; amount?: number; reason?: string; force?: boolean; actorId: string; req?: Request }) {
   const q = await quoteTimeCharge(p);
+  if (q.manualEntryRequired && (p.amount === undefined || p.amount === null || (p.amount as any) === "")) {
+    throw new TimeChargeError(`For more than ${q.maxFlatHours} hours the amount is entered by the desk: type the amount to charge`);
+  }
   const booking = q.booking;
   if (booking.status !== BookingStatus.CHECKED_IN) throw new TimeChargeError(`The guest must be checked in (this booking is ${booking.status})`, 409);
   // Late check-out: the room must not be needed by the next guest that day.

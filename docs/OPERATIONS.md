@@ -154,10 +154,12 @@ Website bookings are **on hold** unless **Admin → Settings → Online booking 
 - **Extra guests** (adult with or without bed, child up to 12 with or without bed) can differ by room type; a blank value uses the hotel-wide rate in Settings. Kids up to 3 years are free.
 - **CP (breakfast)** adds a fixed amount per room by occupancy (single, double) plus breakfast for each extra person (Settings → Occupancy).
 - **Day use** (up to 12 hours, no food) is a flat price by occupancy per room type. Room types with day use switched off (Executive) refuse it.
-- **Early check-in / late check-out** up to 6 hours is a flat fee by occupancy (Settings → Occupancy); the desk can still change the amount.
+- **Early check-in / late check-out** up to 6 hours is a flat fee by occupancy (Settings → Occupancy); the desk can still change the amount. Beyond 6 hours the desk types the amount (nothing is suggested).
+- **Festival, season and weekend prices** are typed by the desk in the room tariff box at registration; there is no automatic date-based price.
+- **Advance**: corporate, long-stay and regular guests pay 100% in advance; credit-based accounts pay none. The advance screen shows this as a reminder (with a *Fill 100%* button); it is not enforced.
 - **Cancellation**: free up to 48 hours before check-in, 50% from 48 to 24 hours, no refund after that (Settings → Cancellation; the published policy follows these numbers).
-- **OTA commission** prefills when the OTA is chosen at registration: Booking.com 18%, MakeMyTrip and Goibibo 20% (editable per booking).
-- **Counter items**: water bottle 1 L ₹20 and ½ L ₹10, tea/coffee ₹30 prefill the price; breakage is charged at cost + 10% (use *Others*).
+- **OTA commission** prefills when the OTA is chosen at registration: Booking.com 18%, MakeMyTrip and Goibibo 20% (editable per booking). The OTA also charges **18% GST on its commission** and takes it with the commission: it is shown as its own figure, and the OTA pays the hotel that much less (or the hotel owes that much more).
+- **Counter items**: water bottle 1 L ₹20 and ½ L ₹10, tea/coffee ₹30 per head (enter the number of heads as the quantity) prefill the price; breakage is charged at cost + 10% (use *Others*).
 - **Putting the real figures into the live database**: take a backup, then run `npx tsx server/src/scripts/apply-real-tariff.ts` (a dry run that shows every change), and again with `--apply --backup-taken` to apply.
 
 

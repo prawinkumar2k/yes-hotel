@@ -31,6 +31,7 @@ const CATEGORY_RATES: { match: RegExp; label: string; set: Record<string, unknow
       singleOccupancyPrice: 2500, basePrice: 3000,
       extraPersonRate: 1000, extraBedRate: 1500,
       dayUseAllowed: false,
+      "capacity.adults": 2,
     },
   },
 ];
