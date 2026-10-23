@@ -59,8 +59,13 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-  const keys = Object.fromEntries(Object.keys(SETTINGS).map((k) => [k, settingsBefore?.[k] ?? 0]));
-  await db().collection("hotelsettings").updateMany({}, { $set: keys });
+  // Put each setting back exactly as it was: fields that were not set are removed again (not left as 0).
+  const was = Object.keys(SETTINGS).filter((k) => settingsBefore?.[k] !== undefined);
+  const wasNot = Object.keys(SETTINGS).filter((k) => settingsBefore?.[k] === undefined);
+  await db().collection("hotelsettings").updateMany({}, {
+    ...(was.length ? { $set: Object.fromEntries(was.map((k) => [k, settingsBefore[k]])) } : {}),
+    ...(wasNot.length ? { $unset: Object.fromEntries(wasNot.map((k) => [k, ""])) } : {}),
+  });
   await db().collection("rooms").deleteMany({ _id: { $in: [ids.rDelux, ids.rDelux2, ids.rExec] } });
   await db().collection("roomcategories").deleteMany({ _id: { $in: [ids.delux, ids.exec] } });
   await db().collection("users").deleteMany({ _id: reception });
