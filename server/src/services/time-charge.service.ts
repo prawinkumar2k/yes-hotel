@@ -8,6 +8,7 @@
  * room's slab) with its CGST and SGST; the booking's arrival / departure time and totals follow,
  * and the charge is recorded on the booking (`timeCharges`) for the GRC and invoice.
  */
+import { earlyLateFlatFee } from "./tariff.service";
 import mongoose from "mongoose";
 import type { Request } from "express";
 import { Booking, BookingStatus } from "../models/Booking";
@@ -46,7 +47,7 @@ async function load(bookingId: string) {
   const booking: any = await Booking.findById(bookingId).populate("roomCategory", "name hourlyPrice");
   if (!booking) throw new TimeChargeError("Booking not found", 404);
   const { HotelSettings } = await import("../models/HotelSettings");
-  const settings: any = (await HotelSettings.findOne().sort({ updatedAt: -1 }).select("checkInTime checkOutTime earlyCheckInFee lateCheckOutFee").lean()) ?? {};
+  const settings: any = (await HotelSettings.findOne().sort({ updatedAt: -1 }).select("checkInTime checkOutTime earlyCheckInFee lateCheckOutFee earlyLateFeeSingle earlyLateFeeDouble earlyLateMaxHours").lean()) ?? {};
   return { booking, settings };
 }
 
@@ -67,7 +68,9 @@ export async function quoteTimeCharge(p: { bookingId: string; kind: TimeChargeKi
 
   const hourlyPrice = Number(booking.roomCategory?.hourlyPrice) || 0;
   const flatFee = Number(late ? settings.lateCheckOutFee : settings.earlyCheckInFee) || 0;
-  const suggested = hourlyPrice > 0 ? r2(hourlyPrice * hours) : flatFee;
+  // The hotel's flat early / late fee by occupancy (up to its hour limit), else the room type's hourly price, else the flat fee.
+  const occupancyFee = earlyLateFlatFee(settings, booking.adults, hours);
+  const suggested = occupancyFee ?? (hourlyPrice > 0 ? r2(hourlyPrice * hours) : flatFee);
   const given = p.amount === undefined || p.amount === null || (p.amount as any) === "" ? undefined : Number(p.amount);
   if (given !== undefined && !(given >= 0)) throw new TimeChargeError("Enter a valid amount");
   const amount = r2(given ?? suggested);

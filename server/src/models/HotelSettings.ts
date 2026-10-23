@@ -19,6 +19,17 @@ export interface IHotelSettings extends Document {
   checkOutTime: string;  // e.g. "11:00"
   earlyCheckInFee?: number;
   lateCheckOutFee?: number;
+  /** Early check-in / late check-out up to earlyLateMaxHours: flat fee by occupancy (0 = not set). */
+  earlyLateFeeSingle?: number;
+  earlyLateFeeDouble?: number;
+  earlyLateMaxHours?: number;
+  /** CP (breakfast) adds this per room per night by occupancy, plus extraBreakfastRate for each extra person (0 = per-person meal rate). */
+  cpSingleSupplement?: number;
+  cpDoubleSupplement?: number;
+  extraBreakfastRate?: number;
+  /** Between cancellationPartialHours and cancellationFreeHours before check-in this % is charged (default 24 h, 50%). */
+  cancellationPartialHours?: number;
+  cancellationPartialPercent?: number;
   maxOccupancyBuffer?: number;  // e.g. 5 = allow 5% overbooking (0 = strict)
 
   // Occupancy Charges
@@ -119,6 +130,14 @@ const HotelSettingsSchema = new Schema<IHotelSettings>(
     checkOutTime: { type: String, required: true, default: "11:00" },
     earlyCheckInFee: { type: Number, default: 0 },
     lateCheckOutFee: { type: Number, default: 0 },
+    earlyLateFeeSingle: { type: Number, default: 0 },
+    earlyLateFeeDouble: { type: Number, default: 0 },
+    earlyLateMaxHours: { type: Number, default: 6 },
+    cpSingleSupplement: { type: Number, default: 0 },
+    cpDoubleSupplement: { type: Number, default: 0 },
+    extraBreakfastRate: { type: Number, default: 0 },
+    cancellationPartialHours: { type: Number, default: 24 },
+    cancellationPartialPercent: { type: Number, default: 50 },
     maxOccupancyBuffer: { type: Number, default: 0 },
 
     extraPersonRate: { type: Number, default: 800 },

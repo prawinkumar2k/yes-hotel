@@ -51,6 +51,15 @@ export default function AdminSettings() {
       extraBedRate: Number(rawData.extraBedRate),
       earlyCheckInFee: Number(rawData.earlyCheckInFee) || 0,
       lateCheckOutFee: Number(rawData.lateCheckOutFee) || 0,
+      cancellationFreeHours: Number(rawData.cancellationFreeHours) || 48,
+      earlyLateFeeSingle: Number(rawData.earlyLateFeeSingle) || 0,
+      earlyLateFeeDouble: Number(rawData.earlyLateFeeDouble) || 0,
+      earlyLateMaxHours: Number(rawData.earlyLateMaxHours) || 6,
+      cpSingleSupplement: Number(rawData.cpSingleSupplement) || 0,
+      cpDoubleSupplement: Number(rawData.cpDoubleSupplement) || 0,
+      extraBreakfastRate: Number(rawData.extraBreakfastRate) || 0,
+      cancellationPartialHours: Number(rawData.cancellationPartialHours) || 0,
+      cancellationPartialPercent: Number(rawData.cancellationPartialPercent) || 0,
       childRateNoBed: Number(rawData.childRateNoBed),
       childRateWithBed: Number(rawData.childRateWithBed),
       mealPlanRates: {
@@ -199,6 +208,15 @@ export default function AdminSettings() {
                 </ul>
                 <p className="text-xs text-gray-500">Split equally into CGST and SGST. Editing slabs comes with Property Settings.</p>
               </div>
+              <div className="col-span-2 rounded-md border border-gray-300 p-3 space-y-3">
+                <p className="text-sm font-bold text-black">Cancellation charges (applied to website cancellations)</p>
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="space-y-1"><label className="text-xs font-bold text-black block">Free if cancelled at least (hours before check-in)</label><Input name="cancellationFreeHours" type="number" min={0} defaultValue={settings?.cancellationFreeHours ?? 48} className="border-gray-400 text-black font-medium" /></div>
+                  <div className="space-y-1"><label className="text-xs font-bold text-black block">Part charged until (hours before)</label><Input name="cancellationPartialHours" type="number" min={0} defaultValue={settings?.cancellationPartialHours ?? 24} className="border-gray-400 text-black font-medium" /></div>
+                  <div className="space-y-1"><label className="text-xs font-bold text-black block">Part charged - % of booking</label><Input name="cancellationPartialPercent" type="number" min={0} max={100} defaultValue={settings?.cancellationPartialPercent ?? 50} className="border-gray-400 text-black font-medium" /></div>
+                </div>
+                <p className="text-xs text-gray-600">Example: free up to 48 hours before, 50% from 48 to 24 hours before, no refund after that.</p>
+              </div>
               <div className="space-y-2 col-span-2">
                 <label className="text-sm font-bold text-black block">Cancellation Policy</label>
                 <textarea 
@@ -230,6 +248,24 @@ export default function AdminSettings() {
                 <label className="text-sm font-bold text-black block">Late Check-out Fee - ₹</label>
                 <Input name="lateCheckOutFee" type="number" min={0} defaultValue={settings?.lateCheckOutFee ?? 0} className="border-gray-400 text-black font-medium" />
                 <p className="text-xs text-gray-600">Same rule as early check-in.</p>
+              </div>
+              <div className="sm:col-span-2 rounded-md border border-gray-300 p-3 space-y-3">
+                <p className="text-sm font-bold text-black">Early check-in / late check-out: flat fee by occupancy</p>
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="space-y-1"><label className="text-xs font-bold text-black block">Single - ₹</label><Input name="earlyLateFeeSingle" type="number" min={0} defaultValue={settings?.earlyLateFeeSingle ?? 0} className="border-gray-400 text-black font-medium" /></div>
+                  <div className="space-y-1"><label className="text-xs font-bold text-black block">Double - ₹</label><Input name="earlyLateFeeDouble" type="number" min={0} defaultValue={settings?.earlyLateFeeDouble ?? 0} className="border-gray-400 text-black font-medium" /></div>
+                  <div className="space-y-1"><label className="text-xs font-bold text-black block">Up to (hours)</label><Input name="earlyLateMaxHours" type="number" min={1} max={23} defaultValue={settings?.earlyLateMaxHours ?? 6} className="border-gray-400 text-black font-medium" /></div>
+                </div>
+                <p className="text-xs text-gray-600">Applies up to the hours shown; 0 means not set (then the hourly price or the flat fees above are used).</p>
+              </div>
+              <div className="sm:col-span-2 rounded-md border border-gray-300 p-3 space-y-3">
+                <p className="text-sm font-bold text-black">CP (breakfast) plan: added to the room price</p>
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="space-y-1"><label className="text-xs font-bold text-black block">Single room - ₹/night</label><Input name="cpSingleSupplement" type="number" min={0} defaultValue={settings?.cpSingleSupplement ?? 0} className="border-gray-400 text-black font-medium" /></div>
+                  <div className="space-y-1"><label className="text-xs font-bold text-black block">Double room - ₹/night</label><Input name="cpDoubleSupplement" type="number" min={0} defaultValue={settings?.cpDoubleSupplement ?? 0} className="border-gray-400 text-black font-medium" /></div>
+                  <div className="space-y-1"><label className="text-xs font-bold text-black block">Each extra person - ₹/night</label><Input name="extraBreakfastRate" type="number" min={0} defaultValue={settings?.extraBreakfastRate ?? 0} className="border-gray-400 text-black font-medium" /></div>
+                </div>
+                <p className="text-xs text-gray-600">When these are 0, CP uses the per-person meal plan rates instead.</p>
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-bold text-black block">Child 3-12 (No Bed) - ₹/night</label>

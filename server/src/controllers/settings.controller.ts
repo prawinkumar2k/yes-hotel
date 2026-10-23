@@ -56,6 +56,14 @@ const settingsSchema = z.object({
   lateCheckOutFee: money("Late check-out fee").optional(),
   childRateNoBed: money("Child rate (no bed)").optional(),
   childRateWithBed: money("Child rate (with bed)").optional(),
+  earlyLateFeeSingle: money("Early / late fee (single)").optional(),
+  earlyLateFeeDouble: money("Early / late fee (double)").optional(),
+  earlyLateMaxHours: z.number().min(1).max(23).optional(),
+  cpSingleSupplement: money("CP supplement (single)").optional(),
+  cpDoubleSupplement: money("CP supplement (double)").optional(),
+  extraBreakfastRate: money("Extra person breakfast").optional(),
+  cancellationPartialHours: z.number().min(0).max(720).optional(),
+  cancellationPartialPercent: z.number().min(0).max(100).optional(),
   mealPlanRates: z.object({
     EP: money("EP rate"),
     CP: money("CP rate"),
@@ -73,7 +81,7 @@ const PUBLIC_SETTING_FIELDS = [
   "checkInTime", "checkOutTime", "earlyCheckInFee", "lateCheckOutFee", "extraPersonRate", "extraBedRate",
   "childRateNoBed", "childRateWithBed", "mealPlanRates", "currency", "currencySymbol", "cgstPercentage", "sgstPercentage",
   "igstPercentage", "taxInclusiveRates", "onlineBookingOpen", "gstNumber", "cancellationPolicy", "cancellationFreeHours",
-  "cancellationPenaltyPercentage", "instagramUrl", "facebookUrl", "youtubeUrl", "metaTitle", "metaDescription", "ogImageUrl",
+  "cancellationPartialHours", "cancellationPartialPercent", "cancellationPenaltyPercentage", "instagramUrl", "facebookUrl", "youtubeUrl", "metaTitle", "metaDescription", "ogImageUrl",
 ] as const;
 
 export function publicSettingsView(settings: any) {

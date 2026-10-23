@@ -1113,7 +1113,7 @@ export default function AdminCashierShifts() {
             <p className="text-xs text-gray-500">Money the guest pays the desk, for a room. It is added to that room's bill (named on the invoice) and to the drawer: cash into the drawer, UPI and card to their own totals.</p>
             <div>
               <label className="block text-xs font-semibold text-gray-600 mb-1">Item *</label>
-              <select value={sale.category} onChange={(e: any) => setSale({ ...sale, category: e.target.value })} className={`w-full bg-gray-50 border border-gray-200 text-sm text-gray-900 rounded-lg p-2.5 outline-none font-semibold`}>
+              <select value={sale.category} onChange={(e: any) => { const item = COUNTER_ITEMS.find((i) => i.category === e.target.value); setSale({ ...sale, category: e.target.value, reason: "", amount: item?.defaultAmount ? String(item.defaultAmount) : sale.amount }); }} className={`w-full bg-gray-50 border border-gray-200 text-sm text-gray-900 rounded-lg p-2.5 outline-none font-semibold`}>
                 {COUNTER_ITEMS.map((i) => <option key={i.category} value={i.category}>{i.label}</option>)}
               </select>
             </div>
@@ -1147,7 +1147,15 @@ export default function AdminCashierShifts() {
             )}
             <div>
               <label className="block text-xs font-semibold text-gray-600 mb-1">{sale.category === "OTHER" ? "What was sold? *" : "Note (optional)"}</label>
-              <input required={sale.category === "OTHER"} minLength={sale.category === "OTHER" ? 3 : undefined} value={sale.reason} onChange={(e) => setSale({ ...sale, reason: e.target.value })} placeholder={sale.category === "OTHER" ? "e.g. Phone charger" : ""} className={`w-full bg-gray-50 border border-gray-200 text-sm text-gray-900 rounded-lg p-2.5 outline-none`} />
+              <input required={sale.category === "OTHER"} minLength={sale.category === "OTHER" ? 3 : undefined} value={sale.reason} onChange={(e) => setSale({ ...sale, reason: e.target.value })} placeholder={sale.category === "OTHER" ? "e.g. Phone charger, or Breakage: glass (cost + 10%)" : ""} className={`w-full bg-gray-50 border border-gray-200 text-sm text-gray-900 rounded-lg p-2.5 outline-none`} />
+              {COUNTER_ITEMS.find((i) => i.category === sale.category)?.variants && (
+                <div className="flex gap-2 mt-2">
+                  {COUNTER_ITEMS.find((i) => i.category === sale.category)!.variants!.map((v) => (
+                    <button key={v.label} type="button" onClick={() => setSale({ ...sale, amount: String(v.amount), reason: v.label })} className={`px-3 py-1.5 rounded-lg border text-xs font-bold ${sale.reason === v.label ? "bg-black text-[#e5c76b] border-black" : "bg-white text-gray-700 border-gray-300"}`}>{v.label} · ₹{v.amount}</button>
+                  ))}
+                </div>
+              )}
+              {sale.category === "OTHER" && <p className="text-[11px] text-gray-500 mt-1">Breakage: charge the cost of the item + 10%.</p>}
             </div>
             <div className="flex gap-3 border-t border-gray-100 pt-4">
               <button type="button" onClick={() => setShowSaleModal(false)} className="flex-1 py-2.5 bg-gray-100 text-gray-700 rounded-xl text-xs font-semibold hover:bg-gray-200 transition">Cancel</button>

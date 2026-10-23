@@ -138,12 +138,15 @@ export const cancelBooking = async (req: Request, res: Response) => {
       const hoursUntilCheckIn = (checkIn.getTime() - now.getTime()) / (1000 * 60 * 60);
       // Free-cancellation window from Admin → Settings (the published policy uses the same number).
       const { HotelSettings } = await import("../models/HotelSettings");
-      const freeHours = Number((await HotelSettings.findOne().sort({ updatedAt: -1 }).select("cancellationFreeHours").lean())?.cancellationFreeHours) || 48;
+      const cs: any = await HotelSettings.findOne().sort({ updatedAt: -1 }).select("cancellationFreeHours cancellationPartialHours cancellationPartialPercent").lean();
+      const freeHours = Number(cs?.cancellationFreeHours) || 48;
+      const partialHours = Number.isFinite(Number(cs?.cancellationPartialHours)) && cs?.cancellationPartialHours != null ? Number(cs.cancellationPartialHours) : 24;
+      const partialPercent = Number.isFinite(Number(cs?.cancellationPartialPercent)) && cs?.cancellationPartialPercent != null ? Number(cs.cancellationPartialPercent) : 50;
 
       if (hoursUntilCheckIn >= freeHours) {
         penaltyPercentage = 0; // Free cancellation
-      } else if (hoursUntilCheckIn >= 24) {
-        penaltyPercentage = 50; // 50% penalty
+      } else if (hoursUntilCheckIn >= partialHours) {
+        penaltyPercentage = partialPercent; // part of the booking amount is charged
       } else {
         penaltyPercentage = 100; // 100% penalty
       }

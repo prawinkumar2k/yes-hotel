@@ -23,6 +23,8 @@ export default function AdminRoomCategories() {
     basePrice: 0,
     hourlyPrice: 0,
     singleOccupancyPrice: 0,
+    extraPersonRate: 0, extraBedRate: 0, childRateNoBed: 0, childRateWithBed: 0,
+    dayUseAllowed: true, dayUseSinglePrice: 0, dayUseDoublePrice: 0, dayUseMaxHours: 12,
     capacityAdults: 2,
     capacityChildren: 0,
     bedType: "",
@@ -53,6 +55,10 @@ export default function AdminRoomCategories() {
         description: data.description,
         basePrice: Number(data.basePrice),
         singleOccupancyPrice: Number(data.singleOccupancyPrice) || 0,
+        extraPersonRate: Number(data.extraPersonRate) || 0, extraBedRate: Number(data.extraBedRate) || 0,
+        childRateNoBed: Number(data.childRateNoBed) || 0, childRateWithBed: Number(data.childRateWithBed) || 0,
+        dayUseAllowed: data.dayUseAllowed !== false, dayUseSinglePrice: Number(data.dayUseSinglePrice) || 0,
+        dayUseDoublePrice: Number(data.dayUseDoublePrice) || 0, dayUseMaxHours: Number(data.dayUseMaxHours) || 12,
         capacity: { adults: Number(data.capacityAdults), children: Number(data.capacityChildren) },
         bedType: data.bedType,
         amenities: data.amenities.split(",").map((a: string) => a.trim()).filter(Boolean),
@@ -107,6 +113,10 @@ export default function AdminRoomCategories() {
         basePrice: category.basePrice,
         hourlyPrice: category.hourlyPrice || 0,
         singleOccupancyPrice: category.singleOccupancyPrice || 0,
+        extraPersonRate: category.extraPersonRate || 0, extraBedRate: category.extraBedRate || 0,
+        childRateNoBed: category.childRateNoBed || 0, childRateWithBed: category.childRateWithBed || 0,
+        dayUseAllowed: category.dayUseAllowed !== false, dayUseSinglePrice: category.dayUseSinglePrice || 0,
+        dayUseDoublePrice: category.dayUseDoublePrice || 0, dayUseMaxHours: category.dayUseMaxHours || 12,
         capacityAdults: category.capacity.adults,
         capacityChildren: category.capacity.children,
         bedType: category.bedType || "",
@@ -117,6 +127,8 @@ export default function AdminRoomCategories() {
       setEditingCategory(null);
       setFormData({
         name: "", slug: "", shortDescription: "", description: "", basePrice: 0, hourlyPrice: 0, singleOccupancyPrice: 0,
+        extraPersonRate: 0, extraBedRate: 0, childRateNoBed: 0, childRateWithBed: 0,
+        dayUseAllowed: true, dayUseSinglePrice: 0, dayUseDoublePrice: 0, dayUseMaxHours: 12,
         capacityAdults: 2, capacityChildren: 0, bedType: "", amenities: "", isActive: true,
       });
     }
@@ -225,7 +237,7 @@ export default function AdminRoomCategories() {
               </div>
               <div className="grid grid-cols-5 gap-3">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Nightly Price (₹)</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Double / 2 persons (₹)</label>
                   <input type="number" required min="0" value={formData.basePrice} onChange={e => setFormData({...formData, basePrice: Number(e.target.value)})} className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-1 focus:ring-hotel-gold" />
                 </div>
                 <div>
@@ -244,6 +256,30 @@ export default function AdminRoomCategories() {
                   <label className="block text-sm font-medium text-gray-700 mb-1">Children Capacity</label>
                   <input type="number" required min="0" value={formData.capacityChildren} onChange={e => setFormData({...formData, capacityChildren: Number(e.target.value)})} className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-1 focus:ring-hotel-gold" />
                 </div>
+              </div>
+              <div className="rounded border border-gray-200 p-3 space-y-3">
+                <p className="text-sm font-semibold text-gray-800">Extra guests (₹ per night; leave 0 to use the hotel-wide rate in Settings)</p>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  {([["extraPersonRate", "Adult, no bed"], ["extraBedRate", "Adult, with bed"], ["childRateNoBed", "Child ≤12, no bed"], ["childRateWithBed", "Child ≤12, with bed"]] as const).map(([k, label]) => (
+                    <div key={k}>
+                      <label className="block text-xs font-medium text-gray-700 mb-1">{label}</label>
+                      <input type="number" min="0" value={(formData as any)[k] || ""} placeholder="hotel rate" onChange={e => setFormData({...formData, [k]: Number(e.target.value)})} className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm" />
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="rounded border border-gray-200 p-3 space-y-3">
+                <label className="flex items-center gap-2 text-sm font-semibold text-gray-800">
+                  <input type="checkbox" checked={formData.dayUseAllowed} onChange={e => setFormData({...formData, dayUseAllowed: e.target.checked})} /> Day use available for this room type
+                </label>
+                {formData.dayUseAllowed && (
+                  <div className="grid grid-cols-3 gap-3">
+                    <div><label className="block text-xs font-medium text-gray-700 mb-1">Single (₹)</label><input type="number" min="0" value={formData.dayUseSinglePrice || ""} onChange={e => setFormData({...formData, dayUseSinglePrice: Number(e.target.value)})} className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm" /></div>
+                    <div><label className="block text-xs font-medium text-gray-700 mb-1">Double (₹)</label><input type="number" min="0" value={formData.dayUseDoublePrice || ""} onChange={e => setFormData({...formData, dayUseDoublePrice: Number(e.target.value)})} className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm" /></div>
+                    <div><label className="block text-xs font-medium text-gray-700 mb-1">Up to (hours)</label><input type="number" min="1" max="23" value={formData.dayUseMaxHours} onChange={e => setFormData({...formData, dayUseMaxHours: Number(e.target.value)})} className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm" /></div>
+                  </div>
+                )}
+                <p className="text-[11px] text-gray-500">Day use is a flat price by occupancy, without food. If the prices are 0, the hourly price above is used.</p>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>

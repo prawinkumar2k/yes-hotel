@@ -9,6 +9,16 @@ export interface IRoomCategory extends Document {
   hourlyPrice?: number;
   /** Tariff when one adult has the room (0 = same as basePrice). */
   singleOccupancyPrice?: number;
+  /** Extra person / bed / child rates for this category (0 = the hotel-wide rate in Settings). */
+  extraPersonRate?: number;
+  extraBedRate?: number;
+  childRateNoBed?: number;
+  childRateWithBed?: number;
+  /** Day use: flat price by occupancy, up to dayUseMaxHours. dayUseAllowed false = no day use for this category. */
+  dayUseAllowed?: boolean;
+  dayUseSinglePrice?: number;
+  dayUseDoublePrice?: number;
+  dayUseMaxHours?: number;
   capacity: {
     adults: number;
     children: number;
@@ -32,6 +42,14 @@ const RoomCategorySchema = new Schema<IRoomCategory>(
     basePrice: { type: Number, required: true },
     hourlyPrice: { type: Number, default: 0 },
     singleOccupancyPrice: { type: Number, default: 0 },
+    extraPersonRate: { type: Number, default: 0 },
+    extraBedRate: { type: Number, default: 0 },
+    childRateNoBed: { type: Number, default: 0 },
+    childRateWithBed: { type: Number, default: 0 },
+    dayUseAllowed: { type: Boolean, default: true },
+    dayUseSinglePrice: { type: Number, default: 0 },
+    dayUseDoublePrice: { type: Number, default: 0 },
+    dayUseMaxHours: { type: Number, default: 12 },
     capacity: {
       adults: { type: Number, required: true, default: 2 },
       children: { type: Number, required: true, default: 0 },

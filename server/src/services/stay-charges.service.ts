@@ -12,20 +12,15 @@ import type { ClientSession } from "mongoose";
 import { FolioLineType } from "../models/FolioLine";
 import { HotelSettings } from "../models/HotelSettings";
 import { postCharge } from "./folio.service";
+import { stayExtraRates } from "./tariff.service";
 import { computeRoomTax, loadGstRules, netOfIncludedTax, pricesIncludeTax } from "./tax.service";
 import { nights as countNights, stayNights, toBusinessDate } from "../../../shared/dates";
 
 const r2 = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
 
-/** Extra-person / bed rates: those agreed at registration (stored on the booking), else the property defaults. */
-export function walkInExtraRates(settings: any, overrides: any) {
-  const pick = (v: unknown, fallback: number) => (v !== undefined && v !== null && v !== "" && Number(v) >= 0 ? Number(v) : fallback);
-  return {
-    extraPersonRate: pick(overrides?.extraPersonRate, settings?.extraPersonRate ?? 800),
-    extraBedRate: pick(overrides?.extraBedRate, settings?.extraBedRate ?? 1200),
-    childRateNoBed: pick(overrides?.childRateNoBed, settings?.childRateNoBed ?? 400),
-    childRateWithBed: pick(overrides?.childRateWithBed, settings?.childRateWithBed ?? 600),
-  };
+/** Extra-person / bed rates: those agreed at registration (stored on the booking), else the room category's, else the property defaults. */
+export function walkInExtraRates(settings: any, overrides: any, category?: any) {
+  return stayExtraRates(settings, overrides, category);
 }
 
 export type StayChargeResult = { taxable: number; cgst: number; sgst: number; tax: number; total: number };

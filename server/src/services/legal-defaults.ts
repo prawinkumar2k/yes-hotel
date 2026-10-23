@@ -14,6 +14,8 @@ export function defaultLegalContent(key: string, settings: any) {
   const checkIn = settings?.checkInTime || "12:00";
   const checkOut = settings?.checkOutTime || "11:00";
   const freeHours = Number(settings?.cancellationFreeHours) || 48;
+  const partialHours = settings?.cancellationPartialHours != null && Number.isFinite(Number(settings.cancellationPartialHours)) ? Number(settings.cancellationPartialHours) : 24;
+  const partialPercent = settings?.cancellationPartialPercent != null && Number.isFinite(Number(settings.cancellationPartialPercent)) ? Number(settings.cancellationPartialPercent) : 50;
   const gstIn = settings?.taxInclusiveRates ? "Room prices shown include GST." : "GST is added to room prices as per government rates.";
   const contact = `${HOTEL.name}, ${hotelAddressOneLine()}\nPhone: ${phone} · Email: ${email}`;
 
@@ -77,8 +79,8 @@ export function defaultLegalContent(key: string, settings: any) {
         settings?.cancellationPolicy ? `${settings.cancellationPolicy}\n` : "",
         "When you cancel before check-in",
         `• More than ${freeHours} hours before check-in: free — full refund.`,
-        `• Between 24 and ${freeHours} hours before check-in: 50% of the booking amount is charged.`,
-        "• Less than 24 hours before check-in, or no-show: 100% of the booking amount is charged.",
+        `• Between ${partialHours} and ${freeHours} hours before check-in: ${partialPercent}% of the booking amount is charged.`,
+        `• Less than ${partialHours} hours before check-in, or no-show: no refund (100% of the booking amount is charged).`,
         "• Genuine emergencies: please tell us the reason; emergency cancellations are refunded in full.",
         "",
         "Refunds",

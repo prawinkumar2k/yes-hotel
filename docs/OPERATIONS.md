@@ -148,6 +148,19 @@ Website bookings are **on hold** unless **Admin → Settings → Online booking 
 - **Credit (Kadan)**: choose "Credit (Kadan)" as the payment method at registration or at Cashier & Billing. The bill is balanced, the amount is listed under Credit (Kadan) in the menu, and you collect it there when the guest pays. The money counts on the day it is collected.
 - **Single-person tariff**: set "Single Person (₹)" on the room category. A walk-in with no more adults than rooms uses it; any tariff can still be typed. Male / Female counts show on the registration card and invoice header.
 
+## 7i. The hotel's real tariff (from the owner's notes, March 2026)
+
+- **Room prices** are set per room type in Room Types: *Double / 2 persons* and *Single Person*. One adult in a room takes the single price. GST (5%) is added on top, so "Room prices include GST" stays **off** in Settings.
+- **Extra guests** (adult with or without bed, child up to 12 with or without bed) can differ by room type; a blank value uses the hotel-wide rate in Settings. Kids up to 3 years are free.
+- **CP (breakfast)** adds a fixed amount per room by occupancy (single, double) plus breakfast for each extra person (Settings → Occupancy).
+- **Day use** (up to 12 hours, no food) is a flat price by occupancy per room type. Room types with day use switched off (Executive) refuse it.
+- **Early check-in / late check-out** up to 6 hours is a flat fee by occupancy (Settings → Occupancy); the desk can still change the amount.
+- **Cancellation**: free up to 48 hours before check-in, 50% from 48 to 24 hours, no refund after that (Settings → Cancellation; the published policy follows these numbers).
+- **OTA commission** prefills when the OTA is chosen at registration: Booking.com 18%, MakeMyTrip and Goibibo 20% (editable per booking).
+- **Counter items**: water bottle 1 L ₹20 and ½ L ₹10, tea/coffee ₹30 prefill the price; breakage is charged at cost + 10% (use *Others*).
+- **Putting the real figures into the live database**: take a backup, then run `npx tsx server/src/scripts/apply-real-tariff.ts` (a dry run that shows every change), and again with `--apply --backup-taken` to apply.
+
+
 ## 8. Daily checks
 
 - Admin → **Audit Log**: look for unexpected `master_password_login` or failed logins.

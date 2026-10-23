@@ -73,6 +73,9 @@ const isValidEmail = (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test((v || "").
 /** A real email to show / prefill (walk-ins without one have an internal …@yeshotels.local placeholder). */
 const realEmail = (v?: string) => (v && !/@yes-?hotels\.local$/i.test(v.trim()) ? v : "");
 
+/** The commission the hotel's agreements with each OTA usually carry (staff can change it per booking). */
+const OTA_DEFAULT_COMMISSION: Record<string, number> = { "Booking.com": 18, MakeMyTrip: 20, Goibibo: 20 };
+
 export default function AdminGuestRegistration() {
   const [showReserve, setShowReserve] = useState(false);
   const navigate = useNavigate();
@@ -964,7 +967,7 @@ export default function AdminGuestRegistration() {
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                     <div>
                       <label className="block text-xs font-bold text-gray-500 mb-1">OTA *</label>
-                      <select required className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm" value={sourceDetails.otaName} onChange={e => setSourceDetails({ ...sourceDetails, otaName: e.target.value })}>
+                      <select required className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm" value={sourceDetails.otaName} onChange={e => { const v = e.target.value; const d = OTA_DEFAULT_COMMISSION[v]; setSourceDetails({ ...sourceDetails, otaName: v, ...(d && sourceDetails.otaCommissionType === "PERCENT" && !sourceDetails.otaCommissionPercent ? { otaCommissionPercent: String(d) } : {}) }); }}>
                         <option value="">Select OTA</option>
                         {["MakeMyTrip", "Goibibo", "Booking.com", "Agoda", "Expedia", "Airbnb", "Cleartrip", "Yatra", "EaseMyTrip", "Other"].map(o => <option key={o} value={o}>{o}</option>)}
                       </select>
