@@ -298,7 +298,7 @@ export default function AdminLayout({ children, title, hidePadding }: { children
                   YES HOTELS
                 </span>
                 <span className="text-[10px] text-slate-700 tracking-wider uppercase font-semibold">
-                  Hotel Operating System
+                  Hotel Operating System (Demo)
                 </span>
               </div>
             )}
