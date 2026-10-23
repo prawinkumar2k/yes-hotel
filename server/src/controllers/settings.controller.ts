@@ -13,6 +13,24 @@ const gstRuleSchema = z.object({
 
 const HHMM = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Use 24-hour HH:MM");
 const optionalUrl = z.union([z.literal(""), z.string().regex(/^\/\S*$/), z.string().url("Enter a full URL (https://…) or a site path (/…)")]).optional();
+const FIELD_LABELS: Record<string, string> = {
+  googleMapsUrl: "Google Maps link", logoUrl: "Logo URL", gstNumber: "GSTIN", email: "Email", phone: "Phone number", address: "Address",
+  hotelName: "Hotel name", checkInTime: "Check-in time", checkOutTime: "Check-out time", cancellationPolicy: "Cancellation policy",
+};
+
+/** The first problem, naming the field (a combined rule such as "a URL or empty" would otherwise only say "Invalid input"). */
+function settingsErrorMessage(err: z.ZodError) {
+  const issue: any = err.issues[0];
+  let message: string = issue.message;
+  if (issue.code === "invalid_union" && Array.isArray(issue.errors)) {
+    const specific = issue.errors.flat().map((x: any) => x?.message).filter((m: string) => m && !/^Invalid (input|string)/.test(m)).pop();
+    if (specific) message = specific;
+  }
+  const field = String(issue.path?.[0] ?? "");
+  const label = FIELD_LABELS[field];
+  return label && !message.toLowerCase().startsWith(label.toLowerCase()) ? `${label}: ${message}` : message;
+}
+
 const money = (label: string) => z.number({ message: `${label} must be a number` }).finite().min(0, `${label} cannot be negative`);
 
 const settingsSchema = z.object({
@@ -147,7 +165,7 @@ export const updateSettings = async (req: Request, res: Response) => {
 
     return res.status(200).json({ success: true, data: settings, message: "Settings updated successfully" });
   } catch (error: any) {
-    if (error instanceof z.ZodError) return res.status(400).json({ success: false, message: (error as any).issues[0].message });
+    if (error instanceof z.ZodError) return res.status(400).json({ success: false, message: settingsErrorMessage(error) });
     return res.status(500).json({ success: false, message: error.message });
   }
 };
