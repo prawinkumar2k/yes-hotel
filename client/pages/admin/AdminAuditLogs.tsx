@@ -73,8 +73,15 @@ export default function AdminAuditLogs() {
         <Button variant="outline" onClick={exportCsv}>Export CSV</Button>
       </div>
 
-      <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
-        <table className="w-full text-sm text-left">
+      <div className="bg-white rounded-lg shadow-sm border overflow-x-auto">
+        <table className="w-full min-w-[1000px] table-fixed text-sm text-left">
+          <colgroup>
+            <col className="w-[170px]" />
+            <col className="w-[240px]" />
+            <col className="w-[190px]" />
+            <col />
+            <col className="w-[150px]" />
+          </colgroup>
           <thead className="bg-gray-50 border-b">
             <tr>
               <th className="px-4 py-3 font-medium text-gray-500">Staff Member / User</th>
@@ -102,14 +109,14 @@ export default function AdminAuditLogs() {
                     </div>
                     <div className="text-gray-500 text-xs">{log.actorRole}</div>
                   </td>
-                  <td className="px-4 py-3 whitespace-nowrap">
-                    <Badge variant="outline">{log.action}</Badge>
+                  <td className="px-4 py-3">
+                    <Badge variant="outline" className="max-w-full whitespace-nowrap text-left">{log.action}</Badge>
                   </td>
-                  <td className="px-4 py-3 text-gray-500">
+                  <td className="px-4 py-3 text-gray-500 break-words">
                     {log.resourceType}
-                    {log.resourceId && <div className="text-xs text-gray-400">{log.resourceId}</div>}
+                    {log.resourceId && <div className="text-xs text-gray-400 break-all">{log.resourceId}</div>}
                   </td>
-                  <td className="px-4 py-3 min-w-[250px]">
+                  <td className="px-4 py-3 min-w-0">
                     {log.metadata && typeof log.metadata === 'object' && (
                       <div className="flex flex-col gap-1 text-[11px] leading-tight">
                         {Object.entries(log.metadata).map(([key, value]) => (
@@ -125,7 +132,7 @@ export default function AdminAuditLogs() {
                       </div>
                     )}
                   </td>
-                  <td className="px-4 py-3 text-gray-500 whitespace-nowrap">
+                  <td className="px-4 py-3 text-gray-500">
                     {format(new Date(log.createdAt), "MMM d, yyyy h:mm a")}
                   </td>
                 </tr>
