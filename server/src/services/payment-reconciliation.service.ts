@@ -167,6 +167,8 @@ export async function finalizePaymentSuccess(
 
   await syncGuestOnPaymentConfirmed({
     email: booking.guestDetails.email,
+    name: `${booking.guestDetails.firstName ?? ""} ${booking.guestDetails.lastName ?? ""}`.trim(),
+    phone: booking.guestDetails.phone,
     amount: booking.totalAmount,
     checkInDate: booking.checkInDate,
     checkOutDate: booking.checkOutDate,

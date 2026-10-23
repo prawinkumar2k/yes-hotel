@@ -40,6 +40,11 @@ export default function AdminCalendar() {
     return d;
   }, [startDate]);
 
+  const unassigned = useMemo(
+    () => (data?.data?.bookings ?? []).filter((b: any) => !b.assignedRoom && (b.status === "CONFIRMED" || b.status === "PENDING")),
+    [data],
+  );
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case "CONFIRMED": return "bg-blue-100 text-blue-800 border-blue-200";
@@ -101,6 +106,34 @@ export default function AdminCalendar() {
                 ))}
               </div>
               
+              {/* Reservations without a room: they have no room row yet, so they are listed here until a room is assigned */}
+              {unassigned.length > 0 && (
+                <div className="border-b bg-amber-50/40">
+                  <div className="px-4 py-2 text-xs font-bold uppercase tracking-wider text-amber-800">Reservations without a room ({unassigned.length})</div>
+                  {unassigned.map((b: any) => (
+                    <div key={b._id} className="flex border-t border-amber-100">
+                      <div className="w-48 shrink-0 p-3 border-r sticky left-0 bg-amber-50 z-10">
+                        <div className="text-sm font-bold truncate">{b.guestDetails?.firstName} {b.guestDetails?.lastName}</div>
+                        <div className="text-xs text-hotel-black/60 truncate">{b.roomCategory?.name || "Room"} · {b.bookingReference}</div>
+                      </div>
+                      {days.map((day, dayIdx) => {
+                        const cell = format(day, "yyyy-MM-dd");
+                        const on = cell >= toBusinessDate(b.checkInDate) && cell < toBusinessDate(b.checkOutDate);
+                        return (
+                          <div key={dayIdx} className="flex-1 min-w-[100px] border-r relative p-1">
+                            {on && (
+                              <Link to={`/admin/bookings/${b._id}`} title="Open the booking to assign a room" className="absolute inset-y-1 inset-x-1 rounded text-[10px] px-2 border border-amber-300 bg-amber-100 text-amber-900 flex items-center font-semibold truncate">
+                                {cell === toBusinessDate(b.checkInDate) ? "Assign a room" : ""}
+                              </Link>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ))}
+                </div>
+              )}
+
               {/* Rooms Rows */}
               {data?.data?.rooms?.map((room: any) => (
                 <div key={room._id} className="flex border-b hover:bg-gray-50/50 transition-colors">

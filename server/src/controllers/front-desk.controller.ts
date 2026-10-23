@@ -138,6 +138,19 @@ export const getFrontDeskSummary = async (req: Request, res: Response) => {
     // Rooms without assignment among today's arrivals
     const unassignedArrivals = arrivals.filter((b) => !b.assignedRoom);
 
+    // Reservations still waiting for a room: arriving today or in the next 14 days (they need a room before arrival).
+    const horizon = new Date(todayEnd.getTime() + 14 * 86400000);
+    const unassignedBookings = await Booking.find({
+      status: BookingStatus.CONFIRMED,
+      assignedRoom: null,
+      checkInDate: { $lte: horizon },
+      checkOutDate: { $gt: todayStart },
+    })
+      .populate("roomCategory", "name")
+      .select("bookingReference groupId billNumber guestDetails checkInDate checkOutDate assignedRoom roomCategory paymentStatus paidAmount totalAmount ratePerNight isVipGuest source adults children")
+      .sort({ checkInDate: 1 })
+      .lean();
+
     // Summary counts
     const summary = {
       arrivalsCount: arrivals.length,
@@ -156,7 +169,7 @@ export const getFrontDeskSummary = async (req: Request, res: Response) => {
         arrivals: arrivals.length,
         departures: departures.length,
         inHouse: inHouse.length,
-        unassignedBookings: unassignedArrivals.length,
+        unassignedBookings: unassignedBookings.length,
         dirtyRooms: dirtyRooms.length,
         availableRooms: availableRooms.length,
         occupiedRooms: occupiedRooms.length,
@@ -185,7 +198,7 @@ export const getFrontDeskSummary = async (req: Request, res: Response) => {
         todaysDepartures: departures,
         inHouse,
         unassignedArrivals,
-        unassignedBookings: unassignedArrivals,
+        unassignedBookings,
         dirtyRooms,
         availableRooms,
         occupiedRooms,

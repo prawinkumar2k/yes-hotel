@@ -1,5 +1,6 @@
 import { Guest } from "../models/Guest";
 import { Property } from "../models/Property";
+import { resolveGuest } from "./guest-match.service";
 
 export class GuestBlockedError extends Error {
   constructor(message = "This guest is blocked from making new bookings") {
@@ -46,12 +47,19 @@ export async function syncGuestOnBookingCreated(params: {
 
 export async function syncGuestOnPaymentConfirmed(params: {
   email: string;
+  /** With the phone, lets a paid website booking create its guest-directory record when there is none yet. */
+  name?: string;
+  phone?: string;
   amount: number;
   checkInDate: Date;
   checkOutDate: Date;
 }) {
   const email = params.email.trim().toLowerCase();
-  const guest = await Guest.findOne({ email });
+  let guest = await Guest.findOne({ email });
+  if (!guest && params.name && params.phone) {
+    // Same matching as walk-ins and advance reservations (email, then phone): never a second record for the same person.
+    guest = (await resolveGuest({ name: params.name, phone: params.phone, email }).catch(() => null))?.guest ?? null;
+  }
   if (!guest) return;
 
   guest.totalSpend = (guest.totalSpend || 0) + params.amount;
