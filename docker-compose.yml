@@ -40,6 +40,15 @@ services:
       - EMAIL_USER=${EMAIL_USER:-}
       - EMAIL_PASS=${EMAIL_PASS:-}
       - BOOKING_ENQUIRY_RECIPIENTS=${BOOKING_ENQUIRY_RECIPIENTS:-}
+      # Razorpay (online payments). The app boots only if the webhook secret is set whenever the key id is.
+      - RAZORPAY_KEY_ID=${RAZORPAY_KEY_ID:-}
+      - RAZORPAY_KEY_SECRET=${RAZORPAY_KEY_SECRET:-}
+      - RAZORPAY_WEBHOOK_SECRET=${RAZORPAY_WEBHOOK_SECRET:-}
+      # Gallery image uploads and Google Analytics (each off when blank)
+      - CLOUDINARY_CLOUD_NAME=${CLOUDINARY_CLOUD_NAME:-}
+      - CLOUDINARY_API_KEY=${CLOUDINARY_API_KEY:-}
+      - CLOUDINARY_API_SECRET=${CLOUDINARY_API_SECRET:-}
+      - GA_MEASUREMENT_ID=${GA_MEASUREMENT_ID:-}
     volumes:
       - yeshotels-uploads:/app/uploads
     healthcheck:
