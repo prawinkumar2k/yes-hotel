@@ -15,7 +15,7 @@ import {
   ScrollText, Moon, DollarSign, Tag, Building2, UtensilsCrossed,
   Package, Truck, ShoppingBag, Landmark, AlertCircle, Monitor, Globe,
   PartyPopper, Sparkles, Search, Bell, Plus, ChevronDown, ChevronRight,
-  ShieldCheck, CheckCircle2, SlidersHorizontal, Smartphone, ClipboardCheck, Receipt
+  CheckCircle2, SlidersHorizontal, Smartphone, ClipboardCheck, Receipt
 } from "lucide-react";
 import CommandPalette from "./CommandPalette";
 import NotificationCenter from "./NotificationCenter";
@@ -206,7 +206,6 @@ export default function AdminLayout({ children, title, hidePadding }: { children
         { label: "Dashboard", to: "/admin/dashboard", icon: LayoutDashboard, pageKey: "DASHBOARD.ADMIN" },
         { label: "Reception Dashboard", to: "/front-desk/dashboard", icon: LayoutDashboard, pageKey: "DASHBOARD.FRONT_DESK", hideIfPage: "DASHBOARD.ADMIN" },
         { label: "Front Desk (Reception)", to: "/admin/front-desk", icon: Home, pageKey: "FRONT_DESK", badge: arrivalsCount > 0 ? arrivalsCount : undefined },
-        { label: "Task Approvals", to: "/admin/task-approvals", icon: ShieldCheck, pageKey: "TASK_APPROVALS" },
         { label: "Room Rack (Tape Chart)", to: "/admin/calendar", icon: CalendarDays, pageKey: "CALENDAR" },
         { label: "Guest Directory", to: "/admin/guests", icon: Users, pageKey: "GUESTS" },
       ],

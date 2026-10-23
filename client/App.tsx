@@ -149,7 +149,6 @@ const AdminEnquiries = lazy(() => import("./pages/admin/AdminEnquiries"));
 const AdminEnquiryDetails = lazy(() => import("./pages/admin/AdminEnquiryDetails"));
 const AdminPOS = lazy(() => import("./pages/admin/AdminPOS"));
 const AdminMenu = lazy(() => import("./pages/admin/AdminMenu"));
-const AdminTaskApprovals = lazy(() => import("./pages/admin/AdminTaskApprovals"));
 
 
 
@@ -274,7 +273,6 @@ function App() {
                 <Route path="/admin/refunds" element={<PermissionRoute pageKey="REFUNDS"><AdminLayout title="Refunds"><AdminRefunds /></AdminLayout></PermissionRoute>} />
                 <Route path="/admin/coupons" element={<PermissionRoute pageKey="COUPONS"><AdminLayout title="Coupons"><AdminCoupons /></AdminLayout></PermissionRoute>} />
                 <Route path="/admin/housekeeping" element={<PermissionRoute pageKey="HOUSEKEEPING"><AdminLayout title="Housekeeping"><AdminHousekeeping /></AdminLayout></PermissionRoute>} />
-                <Route path="/admin/task-approvals" element={<PermissionRoute pageKey="TASK_APPROVALS"><AdminLayout title="Task Approvals"><AdminTaskApprovals /></AdminLayout></PermissionRoute>} />
                 <Route path="/admin/maintenance" element={<PermissionRoute pageKey="MAINTENANCE"><AdminLayout title="Maintenance"><AdminMaintenance /></AdminLayout></PermissionRoute>} />
                 <Route path="/admin/staff" element={<PermissionRoute pageKey="STAFF"><AdminLayout title="Staff"><AdminStaff /></AdminLayout></PermissionRoute>} />
                 <Route path="/admin/gallery" element={<PermissionRoute pageKey="CONTENT_MANAGEMENT"><AdminLayout title="Gallery"><AdminGallery /></AdminLayout></PermissionRoute>} />
