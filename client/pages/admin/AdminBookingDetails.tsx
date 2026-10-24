@@ -325,6 +325,11 @@ export default function AdminBookingDetails() {
                    <span className="text-gray-500">Paid Amount</span>
                    <span className="text-gray-900">₹{booking.paidAmount?.toLocaleString("en-IN") || 0}</span>
                  </div>
+                 {(booking.paidAmount ?? 0) > 0 && (
+                   <div className="text-right mb-2">
+                     <Link to={`/admin/refunds?booking=${encodeURIComponent(booking.bookingReference)}`} className="text-xs font-semibold text-blue-700 underline">Refund a payment</Link>
+                   </div>
+                 )}
                  {booking.status === "CANCELLED" && (
                    <div className="mt-4 pt-4 border-t border-gray-100 space-y-2">
                      <div className="flex justify-between items-center text-sm">
