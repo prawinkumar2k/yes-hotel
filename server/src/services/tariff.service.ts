@@ -12,6 +12,30 @@ export class TariffError extends Error {
 const num = (v: unknown) => (Number.isFinite(Number(v)) ? Number(v) : 0);
 const pos = (v: unknown) => (num(v) > 0 ? num(v) : undefined);
 
+/**
+ * Group check-in: one registration, several rooms. The adults (and children) are shared out evenly across the rooms,
+ * the first rooms taking the remainder; every room has at least one adult. Men are placed first, then women, so each
+ * room's registration card and invoice header show its own counts.
+ */
+export function splitAcrossRooms(adults: unknown, children: unknown, roomCount: number, male?: unknown) {
+  const rooms = Math.max(1, Math.floor(roomCount) || 1);
+  const a = Math.max(rooms, Math.floor(Number(adults)) || rooms);
+  const c = Math.max(0, Math.floor(Number(children)) || 0);
+  let maleLeft = male === undefined || male === null || male === "" ? undefined : Math.min(a, Math.max(0, Math.floor(Number(male)) || 0));
+  return Array.from({ length: rooms }, (_, i) => {
+    const ad = Math.floor(a / rooms) + (i < a % rooms ? 1 : 0);
+    const ch = Math.floor(c / rooms) + (i < c % rooms ? 1 : 0);
+    let maleCount: number | undefined;
+    let femaleCount: number | undefined;
+    if (maleLeft !== undefined) {
+      maleCount = Math.min(ad, maleLeft);
+      maleLeft -= maleCount;
+      femaleCount = ad - maleCount;
+    }
+    return { adults: ad, children: ch, maleCount, femaleCount };
+  });
+}
+
 /** Nightly room price: the single price when every room has at most one adult, else the category's double price. */
 export function categoryNightlyRate(cat: any, adults: unknown, roomCount: number) {
   const single = num(cat?.singleOccupancyPrice);

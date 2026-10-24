@@ -181,11 +181,19 @@ export default function AdminGuestRegistration() {
       })
       .catch(() => undefined);
   }, []);
-  // One adult per room (or fewer adults than rooms) takes the category's single-occupancy tariff when it has one.
+  // Group check-in: the adults are shared out across the rooms, the first rooms taking the remainder (the server does the same).
+  const adultsPerRoom = (roomCount: number) => {
+    const rooms = Math.max(1, roomCount);
+    const total = Math.max(rooms, Math.floor(Number(roomSearch.adults)) || rooms);
+    return Array.from({ length: rooms }, (_, i) => Math.floor(total / rooms) + (i < total % rooms ? 1 : 0));
+  };
+  // A room holding one adult takes the category's single-occupancy tariff when it has one; two or more, the double tariff.
   const defaultRoomRate = (r: any) => {
     const single = Number(r?.category?.singleOccupancyPrice) || 0;
-    const roomCount = Math.max(1, selectedRooms.length || 1);
-    return r?.ratePerNight || (single > 0 && Number(roomSearch.adults) <= roomCount ? single : r?.category?.basePrice) || 0;
+    const rooms = selectedRooms.length > 0 ? selectedRooms : [r];
+    const idx = Math.max(0, rooms.findIndex((x: any) => x?._id === r?._id));
+    const here = adultsPerRoom(rooms.length)[idx] ?? 1;
+    return r?.ratePerNight || (single > 0 && here <= 1 ? single : r?.category?.basePrice) || 0;
   };
   const roomRatesPayload = (rooms: any[]) =>
     Object.fromEntries(rooms.map((r) => [r._id, roomRates[r._id] !== undefined && roomRates[r._id] !== "" ? Number(roomRates[r._id]) : defaultRoomRate(r)]));
@@ -928,6 +936,11 @@ export default function AdminGuestRegistration() {
                     ))}
                   </div>
                   <p className="text-[10px] text-gray-500 mt-0.5">Each room starts at its category tariff (the single-person tariff when one adult has the room). Type any amount to change it.</p>
+                  {selectedRooms.length > 1 && (
+                    <p className="text-[11px] font-semibold text-[#8a6d0b] mt-1">
+                      Group check-in: {Math.max(selectedRooms.length, Number(roomSearch.adults) || 0)} adults across {selectedRooms.length} rooms ({selectedRooms.map((r: any, i: number) => `${r.roomNumber}: ${adultsPerRoom(selectedRooms.length)[i]}`).join(", ")}), all under one name and registration.
+                    </p>
+                  )}
                 </div>
                 <div><label className="block text-xs font-bold text-gray-500 mb-1">Kids &lt; 3 (Free)</label><input type="number" min="0" className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm" value={stayDetails.kidsUnder3} onChange={e => setStayDetails({...stayDetails, kidsUnder3: parseInt(e.target.value)||0})} /></div>
                 <div><label className="block text-xs font-bold text-gray-500 mb-1">Adult Extra Pax (No Bed)</label><div className="flex gap-2"><input type="number" min="0" aria-label="Adult Extra Pax (No Bed) count" title="Persons" className="w-20 px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm" value={stayDetails.extraPersonsNoBed} onChange={e => setStayDetails({...stayDetails, extraPersonsNoBed: parseInt(e.target.value)||0})} /><div className="relative flex-1"><span className="absolute left-2 top-2 text-xs text-gray-400">₹</span><input type="number" min="0" aria-label="Adult Extra Pax (No Bed) rate per person per night" className="w-full pl-5 pr-2 py-2 bg-[#fdfaf2] border border-[#e5c76b] rounded-lg text-sm" value={extraRates.extraPersonRate} onChange={e => setExtraRates({...extraRates, extraPersonRate: e.target.value})} /></div></div><p className="text-[10px] text-gray-500 mt-0.5">persons · ₹ per person / night</p></div>

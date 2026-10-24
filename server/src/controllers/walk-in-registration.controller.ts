@@ -33,7 +33,7 @@ import { HotelSettings } from "../models/HotelSettings";
 import { Property } from "../models/Property";
 import { User, UserRole } from "../models/User";
 import { createFolio, postCharge } from "../services/folio.service";
-import { categoryNightlyRate, dayUseRate, mealPlanCharge, TariffError } from "../services/tariff.service";
+import { categoryNightlyRate, dayUseRate, mealPlanCharge, splitAcrossRooms, TariffError } from "../services/tariff.service";
 
 const CATEGORY_PRICING_FIELDS = "name basePrice singleOccupancyPrice hourlyPrice dayUseAllowed dayUseSinglePrice dayUseDoublePrice dayUseMaxHours extraPersonRate extraBedRate childRateNoBed childRateWithBed";
 import { claimRoomNights, RoomUnavailableError } from "../services/room-nights.service";
@@ -307,9 +307,11 @@ export const calculateRegistrationRate = async (req: Request, res: Response) => 
 
     // Calculate room charges across all selected rooms
     let totalRoomCharges = 0;
-    const roomBreakdowns = rooms.map(rm => {
+    // Group check-in: each room is priced by the adults it holds (one adult: single price, two or more: double price).
+    const split = splitAcrossRooms(adults, children, rooms.length);
+    const roomBreakdowns = rooms.map((rm, idx) => {
       const cat = rm.category as any;
-      const baseRatePerNight = bookingType === "HOURLY" ? dayUseRate(cat, adults, rooms.length, hours) : categoryNightlyRate(cat, adults, rooms.length);
+      const baseRatePerNight = bookingType === "HOURLY" ? dayUseRate(cat, split[idx].adults, 1, hours) : categoryNightlyRate(cat, split[idx].adults, 1);
       const rmRatePerNight = walkInRoomRate(rm._id, baseRatePerNight, roomRates, rateOverrideAmount);
       const cost = rmRatePerNight * (bookingType === "HOURLY" ? 1 : nights);
       totalRoomCharges += cost;
@@ -653,11 +655,12 @@ export const walkInArrivalRegistration = async (req: Request, res: Response) => 
       }
 
       const pricing = await loadRoomPricing();
+      const split = splitAcrossRooms(adults, children, rooms.length, maleCount);
 
       // The discount is worked out on the whole booking and shared across the rooms in proportion to their charges.
       const preSubtotals = rooms.map((rm, i) => {
         const category = rm.category as any;
-        const baseRate = bookingType === "HOURLY" ? dayUseRate(category, adults, rooms.length, hours) : categoryNightlyRate(category, adults, rooms.length);
+        const baseRate = bookingType === "HOURLY" ? dayUseRate(category, split[i].adults, 1, hours) : categoryNightlyRate(category, split[i].adults, 1);
         const rate = walkInRoomRate(rm._id, baseRate, roomRates, rateOverrideAmount);
         const charges = rate * (bookingType === "HOURLY" ? 1 : nights);
         return charges + (i === 0 ? extraPersonTotal + extraBedTotal + childNoBedTotal + childWithBedTotal + mealPlanTotal + Number(otherCharges) : 0);
@@ -670,7 +673,7 @@ export const walkInArrivalRegistration = async (req: Request, res: Response) => 
       for (let i = 0; i < rooms.length; i++) {
         const rm = rooms[i];
         const category = rm.category as any;
-        const baseRatePerNight = bookingType === "HOURLY" ? dayUseRate(category, adults, rooms.length, hours) : categoryNightlyRate(category, adults, rooms.length);
+        const baseRatePerNight = bookingType === "HOURLY" ? dayUseRate(category, split[i].adults, 1, hours) : categoryNightlyRate(category, split[i].adults, 1);
         const rmRatePerNight = walkInRoomRate(rm._id, baseRatePerNight, roomRates, rateOverrideAmount);
         const rmRoomCharges = rmRatePerNight * (bookingType === "HOURLY" ? 1 : nights);
 
@@ -738,10 +741,10 @@ export const walkInArrivalRegistration = async (req: Request, res: Response) => 
               extraRates: i === 0 ? agreedExtraRates : undefined,
               ratePerNight: rmRatePerNight,
               billingInstruction: billingInstruction || undefined,
-              adults: i === 0 ? Number(adults) : 1,
-              ...(i === 0 && maleCount !== undefined ? { maleCount: Math.max(0, Number(maleCount) || 0) } : {}),
-              ...(i === 0 && femaleCount !== undefined ? { femaleCount: Math.max(0, Number(femaleCount) || 0) } : {}),
-              children: i === 0 ? Number(children) : 0,
+              // Group check-in: the guests are shared out across the rooms (not all on the first).
+              adults: split[i].adults,
+              ...(split[i].maleCount !== undefined ? { maleCount: split[i].maleCount, femaleCount: split[i].femaleCount } : {}),
+              children: split[i].children,
               status: BookingStatus.CHECKED_IN,
               checkedInAt: new Date(),
               checkedInBy: (req as any).user?.id ? new mongoose.Types.ObjectId((req as any).user.id) : undefined,
