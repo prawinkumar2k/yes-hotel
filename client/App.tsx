@@ -261,7 +261,7 @@ function App() {
                 <Route path="/admin/pricing" element={<PermissionRoute pageKey="PRICING"><AdminLayout title="Pricing"><AdminPricing /></AdminLayout></PermissionRoute>} />
                 <Route path="/admin/guests" element={<PermissionRoute pageKey="GUESTS"><AdminLayout title="Guests"><AdminGuests /></AdminLayout></PermissionRoute>} />
                 <Route path="/admin/bookings/:id/booking-confirmation" element={<PermissionRoute pageKey="ADVANCES"><AdminLayout title="Booking Confirmation"><AdminBookingConfirmation /></AdminLayout></PermissionRoute>} />
-                <Route path="/admin/credits" element={<PermissionRoute pageKey="ADVANCES"><AdminLayout title="Credit (Kadan)"><AdminCredits /></AdminLayout></PermissionRoute>} />
+                <Route path="/admin/credits" element={<PermissionRoute pageKey="ADVANCES"><AdminLayout title="Credit Ledger"><AdminCredits /></AdminLayout></PermissionRoute>} />
                 <Route path="/admin/advances" element={<PermissionRoute pageKey="ADVANCES"><AdminLayout title="Advance Payments Ledger"><AdminAdvances /></AdminLayout></PermissionRoute>} />
                 <Route path="/admin/verifications" element={<PermissionRoute pageKey="VERIFICATIONS"><AdminLayout title="Verification Queue"><AdminVerificationQueue /></AdminLayout></PermissionRoute>} />
                 <Route path="/admin/change-requests" element={<PermissionRoute pageKey="BOOKINGS"><AdminLayout title="Guest Change Requests"><AdminChangeRequests /></AdminLayout></PermissionRoute>} />

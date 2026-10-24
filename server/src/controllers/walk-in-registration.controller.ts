@@ -782,7 +782,7 @@ export const walkInArrivalRegistration = async (req: Request, res: Response) => 
       }
 
       booking = createdBookings[0];
-      // "Credit (Kadan)": nothing is paid now; the amount is left on credit and collected later.
+      // "Credit (pay later)": nothing is paid now; the amount is left on credit and collected later.
       const onCredit = String(advanceMethod ?? "").toUpperCase() === "CREDIT";
 
       // If advance payment provided, record it on the primary booking (or folio)

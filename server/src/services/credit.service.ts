@@ -1,5 +1,5 @@
 /**
- * Credit ("kadan"): the guest leaves part of the bill unpaid and pays it later.
+ * Credit (pay later): the guest leaves part of the bill unpaid and pays it later.
  * The bill is balanced with a credit line (so checkout can close) and the debt is kept as a CreditEntry
  * that the Credits page collects against. Money is counted as received only when it is collected.
  */
@@ -30,7 +30,7 @@ export async function recordCredit(
   if (!phone) throw new CreditError("Credit needs the guest's phone number on the booking, so the dues can be followed up");
 
   await postCharge(
-    { folioId: p.folioId, bookingId: p.bookingId, lineType: FolioLineType.PAYMENT, description: "Credit (Kadan): to be paid later", amount, date: new Date(), postedBy: "CREDIT_KADAN", notes: p.note || undefined },
+    { folioId: p.folioId, bookingId: p.bookingId, lineType: FolioLineType.PAYMENT, description: "Credit: balance to be paid later", amount, date: new Date(), postedBy: "CREDIT", notes: p.note || undefined },
     { req: opts.req, session: opts.session },
   );
   const [entry] = await CreditEntry.create(

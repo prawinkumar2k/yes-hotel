@@ -233,7 +233,7 @@ export default function AdminLayout({ children, title, hidePadding }: { children
       title: "CASHIERING",
       items: [
         { label: "Advance Deposits", to: "/admin/advances", icon: CreditCard, pageKey: "ADVANCES" },
-        { label: "Credit (Kadan)", to: "/admin/credits", icon: Wallet, pageKey: "ADVANCES" },
+        { label: "Credit Ledger", to: "/admin/credits", icon: Wallet, pageKey: "ADVANCES" },
         { label: "Cashier Shifts", to: "/admin/cashier-shifts", icon: DollarSign, pageKey: "CASHIER_SHIFTS" },
       ],
     },

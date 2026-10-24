@@ -196,7 +196,7 @@ export default function AdminCashierBilling() {
             </label>
             <label className="block text-xs font-bold text-slate-600">Method
               <select value={pay.method} onChange={(e) => setPay({ ...pay, method: e.target.value })} className="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white">
-                <option value="CASH">Cash</option><option value="CARD">Card</option><option value="UPI">UPI</option><option value="CREDIT">Credit (Kadan): pay later</option>
+                <option value="CASH">Cash</option><option value="CARD">Card</option><option value="UPI">UPI</option><option value="CREDIT">Credit (pay later)</option>
               </select>
             </label>
             {pay.method !== "CASH" && pay.method !== "CREDIT" && (

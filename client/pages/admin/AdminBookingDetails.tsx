@@ -2,6 +2,8 @@ import { useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "../../context/AuthContext";
+import { usePermissions } from "../../context/PermissionContext";
+import RefundDialog from "@/components/admin/RefundDialog";
 import { useToast } from "@/components/ui/use-toast";
 import { format } from "date-fns";
 import { nights as countNights } from "@shared/dates";
@@ -22,6 +24,8 @@ async function apiFetch(url: string, token?: string, method = "GET", body?: any)
 export default function AdminBookingDetails() {
   const { id } = useParams();
   const { user } = useAuth();
+  const { hasPermission } = usePermissions();
+  const [refundOpen, setRefundOpen] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
@@ -325,11 +329,12 @@ export default function AdminBookingDetails() {
                    <span className="text-gray-500">Paid Amount</span>
                    <span className="text-gray-900">₹{booking.paidAmount?.toLocaleString("en-IN") || 0}</span>
                  </div>
-                 {(booking.paidAmount ?? 0) > 0 && (
-                   <div className="text-right mb-2">
-                     <Link to={`/admin/refunds?booking=${encodeURIComponent(booking.bookingReference)}`} className="text-xs font-semibold text-blue-700 underline">Refund a payment</Link>
-                   </div>
+                 {(booking.paidAmount ?? 0) > 0 && hasPermission("REFUNDS", "CREATE") && (
+                   <button type="button" onClick={() => setRefundOpen(true)} className="w-full mb-2 px-3 py-2 rounded-lg border border-red-200 bg-red-50 text-red-700 text-sm font-semibold hover:bg-red-100">
+                     Refund payment
+                   </button>
                  )}
+                 <RefundDialog open={refundOpen} onOpenChange={setRefundOpen} bookingRef={booking.bookingReference} />
                  {booking.status === "CANCELLED" && (
                    <div className="mt-4 pt-4 border-t border-gray-100 space-y-2">
                      <div className="flex justify-between items-center text-sm">

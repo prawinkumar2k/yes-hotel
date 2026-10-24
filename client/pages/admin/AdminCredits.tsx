@@ -8,7 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 
 const inr = (n?: number) => `₹${Number(n || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
-/** Credit (kadan): what guests left unpaid and still owe. Collect when they pay. */
+/** Credit (pay later): what guests left unpaid and still owe. Collect when they pay. */
 export default function AdminCredits() {
   const { toast } = useToast();
   const [status, setStatus] = useState<"OPEN" | "SETTLED" | "ALL">("OPEN");
@@ -36,7 +36,7 @@ export default function AdminCredits() {
     <div className="space-y-4">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h2 className="text-xl font-serif font-bold text-gray-900">Credit (Kadan)</h2>
+          <h2 className="text-xl font-serif font-bold text-gray-900">Credit Ledger</h2>
           <p className="text-xs text-gray-500">Amounts guests left unpaid. Collect them here when the guest pays; the money counts in the day's collection on that day.</p>
         </div>
         <div className="text-right">

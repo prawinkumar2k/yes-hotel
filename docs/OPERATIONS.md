@@ -145,7 +145,7 @@ Website bookings are **on hold** unless **Admin → Settings → Online booking 
 - **MIS Daily Sheet** (Reports): the hotel's Excel layout, day by day: rooms, receipts, who booked, sales and money by mode. The Monthly MIS grid uses the same calculation, so both always agree.
 - **Counter sales** (water bottle, dental kit, tea/coffee, Kovai Kongu Mess, others) need the room number. The sale is added to that room's bill and named on the invoice. The Front Desk "Post charge" list has the same items.
 - **Automatic night audit**: the day closes by itself after midnight (Settings: on/off and the time). Arrivals still not checked in are marked No Show, so check guests in before midnight.
-- **Credit (Kadan)**: choose "Credit (Kadan)" as the payment method at registration or at Cashier & Billing. The bill is balanced, the amount is listed under Credit (Kadan) in the menu, and you collect it there when the guest pays. The money counts on the day it is collected.
+- **Credit (pay later)**: choose "Credit (pay later)" as the payment method at registration or at Cashier & Billing. The bill is balanced, the amount is listed under **Credit Ledger** in the menu, and you collect it there when the guest pays. The money counts on the day it is collected.
 - **Single-person tariff**: set "Single Person (₹)" on the room category. A walk-in with no more adults than rooms uses it; any tariff can still be typed. Male / Female counts show on the registration card and invoice header.
 
 ## 7i. The hotel's real tariff (from the owner's notes, March 2026)

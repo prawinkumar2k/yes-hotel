@@ -122,7 +122,7 @@ export async function computeMis(month: string, scope: Record<string, unknown> =
     r.recAdvance += amount;
   }
   for (const a of adjustments as any[]) { const r = row(a.performedAt); if (r) r.advancesAdj += Number(a.amount) || 0; }
-  // Credit (kadan): given on the day it was left unpaid, collected on the day it was paid (that money is also in the modes above)
+  // Credit (pay later): given on the day it was left unpaid, collected on the day it was paid (that money is also in the modes above)
   for (const cr of credits as any[]) {
     const g = row(cr.createdAt); if (g) g.credit += Number(cr.amount) || 0;
     for (const col of cr.collections || []) { const k = row(col.at); if (k) k.creditCollected += Number(col.amount) || 0; }

@@ -31,7 +31,7 @@ const GROUPS: Group[] = [
     { key: "modeTotal", label: "Total", money: true },
   ] },
   { title: "Adjustments", cols: [
-    { key: "refunds", label: "Refunds", money: true }, { key: "expenses", label: "Expenses", money: true }, { key: "credit", label: "Credit (Kadan)", money: true },
+    { key: "refunds", label: "Refunds", money: true }, { key: "expenses", label: "Expenses", money: true }, { key: "credit", label: "Credit", money: true },
     { key: "netCollection", label: "Net Collection", money: true },
   ] },
 ];

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
+import RefundDialog from "@/components/admin/RefundDialog";
 import { api } from "@/lib/api";
 import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -19,34 +20,10 @@ export default function AdminRefunds() {
   const [isViewOpen, setIsViewOpen] = useState(false);
   const [viewingRefund, setViewingRefund] = useState<any>(null);
   
-  // For initiating refund manually: find the payment by booking number, then refund all or part of it
+  // Opening from a booking page (?booking=YH-…) fills in the booking number
   const [searchParams] = useSearchParams();
-  const [bookingRef, setBookingRef] = useState("");
-  const [found, setFound] = useState<any[] | null>(null);
-  const [finding, setFinding] = useState(false);
-  const refundable = (p: any) => Math.max(0, Math.round(((Number(p.amount) || 0) - (Number(p.refundedAmount) || 0)) * 100) / 100);
-  const findPayments = async (ref: string) => {
-    if (!ref.trim()) return;
-    setFinding(true);
-    try {
-      const res = await api.get(`/payments?search=${encodeURIComponent(ref.trim())}&limit=20`);
-      const list = (res.data?.data?.payments ?? []).filter((p: any) => ["COMPLETED", "PARTIALLY_REFUNDED"].includes(p.status) && refundable(p) > 0);
-      setFound(list);
-      if (list.length === 1) { setPaymentId(list[0]._id); setAmount(String(refundable(list[0]))); }
-    } catch (e: any) {
-      toast({ title: "Could not look up payments", description: e?.response?.data?.message || e.message, variant: "destructive" });
-    } finally {
-      setFinding(false);
-    }
-  };
-  useEffect(() => {
-    const ref = searchParams.get("booking");
-    if (ref) { setBookingRef(ref); setIsInitiateOpen(true); findPayments(ref); }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-  const [paymentId, setPaymentId] = useState("");
-  const [amount, setAmount] = useState("");
-  const [reason, setReason] = useState("");
+  const bookingFromLink = searchParams.get("booking") ?? "";
+  useEffect(() => { if (bookingFromLink) setIsInitiateOpen(true); }, [bookingFromLink]);
 
   const { data, isLoading } = useQuery({
     queryKey: ["refunds", page, statusFilter],
@@ -57,36 +34,6 @@ export default function AdminRefunds() {
       return res.data.data;
     }
   });
-
-  const initiateMutation = useMutation({
-    mutationFn: async (data: { paymentId: string, amount: number, reason: string }) => {
-      const res = await api.post("/refunds/initiate", data);
-      return res.data;
-    },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["refunds"] });
-      queryClient.invalidateQueries({ queryKey: ["payments"] });
-      toast({ title: "Success", description: data.message || "Refund initiated successfully" });
-      setIsInitiateOpen(false);
-      setPaymentId("");
-      setAmount("");
-      setReason("");
-    },
-    onError: (error: any) => {
-      toast({ title: "Error", description: error.response?.data?.message || "Failed to initiate refund", variant: "destructive" });
-    }
-  });
-
-  const handleInitiateSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (confirm("Are you sure you want to initiate this refund? This action cannot be undone and will immediately attempt to reverse funds.")) {
-      initiateMutation.mutate({
-        paymentId,
-        amount: Number(amount),
-        reason
-      });
-    }
-  };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -187,54 +134,7 @@ export default function AdminRefunds() {
         )}
       </div>
 
-      <Dialog open={isInitiateOpen} onOpenChange={setIsInitiateOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="text-red-600 flex items-center gap-2">
-              <RefreshCcw className="w-5 h-5" /> Initiate Manual Refund
-            </DialogTitle>
-          </DialogHeader>
-          <div className="bg-red-50 text-red-800 p-3 rounded-md text-sm mb-4">
-            <strong>Warning:</strong> Initiating a refund will immediately attempt to reverse funds from the gateway if applicable, and adjust booking paid amounts. This cannot be undone.
-          </div>
-          <form onSubmit={handleInitiateSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Booking number</label>
-              <div className="flex gap-2">
-                <Input value={bookingRef} onChange={e => setBookingRef(e.target.value)} placeholder="e.g. YH-1024-001" onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); findPayments(bookingRef); } }} />
-                <Button type="button" variant="outline" onClick={() => findPayments(bookingRef)} disabled={finding}>{finding ? "Finding…" : "Find payment"}</Button>
-              </div>
-              {found && found.length === 0 && <p className="text-xs text-red-600">No refundable payment found for this booking.</p>}
-              {found && found.length > 0 && (
-                <div className="space-y-1">
-                  {found.map((p: any) => (
-                    <label key={p._id} className={`flex items-center gap-2 border rounded-md p-2 text-sm cursor-pointer ${paymentId === p._id ? "border-black bg-gray-50" : ""}`}>
-                      <input type="radio" name="refund-payment" checked={paymentId === p._id} onChange={() => { setPaymentId(p._id); setAmount(String(refundable(p))); }} />
-                      <span>₹{Number(p.amount).toLocaleString("en-IN")} · {p.method}{p.razorpayPaymentId ? ` · ${p.razorpayPaymentId}` : ""} · refundable ₹{refundable(p).toLocaleString("en-IN")}</span>
-                    </label>
-                  ))}
-                </div>
-              )}
-              <p className="text-xs text-gray-500">Or paste the payment's system ID: <Input className="mt-1 h-8 text-xs" value={paymentId} onChange={e => setPaymentId(e.target.value)} placeholder="optional" /></p>
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Refund Amount (₹)</label>
-              <Input type="number" required min="0.01" step="0.01" value={amount} onChange={e => setAmount(e.target.value)} placeholder="Full or partial amount" />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Reason for Refund</label>
-              <Input required minLength={5} value={reason} onChange={e => setReason(e.target.value)} placeholder="e.g. Guest cancelled booking 2 days prior" />
-            </div>
-            <DialogFooter className="mt-6">
-              <Button type="button" variant="outline" onClick={() => setIsInitiateOpen(false)}>Cancel</Button>
-              <Button type="submit" variant="destructive" disabled={initiateMutation.isPending}>
-                {initiateMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                Confirm Refund
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+      <RefundDialog open={isInitiateOpen} onOpenChange={setIsInitiateOpen} bookingRef={bookingFromLink} />
 
       <Dialog open={isViewOpen} onOpenChange={setIsViewOpen}>
         <DialogContent>

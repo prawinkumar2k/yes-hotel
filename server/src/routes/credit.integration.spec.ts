@@ -1,5 +1,5 @@
 /**
- * Credit (kadan): part of a bill left unpaid. The bill balances (so checkout can close), the debt is listed,
+ * Credit (pay later): part of a bill left unpaid. The bill balances (so checkout can close), the debt is listed,
  * collecting it later counts as money received that day, and it can never be over-collected.
  */
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -45,7 +45,7 @@ beforeAll(async () => {
   await db().collection("rooms").insertOne({ _id: roomId, propertyId: P, roomNumber: `K${tag}`, floor: "1", status: "OCCUPIED", occupancyStatus: "OCCUPIED", sellStatus: "SELLABLE" });
   await db().collection("bookings").insertOne({
     _id: stayId, bookingReference: `CR-${tag}`, propertyId: P, status: "CHECKED_IN", assignedRoom: roomId, checkedInAt: new Date(), source: "WALK_IN",
-    guestDetails: { firstName: "Kadan", lastName: tag, phone: "9000000001" }, totalAmount: 1000,
+    guestDetails: { firstName: "Credit", lastName: tag, phone: "9000000001" }, totalAmount: 1000,
   });
   await db().collection("folios").insertOne({ _id: folioId, booking: stayId, guest: oid(), room: roomId, status: "OPEN", propertyId: P, checkInDate: new Date(), checkOutDate: new Date(Date.now() + 864e5), totalCharges: 1000 });
   await db().collection("foliolines").insertOne({ _id: oid(), folio: folioId, booking: stayId, lineType: "ADDON", direction: "DEBIT", description: "Stay", amount: 1000, date: new Date(), postedAt: new Date(), postedBy: "T" });
@@ -62,7 +62,7 @@ afterAll(async () => {
   await new Promise((r) => server.close(r));
 });
 
-describe("Credit (kadan)", () => {
+describe("Credit (pay later)", () => {
   it("leaving 400 on credit balances that part of the bill and lists the debt", async () => {
     const before = await misToday();
     const r = await call("POST", `/api/reception/folios/${folioId}/credit`, { amount: 400, note: "pays on Friday" });
@@ -71,7 +71,7 @@ describe("Credit (kadan)", () => {
     creditId = r.json.data.credit._id;
     const list = await call("GET", "/api/credits?status=OPEN");
     const mine = list.json.data.entries.find((e: any) => e._id === creditId);
-    expect(mine).toMatchObject({ amount: 400, collectedTotal: 0, status: "OPEN", guestName: `Kadan ${tag}` });
+    expect(mine).toMatchObject({ amount: 400, collectedTotal: 0, status: "OPEN", guestName: `Credit ${tag}` });
     const after = await misToday();
     expect(after.credit - before.credit).toBe(400);
     // nothing was received yet

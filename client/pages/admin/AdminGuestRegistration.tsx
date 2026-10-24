@@ -1057,7 +1057,7 @@ export default function AdminGuestRegistration() {
                         <option value="BANK_TRANSFER">Bank Transfer</option>
                         <option value="CHEQUE">Cheque</option>
                         <option value="OTHER">Other</option>
-                        <option value="CREDIT">Credit (Kadan): pay later</option>
+                        <option value="CREDIT">Credit (pay later)</option>
                       </select>
                       {billingDetails.advanceMethod === "CREDIT" && <p className="text-[10px] text-amber-700 mt-1">Nothing is collected now. The amount is kept as credit and collected later from the Credits page.</p>}
                     </div>

@@ -1,6 +1,6 @@
 import mongoose, { Schema, Document } from "mongoose";
 
-/** Money a guest owes the hotel and will pay later ("kadan"): left on credit at registration or at the billing desk. */
+/** Money a guest owes the hotel and will pay later: left on credit at registration or at the billing desk. */
 export interface ICreditEntry extends Document {
   propertyId: mongoose.Types.ObjectId;
   booking: mongoose.Types.ObjectId;

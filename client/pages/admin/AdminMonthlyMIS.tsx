@@ -49,7 +49,7 @@ export default function AdminMonthlyMIS() {
     { field: "dayTotal", headerName: "Day Total", width: 140, cellStyle: { backgroundColor: '#fef3c7', fontWeight: 'bold' } },
     { field: "refunds", headerName: "Refunds", width: 130, cellStyle: { color: 'red' } },
     { field: "expenses", headerName: "Expenses", width: 130, cellStyle: { color: 'red' } },
-    { field: "credit", headerName: "Credit (Kadan)", width: 140 },
+    { field: "credit", headerName: "Credit", width: 140 },
     { field: "grandTotal", headerName: "Grand Total", width: 140, cellStyle: { backgroundColor: '#dcfce7', fontWeight: 'bold' } },
     { field: "salesRoom", headerName: "Room Sales", width: 140 },
     { field: "salesFb", headerName: "F&B Sales", width: 140 },

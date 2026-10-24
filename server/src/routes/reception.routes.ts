@@ -189,7 +189,7 @@ router.post("/folios/:folioId/payments", requirePermission("PAYMENTS", "CREATE")
   }
 });
 
-// ── Leave part of the bill on credit (kadan): paid later from the Credits page ──
+// ── Leave part of the bill on credit (pay later): paid later from the Credits page ──
 router.post("/folios/:folioId/credit", requirePermission("PAYMENTS", "CREATE"), async (req: Request, res: Response) => {
   const found = await openFolio(String(req.params.folioId));
   if ("error" in found) return fail(res, found.error[0], found.error[1]);
@@ -205,7 +205,7 @@ router.post("/folios/:folioId/credit", requirePermission("PAYMENTS", "CREATE"), 
       entry = await recordCredit({ folioId: String(folio._id), bookingId: String(folio.booking), amount: amt, note: typeof req.body?.note === "string" ? req.body.note.trim() : undefined, by: actorId(req) }, { req, session });
     });
     const totals = await recomputeFolioBalance(String(folio._id));
-    return res.status(201).json({ success: true, message: `₹${entry.amount.toLocaleString("en-IN")} left on credit (kadan)`, data: { credit: entry, balance: totals.balance } });
+    return res.status(201).json({ success: true, message: `₹${entry.amount.toLocaleString("en-IN")} left on credit`, data: { credit: entry, balance: totals.balance } });
   } catch (error: any) {
     return fail(res, error.status ?? 500, error.message);
   } finally {
