@@ -270,7 +270,7 @@ function App() {
                 <Route path="/admin/payments/:id/receipt" element={<PermissionRoute pageKey="PAYMENTS"><AdminLayout title="Payment Receipt"><AdminPaymentReceipt /></AdminLayout></PermissionRoute>} />
                 <Route path="/admin/advances/:id/receipt" element={<PermissionRoute pageKey="ADVANCES"><AdminLayout title="Advance Receipt"><AdminAdvanceReceipt /></AdminLayout></PermissionRoute>} />
                 <Route path="/admin/cashier-shifts" element={<PermissionRoute pageKey="CASHIER_SHIFTS"><AdminLayout title="Cashier Shift & Drawer Reconciliation"><AdminCashierShifts /></AdminLayout></PermissionRoute>} />
-                <Route path="/admin/refunds" element={<PermissionRoute pageKey="REFUNDS"><AdminLayout title="Refunds"><AdminRefunds /></AdminLayout></PermissionRoute>} />
+                <Route path="/admin/refunds" element={<PermissionRoute pageKey="REFUNDS"><AdminLayout title="Payments & Refunds"><AdminRefunds /></AdminLayout></PermissionRoute>} />
                 <Route path="/admin/coupons" element={<PermissionRoute pageKey="COUPONS"><AdminLayout title="Coupons"><AdminCoupons /></AdminLayout></PermissionRoute>} />
                 <Route path="/admin/housekeeping" element={<PermissionRoute pageKey="HOUSEKEEPING"><AdminLayout title="Housekeeping"><AdminHousekeeping /></AdminLayout></PermissionRoute>} />
                 <Route path="/admin/maintenance" element={<PermissionRoute pageKey="MAINTENANCE"><AdminLayout title="Maintenance"><AdminMaintenance /></AdminLayout></PermissionRoute>} />

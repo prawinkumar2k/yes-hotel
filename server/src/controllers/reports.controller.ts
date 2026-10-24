@@ -897,6 +897,22 @@ export const getMisSheet = async (req: Request, res: Response) => {
   }
 };
 
+export const getPaymentsRefundsReport = async (req: Request, res: Response) => {
+  try {
+    const today = todayBusinessDate();
+    const isDay = (v: unknown) => /^\d{4}-\d{2}-\d{2}$/.test(String(v));
+    const from = isDay(req.query.from) ? String(req.query.from) : `${today.slice(0, 7)}-01`;
+    const to = isDay(req.query.to) ? String(req.query.to) : today;
+    if (from > to) return res.status(400).json({ success: false, message: "The From date is after the To date" });
+    const { paymentsRefundsReport } = await import("../services/payments-report.service");
+    const scope = (req as any).propertyId ? { propertyId: (req as any).propertyId } : {};
+    const data = await paymentsRefundsReport({ from, to, method: req.query.method as string, search: req.query.search as string, scope });
+    return res.json({ success: true, data });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 export const getDynamicReport = async (req: Request, res: Response) => {
   try {
     const { reportId } = req.params;

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import RefundDialog from "@/components/admin/RefundDialog";
+import PaymentsRefundsReport from "@/components/admin/PaymentsRefundsReport";
 import { api } from "@/lib/api";
 import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -16,6 +17,7 @@ export default function AdminRefunds() {
   const { toast } = useToast();
   const [page, setPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState("");
+  const [tab, setTab] = useState<"report" | "log">("report");
   const [isInitiateOpen, setIsInitiateOpen] = useState(false);
   const [isViewOpen, setIsViewOpen] = useState(false);
   const [viewingRefund, setViewingRefund] = useState<any>(null);
@@ -23,7 +25,7 @@ export default function AdminRefunds() {
   // Opening from a booking page (?booking=YH-…) fills in the booking number
   const [searchParams] = useSearchParams();
   const bookingFromLink = searchParams.get("booking") ?? "";
-  useEffect(() => { if (bookingFromLink) setIsInitiateOpen(true); }, [bookingFromLink]);
+  useEffect(() => { if (bookingFromLink) { setTab("log"); setIsInitiateOpen(true); } }, [bookingFromLink]);
 
   const { data, isLoading } = useQuery({
     queryKey: ["refunds", page, statusFilter],
@@ -47,6 +49,18 @@ export default function AdminRefunds() {
   };
 
   return (
+    <div className="space-y-6">
+      <div className="print:hidden">
+        <h1 className="text-3xl font-serif text-hotel-black">Payments &amp; Refunds</h1>
+        <p className="text-hotel-black/60">Every payment and refund as a report, with refunds started from the same page</p>
+        <div className="flex gap-2 mt-4">
+          {([["report", "Payments & Refunds report"], ["log", "Refund log"]] as const).map(([k, label]) => (
+            <button key={k} type="button" onClick={() => setTab(k)} className={`px-4 py-2 rounded-lg text-sm font-bold border ${tab === k ? "bg-black text-[#e5c76b] border-black" : "bg-white text-gray-600 border-gray-300"}`}>{label}</button>
+          ))}
+        </div>
+      </div>
+      {tab === "report" && <PaymentsRefundsReport />}
+      {tab === "log" && (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
@@ -167,6 +181,8 @@ export default function AdminRefunds() {
           )}
         </DialogContent>
       </Dialog>
+    </div>
+      )}
     </div>
   );
 }

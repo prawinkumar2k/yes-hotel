@@ -234,6 +234,7 @@ export default function AdminLayout({ children, title, hidePadding }: { children
       items: [
         { label: "Advance Deposits", to: "/admin/advances", icon: CreditCard, pageKey: "ADVANCES" },
         { label: "Credit Ledger", to: "/admin/credits", icon: Wallet, pageKey: "ADVANCES" },
+        { label: "Payments & Refunds", to: "/admin/refunds", icon: Receipt, pageKey: "REFUNDS" },
         { label: "Cashier Shifts", to: "/admin/cashier-shifts", icon: DollarSign, pageKey: "CASHIER_SHIFTS" },
       ],
     },

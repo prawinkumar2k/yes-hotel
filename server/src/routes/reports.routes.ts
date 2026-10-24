@@ -13,7 +13,7 @@ import {
   getExecutiveSummary,
   getInHouseList,
   getDaySummary,
-  getMonthlyMIS, getMisSheet,
+  getMonthlyMIS, getMisSheet, getPaymentsRefundsReport,
   getDynamicReport
 } from "../controllers/reports.controller";
 import { getCheckInReport, getCheckOutReport, getDayUseSalesReport, getAdvanceOpsReport } from "../controllers/operations-reports.controller";
@@ -33,6 +33,7 @@ router.get("/executive-summary", protect, requirePropertyAccess, requirePermissi
 // Specific custom reports
 router.get("/in-house-list", protect, requirePropertyAccess, requirePermission("REPORTS_LAYOUT", "VIEW"), getInHouseList);
 router.get("/day-summary", protect, requirePropertyAccess, requirePermission("REPORTS_LAYOUT", "VIEW"), getDaySummary);
+router.get("/payments-refunds", protect, requirePropertyAccess, requirePermission("REFUNDS", "VIEW"), getPaymentsRefundsReport);
 router.get("/mis-sheet", protect, requirePropertyAccess, requirePermission("REPORTS_LAYOUT", "VIEW"), getMisSheet);
 router.get("/monthly-mis", protect, requirePropertyAccess, requirePermission("REPORTS_LAYOUT", "VIEW"), getMonthlyMIS);
 
