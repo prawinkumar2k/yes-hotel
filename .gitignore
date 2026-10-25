@@ -34,9 +34,7 @@ playwright/.cache/
 # .env holds real secrets for this project (MongoDB URI, JWT secrets,
 # Razorpay/Cloudinary/SMTP credentials) — it must never be committed.
 # .env.example (tracked) documents the required keys with placeholder values.
-.env
-.env.local
-.env.*.local
+.env*
 
 # Local editor / tool folders and machine-local files (never part of the project)
 /.*/

@@ -1,0 +1,38 @@
+# YES Hotels
+
+> A premium boutique hotel offering thoughtfully designed rooms, bespoke hospitality, and seamless direct booking.
+
+YES Hotels is a luxury boutique hotel providing a full-service hospitality experience. Guests can discover and book rooms directly on our website. Our property features elegantly designed suites and rooms, a dedicated front-desk team, dining facilities, and curated guest experiences.
+
+## Key Pages
+
+- [Home](/) — Main hotel landing page with booking bar
+- [Rooms & Suites](/rooms) — Browse all available room categories
+- [Room Details](/rooms/:slug) — Detailed view of each room type with amenities, pricing, and 3D preview
+- [Book Now](/search) — Search availability and book a room directly online
+- [About Us](/about) — The YES Hotels story and hospitality philosophy
+- [Gallery](/gallery) — Photo gallery of rooms, dining, exteriors, and amenities
+- [FAQ](/faq) — Frequently asked questions about booking, check-in, and policies
+- [Contact](/contact) — Reservations desk, email, and contact form
+- [Privacy Policy](/privacy-policy) — How YES Hotels handles guest data
+- [Terms & Conditions](/terms-and-conditions) — Booking terms
+- [Cancellation & Refund Policy](/cancellation-and-refund) — Cancellation rules
+
+## Hotel Information
+
+- **Brand**: YES Hotels
+- **Type**: Luxury Boutique Hotel
+- **Direct Booking**: Available at /search
+- **Check-in**: 14:00
+- **Check-out**: 12:00
+- **Contact Email**: reservations@yeshotels.com
+- **Front Desk**: Open daily, 6:00 AM – 11:00 PM
+
+## Booking
+
+Direct booking is available at [/search](/search). Guests can check availability by date, select room category, enter guest details, and confirm payment securely via Razorpay.
+
+## Optional
+
+- [Sitemap](/sitemap.xml)
+- [robots.txt](/robots.txt)

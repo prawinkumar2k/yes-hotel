@@ -97,16 +97,30 @@ Allow: /faq
 Allow: /contact
 Allow: /search
 Allow: /sitemap.xml
+Allow: /llms.txt
 
-# Disallow private, staff, and transactional endpoints from indexation
+# Disallow private portals, staff tools, and auth endpoints from indexation
 Disallow: /admin
+Disallow: /admin/
 Disallow: /staff
+Disallow: /staff/
 Disallow: /customer
+Disallow: /customer/
+Disallow: /front-desk
+Disallow: /front-desk/
+Disallow: /housekeeping
+Disallow: /housekeeping/
+Disallow: /maintenance
+Disallow: /maintenance/
+Disallow: /cashier
+Disallow: /cashier/
 Disallow: /login
 Disallow: /register
 Disallow: /forgot-password
 Disallow: /reset-password
-Disallow: /booking/
+Disallow: /booking/guest-details
+Disallow: /booking/payment
+Disallow: /booking/confirmation
 Disallow: /api/
 
 Sitemap: ${baseUrl}/sitemap.xml
