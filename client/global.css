@@ -521,3 +521,12 @@
   .admin-panel main table:not(.fixed *) { min-width: 640px; }
   .admin-panel main { max-width: 100vw; }
 }
+
+/* Admin tables, every page: column headings never break letter by letter, wide tables keep
+   readable columns and scroll sideways inside their own box (screen only; print is untouched). */
+@media screen {
+  .admin-panel main table:not(.fixed *) { table-layout: auto !important; min-width: min(100%, 640px); }
+  .admin-panel main table:not(.fixed *) th { white-space: nowrap; word-break: normal; overflow-wrap: normal; }
+  .admin-panel main table:not(.fixed *) td { word-break: normal; overflow-wrap: break-word; }
+  .admin-panel main :where(div, section):has(> table):not(.fixed *) { overflow-x: auto; max-width: 100%; }
+}
