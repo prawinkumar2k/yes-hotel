@@ -56,24 +56,15 @@ function findBreak(canvas: HTMLCanvasElement, target: number, min: number) {
 }
 
 async function renderCanvas(copy: HTMLElement) {
-  const html2canvas = (await import("html2canvas")).default;
+  // Rendered by the browser itself (SVG foreignObject), so modern CSS colours (oklch) and fonts match the screen.
+  const { toCanvas } = await import("html-to-image");
   const holder = document.createElement("div");
-  holder.style.cssText = "position:fixed;left:-10000px;top:0;width:850px;background:#fff;padding:16px;";
+  holder.style.cssText = "position:fixed;left:0;top:0;width:850px;background:#fff;padding:16px;z-index:-1;pointer-events:none;";
   holder.appendChild(copy);
   document.body.appendChild(holder);
   try {
     try { await (document as any).fonts?.ready; } catch { /* fonts still loading: render anyway */ }
-    return await html2canvas(holder, {
-      scale: 2,
-      backgroundColor: "#ffffff",
-      useCORS: true,
-      onclone: (doc) => {
-        // html2canvas mis-measures letter-spacing/kerning and overprints glyphs; draw plain text.
-        const st = doc.createElement("style");
-        st.textContent = "*{letter-spacing:normal !important;text-shadow:none !important;font-kerning:none !important;text-rendering:optimizeSpeed !important;font-variant-ligatures:none !important}";
-        doc.head.appendChild(st);
-      },
-    });
+    return await toCanvas(holder, { pixelRatio: 2, backgroundColor: "#ffffff", cacheBust: true });
   } finally {
     holder.remove();
   }
