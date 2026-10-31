@@ -189,6 +189,83 @@ router.post("/folios/:folioId/payments", requirePermission("PAYMENTS", "CREATE")
   }
 });
 
+const keyPrefix = (k: string) => new RegExp("^" + k.replace(/[^A-Za-z0-9_-]/g, (c) => "\\" + c) + ":");
+
+// ── Record a (part) payment from the Front Desk, by booking(s) ──────────────
+// A guest may pay in instalments (today, tomorrow, ...). Each call records one receipt per
+// room, splitting the amount across a group's rooms by what each still owes, and keeps
+// booking.paidAmount in step so the Front Desk balance moves.
+router.post("/bookings/payments", requirePermission("PAYMENTS", "CREATE"), async (req: Request, res: Response) => {
+  const { bookingIds, amount, method, reference, clientRequestId, notes } = req.body ?? {};
+  const amt = r2(Number(amount));
+  if (!(amt > 0)) return fail(res, 400, "Enter an amount greater than zero");
+  const mode = String(method ?? "").toUpperCase();
+  if (!METHODS.includes(mode as any)) return fail(res, 400, "Choose a payment method: CASH, CARD, UPI or RAZORPAY");
+  if ((mode === "CARD" || mode === "UPI") && !(typeof reference === "string" && reference.trim())) return fail(res, 400, `A ${mode} reference (approval code / UTR) is required`);
+  const key = typeof clientRequestId === "string" && clientRequestId.trim() ? clientRequestId.trim() : undefined;
+  if (!key) return fail(res, 400, "Missing clientRequestId (duplicate-submission protection)");
+  const ids: string[] = Array.isArray(bookingIds) ? [...new Set(bookingIds.map(String))] : [];
+  if (!ids.length || ids.length > 50 || !ids.every((i) => mongoose.Types.ObjectId.isValid(i))) return fail(res, 400, "Choose the booking to pay for");
+
+  const already = await Payment.find({ clientRequestId: { $regex: keyPrefix(key) } }).lean();
+  if (already.length) return res.json({ success: true, duplicate: true, message: "This payment was already recorded", data: { payment: already[0], payments: already } });
+
+  const session = await mongoose.startSession();
+  try {
+    const payments: any[] = [];
+    await session.withTransaction(async () => {
+      payments.length = 0;
+      const rows: { booking: any; folio: any; due: number }[] = [];
+      for (const id of ids) {
+        const booking = await Booking.findById(id).session(session);
+        if (!booking) throw Object.assign(new Error("Booking not found"), { status: 404 });
+        if (booking.status !== BookingStatus.CHECKED_IN && booking.status !== BookingStatus.CONFIRMED) throw Object.assign(new Error(`Booking ${booking.bookingReference} is ${booking.status}; it cannot take payments`), { status: 409 });
+        const folio = await Folio.findOne({ booking: booking._id, status: FolioStatus.OPEN }).session(session);
+        if (!folio) throw Object.assign(new Error(`Booking ${booking.bookingReference} has no open bill yet`), { status: 409 });
+        rows.push({ booking, folio, due: r2((await recomputeFolioBalance(String(folio._id), { session })).balance) });
+      }
+      const totalDue = r2(rows.reduce((t, r) => t + Math.max(0, r.due), 0));
+      if (totalDue <= 0) throw Object.assign(new Error("Nothing is due on this bill"), { status: 409 });
+      if (amt > totalDue) throw Object.assign(new Error(`Only ₹${totalDue.toFixed(2)} is due; the payment would overpay the bill`), { status: 409 });
+      let left = amt;
+      for (const r of rows) {
+        const part = r2(Math.min(left, Math.max(0, r.due)));
+        if (part <= 0) continue;
+        left = r2(left - part);
+        const out = await recordFolioPayment(
+          {
+            folioId: String(r.folio._id),
+            bookingId: String(r.booking._id),
+            amount: part,
+            method: mode,
+            description: `Payment (${mode})`,
+            postedBy: actorId(req),
+            notes,
+            propertyId: r.booking.propertyId,
+            clientRequestId: `${key}:${r.booking._id}`,
+            reference: typeof reference === "string" ? reference.trim() : undefined,
+          },
+          { req, session },
+        );
+        payments.push(out.payment);
+        const paid = r2((r.booking.paidAmount || 0) + part);
+        r.booking.paidAmount = paid;
+        r.booking.paymentStatus = (paid >= (r.booking.totalAmount || 0) - 0.01 ? "PAID" : "PARTIAL") as any;
+        await r.booking.save({ session });
+      }
+    });
+    return res.status(201).json({ success: true, message: `₹${amt.toLocaleString("en-IN")} received (${mode})`, data: { payment: payments[0], payments } });
+  } catch (error: any) {
+    if (error?.code === 11000) {
+      const p = await Payment.find({ clientRequestId: { $regex: keyPrefix(key) } }).lean();
+      return res.json({ success: true, duplicate: true, message: "This payment was already recorded", data: { payment: p[0], payments: p } });
+    }
+    return fail(res, error.status ?? 500, error.message);
+  } finally {
+    await session.endSession();
+  }
+});
+
 // ── Leave part of the bill on credit (pay later): paid later from the Credits page ──
 router.post("/folios/:folioId/credit", requirePermission("PAYMENTS", "CREATE"), async (req: Request, res: Response) => {
   const found = await openFolio(String(req.params.folioId));

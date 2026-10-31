@@ -90,6 +90,10 @@ export default function AdminFrontDesk() {
     isGroupFolio?: boolean;
     allGroupBookings?: any[];
   }>({ open: false, booking: null, folio: null, isGroupFolio: false, allGroupBookings: [] });
+  // Part-payments: a guest can pay the balance in instalments over several days.
+  const [payModal, setPayModal] = useState<{ open: boolean; booking: any | null; due: number; paid: number; total: number }>({ open: false, booking: null, due: 0, paid: 0, total: 0 });
+  const [payForm, setPayForm] = useState({ amount: "", method: "CASH", reference: "", notes: "", key: "" });
+  const [payBusy, setPayBusy] = useState(false);
   const [newChargeDesc, setNewChargeDesc] = useState("");
   const [newChargeAmount, setNewChargeAmount] = useState("");
   const [newChargeType, setNewChargeType] = useState("ADDON");
@@ -478,6 +482,53 @@ export default function AdminFrontDesk() {
       toast({ title: "Error", description: err.message, variant: "destructive" });
     } finally {
       setSubmittingAction(false);
+    }
+  };
+
+  const closePayModal = () => setPayModal({ open: false, booking: null, due: 0, paid: 0, total: 0 });
+
+  const openPayModal = (b: any) => {
+    const paid = b.paidAmountCombined !== undefined ? b.paidAmountCombined : (b.paidAmount || 0);
+    const total = b.totalPriceCombined !== undefined ? b.totalPriceCombined : (b.totalAmount || b.totalPrice || 0);
+    const due = Math.round((total - paid) * 100) / 100;
+    const key = typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `k-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    setPayForm({ amount: String(due), method: "CASH", reference: "", notes: "", key });
+    setPayModal({ open: true, booking: b, due, paid, total });
+  };
+
+  const submitPayment = async () => {
+    const b = payModal.booking;
+    if (!b || payBusy) return;
+    const amount = Number(payForm.amount);
+    if (!(amount > 0)) { toast({ title: "Enter the amount received", variant: "destructive" }); return; }
+    if (amount > payModal.due + 0.001) { toast({ title: "Amount is more than the balance due", description: `Only ₹${payModal.due.toLocaleString("en-IN")} is due.`, variant: "destructive" }); return; }
+    if ((payForm.method === "CARD" || payForm.method === "UPI") && !payForm.reference.trim()) { toast({ title: `Enter the ${payForm.method} reference`, description: "Approval code / UTR number", variant: "destructive" }); return; }
+    setPayBusy(true);
+    try {
+      const token = getStoredAuthToken();
+      const res = await fetch("/api/reception/bookings/payments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify({
+          bookingIds: b.isGroup ? (b.groupBookings || []).map((g: any) => g._id) : [b._id],
+          amount, method: payForm.method, reference: payForm.reference.trim() || undefined, notes: payForm.notes.trim() || undefined, clientRequestId: payForm.key,
+        }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        const left = Math.round((payModal.due - amount) * 100) / 100;
+        toast({ title: json.duplicate ? "Already recorded" : "Payment received", description: left > 0 ? `${json.message}. Balance still due ₹${left.toLocaleString("en-IN")}.` : `${json.message}. Bill is paid in full.` });
+        closePayModal();
+        queryClient.invalidateQueries();
+        const pid = json.data?.payment?._id;
+        if (pid) window.open(`/admin/payments/${pid}/receipt`, "_blank");
+      } else {
+        toast({ title: "Could not record payment", description: json.message, variant: "destructive" });
+      }
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    } finally {
+      setPayBusy(false);
     }
   };
 
@@ -1255,6 +1306,17 @@ export default function AdminFrontDesk() {
                               <FileText size={13} className="text-[#c9a227]" /> Folio
                             </button>
 
+                            {/* Add Payment (part-payments allowed, any day) */}
+                            {balance > 0.009 && b.status === "CHECKED_IN" && (
+                              <button
+                                onClick={() => openPayModal(b)}
+                                className="inline-flex items-center gap-1 text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white px-2.5 py-1.5 rounded-lg shadow-sm transition"
+                                title="Record a payment (full or part) towards the balance"
+                              >
+                                <CreditCard size={13} /> Add Payment
+                              </button>
+                            )}
+
                             {/* Specific Actions based on Tab */}
                             {activeTab === "ARRIVALS" && (
                               <button
@@ -1562,6 +1624,52 @@ export default function AdminFrontDesk() {
               >
                 {submittingAction ? "Processing..." : "Confirm Check-In"}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: ADD PAYMENT (full or part) */}
+      {payModal.open && payModal.booking && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white border border-gray-200 rounded-2xl w-full max-w-md p-6 shadow-2xl space-y-4 text-gray-800">
+            <div className="flex items-center justify-between border-b border-gray-200 pb-3">
+              <div className="flex items-center gap-2">
+                <CreditCard className="text-emerald-600" size={20} />
+                <h3 className="font-serif text-lg font-bold">Add Payment</h3>
+              </div>
+              <button onClick={closePayModal} className="text-gray-500 hover:text-gray-800"><X size={20} /></button>
+            </div>
+            <div className="text-sm">
+              <div className="font-semibold">{`${payModal.booking.guestDetails?.firstName || "Guest"} ${payModal.booking.guestDetails?.lastName || ""}`.trim()}{payModal.booking.isGroup ? ` · ${payModal.booking.roomCount} rooms` : ""}</div>
+              <div className="mt-2 grid grid-cols-3 gap-2 text-center text-xs font-mono">
+                <div className="bg-gray-50 border rounded-lg p-2">Total<div className="font-bold text-sm">₹{payModal.total.toLocaleString("en-IN")}</div></div>
+                <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-2">Paid so far<div className="font-bold text-sm text-emerald-700">₹{payModal.paid.toLocaleString("en-IN")}</div></div>
+                <div className="bg-red-50 border border-red-200 rounded-lg p-2">Balance due<div className="font-bold text-sm text-red-700">₹{payModal.due.toLocaleString("en-IN")}</div></div>
+              </div>
+            </div>
+            <label className="block text-xs font-semibold text-gray-600">Amount received now (part payment is fine; the rest can be paid on another day)
+              <input type="number" min="0.01" step="0.01" max={payModal.due} value={payForm.amount} onChange={(e) => setPayForm({ ...payForm, amount: e.target.value })} className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" />
+            </label>
+            <div>
+              <div className="text-xs font-semibold text-gray-600 mb-1">Payment type</div>
+              <div className="grid grid-cols-3 gap-2">
+                {["CASH", "UPI", "CARD"].map((m) => (
+                  <button key={m} type="button" onClick={() => setPayForm({ ...payForm, method: m })} className={cn("py-2 rounded-lg text-xs font-bold border", payForm.method === m ? "bg-emerald-600 text-white border-emerald-600" : "bg-white text-gray-700 border-gray-300")}>{m}</button>
+                ))}
+              </div>
+            </div>
+            {(payForm.method === "UPI" || payForm.method === "CARD") && (
+              <label className="block text-xs font-semibold text-gray-600">{payForm.method === "UPI" ? "UPI reference / UTR" : "Card approval code"}
+                <input value={payForm.reference} onChange={(e) => setPayForm({ ...payForm, reference: e.target.value })} className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" />
+              </label>
+            )}
+            <label className="block text-xs font-semibold text-gray-600">Note (optional)
+              <input value={payForm.notes} onChange={(e) => setPayForm({ ...payForm, notes: e.target.value })} className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" />
+            </label>
+            <div className="flex justify-end gap-2 pt-1">
+              <button onClick={closePayModal} className="px-4 py-2 text-xs font-semibold rounded-lg border border-gray-300">Cancel</button>
+              <button onClick={submitPayment} disabled={payBusy} className="px-4 py-2 text-xs font-bold rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white disabled:opacity-50">{payBusy ? "Saving..." : "Receive Payment"}</button>
             </div>
           </div>
         </div>
