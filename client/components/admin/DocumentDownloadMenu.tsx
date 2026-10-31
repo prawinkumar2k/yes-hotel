@@ -41,6 +41,20 @@ function extract(copy: HTMLElement) {
   return { tables, lines };
 }
 
+/** The nearest blank pixel row at or above `target` (not above `min`), so a page never cuts through text or a box line. */
+function findBreak(canvas: HTMLCanvasElement, target: number, min: number) {
+  const ctx = canvas.getContext("2d")!;
+  for (let row = target; row > min; row--) {
+    const d = ctx.getImageData(0, row, canvas.width, 1).data;
+    let blank = true;
+    for (let i = 0; i < d.length; i += 16) {
+      if (d[i] < 245 || d[i + 1] < 245 || d[i + 2] < 245) { blank = false; break; }
+    }
+    if (blank) return row;
+  }
+  return target;
+}
+
 async function renderCanvas(copy: HTMLElement) {
   const html2canvas = (await import("html2canvas")).default;
   const holder = document.createElement("div");
@@ -48,7 +62,18 @@ async function renderCanvas(copy: HTMLElement) {
   holder.appendChild(copy);
   document.body.appendChild(holder);
   try {
-    return await html2canvas(holder, { scale: 2, backgroundColor: "#ffffff", useCORS: true });
+    try { await (document as any).fonts?.ready; } catch { /* fonts still loading: render anyway */ }
+    return await html2canvas(holder, {
+      scale: 2,
+      backgroundColor: "#ffffff",
+      useCORS: true,
+      onclone: (doc) => {
+        // html2canvas mis-measures letter-spacing/kerning and overprints glyphs; draw plain text.
+        const st = doc.createElement("style");
+        st.textContent = "*{letter-spacing:normal !important;text-shadow:none !important;font-kerning:none !important;text-rendering:optimizeSpeed !important;font-variant-ligatures:none !important}";
+        doc.head.appendChild(st);
+      },
+    });
   } finally {
     holder.remove();
   }
@@ -86,13 +111,17 @@ export default function DocumentDownloadMenu({ filename, label = "Download" }: {
           const imgW = pageW - margin * 2;
           const pxPerMm = canvas.width / imgW;
           const sliceH = Math.floor((pageH - margin * 2) * pxPerMm);
-          for (let y = 0, page = 0; y < canvas.height; y += sliceH, page++) {
+          let y = 0;
+          for (let page = 0; y < canvas.height; page++) {
+            const end = y + sliceH >= canvas.height ? canvas.height : findBreak(canvas, y + sliceH, y + Math.floor(sliceH * 0.7));
+            const h = end - y;
             const part = document.createElement("canvas");
             part.width = canvas.width;
-            part.height = Math.min(sliceH, canvas.height - y);
-            part.getContext("2d")!.drawImage(canvas, 0, y, canvas.width, part.height, 0, 0, canvas.width, part.height);
+            part.height = h;
+            part.getContext("2d")!.drawImage(canvas, 0, y, canvas.width, h, 0, 0, canvas.width, h);
             if (page > 0) pdf.addPage();
-            pdf.addImage(part.toDataURL("image/jpeg", 0.95), "JPEG", margin, margin, imgW, part.height / pxPerMm);
+            pdf.addImage(part.toDataURL("image/jpeg", 0.95), "JPEG", margin, margin, imgW, h / pxPerMm);
+            y = end;
           }
           pdf.save(`${base}.pdf`);
         }
