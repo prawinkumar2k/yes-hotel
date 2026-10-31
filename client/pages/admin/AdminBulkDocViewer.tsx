@@ -238,7 +238,7 @@ function BookingDocCard({
 
       {/* DOCUMENT 1: GUEST REGISTRATION CARD (GRC) — IDENTICAL TO ADMIN GRC PRINT */}
       {(docType === "BOTH" || docType === "GRC") && (
-        <div className="bg-white p-4 print:p-0 mx-auto max-w-[850px] print:max-w-none print:[zoom:0.72] print:m-0 print:break-after-page">
+        <div className="bg-white p-4 print:p-0 mx-auto max-w-[850px] print:max-w-none print:[zoom:0.86] print:m-0 print:break-after-page">
           <div className="print:hidden flex justify-between items-center mb-2 pb-1 border-b border-gray-300 text-xs">
             <span className="font-bold text-gray-800 uppercase tracking-wider flex items-center gap-1.5">
               <FileCheck2 size={15} className="text-[#c9a227]" />

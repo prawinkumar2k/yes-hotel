@@ -113,7 +113,7 @@ export default function AdminGRCPrint() {
   const planLabel: Record<string, string> = { EP: "Room only", CP: "Breakfast", MAP: "Breakfast + one meal", AP: "All meals" };
 
   return (
-    <div data-doc-root className="min-h-screen bg-white text-black p-4 font-sans print:p-0 print:m-0 print:min-h-0 print:max-w-none print:[zoom:0.72] mx-auto max-w-[850px]">
+    <div data-doc-root className="min-h-screen bg-white text-black p-4 font-sans print:p-0 print:m-0 print:min-h-0 print:max-w-none print:[zoom:0.86] mx-auto max-w-[850px]">
       {/* Top Toolbar (Hidden on Print) */}
       <div className={`print:hidden flex justify-between items-center mb-4 bg-gray-100 p-3 rounded-lg border border-gray-300${embedded ? " hidden" : ""}`}>
         <Link
