@@ -77,15 +77,15 @@ export default function MisSheetReport() {
         <div className="p-6 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">Could not load the MIS sheet.</div>
       ) : (
         <div className="bg-white border border-gray-300 overflow-x-auto print:border-black">
-          <table className="w-full text-[11px] border-collapse">
+          <table className="w-full min-w-max print:min-w-0 text-[11px] border-collapse">
             <thead>
               <tr className="bg-gray-100 text-center">
-                <th rowSpan={2} className="border border-gray-400 px-2 py-1 text-left">Date</th>
-                <th rowSpan={2} className="border border-gray-400 px-2 py-1">Day</th>
-                {GROUPS.map((g) => <th key={g.title} colSpan={g.cols.length} className="border border-gray-400 px-2 py-1 uppercase tracking-wide">{g.title}</th>)}
+                <th rowSpan={2} className="border border-gray-400 px-2 py-1 text-left whitespace-nowrap">Date</th>
+                <th rowSpan={2} className="border border-gray-400 px-2 py-1 whitespace-nowrap">Day</th>
+                {GROUPS.map((g) => <th key={g.title} colSpan={g.cols.length} className="border border-gray-400 px-2 py-1 uppercase tracking-wide whitespace-nowrap">{g.title}</th>)}
               </tr>
               <tr className="bg-gray-50 text-center">
-                {allCols.map((c) => <th key={c.key} className="border border-gray-400 px-1.5 py-1 font-semibold">{c.label}</th>)}
+                {allCols.map((c) => <th key={c.key} className="border border-gray-400 px-1.5 py-1 font-semibold whitespace-nowrap">{c.label}</th>)}
               </tr>
             </thead>
             <tbody>
