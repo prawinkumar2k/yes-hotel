@@ -2621,9 +2621,9 @@ export default function AdminFrontDesk() {
                         <th className="p-3">Date</th>
                         <th className="p-3">Particulars / Description</th>
                         <th className="p-3">Type</th>
-                        <th className="p-3 text-right">Debit (Charge ₹)</th>
-                        <th className="p-3 text-right">Credit (Paid ₹)</th>
-                        <th className="p-3 text-center">Action</th>
+                        <th className="p-3 text-right whitespace-nowrap">Debit (Charge ₹)</th>
+                        <th className="p-3 text-right whitespace-nowrap">Credit (Paid ₹)</th>
+                        <th className="p-3 text-center whitespace-nowrap">Action</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100 font-mono">
@@ -2713,16 +2713,16 @@ export default function AdminFrontDesk() {
                 </div>
                 <div className={cn(
                   "p-3 rounded-xl border shadow-2xs col-span-2 sm:col-span-1",
-                  (folioDrawer.folio?.balance || 0) <= 0
+                  (folioDrawer.folio?.balance || 0) < 0.005
                     ? "bg-emerald-50 border-emerald-300 text-emerald-900"
                     : "bg-red-50 border-red-300 text-red-900"
                 )}>
                   <span className="text-[10px] block uppercase font-sans font-bold">Net Balance Due</span>
                   <span className="text-base font-black">
-                    ₹{(folioDrawer.folio?.balance || 0).toLocaleString()}
+                    ₹{Math.max(0, Math.round((folioDrawer.folio?.balance || 0) * 100) / 100).toLocaleString("en-IN", { maximumFractionDigits: 2 })}
                   </span>
                   <span className="text-[9px] font-sans font-black block mt-0.5">
-                    {(folioDrawer.folio?.balance || 0) <= 0 ? "PAID IN FULL" : "SETTLEMENT REQUIRED"}
+                    {(folioDrawer.folio?.balance || 0) < 0.005 ? "PAID IN FULL" : "SETTLEMENT REQUIRED"}
                   </span>
                 </div>
               </div>
@@ -2748,7 +2748,8 @@ export default function AdminFrontDesk() {
                 <button
                   type="button"
                   onClick={() => setFolioDrawer({ open: false, booking: null, folio: null, isGroupFolio: false, allGroupBookings: [] })}
-                  className="w-full sm:w-auto px-6 py-2 bg-gray-900 hover:bg-black text-white rounded-xl text-xs font-bold transition shadow-md"
+                  style={{ backgroundColor: "#111827", color: "#ffffff" }}
+                  className="w-full sm:w-auto px-6 py-2 hover:opacity-90 rounded-xl text-xs font-bold transition shadow-md"
                 >
                   Close Folio Inspector
                 </button>
