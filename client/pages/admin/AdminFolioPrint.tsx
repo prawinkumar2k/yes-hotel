@@ -7,6 +7,8 @@ import { useParams, Link, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { format, differenceInDays } from "date-fns";
+import DocumentDownloadMenu from "@/components/admin/DocumentDownloadMenu";
+import AddPaymentDialog from "@/components/admin/AddPaymentDialog";
 import { Loader2, Printer, Key, ArrowLeft, FileCheck2, Building2, CheckCircle2 } from "lucide-react";
 
 // Number to words helper
@@ -28,6 +30,7 @@ function numberToWords(num: number): string {
 }
 
 export default function AdminFolioPrint() {
+  const [payOpen, setPayOpen] = useState(false);
   usePrintLayout("portrait", 8);
   // Shown inside the registration pop-up: hide this page's own toolbar.
   const embedded = typeof window !== "undefined" && window.self !== window.top;
@@ -190,7 +193,16 @@ export default function AdminFolioPrint() {
 
   return (
     <>
-      <div className="min-h-screen bg-white text-black p-4 font-sans print:p-0 print:m-0 mx-auto max-w-[850px]">
+      <div data-doc-root className="min-h-screen bg-white text-black p-4 font-sans print:p-0 print:m-0 mx-auto max-w-[850px]">
+        <AddPaymentDialog
+          open={payOpen}
+          onClose={() => setPayOpen(false)}
+          bookingIds={isGroupFolio && groupBookings.length > 0 ? groupBookings.map((g: any) => String(g._id || g.bookingId || g.id)).filter(Boolean) : [String(activeBookingId)]}
+          guestName={`${booking?.guestDetails?.firstName || "Guest"} ${booking?.guestDetails?.lastName || ""}`.trim()}
+          roomCount={isGroupFolio && groupBookings.length > 0 ? groupBookings.length : 1}
+          total={Math.round(grandTotal * 100) / 100}
+          paid={Math.round(totalPaid * 100) / 100}
+        />
         {/* Top Control Bar (Hidden on print) */}
         <div className={`print:hidden mb-4 bg-gray-100 p-3 rounded-xl border border-gray-300 shadow-sm space-y-3${embedded ? " hidden" : ""}`}>
           <div className="flex flex-wrap justify-between items-center gap-3">
@@ -207,6 +219,15 @@ export default function AdminFolioPrint() {
               >
                 <FileCheck2 size={15} /> View Registration Card (GRC)
               </Link>
+              {Math.round((grandTotal - totalPaid) * 100) / 100 > 0.009 && booking?.status === "CHECKED_IN" && (
+                <button
+                  onClick={() => setPayOpen(true)}
+                  className="flex items-center gap-1 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded text-xs font-bold transition shadow-sm"
+                >
+                  Add Payment
+                </button>
+              )}
+              <DocumentDownloadMenu filename={`GST-Invoice-${booking?.bookingReference || activeBookingId}`} />
               <button
                 onClick={() => window.print()}
                 className="flex items-center gap-2 px-4 py-2 bg-hotel-black text-hotel-gold font-bold uppercase text-xs rounded hover:bg-gray-800 transition shadow"

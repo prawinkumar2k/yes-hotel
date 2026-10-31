@@ -2,6 +2,7 @@ import { useAuth } from "../../context/AuthContext";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { useState } from "react";
+import AddPaymentDialog from "@/components/admin/AddPaymentDialog";
 import { Search, ChevronRight, ChevronLeft, Plus } from "lucide-react";
 
 const STATUS_COLORS: Record<string, string> = {
@@ -17,6 +18,7 @@ export default function AdminBookings() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [page, setPage] = useState(1);
+  const [payFor, setPayFor] = useState<any | null>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ["adminBookings", page, statusFilter, search],
@@ -73,6 +75,15 @@ export default function AdminBookings() {
           </select>
         </div>
 
+        <AddPaymentDialog
+          open={payFor !== null}
+          onClose={() => setPayFor(null)}
+          bookingIds={payFor ? [String(payFor._id)] : []}
+          guestName={`${payFor?.guestDetails?.firstName || "Guest"} ${payFor?.guestDetails?.lastName || ""}`.trim()}
+          total={payFor?.totalAmount || 0}
+          paid={payFor?.paidAmount || 0}
+        />
+
         {/* Table */}
         <div className="bg-white rounded shadow-sm table-scroll">
           <table className="w-full text-sm">
@@ -107,7 +118,12 @@ export default function AdminBookings() {
                       <span className={`text-xs px-2 py-1 rounded-full font-medium ${STATUS_COLORS[b.status]}`}>{b.status}</span>
                     </td>
                     <td className="px-4 py-3">
-                      <Link to={`/admin/bookings/${b._id}`} className="text-hotel-gold hover:underline text-xs">View</Link>
+                      <div className="flex items-center gap-3 whitespace-nowrap">
+                        <Link to={`/admin/bookings/${b._id}`} className="text-hotel-gold hover:underline text-xs">View</Link>
+                        {b.status === "CHECKED_IN" && (b.totalAmount || 0) - (b.paidAmount || 0) > 0.009 && (
+                          <button type="button" onClick={() => setPayFor(b)} className="text-xs font-bold text-emerald-700 hover:underline">Add Payment</button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))

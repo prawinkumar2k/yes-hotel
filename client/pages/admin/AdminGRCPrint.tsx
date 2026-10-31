@@ -8,6 +8,7 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { format } from "date-fns";
 import { nights as countNights } from "@shared/dates";
+import DocumentDownloadMenu from "@/components/admin/DocumentDownloadMenu";
 import { Loader2, Printer, ArrowLeft, ShieldCheck, FileCheck2, Eye, X } from "lucide-react";
 
 export default function AdminGRCPrint() {
@@ -112,7 +113,7 @@ export default function AdminGRCPrint() {
   const planLabel: Record<string, string> = { EP: "Room only", CP: "Breakfast", MAP: "Breakfast + one meal", AP: "All meals" };
 
   return (
-    <div className="min-h-screen bg-white text-black p-4 font-sans print:p-0 print:m-0 mx-auto max-w-[850px]">
+    <div data-doc-root className="min-h-screen bg-white text-black p-4 font-sans print:p-0 print:m-0 mx-auto max-w-[850px]">
       {/* Top Toolbar (Hidden on Print) */}
       <div className={`print:hidden flex justify-between items-center mb-4 bg-gray-100 p-3 rounded-lg border border-gray-300${embedded ? " hidden" : ""}`}>
         <Link
@@ -128,6 +129,7 @@ export default function AdminGRCPrint() {
           >
             View GST Invoice
           </Link>
+          <DocumentDownloadMenu filename={`GRC-${booking?.bookingReference || id}`} />
           <button
             onClick={() => window.print()}
             className="flex items-center gap-2 px-4 py-2 bg-black text-[#c9a227] font-bold uppercase text-xs rounded hover:bg-gray-900 transition shadow"

@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "../../context/AuthContext";
 import { usePermissions } from "../../context/PermissionContext";
 import RefundDialog from "@/components/admin/RefundDialog";
+import AddPaymentDialog from "@/components/admin/AddPaymentDialog";
 import { useToast } from "@/components/ui/use-toast";
 import { format } from "date-fns";
 import { nights as countNights } from "@shared/dates";
@@ -26,6 +27,7 @@ export default function AdminBookingDetails() {
   const { user } = useAuth();
   const { hasPermission } = usePermissions();
   const [refundOpen, setRefundOpen] = useState(false);
+  const [payOpen, setPayOpen] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
@@ -329,6 +331,25 @@ export default function AdminBookingDetails() {
                    <span className="text-gray-500">Paid Amount</span>
                    <span className="text-gray-900">₹{booking.paidAmount?.toLocaleString("en-IN") || 0}</span>
                  </div>
+                 {booking.status === "CHECKED_IN" && booking.totalAmount - (booking.paidAmount || 0) > 0.009 && (
+                   <>
+                     <div className="flex justify-between items-center text-sm mb-2">
+                       <span className="text-gray-500">Balance Due</span>
+                       <span className="text-red-600 font-semibold">₹{(booking.totalAmount - (booking.paidAmount || 0)).toLocaleString("en-IN", { maximumFractionDigits: 2 })}</span>
+                     </div>
+                     <button type="button" onClick={() => setPayOpen(true)} className="w-full mb-2 px-3 py-2 rounded-lg bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-500">
+                       Add Payment
+                     </button>
+                     <AddPaymentDialog
+                       open={payOpen}
+                       onClose={() => setPayOpen(false)}
+                       bookingIds={[String(booking._id)]}
+                       guestName={`${booking.guestDetails?.firstName || "Guest"} ${booking.guestDetails?.lastName || ""}`.trim()}
+                       total={booking.totalAmount}
+                       paid={booking.paidAmount || 0}
+                     />
+                   </>
+                 )}
                  {(booking.paidAmount ?? 0) > 0 && hasPermission("REFUNDS", "CREATE") && (
                    <button type="button" onClick={() => setRefundOpen(true)} className="w-full mb-2 px-3 py-2 rounded-lg border border-red-200 bg-red-50 text-red-700 text-sm font-semibold hover:bg-red-100">
                      Refund payment
