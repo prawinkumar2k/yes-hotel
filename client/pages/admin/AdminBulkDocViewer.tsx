@@ -238,7 +238,7 @@ function BookingDocCard({
 
       {/* DOCUMENT 1: GUEST REGISTRATION CARD (GRC) — IDENTICAL TO ADMIN GRC PRINT */}
       {(docType === "BOTH" || docType === "GRC") && (
-        <div className="bg-white p-4 print:p-0 mx-auto max-w-[850px] print:max-w-none print:[zoom:0.86] print:m-0 print:break-after-page">
+        <div className="bg-white p-4 print:p-0 mx-auto max-w-[850px] print:max-w-none print:[zoom:0.84] print:m-0 print:break-after-page">
           <div className="print:hidden flex justify-between items-center mb-2 pb-1 border-b border-gray-300 text-xs">
             <span className="font-bold text-gray-800 uppercase tracking-wider flex items-center gap-1.5">
               <FileCheck2 size={15} className="text-[#c9a227]" />
@@ -247,7 +247,7 @@ function BookingDocCard({
             <span className="text-gray-500 font-mono">Bill #{billNo}</span>
           </div>
 
-          <div className="border-2 border-black p-3 text-[11px] leading-tight font-sans bg-white print:break-inside-avoid">
+          <div className="border-2 border-black p-3 text-[11px] leading-tight font-sans bg-white">
             {/* HEADER SECTION */}
             <div className="border-b-2 border-black pb-2 text-center relative">
               <div className="flex items-center justify-between">
