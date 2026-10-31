@@ -515,3 +515,9 @@
   .report-print .text-xs, .report-print .text-sm { font-size: 10px !important; }
   * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }
+
+/* Small screens: wide admin tables scroll sideways instead of crushing their columns. */
+@media (max-width: 1023px) {
+  .admin-panel main table:not(.fixed *) { min-width: 640px; }
+  .admin-panel main { max-width: 100vw; }
+}

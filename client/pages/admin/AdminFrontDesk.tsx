@@ -1142,7 +1142,7 @@ export default function AdminFrontDesk() {
                 ))}
               </div>
             ) : (
-              <table className="w-full text-left text-sm">
+              <div className="overflow-x-auto"><table className="w-full min-w-[860px] text-left text-sm">
                 <thead className="bg-gray-100 text-gray-500 text-xs uppercase font-mono border-b border-gray-200">
                   <tr>
                     <th className="p-3.5 rounded-l-xl">Ref & Guest</th>
@@ -1244,7 +1244,7 @@ export default function AdminFrontDesk() {
                           </td>
 
                           {/* Stay Dates */}
-                          <td className="p-3.5 text-xs text-gray-600">
+                          <td className="p-3.5 text-xs text-gray-600 whitespace-nowrap">
                             <div className="flex items-center gap-1 text-gray-500 font-mono">
                               <Calendar size={13} className="text-[#c9a227]" />
                               {new Date(b.checkInDate).toLocaleDateString()} → {new Date(b.checkOutDate).toLocaleDateString()}
@@ -1253,9 +1253,9 @@ export default function AdminFrontDesk() {
                           </td>
 
                           {/* Financial Status */}
-                          <td className="p-3.5 text-xs">
+                          <td className="p-3.5 text-xs whitespace-nowrap">
                             <div className="font-mono text-gray-800 font-semibold">
-                              Total: ₹{total.toLocaleString()}
+                              Total: ₹{total.toLocaleString("en-IN", { maximumFractionDigits: 2 })}
                               {isGroup && (
                                 <span className="text-[10px] text-gray-500 block font-normal">
                                   ({roomCount} rooms combined)
@@ -1269,14 +1269,14 @@ export default function AdminFrontDesk() {
                                 </span>
                               ) : (
                                 <span className="text-[10px] bg-red-500/20 text-red-700 px-1.5 py-0.5 rounded font-bold border border-red-500/30">
-                                  BAL DUE: ₹{balance.toLocaleString()}
+                                  BAL DUE: ₹{balance.toLocaleString("en-IN", { maximumFractionDigits: 2 })}
                                 </span>
                               )}
                             </div>
                           </td>
 
                           {/* Actions */}
-                          <td className="p-3.5 text-right space-x-1.5">
+                          <td className="p-3.5 text-right min-w-[300px] [&>*]:m-0.5">
                             {/* Print GRC Card */}
                             <Link
                               to={`/admin/bookings/${b._id}/grc-print`}
@@ -1307,7 +1307,7 @@ export default function AdminFrontDesk() {
                             </button>
 
                             {/* Add Payment (part-payments allowed, any day) */}
-                            {balance > 0.009 && b.status === "CHECKED_IN" && (
+                            {balance > 0.009 && activeTab !== "ARRIVALS" && (
                               <button
                                 onClick={() => openPayModal(b)}
                                 className="inline-flex items-center gap-1 text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white px-2.5 py-1.5 rounded-lg shadow-sm transition"
@@ -1541,7 +1541,7 @@ export default function AdminFrontDesk() {
                     );
                   })}
                 </tbody>
-              </table>
+              </table></div>
             )}
           </div>
         )}
