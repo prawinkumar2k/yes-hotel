@@ -833,7 +833,7 @@ export default function AdminFrontDesk() {
       </div>
 
       {/* Top KPI Ribbon */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-8 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
         {/* In House Card */}
         <div
           onClick={() => setActiveTab("IN_HOUSE")}

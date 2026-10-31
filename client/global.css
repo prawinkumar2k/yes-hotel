@@ -530,3 +530,10 @@
   .admin-panel main table:not(.fixed *) td { word-break: normal; overflow-wrap: break-word; }
   .admin-panel main :where(div, section):has(> table):not(.fixed *) { overflow-x: auto; max-width: 100%; }
 }
+
+/* Card rows of 5+ columns (summary tiles) fit as many as have room, instead of squeezing every card. */
+@media screen {
+  .admin-panel main :is([class*="sm:grid-cols-5"], [class*="sm:grid-cols-6"], [class*="sm:grid-cols-7"], [class*="sm:grid-cols-8"], [class*="md:grid-cols-5"], [class*="md:grid-cols-6"], [class*="md:grid-cols-7"], [class*="md:grid-cols-8"], [class*="lg:grid-cols-5"], [class*="lg:grid-cols-6"], [class*="lg:grid-cols-7"], [class*="lg:grid-cols-8"], [class*="xl:grid-cols-5"], [class*="xl:grid-cols-6"], [class*="xl:grid-cols-7"], [class*="xl:grid-cols-8"], [class*="2xl:grid-cols-5"], [class*="2xl:grid-cols-6"], [class*="2xl:grid-cols-7"], [class*="2xl:grid-cols-8"]):not(.fixed *) {
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)) !important;
+  }
+}
