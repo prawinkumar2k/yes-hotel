@@ -1262,6 +1262,12 @@ export default function AdminFrontDesk() {
                                 </span>
                               )}
                             </div>
+                            <div className="text-[10px] text-gray-500 font-normal font-mono">Paid ₹{paid.toLocaleString("en-IN", { maximumFractionDigits: 2 })}</div>
+                            {activeTab !== "ARRIVALS" && (
+                              <button type="button" onClick={() => openFolioDrawer(b)} className="text-[10px] font-semibold text-amber-700 hover:underline">
+                                View bill (all charges)
+                              </button>
+                            )}
                             <div className="mt-0.5">
                               {balance <= 0 ? (
                                 <span className="text-[10px] bg-emerald-500/20 text-emerald-700 px-1.5 py-0.5 rounded font-bold border border-emerald-500/30">
@@ -1314,6 +1320,17 @@ export default function AdminFrontDesk() {
                                 title="Record a payment (full or part) towards the balance"
                               >
                                 <CreditCard size={13} /> Add Payment
+                              </button>
+                            )}
+
+                            {/* Add Charge: extras (food, laundry, minibar…) at any time, even when the bill is paid */}
+                            {activeTab !== "ARRIVALS" && (
+                              <button
+                                onClick={async () => { await openFolioDrawer(b); setShowAddCharge(true); }}
+                                className="inline-flex items-center gap-1 text-xs font-bold bg-indigo-600 hover:bg-indigo-500 text-white px-2.5 py-1.5 rounded-lg shadow-sm transition"
+                                title="Add an extra charge to the bill (pick the room inside)"
+                              >
+                                <PlusCircle size={13} /> Add Charge
                               </button>
                             )}
 

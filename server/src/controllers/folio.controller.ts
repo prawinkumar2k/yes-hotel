@@ -332,6 +332,20 @@ export const postFolioCharge = async (req: Request, res: Response) => {
       }
     }
 
+    // Keep the booking's bill in step (as late check-out and room moves do), so the Front Desk,
+    // booking page and reports show the extra and the balance due straight away.
+    if (!isConcession) {
+      const taxAdded = chargeTax ? Math.round(((chargeTax.cgst || 0) + (chargeTax.sgst || 0)) * 100) / 100 : 0;
+      const added = Math.round(((line as any).amount + taxAdded) * 100) / 100;
+      if (added > 0) {
+        await Booking.updateOne(
+          { _id: folio.booking },
+          { $inc: { totalAmount: added, taxAmount: taxAdded } },
+        );
+        await Booking.updateOne({ _id: folio.booking, paymentStatus: PaymentStatus.PAID }, { $set: { paymentStatus: PaymentStatus.PARTIAL } });
+      }
+    }
+
     const recomputed = await Folio.findById(folioId);
 
     return res.json({
@@ -548,6 +562,11 @@ export const deleteFolioLine = async (req: Request, res: Response) => {
     const voided = await FolioLine.findById(lineId).lean();
     await reverseFolioLine(folioId, lineId, reason, { req, postedBy: actor ? String(actor) : "STAFF" });
     const folio = await Folio.findById(folioId).lean();
+    // A voided charge comes off the booking's bill too.
+    if (voided && voided.direction === FolioLineDirection.DEBIT && voided.lineType !== FolioLineType.REFUND && folio?.booking) {
+      const isTax = [FolioLineType.TAX_CGST, FolioLineType.TAX_SGST, FolioLineType.TAX_IGST].includes(voided.lineType as any);
+      await Booking.updateOne({ _id: folio.booking }, { $inc: { totalAmount: -voided.amount, ...(isTax ? { taxAmount: -voided.amount } : {}) } });
+    }
     await queueForVerification({
       type: VerificationType.FOLIO_VOID,
       subjectKey: `folioLine:${lineId}:void`,
