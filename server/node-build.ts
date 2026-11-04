@@ -5,6 +5,7 @@ import mongoose from "mongoose";
 import { createServer } from "./index";
 import { attachRealtime } from "./src/realtime/socket";
 import * as express from "express";
+import compression from "compression";
 import { logger } from "./src/services/logger.service";
 import { stopJobWorker } from "./src/services/job-queue.service";
 import { injectSeoTagsIntoHtml } from "./src/services/seo-meta-injector.service";
@@ -19,7 +20,16 @@ const distPath = path.join(__dirname, "../spa");
 // Serve static files
 // redirect:false — the photo folder public/gallery must not turn the /gallery page into /gallery/
 // index:false — allows app.get("/*splat") to enrich index.html with Schema.org JSON-LD and meta tags on the root URL
-app.use(express.static(distPath, { index: false, redirect: false }));
+// Compress text responses (the app bundle is ~1.7 MB raw) so first load is fast.
+app.use(compression());
+// Built files in /assets carry a content hash in their name, so browsers may keep them for a year.
+app.use(express.static(distPath, {
+  index: false,
+  redirect: false,
+  setHeaders: (res, filePath) => {
+    if (filePath.split("\\").join("/").includes("/assets/")) res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+  },
+}));
 
 // Handle React Router - serve index.html for all non-API routes
 //
