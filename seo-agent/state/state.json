@@ -42,6 +42,10 @@
   "history": [
     {
       "date": "2026-11-09",
+      "summary": "c53fa58 DEPLOYED by the owner and verified live: og:url on all pages, trailing-slash 301 one hop, no loops, www still a 200 mirror (nginx redirect SEO-003 not applied)."
+    },
+    {
+      "date": "2026-11-09",
       "summary": "Canonical host review (branch seo-agent/canonical-host): non-www confirmed; nginx is the right place for the www redirect; og:url bug and /rooms/ duplicate fixed locally; middleware + 46 new tests; nothing deployed or changed on the server."
     },
     {

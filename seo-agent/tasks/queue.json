@@ -177,10 +177,10 @@
       "risk": "Low",
       "effort": "S",
       "dependencies": [],
-      "status": "implemented-locally",
-      "completedAt": null,
-      "validation": "Branch seo-agent/canonical-host: og:url tag added to index.html (the injector rewrites it per page) and a trailing-slash 301 (server/src/middleware/canonical-url.ts). 77 tests pass; built server booted locally and verified. Not deployed.",
-      "approvalNeeded": "Merge + deploy"
+      "status": "done",
+      "completedAt": "2026-11-09T12:12+05:30",
+      "validation": "Deployed 2026-11-09 (commit c53fa58). Live host-audit: og:url present and equal to canonical on all 11 apex HTML pages; /rooms/ and /hotels-near/begur/ answer 301 to the slash-less address in one hop; no loops; www unchanged (redirect flag off).",
+      "approvalNeeded": null
     },
     {
       "id": "SEO-013",
