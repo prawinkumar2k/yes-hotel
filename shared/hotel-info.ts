@@ -8,7 +8,7 @@ export const HOTEL = {
   shortName: "YES Hotels",
   category: "Contemporary 3-star boutique hotel",
   tagline: "Say Yes to Time Well Spent",
-  website: "https://www.yeshotels.in",
+  website: "https://yeshotels.in",
   /** GSTIN printed on tax invoices (Admin → Settings can override it). */
   gstin: "29AFAFS2437J1ZS",
   instagram: "yeshotel_blr",
@@ -25,7 +25,7 @@ export const HOTEL = {
     pincode: "560100",
   },
   landmark: "At Hosa Road Junction on Hosur Road, near Hosa Road Metro Station",
-  mapsUrl: "https://www.google.com/maps/search/?api=1&query=YES+HOTELS+Hosa+Road+Junction+Bengaluru+560100",
+  mapsUrl: "https://www.google.com/maps?cid=15884523383505329498",
   checkIn: "12:00 PM",
   checkInWindow: "12:00 PM to 11:30 PM",
   checkOut: "11:00 AM",

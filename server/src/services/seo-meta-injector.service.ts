@@ -121,6 +121,13 @@ export async function injectSeoTagsIntoHtml(
       { "@type": "LocationFeatureSpecification", name: "Free On-Site Parking", value: true },
       { "@type": "LocationFeatureSpecification", name: "Daily Housekeeping", value: true },
     ],
+    hasMap: HOTEL.mapsUrl,
+    sameAs: [
+      baseUrl,
+      HOTEL.instagramUrl,
+      HOTEL.mapsUrl,
+    ],
+    // aggregateRating intentionally omitted: no verified, visible review source (see seo-agent/reports/rating-review-2026-11-09.md).
   };
 
   const organizationSchema: any = {

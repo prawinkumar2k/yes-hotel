@@ -86,9 +86,22 @@ describe("JSON-LD", () => {
       for (const f of own) expect(f.url.startsWith(ORIGIN), `${f.key}: ${f.url}`).toBe(true);
     });
   }
-  // Blocked: shared/hotel-info.ts (HOTEL.website is the www address) and the uncommitted sameAs/hasMap/aggregateRating draft in
-  // seo-meta-injector.service.ts are owner-modified files. Once they are settled: sameAs must list https://yeshotels.in, not the www twin.
-  it.todo("JSON-LD sameAs / website use https://yeshotels.in (HOTEL.website is currently the www address)");
+  it("JSON-LD sameAs / url use the preferred host, hasMap is kept, and no unverified aggregateRating is emitted", async () => {
+    for (const p of ["/", "/rooms", "/about"]) {
+      const html = await injectSeoTagsIntoHtml(indexHtml, p);
+      const blocks = [...html.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)].map((m) => JSON.parse(m[1]));
+      const flat = JSON.stringify(blocks);
+      expect(flat, p).not.toContain("www.yeshotels.in");
+      expect(flat, p).not.toContain("aggregateRating");
+      expect(flat, p).not.toContain("AggregateRating");
+      const hotel = blocks.flatMap((b: any) => b["@graph"] ?? [b]).find((b: any) => b && ["Hotel", "LodgingBusiness"].includes(b["@type"]));
+      expect(hotel, p).toBeTruthy();
+      expect(hotel.sameAs).toContain(ORIGIN);
+      expect(hotel.url).toBe(ORIGIN);
+      expect(typeof hotel.hasMap).toBe("string");
+      expect(hotel.address?.postalCode).toBeTruthy();
+    }
+  });
 });
 
 describe("sitemap.xml and robots.txt", () => {
