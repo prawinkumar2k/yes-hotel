@@ -18,10 +18,10 @@
       "risk": "Very low (formatting only, verified the injector now matches and replaces it)",
       "effort": "XS",
       "dependencies": [],
-      "status": "implemented-locally-validated",
-      "validation": "Reviewed 2026-11-09. Root cause confirmed (injector checks for the one-line text <meta name=\"description\"; index.html had the tag on several lines, so a second tag was appended). After the fix, 17 new regression tests (real index.html through the injector for / /about /rooms /hotels-near /gallery /faq /contact /terms /privacy /cancellation /search, one area page and one room page) plus the 13 existing SEO tests pass; production build passes. Home now gets its own description, area and room pages get theirs. Live site still shows 2 tags until deployed.",
-      "completedAt": null,
-      "approvalNeeded": "Deploy to production (a push to hardening/phase-1 or main deploys automatically)"
+      "status": "done",
+      "validation": "Deployed 2026-11-09 (commit 9dcdfa1 on hardening/phase-1). Live audit afterwards: 23 pages, 0 pages with 2 description tags (was 23), 0 HTTP errors, 0 broken links, 15 distinct descriptions across 23 pages (was 1). Home, room and area pages now carry their own description. Regression tests in server/src/routes/seo-description.integration.spec.ts.",
+      "completedAt": "2026-11-09T11:04+05:30",
+      "approvalNeeded": null
     },
     {
       "id": "SEO-002",
@@ -178,6 +178,21 @@
       "effort": "S",
       "dependencies": [
         "Change lives in seo-meta-injector.service.ts, which has the owner's uncommitted edits"
+      ],
+      "status": "blocked",
+      "completedAt": null
+    },
+    {
+      "id": "SEO-013",
+      "name": "Give about, rooms, gallery, faq, contact and legal pages their own descriptions",
+      "description": "After SEO-001 these 8 pages still share the generic fallback description (208 chars; Google shows about 155). Page-specific, verified wording is needed for each. The code lives in seo-meta-injector.service.ts, which has the owner's uncommitted edits.",
+      "affectedPages": "/about /rooms /gallery /faq /contact /terms-and-conditions /privacy-policy /cancellation-and-refund",
+      "expectedImpact": "Distinct snippets for core pages",
+      "priority": "P3",
+      "risk": "Low",
+      "effort": "S",
+      "dependencies": [
+        "SEO-004 decision so the injector can be edited and committed"
       ],
       "status": "blocked",
       "completedAt": null

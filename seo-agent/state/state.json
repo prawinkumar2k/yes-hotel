@@ -18,7 +18,14 @@
     "searchConsole": "not connected",
     "googleBusinessProfile": "not connected",
     "analytics": "not connected",
-    "coreWebVitals": "no data"
+    "coreWebVitals": "no data",
+    "afterSeo001": {
+      "pagesWithTwoMetaDescriptionTags": 0,
+      "distinctDescriptions": "15 of 23",
+      "descriptionsOver170Chars": 14,
+      "pagesWithoutH1InServedHtml": 9,
+      "titlesOver65Chars": 2
+    }
   },
   "currentKeywordTargets": [
     "hotel near Hosa Road Metro",
@@ -33,6 +40,10 @@
   "lastSuccessfulAudit": "2026-11-09T05:04:53.058Z",
   "lastSearchConsoleSync": null,
   "history": [
+    {
+      "date": "2026-11-09",
+      "summary": "SEO-001 DEPLOYED and verified live: 0 of 23 pages have duplicate description tags (was 23); 15 distinct descriptions (was 1). Deploy commit 9dcdfa1."
+    },
     {
       "date": "2026-11-09",
       "summary": "Review pass: description fix validated (17 new regression tests + 13 existing, build ok); domain report (recommend non-www); rating review (hardcoded/unverified, do not deploy); scheduler hardened and templates prepared, NOT active. Added SEO-011 (llms.txt facts) and SEO-012."
