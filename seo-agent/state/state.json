@@ -1,0 +1,50 @@
+{
+  "firstRun": "2026-11-09",
+  "site": "https://www.yeshotels.in",
+  "canonicalHost": "https://yeshotels.in",
+  "timezone": "Asia/Kolkata",
+  "baseline": {
+    "date": "2026-11-09",
+    "source": "seo-agent/scripts/audit.mjs against the live site",
+    "publicUrlsAudited": 23,
+    "sitemapUrls": 22,
+    "httpErrors": 0,
+    "brokenInternalLinks": 0,
+    "pagesWithTwoMetaDescriptionTags": 23,
+    "pagesWithoutH1InServedHtml": 9,
+    "titlesOver65Chars": 2,
+    "descriptionsOver170Chars": 23,
+    "hostVariants": "www and non-www both 200, no redirect; canonical = non-www",
+    "searchConsole": "not connected",
+    "googleBusinessProfile": "not connected",
+    "analytics": "not connected",
+    "coreWebVitals": "no data"
+  },
+  "currentKeywordTargets": [
+    "hotel near Hosa Road Metro",
+    "hotel near Electronic City Bengaluru",
+    "hotel near Narayana Health City",
+    "hotel near Bommasandra",
+    "boutique hotel Hosa Road Junction Bengaluru"
+  ],
+  "keywordTargetsNote": "Derived from the site's own live page titles and area pages. Replace with real Search Console queries once connected.",
+  "lastExecution": "2026-11-09T05:05:07.941Z",
+  "lastExecutionStatus": "ok",
+  "lastSuccessfulAudit": "2026-11-09T05:04:53.058Z",
+  "lastSearchConsoleSync": null,
+  "history": [
+    {
+      "date": "2026-11-09",
+      "summary": "Baseline audit. SEO-001 fixed locally: index.html description tag put on one line so the injector replaces it instead of adding a duplicate. Not deployed."
+    },
+    {
+      "date": "2026-11-04",
+      "summary": "Earlier (before the agent): compression and long-term caching for built assets, loading spinner instead of raw SEO text (commit 0e84acf)."
+    }
+  ],
+  "scheduler": {
+    "active": false,
+    "verifiedScheduledRun": false,
+    "note": "Not active. See README.md. Do not report as active until a real scheduled run has produced a report."
+  }
+}

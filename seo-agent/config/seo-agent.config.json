@@ -1,0 +1,21 @@
+{
+  "business": "YES HOTELS",
+  "siteUrl": "https://www.yeshotels.in",
+  "canonicalHost": "https://yeshotels.in",
+  "alternateHosts": ["https://yeshotels.in"],
+  "timezone": "Asia/Kolkata",
+  "dailyRunLocalTime": "09:00",
+  "evidence": {
+    "siteUrl": "shared/hotel-info.ts (HOTEL.website)",
+    "canonicalHost": "What the live site declares in its canonical tags, sitemap and robots.txt (server CLIENT_URL). Differs from HOTEL.website (www): see task SEO-003.",
+    "timezone": "Hotel address is Bengaluru, Karnataka (shared/hotel-info.ts), which is Asia/Kolkata (IST, UTC+05:30)"
+  },
+  "crawl": { "delayMs": 400, "timeoutMs": 20000, "userAgent": "YESHotelsSEOAgent/1.0 (own-site audit)" },
+  "extraPaths": ["/", "/about", "/rooms", "/hotels-near", "/gallery", "/faq", "/contact", "/terms-and-conditions", "/privacy-policy", "/cancellation-and-refund", "/search"],
+  "integrations": {
+    "searchConsole": { "enabled": false, "note": "Needs authorized access (service account or OAuth). Provide credentials through environment variables, never in this file." },
+    "googleBusinessProfile": { "enabled": false, "note": "Needs authorized Business Profile API access." },
+    "analytics": { "enabled": false }
+  },
+  "requireApprovalFor": ["deploy", "dns", "pricing", "business-address", "gbp-changes", "new-customer-facing-pages", "payment-or-booking-logic"]
+}

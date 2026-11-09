@@ -1,0 +1,831 @@
+{
+  "ranAt": "2026-11-09T05:04:53.058Z",
+  "site": "https://www.yeshotels.in",
+  "checks": {
+    "robots": {
+      "status": 200,
+      "sitemapLines": [
+        "Sitemap: https://yeshotels.in/sitemap.xml"
+      ],
+      "blocksAll": false
+    },
+    "sitemap": {
+      "status": 200,
+      "urlCount": 22,
+      "hosts": [
+        "https://yeshotels.in"
+      ]
+    },
+    "llmsTxt": {
+      "status": 200
+    },
+    "hostVariants": {
+      "https://www.yeshotels.in": {
+        "status": 200,
+        "redirectsTo": null
+      },
+      "https://yeshotels.in": {
+        "status": 200,
+        "redirectsTo": null
+      }
+    }
+  },
+  "pages": [
+    {
+      "url": "https://www.yeshotels.in/",
+      "status": 200,
+      "ms": 289,
+      "title": "Hotel near Hosa Road Metro &amp; Electronic City, Bengaluru | Rooms from ₹2,000 | YES HOTELS",
+      "titleLen": 92,
+      "description": "YES HOTELS — a contemporary boutique hotel at Hosa Road Junction, Hosur Road, Electronic City, Bengaluru. Clean AC rooms near Hosa Road Metro, free Wi-Fi and parking, 24-hour front desk. Call +91 87698 28787.",
+      "descLen": 208,
+      "canonical": "https://yeshotels.in",
+      "robots": "index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1",
+      "h1s": 1,
+      "jsonLdTypes": [
+        "Hotel",
+        "Organization"
+      ],
+      "images": 0,
+      "imgNoAlt": 0,
+      "internalLinks": [
+        "/rooms/deluxe-room",
+        "/rooms/executive-room",
+        "/hotels-near/begur",
+        "/hotels-near/bommanahalli",
+        "/hotels-near/bommasandra",
+        "/hotels-near/narayana-health-city",
+        "/hotels-near/electronic-city",
+        "/hotels-near/hebbagodi",
+        "/hotels-near/hosa-road",
+        "/hotels-near/hosa-road-metro-station",
+        "/hotels-near/kudlu-gate",
+        "/hotels-near/singasandra",
+        "/rooms",
+        "/about",
+        "/faq",
+        "/contact"
+      ],
+      "issues": [
+        "title long (92)",
+        "description long (208)",
+        "2 meta description tags (search engines may use the wrong one)"
+      ]
+    },
+    {
+      "url": "https://www.yeshotels.in/about",
+      "status": 200,
+      "ms": 92,
+      "title": "YES HOTELS, Bengaluru — Boutique Hotel at Hosa Road Junction",
+      "titleLen": 60,
+      "description": "YES HOTELS — a contemporary boutique hotel at Hosa Road Junction, Hosur Road, Electronic City, Bengaluru. Clean AC rooms near Hosa Road Metro, free Wi-Fi and parking, 24-hour front desk. Call +91 87698 28787.",
+      "descLen": 208,
+      "canonical": "https://yeshotels.in/about",
+      "robots": "index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1",
+      "h1s": 0,
+      "jsonLdTypes": [
+        "Hotel",
+        "Organization"
+      ],
+      "images": 0,
+      "imgNoAlt": 0,
+      "internalLinks": [],
+      "issues": [
+        "description long (208)",
+        "2 meta description tags (search engines may use the wrong one)",
+        "no H1 in served HTML"
+      ]
+    },
+    {
+      "url": "https://www.yeshotels.in/rooms",
+      "status": 200,
+      "ms": 164,
+      "title": "YES HOTELS, Bengaluru — Boutique Hotel at Hosa Road Junction",
+      "titleLen": 60,
+      "description": "YES HOTELS — a contemporary boutique hotel at Hosa Road Junction, Hosur Road, Electronic City, Bengaluru. Clean AC rooms near Hosa Road Metro, free Wi-Fi and parking, 24-hour front desk. Call +91 87698 28787.",
+      "descLen": 208,
+      "canonical": "https://yeshotels.in/rooms",
+      "robots": "index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1",
+      "h1s": 0,
+      "jsonLdTypes": [
+        "Hotel",
+        "Organization"
+      ],
+      "images": 0,
+      "imgNoAlt": 0,
+      "internalLinks": [],
+      "issues": [
+        "description long (208)",
+        "2 meta description tags (search engines may use the wrong one)",
+        "no H1 in served HTML"
+      ]
+    },
+    {
+      "url": "https://www.yeshotels.in/hotels-near",
+      "status": 200,
+      "ms": 92,
+      "title": "Hotels near Hosa Road Metro, Electronic City &amp; South Bengaluru | YES HOTELS",
+      "titleLen": 79,
+      "description": "YES HOTELS — a contemporary boutique hotel at Hosa Road Junction, Hosur Road, Electronic City, Bengaluru. Clean AC rooms near Hosa Road Metro, free Wi-Fi and parking, 24-hour front desk. Call +91 87698 28787.",
+      "descLen": 208,
+      "canonical": "https://yeshotels.in/hotels-near",
+      "robots": "index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1",
+      "h1s": 1,
+      "jsonLdTypes": [
+        "Hotel",
+        "Organization"
+      ],
+      "images": 0,
+      "imgNoAlt": 0,
+      "internalLinks": [
+        "/hotels-near/begur",
+        "/hotels-near/bommanahalli",
+        "/hotels-near/bommasandra",
+        "/hotels-near/narayana-health-city",
+        "/hotels-near/electronic-city",
+        "/hotels-near/hebbagodi",
+        "/hotels-near/hosa-road",
+        "/hotels-near/hosa-road-metro-station",
+        "/hotels-near/kudlu-gate",
+        "/hotels-near/singasandra",
+        "/rooms",
+        "/about",
+        "/faq",
+        "/contact"
+      ],
+      "issues": [
+        "title long (79)",
+        "description long (208)",
+        "2 meta description tags (search engines may use the wrong one)"
+      ]
+    },
+    {
+      "url": "https://www.yeshotels.in/gallery",
+      "status": 200,
+      "ms": 100,
+      "title": "YES HOTELS, Bengaluru — Boutique Hotel at Hosa Road Junction",
+      "titleLen": 60,
+      "description": "YES HOTELS — a contemporary boutique hotel at Hosa Road Junction, Hosur Road, Electronic City, Bengaluru. Clean AC rooms near Hosa Road Metro, free Wi-Fi and parking, 24-hour front desk. Call +91 87698 28787.",
+      "descLen": 208,
+      "canonical": "https://yeshotels.in/gallery",
+      "robots": "index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1",
+      "h1s": 0,
+      "jsonLdTypes": [
+        "Hotel",
+        "Organization"
+      ],
+      "images": 0,
+      "imgNoAlt": 0,
+      "internalLinks": [],
+      "issues": [
+        "description long (208)",
+        "2 meta description tags (search engines may use the wrong one)",
+        "no H1 in served HTML"
+      ]
+    },
+    {
+      "url": "https://www.yeshotels.in/faq",
+      "status": 200,
+      "ms": 96,
+      "title": "YES HOTELS, Bengaluru — Boutique Hotel at Hosa Road Junction",
+      "titleLen": 60,
+      "description": "YES HOTELS — a contemporary boutique hotel at Hosa Road Junction, Hosur Road, Electronic City, Bengaluru. Clean AC rooms near Hosa Road Metro, free Wi-Fi and parking, 24-hour front desk. Call +91 87698 28787.",
+      "descLen": 208,
+      "canonical": "https://yeshotels.in/faq",
+      "robots": "index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1",
+      "h1s": 0,
+      "jsonLdTypes": [
+        "Hotel",
+        "Organization"
+      ],
+      "images": 0,
+      "imgNoAlt": 0,
+      "internalLinks": [],
+      "issues": [
+        "description long (208)",
+        "2 meta description tags (search engines may use the wrong one)",
+        "no H1 in served HTML"
+      ]
+    },
+    {
+      "url": "https://www.yeshotels.in/contact",
+      "status": 200,
+      "ms": 88,
+      "title": "YES HOTELS, Bengaluru — Boutique Hotel at Hosa Road Junction",
+      "titleLen": 60,
+      "description": "YES HOTELS — a contemporary boutique hotel at Hosa Road Junction, Hosur Road, Electronic City, Bengaluru. Clean AC rooms near Hosa Road Metro, free Wi-Fi and parking, 24-hour front desk. Call +91 87698 28787.",
+      "descLen": 208,
+      "canonical": "https://yeshotels.in/contact",
+      "robots": "index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1",
+      "h1s": 0,
+      "jsonLdTypes": [
+        "Hotel",
+        "Organization"
+      ],
+      "images": 0,
+      "imgNoAlt": 0,
+      "internalLinks": [],
+      "issues": [
+        "description long (208)",
+        "2 meta description tags (search engines may use the wrong one)",
+        "no H1 in served HTML"
+      ]
+    },
+    {
+      "url": "https://www.yeshotels.in/terms-and-conditions",
+      "status": 200,
+      "ms": 102,
+      "title": "YES HOTELS, Bengaluru — Boutique Hotel at Hosa Road Junction",
+      "titleLen": 60,
+      "description": "YES HOTELS — a contemporary boutique hotel at Hosa Road Junction, Hosur Road, Electronic City, Bengaluru. Clean AC rooms near Hosa Road Metro, free Wi-Fi and parking, 24-hour front desk. Call +91 87698 28787.",
+      "descLen": 208,
+      "canonical": "https://yeshotels.in/terms-and-conditions",
+      "robots": "index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1",
+      "h1s": 0,
+      "jsonLdTypes": [
+        "Hotel",
+        "Organization"
+      ],
+      "images": 0,
+      "imgNoAlt": 0,
+      "internalLinks": [],
+      "issues": [
+        "description long (208)",
+        "2 meta description tags (search engines may use the wrong one)",
+        "no H1 in served HTML"
+      ]
+    },
+    {
+      "url": "https://www.yeshotels.in/privacy-policy",
+      "status": 200,
+      "ms": 105,
+      "title": "YES HOTELS, Bengaluru — Boutique Hotel at Hosa Road Junction",
+      "titleLen": 60,
+      "description": "YES HOTELS — a contemporary boutique hotel at Hosa Road Junction, Hosur Road, Electronic City, Bengaluru. Clean AC rooms near Hosa Road Metro, free Wi-Fi and parking, 24-hour front desk. Call +91 87698 28787.",
+      "descLen": 208,
+      "canonical": "https://yeshotels.in/privacy-policy",
+      "robots": "index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1",
+      "h1s": 0,
+      "jsonLdTypes": [
+        "Hotel",
+        "Organization"
+      ],
+      "images": 0,
+      "imgNoAlt": 0,
+      "internalLinks": [],
+      "issues": [
+        "description long (208)",
+        "2 meta description tags (search engines may use the wrong one)",
+        "no H1 in served HTML"
+      ]
+    },
+    {
+      "url": "https://www.yeshotels.in/cancellation-and-refund",
+      "status": 200,
+      "ms": 99,
+      "title": "YES HOTELS, Bengaluru — Boutique Hotel at Hosa Road Junction",
+      "titleLen": 60,
+      "description": "YES HOTELS — a contemporary boutique hotel at Hosa Road Junction, Hosur Road, Electronic City, Bengaluru. Clean AC rooms near Hosa Road Metro, free Wi-Fi and parking, 24-hour front desk. Call +91 87698 28787.",
+      "descLen": 208,
+      "canonical": "https://yeshotels.in/cancellation-and-refund",
+      "robots": "index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1",
+      "h1s": 0,
+      "jsonLdTypes": [
+        "Hotel",
+        "Organization"
+      ],
+      "images": 0,
+      "imgNoAlt": 0,
+      "internalLinks": [],
+      "issues": [
+        "description long (208)",
+        "2 meta description tags (search engines may use the wrong one)",
+        "no H1 in served HTML"
+      ]
+    },
+    {
+      "url": "https://www.yeshotels.in/search",
+      "status": 200,
+      "ms": 99,
+      "title": "YES HOTELS, Bengaluru — Boutique Hotel at Hosa Road Junction",
+      "titleLen": 60,
+      "description": "YES HOTELS — a contemporary boutique hotel at Hosa Road Junction, Hosur Road, Electronic City, Bengaluru. Clean AC rooms near Hosa Road Metro, free Wi-Fi and parking, 24-hour front desk. Call +91 87698 28787.",
+      "descLen": 208,
+      "canonical": "https://yeshotels.in/search",
+      "robots": "noindex, follow",
+      "h1s": 0,
+      "jsonLdTypes": [
+        "Hotel",
+        "Organization"
+      ],
+      "images": 0,
+      "imgNoAlt": 0,
+      "internalLinks": [],
+      "issues": [
+        "description long (208)",
+        "2 meta description tags (search engines may use the wrong one)",
+        "noindex",
+        "no H1 in served HTML"
+      ]
+    },
+    {
+      "url": "https://www.yeshotels.in/rooms/deluxe-room",
+      "status": 200,
+      "ms": 107,
+      "title": "Deluxe Room at Hosa Road Junction, Bengaluru | YES HOTELS",
+      "titleLen": 57,
+      "description": "YES HOTELS — a contemporary boutique hotel at Hosa Road Junction, Hosur Road, Electronic City, Bengaluru. Clean AC rooms near Hosa Road Metro, free Wi-Fi and parking, 24-hour front desk. Call +91 87698 28787.",
+      "descLen": 208,
+      "canonical": "https://yeshotels.in/rooms/deluxe-room",
+      "robots": "index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1",
+      "h1s": 1,
+      "jsonLdTypes": [
+        "Hotel",
+        "Organization",
+        "BreadcrumbList"
+      ],
+      "images": 0,
+      "imgNoAlt": 0,
+      "internalLinks": [
+        "/rooms",
+        "/about",
+        "/faq",
+        "/contact"
+      ],
+      "issues": [
+        "description long (208)",
+        "2 meta description tags (search engines may use the wrong one)"
+      ]
+    },
+    {
+      "url": "https://www.yeshotels.in/rooms/executive-room",
+      "status": 200,
+      "ms": 110,
+      "title": "Executive Room at Hosa Road Junction, Bengaluru | YES HOTELS",
+      "titleLen": 60,
+      "description": "YES HOTELS — a contemporary boutique hotel at Hosa Road Junction, Hosur Road, Electronic City, Bengaluru. Clean AC rooms near Hosa Road Metro, free Wi-Fi and parking, 24-hour front desk. Call +91 87698 28787.",
+      "descLen": 208,
+      "canonical": "https://yeshotels.in/rooms/executive-room",
+      "robots": "index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1",
+      "h1s": 1,
+      "jsonLdTypes": [
+        "Hotel",
+        "Organization",
+        "BreadcrumbList"
+      ],
+      "images": 0,
+      "imgNoAlt": 0,
+      "internalLinks": [
+        "/rooms",
+        "/about",
+        "/faq",
+        "/contact"
+      ],
+      "issues": [
+        "description long (208)",
+        "2 meta description tags (search engines may use the wrong one)"
+      ]
+    },
+    {
+      "url": "https://www.yeshotels.in/hotels-near/hosa-road",
+      "status": 200,
+      "ms": 110,
+      "title": "Hotels at Hosa Road Junction Bengaluru | YES HOTELS",
+      "titleLen": 51,
+      "description": "YES HOTELS — a contemporary boutique hotel at Hosa Road Junction, Hosur Road, Electronic City, Bengaluru. Clean AC rooms near Hosa Road Metro, free Wi-Fi and parking, 24-hour front desk. Call +91 87698 28787.",
+      "descLen": 208,
+      "canonical": "https://yeshotels.in/hotels-near/hosa-road",
+      "robots": "index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1",
+      "h1s": 1,
+      "jsonLdTypes": [
+        "Hotel",
+        "Organization",
+        "BreadcrumbList",
+        "FAQPage"
+      ],
+      "images": 0,
+      "imgNoAlt": 0,
+      "internalLinks": [
+        "/hotels-near/begur",
+        "/hotels-near/bommanahalli",
+        "/hotels-near/bommasandra",
+        "/hotels-near/narayana-health-city",
+        "/hotels-near/electronic-city",
+        "/hotels-near/hebbagodi",
+        "/hotels-near/hosa-road-metro-station",
+        "/hotels-near/kudlu-gate",
+        "/hotels-near/singasandra",
+        "/rooms",
+        "/about",
+        "/faq",
+        "/contact"
+      ],
+      "issues": [
+        "description long (208)",
+        "2 meta description tags (search engines may use the wrong one)"
+      ]
+    },
+    {
+      "url": "https://www.yeshotels.in/hotels-near/electronic-city",
+      "status": 200,
+      "ms": 99,
+      "title": "Hotels Near Electronic City Bengaluru | YES HOTELS",
+      "titleLen": 50,
+      "description": "YES HOTELS — a contemporary boutique hotel at Hosa Road Junction, Hosur Road, Electronic City, Bengaluru. Clean AC rooms near Hosa Road Metro, free Wi-Fi and parking, 24-hour front desk. Call +91 87698 28787.",
+      "descLen": 208,
+      "canonical": "https://yeshotels.in/hotels-near/electronic-city",
+      "robots": "index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1",
+      "h1s": 1,
+      "jsonLdTypes": [
+        "Hotel",
+        "Organization",
+        "BreadcrumbList",
+        "FAQPage"
+      ],
+      "images": 0,
+      "imgNoAlt": 0,
+      "internalLinks": [
+        "/hotels-near/begur",
+        "/hotels-near/bommanahalli",
+        "/hotels-near/bommasandra",
+        "/hotels-near/narayana-health-city",
+        "/hotels-near/hebbagodi",
+        "/hotels-near/hosa-road",
+        "/hotels-near/hosa-road-metro-station",
+        "/hotels-near/kudlu-gate",
+        "/hotels-near/singasandra",
+        "/rooms",
+        "/about",
+        "/faq",
+        "/contact"
+      ],
+      "issues": [
+        "description long (208)",
+        "2 meta description tags (search engines may use the wrong one)"
+      ]
+    },
+    {
+      "url": "https://www.yeshotels.in/hotels-near/bommasandra",
+      "status": 200,
+      "ms": 102,
+      "title": "Hotels Near Bommasandra Bengaluru | YES HOTELS",
+      "titleLen": 46,
+      "description": "YES HOTELS — a contemporary boutique hotel at Hosa Road Junction, Hosur Road, Electronic City, Bengaluru. Clean AC rooms near Hosa Road Metro, free Wi-Fi and parking, 24-hour front desk. Call +91 87698 28787.",
+      "descLen": 208,
+      "canonical": "https://yeshotels.in/hotels-near/bommasandra",
+      "robots": "index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1",
+      "h1s": 1,
+      "jsonLdTypes": [
+        "Hotel",
+        "Organization",
+        "BreadcrumbList",
+        "FAQPage"
+      ],
+      "images": 0,
+      "imgNoAlt": 0,
+      "internalLinks": [
+        "/hotels-near/begur",
+        "/hotels-near/bommanahalli",
+        "/hotels-near/narayana-health-city",
+        "/hotels-near/electronic-city",
+        "/hotels-near/hebbagodi",
+        "/hotels-near/hosa-road",
+        "/hotels-near/hosa-road-metro-station",
+        "/hotels-near/kudlu-gate",
+        "/hotels-near/singasandra",
+        "/rooms",
+        "/about",
+        "/faq",
+        "/contact"
+      ],
+      "issues": [
+        "description long (208)",
+        "2 meta description tags (search engines may use the wrong one)"
+      ]
+    },
+    {
+      "url": "https://www.yeshotels.in/hotels-near/narayana-health-city",
+      "status": 200,
+      "ms": 103,
+      "title": "Hotels Near Narayana Health City Bengaluru | YES HOTELS",
+      "titleLen": 55,
+      "description": "YES HOTELS — a contemporary boutique hotel at Hosa Road Junction, Hosur Road, Electronic City, Bengaluru. Clean AC rooms near Hosa Road Metro, free Wi-Fi and parking, 24-hour front desk. Call +91 87698 28787.",
+      "descLen": 208,
+      "canonical": "https://yeshotels.in/hotels-near/narayana-health-city",
+      "robots": "index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1",
+      "h1s": 1,
+      "jsonLdTypes": [
+        "Hotel",
+        "Organization",
+        "BreadcrumbList",
+        "FAQPage"
+      ],
+      "images": 0,
+      "imgNoAlt": 0,
+      "internalLinks": [
+        "/hotels-near/begur",
+        "/hotels-near/bommanahalli",
+        "/hotels-near/bommasandra",
+        "/hotels-near/electronic-city",
+        "/hotels-near/hebbagodi",
+        "/hotels-near/hosa-road",
+        "/hotels-near/hosa-road-metro-station",
+        "/hotels-near/kudlu-gate",
+        "/hotels-near/singasandra",
+        "/rooms",
+        "/about",
+        "/faq",
+        "/contact"
+      ],
+      "issues": [
+        "description long (208)",
+        "2 meta description tags (search engines may use the wrong one)"
+      ]
+    },
+    {
+      "url": "https://www.yeshotels.in/hotels-near/bommanahalli",
+      "status": 200,
+      "ms": 100,
+      "title": "Hotels Near Bommanahalli Bengaluru | YES HOTELS",
+      "titleLen": 47,
+      "description": "YES HOTELS — a contemporary boutique hotel at Hosa Road Junction, Hosur Road, Electronic City, Bengaluru. Clean AC rooms near Hosa Road Metro, free Wi-Fi and parking, 24-hour front desk. Call +91 87698 28787.",
+      "descLen": 208,
+      "canonical": "https://yeshotels.in/hotels-near/bommanahalli",
+      "robots": "index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1",
+      "h1s": 1,
+      "jsonLdTypes": [
+        "Hotel",
+        "Organization",
+        "BreadcrumbList",
+        "FAQPage"
+      ],
+      "images": 0,
+      "imgNoAlt": 0,
+      "internalLinks": [
+        "/hotels-near/begur",
+        "/hotels-near/bommasandra",
+        "/hotels-near/narayana-health-city",
+        "/hotels-near/electronic-city",
+        "/hotels-near/hebbagodi",
+        "/hotels-near/hosa-road",
+        "/hotels-near/hosa-road-metro-station",
+        "/hotels-near/kudlu-gate",
+        "/hotels-near/singasandra",
+        "/rooms",
+        "/about",
+        "/faq",
+        "/contact"
+      ],
+      "issues": [
+        "description long (208)",
+        "2 meta description tags (search engines may use the wrong one)"
+      ]
+    },
+    {
+      "url": "https://www.yeshotels.in/hotels-near/singasandra",
+      "status": 200,
+      "ms": 119,
+      "title": "Hotels Near Singasandra Bengaluru | YES HOTELS",
+      "titleLen": 46,
+      "description": "YES HOTELS — a contemporary boutique hotel at Hosa Road Junction, Hosur Road, Electronic City, Bengaluru. Clean AC rooms near Hosa Road Metro, free Wi-Fi and parking, 24-hour front desk. Call +91 87698 28787.",
+      "descLen": 208,
+      "canonical": "https://yeshotels.in/hotels-near/singasandra",
+      "robots": "index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1",
+      "h1s": 1,
+      "jsonLdTypes": [
+        "Hotel",
+        "Organization",
+        "BreadcrumbList",
+        "FAQPage"
+      ],
+      "images": 0,
+      "imgNoAlt": 0,
+      "internalLinks": [
+        "/hotels-near/begur",
+        "/hotels-near/bommanahalli",
+        "/hotels-near/bommasandra",
+        "/hotels-near/narayana-health-city",
+        "/hotels-near/electronic-city",
+        "/hotels-near/hebbagodi",
+        "/hotels-near/hosa-road",
+        "/hotels-near/hosa-road-metro-station",
+        "/hotels-near/kudlu-gate",
+        "/rooms",
+        "/about",
+        "/faq",
+        "/contact"
+      ],
+      "issues": [
+        "description long (208)",
+        "2 meta description tags (search engines may use the wrong one)"
+      ]
+    },
+    {
+      "url": "https://www.yeshotels.in/hotels-near/kudlu-gate",
+      "status": 200,
+      "ms": 115,
+      "title": "Hotels Near Kudlu Gate Bengaluru | YES HOTELS",
+      "titleLen": 45,
+      "description": "YES HOTELS — a contemporary boutique hotel at Hosa Road Junction, Hosur Road, Electronic City, Bengaluru. Clean AC rooms near Hosa Road Metro, free Wi-Fi and parking, 24-hour front desk. Call +91 87698 28787.",
+      "descLen": 208,
+      "canonical": "https://yeshotels.in/hotels-near/kudlu-gate",
+      "robots": "index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1",
+      "h1s": 1,
+      "jsonLdTypes": [
+        "Hotel",
+        "Organization",
+        "BreadcrumbList",
+        "FAQPage"
+      ],
+      "images": 0,
+      "imgNoAlt": 0,
+      "internalLinks": [
+        "/hotels-near/begur",
+        "/hotels-near/bommanahalli",
+        "/hotels-near/bommasandra",
+        "/hotels-near/narayana-health-city",
+        "/hotels-near/electronic-city",
+        "/hotels-near/hebbagodi",
+        "/hotels-near/hosa-road",
+        "/hotels-near/hosa-road-metro-station",
+        "/hotels-near/singasandra",
+        "/rooms",
+        "/about",
+        "/faq",
+        "/contact"
+      ],
+      "issues": [
+        "description long (208)",
+        "2 meta description tags (search engines may use the wrong one)"
+      ]
+    },
+    {
+      "url": "https://www.yeshotels.in/hotels-near/hosa-road-metro-station",
+      "status": 200,
+      "ms": 110,
+      "title": "Hotels Near Hosa Road Metro Station | YES HOTELS (100m Walk)",
+      "titleLen": 60,
+      "description": "YES HOTELS — a contemporary boutique hotel at Hosa Road Junction, Hosur Road, Electronic City, Bengaluru. Clean AC rooms near Hosa Road Metro, free Wi-Fi and parking, 24-hour front desk. Call +91 87698 28787.",
+      "descLen": 208,
+      "canonical": "https://yeshotels.in/hotels-near/hosa-road-metro-station",
+      "robots": "index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1",
+      "h1s": 1,
+      "jsonLdTypes": [
+        "Hotel",
+        "Organization",
+        "BreadcrumbList",
+        "FAQPage"
+      ],
+      "images": 0,
+      "imgNoAlt": 0,
+      "internalLinks": [
+        "/hotels-near/begur",
+        "/hotels-near/bommanahalli",
+        "/hotels-near/bommasandra",
+        "/hotels-near/narayana-health-city",
+        "/hotels-near/electronic-city",
+        "/hotels-near/hebbagodi",
+        "/hotels-near/hosa-road",
+        "/hotels-near/kudlu-gate",
+        "/hotels-near/singasandra",
+        "/rooms",
+        "/about",
+        "/faq",
+        "/contact"
+      ],
+      "issues": [
+        "description long (208)",
+        "2 meta description tags (search engines may use the wrong one)"
+      ]
+    },
+    {
+      "url": "https://www.yeshotels.in/hotels-near/begur",
+      "status": 200,
+      "ms": 95,
+      "title": "Hotels Near Begur Bengaluru | YES HOTELS",
+      "titleLen": 40,
+      "description": "YES HOTELS — a contemporary boutique hotel at Hosa Road Junction, Hosur Road, Electronic City, Bengaluru. Clean AC rooms near Hosa Road Metro, free Wi-Fi and parking, 24-hour front desk. Call +91 87698 28787.",
+      "descLen": 208,
+      "canonical": "https://yeshotels.in/hotels-near/begur",
+      "robots": "index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1",
+      "h1s": 1,
+      "jsonLdTypes": [
+        "Hotel",
+        "Organization",
+        "BreadcrumbList",
+        "FAQPage"
+      ],
+      "images": 0,
+      "imgNoAlt": 0,
+      "internalLinks": [
+        "/hotels-near/bommanahalli",
+        "/hotels-near/bommasandra",
+        "/hotels-near/narayana-health-city",
+        "/hotels-near/electronic-city",
+        "/hotels-near/hebbagodi",
+        "/hotels-near/hosa-road",
+        "/hotels-near/hosa-road-metro-station",
+        "/hotels-near/kudlu-gate",
+        "/hotels-near/singasandra",
+        "/rooms",
+        "/about",
+        "/faq",
+        "/contact"
+      ],
+      "issues": [
+        "description long (208)",
+        "2 meta description tags (search engines may use the wrong one)"
+      ]
+    },
+    {
+      "url": "https://www.yeshotels.in/hotels-near/hebbagodi",
+      "status": 200,
+      "ms": 172,
+      "title": "Hotels Near Hebbagodi Bengaluru | YES HOTELS",
+      "titleLen": 44,
+      "description": "YES HOTELS — a contemporary boutique hotel at Hosa Road Junction, Hosur Road, Electronic City, Bengaluru. Clean AC rooms near Hosa Road Metro, free Wi-Fi and parking, 24-hour front desk. Call +91 87698 28787.",
+      "descLen": 208,
+      "canonical": "https://yeshotels.in/hotels-near/hebbagodi",
+      "robots": "index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1",
+      "h1s": 1,
+      "jsonLdTypes": [
+        "Hotel",
+        "Organization",
+        "BreadcrumbList",
+        "FAQPage"
+      ],
+      "images": 0,
+      "imgNoAlt": 0,
+      "internalLinks": [
+        "/hotels-near/begur",
+        "/hotels-near/bommanahalli",
+        "/hotels-near/bommasandra",
+        "/hotels-near/narayana-health-city",
+        "/hotels-near/electronic-city",
+        "/hotels-near/hosa-road",
+        "/hotels-near/hosa-road-metro-station",
+        "/hotels-near/kudlu-gate",
+        "/hotels-near/singasandra",
+        "/rooms",
+        "/about",
+        "/faq",
+        "/contact"
+      ],
+      "issues": [
+        "description long (208)",
+        "2 meta description tags (search engines may use the wrong one)"
+      ]
+    }
+  ],
+  "duplicates": {
+    "title": [
+      [
+        "https://www.yeshotels.in/about",
+        "https://www.yeshotels.in/rooms",
+        "https://www.yeshotels.in/gallery",
+        "https://www.yeshotels.in/faq",
+        "https://www.yeshotels.in/contact",
+        "https://www.yeshotels.in/terms-and-conditions",
+        "https://www.yeshotels.in/privacy-policy",
+        "https://www.yeshotels.in/cancellation-and-refund",
+        "https://www.yeshotels.in/search"
+      ]
+    ],
+    "description": [
+      [
+        "https://www.yeshotels.in/",
+        "https://www.yeshotels.in/about",
+        "https://www.yeshotels.in/rooms",
+        "https://www.yeshotels.in/hotels-near",
+        "https://www.yeshotels.in/gallery",
+        "https://www.yeshotels.in/faq",
+        "https://www.yeshotels.in/contact",
+        "https://www.yeshotels.in/terms-and-conditions",
+        "https://www.yeshotels.in/privacy-policy",
+        "https://www.yeshotels.in/cancellation-and-refund",
+        "https://www.yeshotels.in/search",
+        "https://www.yeshotels.in/rooms/deluxe-room",
+        "https://www.yeshotels.in/rooms/executive-room",
+        "https://www.yeshotels.in/hotels-near/hosa-road",
+        "https://www.yeshotels.in/hotels-near/electronic-city",
+        "https://www.yeshotels.in/hotels-near/bommasandra",
+        "https://www.yeshotels.in/hotels-near/narayana-health-city",
+        "https://www.yeshotels.in/hotels-near/bommanahalli",
+        "https://www.yeshotels.in/hotels-near/singasandra",
+        "https://www.yeshotels.in/hotels-near/kudlu-gate",
+        "https://www.yeshotels.in/hotels-near/hosa-road-metro-station",
+        "https://www.yeshotels.in/hotels-near/begur",
+        "https://www.yeshotels.in/hotels-near/hebbagodi"
+      ]
+    ]
+  },
+  "brokenLinks": [],
+  "summary": {
+    "pagesChecked": 23,
+    "pagesWithIssues": 23,
+    "non200": 0,
+    "brokenInternalLinks": 0,
+    "duplicateTitles": 1,
+    "duplicateDescriptions": 1
+  }
+}

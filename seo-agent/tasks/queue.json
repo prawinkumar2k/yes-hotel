@@ -1,0 +1,129 @@
+{
+  "updated": "2026-11-09",
+  "priorityScale": { "P0": "critical indexing/production", "P1": "high-impact technical SEO", "P2": "important content/local/performance", "P3": "routine maintenance", "P4": "optional experiment" },
+  "tasks": [
+    {
+      "id": "SEO-001",
+      "name": "Duplicate <meta name=description> on every page",
+      "description": "index.html had the description tag split over several lines, so the server's SEO injector could not find it (it checks for the exact text '<meta name=\"description\"') and ADDED a second tag instead of replacing it. Every page therefore served the generic homepage description first and the page-specific one second.",
+      "affectedPages": "all 23 audited public URLs",
+      "expectedImpact": "Page-specific snippets for rooms and area pages; removes a conflicting-metadata signal",
+      "priority": "P1",
+      "risk": "Very low (formatting only, verified the injector now matches and replaces it)",
+      "effort": "XS",
+      "dependencies": [],
+      "status": "implemented-locally",
+      "validation": "Local check: injector test+regex now match and leave exactly 1 description tag. Live site still shows 2 until deployed.",
+      "completedAt": null,
+      "approvalNeeded": "Deploy to production (push to hardening/phase-1 or main auto-deploys)"
+    },
+    {
+      "id": "SEO-002",
+      "name": "Served HTML for /about, /rooms, /gallery, /faq, /contact and legal pages has no H1 or text",
+      "description": "These pages are rendered only by JavaScript. Google can render JS, but other crawlers and AI tools see an empty page. Home, /hotels-near/*, and /rooms/:slug already ship a prerendered summary.",
+      "affectedPages": "9 pages",
+      "expectedImpact": "More reliable indexing and snippets for core pages",
+      "priority": "P2",
+      "risk": "Low",
+      "effort": "M",
+      "dependencies": ["The owner's uncommitted edits to server/src/services/seo-meta-injector.service.ts must be committed or reviewed first"],
+      "status": "blocked",
+      "completedAt": null
+    },
+    {
+      "id": "SEO-003",
+      "name": "Choose one preferred host (www vs non-www)",
+      "description": "https://www.yeshotels.in and https://yeshotels.in both answer 200 with no redirect. Canonical tags, sitemap and robots.txt use non-www; shared/hotel-info.ts (HOTEL.website) and llms.txt use www. Search engines can split signals between the two.",
+      "affectedPages": "whole site",
+      "expectedImpact": "Consolidates link and ranking signals on one host",
+      "priority": "P2",
+      "risk": "Medium: needs an nginx redirect on the VPS plus aligning HOTEL.website",
+      "effort": "S",
+      "dependencies": ["Owner decision on the preferred host"],
+      "status": "awaiting-approval",
+      "completedAt": null
+    },
+    {
+      "id": "SEO-004",
+      "name": "Verify aggregateRating (4.8 / 33 reviews) before it goes live",
+      "description": "The owner's uncommitted change to seo-meta-injector.service.ts hard-codes aggregateRating 4.8 from 33 reviews into the Hotel JSON-LD. Review markup must match real, visible reviews. Wrong or self-serving ratings can cause a structured-data manual action. The agent did not change this file.",
+      "affectedPages": "all pages (site-wide Hotel schema)",
+      "expectedImpact": "Avoids a structured-data penalty",
+      "priority": "P2",
+      "risk": "Medium",
+      "effort": "XS",
+      "dependencies": ["Owner confirms the numbers from the Google Business Profile or another real source"],
+      "status": "awaiting-approval",
+      "completedAt": null
+    },
+    {
+      "id": "SEO-005",
+      "name": "Shorten over-long titles and descriptions",
+      "description": "All pages have a 208-character generic fallback description (Google shows about 155-160). Home title is 92 characters and /hotels-near is 79 (about 60 is safe).",
+      "affectedPages": "home, /hotels-near and the fallback description",
+      "expectedImpact": "Cleaner snippets and higher CTR",
+      "priority": "P3",
+      "risk": "Low",
+      "effort": "S",
+      "dependencies": ["SEO-001 deployed (otherwise the longer duplicate still wins)", "owner-reviewed wording"],
+      "status": "pending",
+      "completedAt": null
+    },
+    {
+      "id": "SEO-006",
+      "name": "robots.txt allows /search but the page is noindex",
+      "description": "Harmless, but inconsistent. Remove the Allow line or leave noindex alone.",
+      "affectedPages": "/search",
+      "priority": "P3",
+      "risk": "Very low",
+      "effort": "XS",
+      "dependencies": [],
+      "status": "pending",
+      "completedAt": null
+    },
+    {
+      "id": "SEO-007",
+      "name": "Connect Google Search Console",
+      "description": "The site has a verification file (public/googlef44e311027c3fe88.html) and a meta verification tag, so the property exists. The agent needs authorized API access (service account added as a user on the property) to read clicks, impressions, CTR, position and indexing status.",
+      "priority": "P2",
+      "risk": "None",
+      "effort": "S",
+      "dependencies": ["Owner adds a service-account email in Search Console and provides the key through an environment variable"],
+      "status": "blocked",
+      "completedAt": null
+    },
+    {
+      "id": "SEO-008",
+      "name": "Connect Google Business Profile",
+      "description": "No Business Profile API access is configured. The Maps link in the owner's uncommitted change points at a cid. Profile completeness, reviews and interactions can only be read with authorized access.",
+      "priority": "P2",
+      "risk": "None",
+      "effort": "S",
+      "dependencies": ["Business Profile API access granted by the profile owner"],
+      "status": "blocked",
+      "completedAt": null
+    },
+    {
+      "id": "SEO-009",
+      "name": "Activate the 09:00 IST daily schedule",
+      "description": "run-daily.mjs is ready. A scheduler must be chosen and enabled (see seo-agent/README.md). Not active until a real scheduled run is verified.",
+      "priority": "P2",
+      "risk": "Low",
+      "effort": "XS",
+      "dependencies": ["Owner picks where it runs (this PC, the VPS cron, or a scheduled cloud agent)"],
+      "status": "awaiting-approval",
+      "completedAt": null
+    },
+    {
+      "id": "SEO-010",
+      "name": "Core Web Vitals / mobile baseline",
+      "description": "No performance field data yet. Search Console CWV report or PageSpeed Insights needed. Compression and caching were already fixed on 2026-11-04 (commit 0e84acf).",
+      "priority": "P3",
+      "risk": "None",
+      "effort": "S",
+      "dependencies": ["SEO-007 or a PageSpeed run"],
+      "status": "pending",
+      "completedAt": null
+    }
+  ]
+}
