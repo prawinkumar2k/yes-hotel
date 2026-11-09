@@ -6,6 +6,7 @@ import { createServer } from "./index";
 import { attachRealtime } from "./src/realtime/socket";
 import * as express from "express";
 import compression from "compression";
+import { canonicalUrl } from "./src/middleware/canonical-url";
 import { logger } from "./src/services/logger.service";
 import { stopJobWorker } from "./src/services/job-queue.service";
 import { injectSeoTagsIntoHtml } from "./src/services/seo-meta-injector.service";
@@ -20,6 +21,9 @@ const distPath = path.join(__dirname, "../spa");
 // Serve static files
 // redirect:false — the photo folder public/gallery must not turn the /gallery page into /gallery/
 // index:false — allows app.get("/*splat") to enrich index.html with Schema.org JSON-LD and meta tags on the root URL
+// One address per page: /rooms/ -> /rooms (on by default). www -> non-www only when CANONICAL_HOST_REDIRECT=on (off by default;
+// the recommended place for that redirect is nginx, see seo-agent/deploy/nginx-canonical-host.conf).
+app.use(canonicalUrl());
 // Compress text responses (the app bundle is ~1.7 MB raw) so first load is fast.
 app.use(compression());
 // Built files in /assets carry a content hash in their name, so browsers may keep them for a year.

@@ -50,9 +50,9 @@
       "dependencies": [
         "Owner decision on the preferred host"
       ],
-      "status": "awaiting-approval",
+      "status": "prepared-awaiting-approval",
       "completedAt": null,
-      "recommendation": "Use https://yeshotels.in (non-www). Production CLIENT_URL, canonicals, sitemap, robots and JSON-LD already use it. See reports/domain-consistency-2026-11-09.md"
+      "recommendation": "Confirmed: https://yeshotels.in. Redirect www in nginx (one hop). See reports/canonical-host-review-2026-11-09.md and deploy/nginx-canonical-host.conf"
     },
     {
       "id": "SEO-004",
@@ -176,11 +176,11 @@
       "priority": "P3",
       "risk": "Low",
       "effort": "S",
-      "dependencies": [
-        "Change lives in seo-meta-injector.service.ts, which has the owner's uncommitted edits"
-      ],
-      "status": "blocked",
-      "completedAt": null
+      "dependencies": [],
+      "status": "implemented-locally",
+      "completedAt": null,
+      "validation": "Branch seo-agent/canonical-host: og:url tag added to index.html (the injector rewrites it per page) and a trailing-slash 301 (server/src/middleware/canonical-url.ts). 77 tests pass; built server booted locally and verified. Not deployed.",
+      "approvalNeeded": "Merge + deploy"
     },
     {
       "id": "SEO-013",
@@ -195,6 +195,32 @@
         "SEO-004 decision so the injector can be edited and committed"
       ],
       "status": "blocked",
+      "completedAt": null
+    },
+    {
+      "id": "SEO-014",
+      "name": "Re-run host-audit after any redirect change; keep Search Console and Business Profile on the apex",
+      "description": "After the nginx redirect (SEO-003) is applied, run seo-agent/scripts/host-audit.mjs: every www and http row must end in one hop at https://yeshotels.in. Update Search Console property, sitemap submission, Business Profile website field, and any integration using a www URL.",
+      "priority": "P2",
+      "risk": "Low",
+      "effort": "XS",
+      "dependencies": [
+        "SEO-003 applied"
+      ],
+      "status": "blocked",
+      "completedAt": null
+    },
+    {
+      "id": "SEO-015",
+      "name": "JSON-LD sameAs / HOTEL.website must use the apex",
+      "description": "The owner's draft puts HOTEL.website (www) into sameAs. Proposal in tasks/proposals/jsonld-sameas-host.md. Test placeholder (it.todo) exists.",
+      "priority": "P2",
+      "risk": "Low",
+      "effort": "XS",
+      "dependencies": [
+        "Owner settles the draft (SEO-004)"
+      ],
+      "status": "awaiting-approval",
       "completedAt": null
     }
   ]
