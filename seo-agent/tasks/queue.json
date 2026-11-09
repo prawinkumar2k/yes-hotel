@@ -1,5 +1,5 @@
 {
-  "updated": "2026-11-09",
+  "updated": "2026-11-09T11:21:48.322Z",
   "priorityScale": {
     "P0": "critical indexing/production",
     "P1": "high-impact technical SEO",
@@ -50,9 +50,10 @@
       "dependencies": [
         "Owner decision on the preferred host"
       ],
-      "status": "prepared-awaiting-approval",
+      "status": "READY FOR APPROVAL",
       "completedAt": null,
-      "recommendation": "Confirmed: https://yeshotels.in. Redirect www in nginx (one hop). See reports/canonical-host-review-2026-11-09.md and deploy/nginx-canonical-host.conf"
+      "recommendation": "Confirmed: https://yeshotels.in. Redirect www in nginx (one hop). See reports/canonical-host-review-2026-11-09.md and deploy/nginx-canonical-host.conf",
+      "note": "Nginx config + rollout + rollback in deploy/nginx-canonical-host.conf. No server access/approval this session; nothing applied. Live 2026-11-09: www still 200 on 13/13 routes. Cert covers both names (valid to 2027-01-13). Pre-checks left for owner: external integrations using www, certbot renew --dry-run after."
     },
     {
       "id": "SEO-004",
@@ -66,9 +67,10 @@
       "dependencies": [
         "Owner confirms the numbers from the Google Business Profile or another real source"
       ],
-      "status": "awaiting-approval",
+      "status": "COMPLETE LOCALLY",
       "completedAt": null,
-      "evidence": "Hardcoded literal, absent from every data source and from git history except a 142-review version that was deliberately removed on 2026-10-16 (commit f0ce8e7). Status: unsupported / unverified. Do not deploy aggregateRating. See reports/rating-review-2026-11-09.md"
+      "evidence": "Hardcoded literal, absent from every data source and from git history except a 142-review version that was deliberately removed on 2026-10-16 (commit f0ce8e7). Status: unsupported / unverified. Do not deploy aggregateRating. See reports/rating-review-2026-11-09.md",
+      "note": "aggregateRating removed from the working-tree injector draft; owner original saved in tasks/proposals/owner-draft-rating-maps-2026-11-09.patch. Test asserts no AggregateRating is emitted. Uncommitted; add a rating only from a verified, visible source."
     },
     {
       "id": "SEO-005",
@@ -134,9 +136,10 @@
       "dependencies": [
         "Owner picks where it runs (this PC, the VPS cron, or a scheduled cloud agent)"
       ],
-      "status": "prepared-not-active",
+      "status": "READY FOR APPROVAL",
       "completedAt": null,
-      "readiness": "Runner hardened (data dir outside checkout, retries, non-zero exit, overlap lock) and systemd/docker templates in seo-agent/deploy/. Not installed. See reports/scheduler-readiness-2026-11-09.md"
+      "readiness": "Runner hardened (data dir outside checkout, retries, non-zero exit, overlap lock) and systemd/docker templates in seo-agent/deploy/. Not installed. See reports/scheduler-readiness-2026-11-09.md",
+      "note": "Reviewed: paths match DEPLOYMENT.md (/opt/yeshotels checkout, data in /var/lib/yeshotels-seo outside it), flock overlap guard, 3 retries, nonzero exit on failure, read-only container, cap-drop, 256m limit. bash -n and node --check pass; systemd-analyze not available locally, so unit syntax is unvalidated until installed. NOT installed, no scheduled run has happened."
     },
     {
       "id": "SEO-010",
@@ -163,9 +166,10 @@
       "dependencies": [
         "Owner review of the draft"
       ],
-      "status": "awaiting-approval",
+      "status": "COMPLETE LOCALLY",
       "completedAt": null,
-      "approvalNeeded": "Customer-facing content change + deploy"
+      "approvalNeeded": "Customer-facing content change + deploy",
+      "note": "public/llms.txt rewritten from shared/hotel-info.ts with absolute apex URLs; all 11 linked pages return 200 live. Not deployed."
     },
     {
       "id": "SEO-012",
@@ -220,8 +224,9 @@
       "dependencies": [
         "Owner settles the draft (SEO-004)"
       ],
-      "status": "awaiting-approval",
-      "completedAt": null
+      "status": "COMPLETE LOCALLY",
+      "completedAt": null,
+      "note": "sameAs now uses CLIENT_URL base; HOTEL.website set to apex; hasMap kept; it.todo replaced by a real test (no www in JSON-LD). Uncommitted owner files. Maps cid URL kept as the owner supplied it; not independently verified."
     }
   ]
 }

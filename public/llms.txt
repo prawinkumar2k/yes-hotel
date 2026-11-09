@@ -1,38 +1,38 @@
-# YES Hotels
+# YES HOTELS
 
-> A premium boutique hotel offering thoughtfully designed rooms, bespoke hospitality, and seamless direct booking.
+> A contemporary 3-star boutique hotel at Hosa Road Junction on Hosur Road, Bengaluru, near Hosa Road Metro Station and Electronic City. Book direct on the hotel's own website.
 
-YES Hotels is a luxury boutique hotel providing a full-service hospitality experience. Guests can discover and book rooms directly on our website. Our property features elegantly designed suites and rooms, a dedicated front-desk team, dining facilities, and curated guest experiences.
+YES HOTELS offers air-conditioned rooms with free high-speed Wi-Fi, free on-site parking, a lift and a 24-hour front desk. Stays can be nightly, hourly / day-use, weekly or monthly.
 
-## Key Pages
+## Key pages
 
-- [Home](/) — Main hotel landing page with booking bar
-- [Rooms & Suites](/rooms) — Browse all available room categories
-- [Room Details](/rooms/:slug) — Detailed view of each room type with amenities, pricing, and 3D preview
-- [Book Now](/search) — Search availability and book a room directly online
-- [About Us](/about) — The YES Hotels story and hospitality philosophy
-- [Gallery](/gallery) — Photo gallery of rooms, dining, exteriors, and amenities
-- [FAQ](/faq) — Frequently asked questions about booking, check-in, and policies
-- [Contact](/contact) — Reservations desk, email, and contact form
-- [Privacy Policy](/privacy-policy) — How YES Hotels handles guest data
-- [Terms & Conditions](/terms-and-conditions) — Booking terms
-- [Cancellation & Refund Policy](/cancellation-and-refund) — Cancellation rules
+- [Home](https://yeshotels.in/) — Hotel overview and booking bar
+- [Rooms](https://yeshotels.in/rooms) — Room types, rates and amenities
+- [Hotels near Hosa Road Metro, Electronic City and South Bengaluru](https://yeshotels.in/hotels-near) — Distances and travel times to nearby areas
+- [Book a room](https://yeshotels.in/search) — Check availability and book direct
+- [About](https://yeshotels.in/about) — About the hotel
+- [Gallery](https://yeshotels.in/gallery) — Photos
+- [FAQ](https://yeshotels.in/faq) — Booking, check-in and policies
+- [Contact](https://yeshotels.in/contact) — Phone, WhatsApp and address
+- [Cancellation and refund policy](https://yeshotels.in/cancellation-and-refund)
+- [Terms and conditions](https://yeshotels.in/terms-and-conditions)
+- [Privacy policy](https://yeshotels.in/privacy-policy)
 
-## Hotel Information
+## Hotel information
 
-- **Brand**: YES Hotels
-- **Type**: Luxury Boutique Hotel
-- **Direct Booking**: Available at /search
-- **Check-in**: 14:00
-- **Check-out**: 12:00
-- **Contact Email**: reservations@yeshotels.com
-- **Front Desk**: Open daily, 6:00 AM – 11:00 PM
+- **Name**: YES HOTELS
+- **Type**: Contemporary 3-star boutique hotel
+- **Address**: 2nd Floor, Building No. 51 / A51, Khata No. 749, Hosur Main Road, Hosa Road Junction, Parappana Agrahara, Begur, Electronic City, Bengaluru, Karnataka 560100
+- **Phone**: +91 87698 28787 (also WhatsApp)
+- **Check-in**: 12:00 PM (arrivals accepted until 11:30 PM)
+- **Check-out**: 11:00 AM
+- **Front desk**: 24 hours
+- **In-room**: air-conditioning, private bathroom with hot and cold shower, flat-screen TV, work desk, free high-speed Wi-Fi, tea / coffee tray, packaged drinking water, daily housekeeping
+- **Property**: lift to all floors, free on-site parking, luggage storage, laundry service, breakfast (paid or with your plan)
+- **Direct booking**: https://yeshotels.in/search
 
-## Booking
-
-Direct booking is available at [/search](/search). Guests can check availability by date, select room category, enter guest details, and confirm payment securely via Razorpay.
+The hotel has no spa, pool, gym, bar or banquet hall.
 
 ## Optional
 
-- [Sitemap](/sitemap.xml)
-- [robots.txt](/robots.txt)
+- [Sitemap](https://yeshotels.in/sitemap.xml)
