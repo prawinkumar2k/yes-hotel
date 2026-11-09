@@ -1,0 +1,44 @@
+# YES HOTELS
+
+> A contemporary 3-star boutique hotel at Hosa Road Junction on Hosur Road, Bengaluru, near Hosa Road Metro Station and Electronic City. Book direct on the hotel's own website.
+
+YES HOTELS offers air-conditioned rooms with free high-speed Wi-Fi, free on-site parking, a lift and a 24-hour front desk. Stays can be nightly, hourly / day-use, weekly or monthly.
+
+## Key pages
+
+- [Home](/) — Hotel overview and booking bar
+- [Rooms](/rooms) — Room types, rates and amenities
+- [Hotels near Hosa Road Metro, Electronic City and South Bengaluru](/hotels-near) — Distances and travel times to nearby areas
+- [Book a room](/search) — Check availability and book direct
+- [About](/about) — About the hotel
+- [Gallery](/gallery) — Photos
+- [FAQ](/faq) — Booking, check-in and policies
+- [Contact](/contact) — Phone, WhatsApp and address
+- [Cancellation and refund policy](/cancellation-and-refund)
+- [Terms and conditions](/terms-and-conditions)
+- [Privacy policy](/privacy-policy)
+
+## Hotel information
+
+- **Name**: YES HOTELS
+- **Type**: Contemporary 3-star boutique hotel
+- **Address**: 2nd Floor, Building No. 51 / A51, Khata No. 749, Hosur Main Road, Hosa Road Junction, Parappana Agrahara, Begur, Electronic City, Bengaluru, Karnataka 560100
+- **Phone**: +91 87698 28787 (also WhatsApp)
+- **Check-in**: 12:00 PM (arrivals accepted until 11:30 PM)
+- **Check-out**: 11:00 AM
+- **Front desk**: 24 hours
+- **In-room**: air-conditioning, private bathroom with hot and cold shower, flat-screen TV, work desk, free high-speed Wi-Fi, tea / coffee tray, packaged drinking water, daily housekeeping
+- **Property**: lift to all floors, free on-site parking, luggage storage, laundry service, breakfast (paid or with your plan)
+- **Direct booking**: /search
+
+The hotel has no spa, pool, gym, bar or banquet hall.
+
+<!--
+DRAFT for owner review. Every fact above comes from shared/hotel-info.ts (the project's single source of hotel facts).
+Differences from the live public/llms.txt (which is NOT changed yet):
+  - live says "luxury", "suites" and "dining facilities"; the hotel is a 3-star boutique hotel with breakfast only
+  - live check-in 14:00 / check-out 12:00; the hotel's facts are 12:00 PM / 11:00 AM
+  - live contact email reservations@yeshotels.com (a different domain); no verified email is published here
+  - live front desk "6:00 AM - 11:00 PM"; the hotel's front desk is 24 hours
+Delete this comment before publishing, and use the full preferred-host URLs if the owner wants absolute links.
+-->

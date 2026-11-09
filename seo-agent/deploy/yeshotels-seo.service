@@ -1,0 +1,17 @@
+# Template only: NOT installed. Copy to /etc/systemd/system/ when approved.
+[Unit]
+Description=YES HOTELS daily SEO audit (read-only)
+Wants=network-online.target docker.service
+After=network-online.target docker.service
+# Alert hook: create yeshotels-seo-alert.service (e.g. sends an email) and uncomment.
+# OnFailure=yeshotels-seo-alert.service
+
+[Service]
+Type=oneshot
+User=root
+Environment=SEO_REPO_DIR=/opt/yeshotels
+Environment=SEO_AGENT_DATA_DIR=/var/lib/yeshotels-seo
+ExecStart=/opt/yeshotels/seo-agent/deploy/run-in-docker.sh
+TimeoutStartSec=20min
+# The script exits non-zero when the audit failed after its 3 attempts, so systemd records the failure in `systemctl status` / `journalctl -u yeshotels-seo`.
+Nice=10

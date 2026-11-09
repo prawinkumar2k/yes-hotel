@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Lightweight, read-only SEO audit of the live site.
- *   node seo-agent/scripts/audit.mjs   -> writes seo-agent/state/last-audit.json and prints a summary
+ *   node seo-agent/scripts/audit.mjs   -> writes <SEO_AGENT_DATA_DIR or seo-agent>/state/last-audit.json and prints a summary
  * No dependencies. Polite: sequential requests with a delay. Never writes to the site.
  */
 import fs from "node:fs";
@@ -10,6 +10,9 @@ import { fileURLToPath } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const cfg = JSON.parse(fs.readFileSync(path.join(root, "config/seo-agent.config.json"), "utf8"));
+// Where results are written. On the server this must be OUTSIDE the git checkout (deploys run `git reset --hard`).
+const DATA = process.env.SEO_AGENT_DATA_DIR ? path.resolve(process.env.SEO_AGENT_DATA_DIR) : root;
+if (process.env.SEO_AGENT_SITE_URL) cfg.siteUrl = process.env.SEO_AGENT_SITE_URL.replace(/\/$/, "");
 const H = { "user-agent": cfg.crawl.userAgent };
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const normalise = (u) => u.replace(/^https?:\/\/(www\.)?yeshotels\.in/, cfg.siteUrl);
@@ -127,6 +130,11 @@ out.summary = {
   duplicateTitles: out.duplicates.title.length,
   duplicateDescriptions: out.duplicates.description.length,
 };
-fs.mkdirSync(path.join(root, "state"), { recursive: true });
-fs.writeFileSync(path.join(root, "state/last-audit.json"), JSON.stringify(out, null, 2));
+// An audit where nothing could be fetched is a failure, not a clean result.
+if (out.pages.length && out.pages.every((pg) => pg.status === 0)) {
+  console.error("Audit failed: the site could not be reached (every request failed).");
+  process.exit(2);
+}
+fs.mkdirSync(path.join(DATA, "state"), { recursive: true });
+fs.writeFileSync(path.join(DATA, "state/last-audit.json"), JSON.stringify(out, null, 2));
 console.log(JSON.stringify({ summary: out.summary, checks: out.checks, issues: bad.map((p) => ({ url: p.url, issues: p.issues })), brokenLinks: out.brokenLinks, duplicates: out.duplicates }, null, 2));

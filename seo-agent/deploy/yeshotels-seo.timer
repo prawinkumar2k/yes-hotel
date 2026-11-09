@@ -1,0 +1,15 @@
+# Template only: NOT installed. Copy to /etc/systemd/system/ when approved, then:
+#   systemctl daemon-reload && systemctl enable --now yeshotels-seo.timer
+[Unit]
+Description=Run the YES HOTELS SEO audit every day at 09:00 India time
+
+[Timer]
+# The time zone is part of the schedule, so the server's own clock zone does not matter (needs systemd 235+; Ubuntu 24.04 has 255).
+OnCalendar=*-*-* 09:00:00 Asia/Kolkata
+# If the server was off or rebooting at 09:00, run once as soon as it is back.
+Persistent=true
+RandomizedDelaySec=120
+Unit=yeshotels-seo.service
+
+[Install]
+WantedBy=timers.target

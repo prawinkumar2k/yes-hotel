@@ -14,16 +14,19 @@ logs/                          run logs
 
 Run it by hand: `node seo-agent/scripts/run-daily.mjs`
 
-## Scheduling at 09:00 India time (NOT active yet)
+## Scheduling at 09:00 India time (NOT active)
 
-Nothing is scheduled. A scheduler is only "on" once a real scheduled run has produced a report. Pick one:
+Nothing is scheduled. It is only "active" after a real scheduled run has produced a report.
 
-1. **This Windows PC** (works only while the PC is on and signed in). In PowerShell, from the repo folder:
-   `schtasks /Create /SC DAILY /ST 09:00 /TN "YES HOTELS SEO" /TR "node C:\Users\prawi\OneDrive\Documents\GitHub\yes-hotel\seo-agent\scripts\run-daily.mjs"`
-   (the PC's clock must be on India time).
-2. **The VPS** (always on): `0 9 * * * cd /opt/yeshotels && TZ=Asia/Kolkata node seo-agent/scripts/run-daily.mjs >> seo-agent/logs/cron.log 2>&1`.
-   Needs Node on the host and the seo-agent folder deployed there. Do not change other sites on that VPS.
-3. **A scheduled cloud agent** (Claude Code `/schedule`) if you want the agent to fix and propose changes, not only audit.
+Results (state, reports, logs) go to `SEO_AGENT_DATA_DIR` when set, otherwise into this folder. **On the server always set it to a folder outside the git checkout** (deploys run `git reset --hard`).
+
+Recommended: the Hostinger VPS, as a systemd timer that runs the audit in a throw-away Docker container. Ready-to-copy templates are in `deploy/`:
+`run-in-docker.sh`, `yeshotels-seo.service`, `yeshotels-seo.timer`, `seo.env.example`.
+Full requirements, security settings, the tested/untested list and the first-run checklist: `reports/scheduler-readiness-2026-11-09.md`.
+
+Other options: Windows Task Scheduler on this PC (`schtasks /Create /SC DAILY /ST 09:00 /TN "YES HOTELS SEO" /TR "node <repo-folder>\seo-agent\scripts\run-daily.mjs"`, PC must be on and set to India time), or a Claude Code scheduled agent if you want it to propose fixes too.
+
+Behaviour: overlapping runs exit without doing anything; a failed audit is retried 3 times, then written as `-FAILED.md` with a non-zero exit code.
 
 ## What the agent may and may not do
 
@@ -32,5 +35,5 @@ Needs your approval: deploying (a push to `main` or `hardening/phase-1` deploys 
 
 ## Access still needed
 
-- Search Console: add a service account as a user on the property, give the key to the agent through an environment variable.
+- Search Console: add a service account as a user on the property, keep the key in a file outside the repo (chmod 600) and point GSC_SERVICE_ACCOUNT_FILE at it.
 - Google Business Profile: API access from the profile owner.

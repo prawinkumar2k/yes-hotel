@@ -35,6 +35,10 @@
   "history": [
     {
       "date": "2026-11-09",
+      "summary": "Review pass: description fix validated (17 new regression tests + 13 existing, build ok); domain report (recommend non-www); rating review (hardcoded/unverified, do not deploy); scheduler hardened and templates prepared, NOT active. Added SEO-011 (llms.txt facts) and SEO-012."
+    },
+    {
+      "date": "2026-11-09",
       "summary": "Baseline audit. SEO-001 fixed locally: index.html description tag put on one line so the injector replaces it instead of adding a duplicate. Not deployed."
     },
     {

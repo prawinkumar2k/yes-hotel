@@ -12,8 +12,11 @@ import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const p = (...a) => path.join(root, ...a);
-const cfg = JSON.parse(fs.readFileSync(p("config/seo-agent.config.json"), "utf8"));
+// Code and config live in the repo; results (state, reports, logs) live in DATA, which on the server is outside the checkout.
+const DATA = process.env.SEO_AGENT_DATA_DIR ? path.resolve(process.env.SEO_AGENT_DATA_DIR) : root;
+const p = (...a) => (["state", "reports", "logs"].includes(a[0].split("/")[0]) ? path.join(DATA, ...a) : path.join(root, ...a));
+const cfg = JSON.parse(fs.readFileSync(path.join(root, "config/seo-agent.config.json"), "utf8"));
+if (process.env.SEO_AGENT_SITE_URL) cfg.siteUrl = process.env.SEO_AGENT_SITE_URL;
 const today = new Intl.DateTimeFormat("en-CA", { timeZone: cfg.timezone }).format(new Date());
 const nowLocal = new Intl.DateTimeFormat("en-GB", { timeZone: cfg.timezone, dateStyle: "medium", timeStyle: "short" }).format(new Date());
 const log = (m) => { fs.mkdirSync(p("logs"), { recursive: true }); fs.appendFileSync(p("logs", `${today}.log`), `${new Date().toISOString()} ${m}\n`); console.log(m); };
@@ -30,11 +33,18 @@ const read = (f, d) => { try { return JSON.parse(fs.readFileSync(p(f), "utf8"));
 const prev = read("state/last-audit.json", null);
 const state = read("state/state.json", { firstRun: today, history: [] });
 
-let status = "ok", failure = "";
-try {
-  execFileSync(process.execPath, [p("scripts/audit.mjs")], { stdio: "ignore", timeout: 10 * 60 * 1000 });
-} catch (e) {
-  status = "failed"; failure = String(e.message || e); log(`Audit failed: ${failure}`);
+// Retry a recoverable failure (network blip, site restarting) up to 3 times, 2 minutes apart.
+let status = "failed", failure = "";
+const attempts = Number(process.env.SEO_AGENT_ATTEMPTS || 3), waitMs = Number(process.env.SEO_AGENT_RETRY_WAIT_MS || 120000);
+for (let i = 1; i <= attempts && status !== "ok"; i++) {
+  try {
+    execFileSync(process.execPath, [path.join(root, "scripts/audit.mjs")], { stdio: "ignore", timeout: 10 * 60 * 1000, env: process.env });
+    status = "ok"; failure = "";
+  } catch (e) {
+    failure = String(e.message || e).split(/\r?\n/)[0];
+    log(`Audit attempt ${i}/${attempts} failed: ${failure}`);
+    if (i < attempts) await new Promise((r) => setTimeout(r, waitMs));
+  }
 }
 const audit = read("state/last-audit.json", null);
 const queue = read("tasks/queue.json", { tasks: [] });
@@ -93,10 +103,13 @@ L(`- Completed: audit run. In progress: ${queue.tasks.filter((t) => t.status ===
 L(`- Overall status: ${status === "ok" ? "Baseline established; search and local data pending access." : "Run failed; see logs."}`);
 
 fs.mkdirSync(p("reports/daily"), { recursive: true });
-fs.writeFileSync(p("reports/daily", `${today}.md`), lines.join("\n") + "\n");
+// A failed run never overwrites an earlier good report from the same day.
+const reportFile = p("reports/daily", status === "ok" ? `${today}.md` : `${today}-FAILED.md`);
+fs.writeFileSync(reportFile, lines.join("\n") + "\n");
 state.lastExecution = new Date().toISOString();
 state.lastExecutionStatus = status;
 if (status === "ok") state.lastSuccessfulAudit = audit?.ranAt;
 state.lastSearchConsoleSync = null;
 fs.writeFileSync(p("state/state.json"), JSON.stringify(state, null, 2));
-log(`Report written: reports/daily/${today}.md (${status})`);
+log(`Report written: ${reportFile} (${status})`);
+if (status !== "ok") process.exit(1); // non-zero so the scheduler records and alerts on the failure

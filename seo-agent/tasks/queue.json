@@ -1,6 +1,12 @@
 {
   "updated": "2026-11-09",
-  "priorityScale": { "P0": "critical indexing/production", "P1": "high-impact technical SEO", "P2": "important content/local/performance", "P3": "routine maintenance", "P4": "optional experiment" },
+  "priorityScale": {
+    "P0": "critical indexing/production",
+    "P1": "high-impact technical SEO",
+    "P2": "important content/local/performance",
+    "P3": "routine maintenance",
+    "P4": "optional experiment"
+  },
   "tasks": [
     {
       "id": "SEO-001",
@@ -12,10 +18,10 @@
       "risk": "Very low (formatting only, verified the injector now matches and replaces it)",
       "effort": "XS",
       "dependencies": [],
-      "status": "implemented-locally",
-      "validation": "Local check: injector test+regex now match and leave exactly 1 description tag. Live site still shows 2 until deployed.",
+      "status": "implemented-locally-validated",
+      "validation": "Reviewed 2026-11-09. Root cause confirmed (injector checks for the one-line text <meta name=\"description\"; index.html had the tag on several lines, so a second tag was appended). After the fix, 17 new regression tests (real index.html through the injector for / /about /rooms /hotels-near /gallery /faq /contact /terms /privacy /cancellation /search, one area page and one room page) plus the 13 existing SEO tests pass; production build passes. Home now gets its own description, area and room pages get theirs. Live site still shows 2 tags until deployed.",
       "completedAt": null,
-      "approvalNeeded": "Deploy to production (push to hardening/phase-1 or main auto-deploys)"
+      "approvalNeeded": "Deploy to production (a push to hardening/phase-1 or main deploys automatically)"
     },
     {
       "id": "SEO-002",
@@ -26,7 +32,9 @@
       "priority": "P2",
       "risk": "Low",
       "effort": "M",
-      "dependencies": ["The owner's uncommitted edits to server/src/services/seo-meta-injector.service.ts must be committed or reviewed first"],
+      "dependencies": [
+        "The owner's uncommitted edits to server/src/services/seo-meta-injector.service.ts must be committed or reviewed first"
+      ],
       "status": "blocked",
       "completedAt": null
     },
@@ -39,9 +47,12 @@
       "priority": "P2",
       "risk": "Medium: needs an nginx redirect on the VPS plus aligning HOTEL.website",
       "effort": "S",
-      "dependencies": ["Owner decision on the preferred host"],
+      "dependencies": [
+        "Owner decision on the preferred host"
+      ],
       "status": "awaiting-approval",
-      "completedAt": null
+      "completedAt": null,
+      "recommendation": "Use https://yeshotels.in (non-www). Production CLIENT_URL, canonicals, sitemap, robots and JSON-LD already use it. See reports/domain-consistency-2026-11-09.md"
     },
     {
       "id": "SEO-004",
@@ -52,9 +63,12 @@
       "priority": "P2",
       "risk": "Medium",
       "effort": "XS",
-      "dependencies": ["Owner confirms the numbers from the Google Business Profile or another real source"],
+      "dependencies": [
+        "Owner confirms the numbers from the Google Business Profile or another real source"
+      ],
       "status": "awaiting-approval",
-      "completedAt": null
+      "completedAt": null,
+      "evidence": "Hardcoded literal, absent from every data source and from git history except a 142-review version that was deliberately removed on 2026-10-16 (commit f0ce8e7). Status: unsupported / unverified. Do not deploy aggregateRating. See reports/rating-review-2026-11-09.md"
     },
     {
       "id": "SEO-005",
@@ -65,7 +79,10 @@
       "priority": "P3",
       "risk": "Low",
       "effort": "S",
-      "dependencies": ["SEO-001 deployed (otherwise the longer duplicate still wins)", "owner-reviewed wording"],
+      "dependencies": [
+        "SEO-001 deployed (otherwise the longer duplicate still wins)",
+        "owner-reviewed wording"
+      ],
       "status": "pending",
       "completedAt": null
     },
@@ -88,7 +105,9 @@
       "priority": "P2",
       "risk": "None",
       "effort": "S",
-      "dependencies": ["Owner adds a service-account email in Search Console and provides the key through an environment variable"],
+      "dependencies": [
+        "Owner adds a service-account email in Search Console and provides the key through an environment variable"
+      ],
       "status": "blocked",
       "completedAt": null
     },
@@ -99,7 +118,9 @@
       "priority": "P2",
       "risk": "None",
       "effort": "S",
-      "dependencies": ["Business Profile API access granted by the profile owner"],
+      "dependencies": [
+        "Business Profile API access granted by the profile owner"
+      ],
       "status": "blocked",
       "completedAt": null
     },
@@ -110,9 +131,12 @@
       "priority": "P2",
       "risk": "Low",
       "effort": "XS",
-      "dependencies": ["Owner picks where it runs (this PC, the VPS cron, or a scheduled cloud agent)"],
-      "status": "awaiting-approval",
-      "completedAt": null
+      "dependencies": [
+        "Owner picks where it runs (this PC, the VPS cron, or a scheduled cloud agent)"
+      ],
+      "status": "prepared-not-active",
+      "completedAt": null,
+      "readiness": "Runner hardened (data dir outside checkout, retries, non-zero exit, overlap lock) and systemd/docker templates in seo-agent/deploy/. Not installed. See reports/scheduler-readiness-2026-11-09.md"
     },
     {
       "id": "SEO-010",
@@ -121,8 +145,41 @@
       "priority": "P3",
       "risk": "None",
       "effort": "S",
-      "dependencies": ["SEO-007 or a PageSpeed run"],
+      "dependencies": [
+        "SEO-007 or a PageSpeed run"
+      ],
       "status": "pending",
+      "completedAt": null
+    },
+    {
+      "id": "SEO-011",
+      "name": "llms.txt contains facts that do not match the hotel",
+      "description": "public/llms.txt (served at /llms.txt to AI tools) says luxury hotel, suites, dining facilities, check-in 14:00, check-out 12:00, front desk 6:00-23:00 and email reservations@yeshotels.com. The project's verified facts (shared/hotel-info.ts) are: 3-star boutique, breakfast only, check-in 12:00 PM, check-out 11:00 AM, 24-hour front desk. A corrected draft is in tasks/proposals/llms.txt.proposed.",
+      "affectedPages": "/llms.txt",
+      "expectedImpact": "AI assistants stop quoting wrong times and amenities",
+      "priority": "P2",
+      "risk": "Low",
+      "effort": "XS",
+      "dependencies": [
+        "Owner review of the draft"
+      ],
+      "status": "awaiting-approval",
+      "completedAt": null,
+      "approvalNeeded": "Customer-facing content change + deploy"
+    },
+    {
+      "id": "SEO-012",
+      "name": "Trailing-slash duplicates and missing og:url",
+      "description": "/rooms/ returns 200 with a canonical of /rooms/ (a duplicate of /rooms). Pages have no og:url tag.",
+      "affectedPages": "all routes with a trailing slash",
+      "expectedImpact": "Removes duplicate URLs",
+      "priority": "P3",
+      "risk": "Low",
+      "effort": "S",
+      "dependencies": [
+        "Change lives in seo-meta-injector.service.ts, which has the owner's uncommitted edits"
+      ],
+      "status": "blocked",
       "completedAt": null
     }
   ]
