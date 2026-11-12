@@ -4,7 +4,15 @@ import { useLocation } from "react-router-dom";
 export default function DevCredit({ className = "" }: { className?: string }) {
   return (
     <span className={`print:hidden ${className}`}>
-      Developed by <strong className="font-semibold">Dealpost Private Limited</strong>
+      Developed by{" "}
+      <a
+        href="https://dealpost.co.in/"
+        target="_blank"
+        rel="noopener"
+        className="font-semibold underline-offset-2 hover:underline"
+      >
+        Dealpost Private Limited
+      </a>
     </span>
   );
 }
