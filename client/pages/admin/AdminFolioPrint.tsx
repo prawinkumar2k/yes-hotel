@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { buildInvoiceRows } from "@/lib/invoiceRows";
 import { computeSettlement, compactInvoiceNumbers, isStayChargeLine } from "@/lib/invoiceSettlement";
 import InvoiceBottom from "@/components/admin/InvoiceBottom";
+import InvoiceFooter from "@/components/admin/InvoiceFooter";
 import HotelDocAddress from "@/components/admin/HotelDocAddress";
 import StayExtensionNote from "@/components/admin/StayExtensionNote";
 import { useParams, Link, useSearchParams } from "react-router-dom";
@@ -11,7 +12,7 @@ import { api } from "@/lib/api";
 import { format, differenceInDays } from "date-fns";
 import DocumentDownloadMenu from "@/components/admin/DocumentDownloadMenu";
 import AddPaymentDialog from "@/components/admin/AddPaymentDialog";
-import { Loader2, Printer, Key, ArrowLeft, FileCheck2, Building2, CheckCircle2 } from "lucide-react";
+import { Loader2, Printer, ArrowLeft, FileCheck2, Building2, CheckCircle2 } from "lucide-react";
 
 // Number to words helper
 function numberToWords(num: number): string {
@@ -422,36 +423,7 @@ export default function AdminFolioPrint() {
           />
 
           {/* FOOTER */}
-          <div className="border-t border-black p-2 relative h-28 break-inside-avoid">
-            <div className="text-[9px] w-1/2">
-               <p>*Regardless of the billing instruction, I agree to be held personally liable for the payment of the total amount of bill for my stay in the hotel.</p>
-               <p>*All disputes subject to BENGALURU Jurisdiction.</p>
-            </div>
-            <div className="absolute top-2 right-2 text-right">
-               <p>Certified that the particulars given above are true and correct.</p>
-               <p className="mt-2 font-bold">For YES HOTELS</p>
-            </div>
-            
-            <div className="absolute top-12 w-full text-center flex justify-center items-center gap-2 text-[10px] font-bold">
-              <Key size={14} className="text-gray-600 rotate-90" />
-              We Request You To Return The Room Key
-            </div>
-            
-            <div className="absolute bottom-6 left-2 font-bold uppercase text-[10px]">
-              Guest Signatory
-            </div>
-            
-            <div className="absolute bottom-2 right-2 text-right">
-              <p className="font-bold uppercase text-[10px]">USER</p>
-              <p className="font-bold uppercase text-[10px]">Authorised Signatory</p>
-            </div>
-            
-            <div className="absolute bottom-0 w-full text-center text-[10px] font-bold">
-              Thank You! Visit Again!
-            </div>
-            
-            <div className="absolute -bottom-4 right-0 text-[8px]">E.&.O.E.</div>
-          </div>
+          <InvoiceFooter />
         </div>
       </div>
     </>
