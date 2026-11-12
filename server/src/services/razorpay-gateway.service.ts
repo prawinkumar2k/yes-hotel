@@ -7,6 +7,7 @@
  * Tests replace the gateway (no network, no real money): setRazorpayGatewayForTests(...).
  */
 import Razorpay from "razorpay";
+import { CircuitBreaker, withRetry, withTimeout } from "../utils/resilience";
 
 export type GatewayOrder = { id: string; amount: number; amount_paid?: number; currency: string; status?: string; notes?: Record<string, any> };
 export type GatewayPayment = { id: string; order_id: string; amount: number; currency: string; status: string; notes?: Record<string, any> };
@@ -19,9 +20,15 @@ function client() {
   return new Razorpay({ key_id: keyId, key_secret: keySecret });
 }
 
+// Reads only (safe to repeat): 8s limit per try, 3 tries with growing waits, and a breaker so a
+// Razorpay outage fails fast instead of tying up the server.
+const breaker = new CircuitBreaker("Razorpay");
+const guarded = <T>(label: string, fn: () => Promise<T>) =>
+  breaker.run(() => withRetry(() => withTimeout(fn(), 8000, label), { attempts: 3 }));
+
 const real: Gateway = {
-  fetchOrder: async (id) => (await client().orders.fetch(id)) as any,
-  fetchPayment: async (id) => (await client().payments.fetch(id)) as any,
+  fetchOrder: (id) => guarded("Razorpay order fetch", async () => (await client().orders.fetch(id)) as any),
+  fetchPayment: (id) => guarded("Razorpay payment fetch", async () => (await client().payments.fetch(id)) as any),
 };
 let gateway: Gateway = real;
 

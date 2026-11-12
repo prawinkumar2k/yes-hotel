@@ -18,6 +18,10 @@ export function getTransporter() {
     cachedTransporter = nodemailer.createTransport({
       service: process.env.EMAIL_SERVICE || "gmail",
       auth: { user, pass },
+      // Never hang on a slow mail server; a failed send is retried later by the durable job queue.
+      connectionTimeout: 10_000,
+      greetingTimeout: 10_000,
+      socketTimeout: 20_000,
     });
   } catch {
     cachedTransporter = null;
