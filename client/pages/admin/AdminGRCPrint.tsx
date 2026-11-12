@@ -107,8 +107,8 @@ export default function AdminGRCPrint() {
   // Charges beyond the room rate (extra persons / children): what the bill shows over the nightly tariff.
   const taxable = Math.max(0, Number(booking.totalAmount || 0) - Number(booking.taxAmount || 0));
   const extrasAmount = Math.max(0, Math.round((taxable - Number(booking.ratePerNight || 0) * nights) * 100) / 100);
-  const stayTotal = Number(booking.totalAmount || 0);
-  const balanceDue = Math.max(0, stayTotal - advanceAmount);
+  const stayTotal = groupBookings.length > 1 ? groupBookings.reduce((t: number, g: any) => t + Number(g.totalAmount || 0), 0) : Number(booking.totalAmount || 0);
+  const balanceDue = booking.status === "CHECKED_OUT" && booking.paymentStatus === "PAID" ? 0 : Math.max(0, stayTotal - advanceAmount);
   const inr = (n: number) => Number(n || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const planLabel: Record<string, string> = { EP: "Room only", CP: "Breakfast", MAP: "Breakfast + one meal", AP: "All meals" };
 
@@ -215,11 +215,13 @@ export default function AdminGRCPrint() {
                 For Office Use Only
               </div>
               <div className="space-y-1.5 text-[10.5px]">
-                <div className="flex justify-between border-b border-dotted border-gray-400 pb-0.5">
+                <div className="border-b border-dotted border-gray-400 pb-0.5">
                   <span className="font-bold">Room No.</span>
-                  <span className="font-black text-sm font-mono">{allRoomNumbers}</span>
-                  <span className="font-bold ml-2">Tariff</span>
-                  <span className="font-black font-mono">₹{inr(ratePerNight)}/-</span>
+                  <div className="font-black text-sm font-mono leading-snug break-words">{allRoomNumbers}</div>
+                </div>
+                <div className="flex justify-between gap-2 border-b border-dotted border-gray-400 pb-0.5">
+                  <span className="font-bold whitespace-nowrap">Tariff / room / night</span>
+                  <span className="font-black font-mono whitespace-nowrap">₹{inr(ratePerNight)}/-</span>
                 </div>
                 <div className="flex justify-between border-b border-dotted border-gray-400 pb-0.5">
                   <span className="font-bold">Extra Bed</span>

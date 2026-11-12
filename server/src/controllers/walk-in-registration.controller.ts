@@ -76,6 +76,7 @@ async function walkInStayTax(perRoomTaxable: number[], checkIn: Date, checkOut: 
   return { cgst, sgst, totalTax: r2(cgst + sgst), daily };
 }
 import { generateAdvanceNumber, receiveAdvance } from "../services/advance.service";
+import { splitAdvanceAcrossRooms } from "../services/advance-split";
 import { createAuditLog } from "../services/audit.service";
 import { generateBookingReference } from "../utils/booking-reference";
 import crypto from "crypto";
@@ -829,6 +830,14 @@ export const walkInArrivalRegistration = async (req: Request, res: Response) => 
         throw new Error(`Payment ₹${Number(advanceAmount).toLocaleString("en-IN")} is more than the total ₹${walkInTotalDue.toLocaleString("en-IN")}`);
       }
 
+      // One payment, shared across the rooms' bills in proportion to what each room costs (see advance-split.ts).
+      const paidAtRegistration = onCredit ? 0 : Number(advanceAmount) || 0;
+      const perRoomPaid = new Map<string, number>();
+      if (paidAtRegistration > 0) {
+        const shares = splitAdvanceAcrossRooms(paidAtRegistration, createdBookings.map((b) => Number(b.totalAmount) || 0));
+        createdBookings.forEach((b, i) => perRoomPaid.set(b._id.toString(), shares[i]));
+      }
+
       // Pre-create OPEN Folios for all created bookings
       for (const cb of createdBookings) {
         try {
@@ -861,14 +870,14 @@ export const walkInArrivalRegistration = async (req: Request, res: Response) => 
           if (onCredit && cb._id.toString() === booking._id.toString() && advanceAmount && Number(advanceAmount) > 0) {
             const { recordCredit } = await import("../services/credit.service");
             await recordCredit({ folioId: f._id.toString(), bookingId: cb._id.toString(), amount: Number(advanceAmount), note: advanceReference || undefined, by: String((req as any).user?.id || (req as any).user?._id || "") }, { req, session });
-          } else if (cb._id.toString() === booking._id.toString() && advanceAmount && Number(advanceAmount) > 0) {
+          } else if ((perRoomPaid.get(cb._id.toString()) ?? 0) > 0) {
             await postCharge(
               {
                 folioId: f._id.toString(),
                 bookingId: cb._id.toString(),
                 lineType: FolioLineType.ADVANCE_ADJUSTMENT,
                 description: `${Number(advanceAmount) >= walkInTotalDue - 0.01 ? "Payment Received" : "Advance Payment Received"} (${advanceMethod || "CASH"})`,
-                amount: Number(advanceAmount),
+                amount: perRoomPaid.get(cb._id.toString())!,
                 advancePaymentId: advance?._id?.toString(),
                 date: new Date(),
                 postedBy: (req as any).user?.id || (req as any).user?._id || "SYSTEM",
@@ -887,8 +896,8 @@ export const walkInArrivalRegistration = async (req: Request, res: Response) => 
       const paidNow = onCredit ? 0 : Number(advanceAmount) || 0;
       if (paidNow > 0) {
         for (const cb of createdBookings) {
-          cb.paymentStatus = paidNow >= walkInTotalDue - 0.01 ? PaymentStatus.PAID : PaymentStatus.PARTIAL;
-          if (cb._id.toString() === booking._id.toString()) cb.paidAmount = paidNow;
+          cb.paymentStatus = (perRoomPaid.get(cb._id.toString()) ?? 0) >= Number(cb.totalAmount || 0) - 0.01 ? PaymentStatus.PAID : PaymentStatus.PARTIAL;
+          cb.paidAmount = perRoomPaid.get(cb._id.toString()) ?? 0;
           await cb.save({ session });
         }
       }

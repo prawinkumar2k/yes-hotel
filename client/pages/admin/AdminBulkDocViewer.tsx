@@ -2,6 +2,8 @@ import { advanceInfo, settlementKind } from "@/lib/advanceInfo";
 import { usePrintLayout } from "@/lib/usePrintLayout";
 import { useState, useMemo, useEffect } from "react";
 import { buildInvoiceRows } from "@/lib/invoiceRows";
+import { computeSettlement, compactInvoiceNumbers, isStayChargeLine } from "@/lib/invoiceSettlement";
+import InvoiceBottom from "@/components/admin/InvoiceBottom";
 import HotelDocAddress from "@/components/admin/HotelDocAddress";
 import { hotelContactFrom, useHotelSettings } from "@/hooks/usePublicData";
 import StayExtensionNote from "@/components/admin/StayExtensionNote";
@@ -102,14 +104,14 @@ function BookingDocCard({
   const issuedFolios: any[] = (isGroupFolio && folioData?.data?.groupFolios?.length ? folioData.data.groupFolios : [folio]).filter(Boolean);
   const issuedInvoiceNos = issuedFolios.map((f: any) => f.invoiceNumber).filter(Boolean);
   const isProvisional = issuedInvoiceNos.length === 0;
-  const invoiceNo = isProvisional ? "Issued at checkout" : issuedInvoiceNos.join(" / ");
+  const invoiceNo = isProvisional ? "Issued at checkout" : compactInvoiceNumbers(issuedInvoiceNos);
   const invoiceDate = !isProvisional && issuedFolios.find((f: any) => f.invoiceNumber)?.closedAt ? new Date(issuedFolios.find((f: any) => f.invoiceNumber).closedAt) : new Date();
 
   const billNo = b.billNumber || "—";
   const grcNo = b.billNumber || b.grcNumber || b.bookingReference || "—";
 
   // Process rows day-by-day with room number breakdown
-  const debitLines = lines.filter((l: any) => l.direction !== "CREDIT");
+  const debitLines = lines.filter(isStayChargeLine);
   const groupedData = useMemo(() => {
     if (debitLines.length > 0) {
       // One row per room and night, with the GST of that night (shared helper).
@@ -158,19 +160,9 @@ function BookingDocCard({
   const taxableValue = totals.tariff + totals.extBed - totals.disc;
   const grandTotal = taxableValue + totals.cgst + totals.sgst + totals.fnb + totals.others;
 
-  const advanceLines = lines.filter((l: any) => l.direction === "CREDIT" && (l.lineType === "ADVANCE_ADJUSTMENT" || l.lineType === "ADVANCE" || l.description?.toLowerCase().includes("adv")));
-  const checkoutPaymentLines = lines.filter((l: any) => l.direction === "CREDIT" && (l.lineType === "PAYMENT" || l.description?.toLowerCase().includes("checkout") || l.description?.toLowerCase().includes("settl")));
-
-  const advanceFromAdvanceLines = advanceLines.reduce((s: number, a: any) => s + a.amount, 0);
-  const advanceFromList = advancesList.reduce((s: number, a: any) => s + (a.amount || 0), 0);
-  const advanceTotal = advanceFromAdvanceLines > 0 ? advanceFromAdvanceLines : (advanceFromList > 0 ? advanceFromList : (b.advanceAmount || 0));
-
-  const checkoutSettledTotal = checkoutPaymentLines.reduce((s: number, a: any) => s + a.amount, 0);
-  const totalPaid = advanceTotal + checkoutSettledTotal;
-
-  const net = Math.max(0, grandTotal - totalPaid);
-  const roundedNet = Math.round(net);
-  const roundOff = Number((roundedNet - net).toFixed(2));
+  const settlement = computeSettlement({ lines, advancesList, bookingAdvanceAmount: b.advanceAmount || 0, grandTotal });
+  const { advanceTotal, roundedNet } = settlement;
+  const totalPaid = settlement.paidNet;
 
   const creditLines = lines.filter((l: any) => l.direction === "CREDIT");
   const primaryAdvance = creditLines[0] || advancesList[0] || null;
@@ -188,8 +180,8 @@ function BookingDocCard({
   const settle = settlementKind(b.billingInstruction, advanceMethod, b.paymentStatus === "PAID");
   const bookingTaxable = Math.max(0, Number(b.totalAmount || 0) - Number(b.taxAmount || 0));
   const extrasAmount = Math.max(0, Math.round((bookingTaxable - Number(b.ratePerNight || 0) * nights) * 100) / 100);
-  const stayTotal = Number(b.totalAmount || 0);
-  const balanceDue = Math.max(0, stayTotal - adv.total);
+  const stayTotal = groupBookings.length > 1 ? groupBookings.reduce((t: number, g: any) => t + Number(g.totalAmount || 0), 0) : Number(b.totalAmount || 0);
+  const balanceDue = b.status === "CHECKED_OUT" && b.paymentStatus === "PAID" ? 0 : Math.max(0, stayTotal - adv.total);
   const money = (n: number) => Number(n || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const planLabel: Record<string, string> = { EP: "Room only", CP: "Breakfast", MAP: "Breakfast + one meal", AP: "All meals" };
 
@@ -316,11 +308,13 @@ function BookingDocCard({
                     For Office Use Only
                   </div>
                   <div className="space-y-1.5 text-[10.5px]">
-                    <div className="flex justify-between border-b border-dotted border-gray-400 pb-0.5">
+                    <div className="border-b border-dotted border-gray-400 pb-0.5">
                       <span className="font-bold">Room No.</span>
-                      <span className="font-black text-sm font-mono">{allRoomsStr}</span>
-                      <span className="font-bold ml-2">Tariff</span>
-                      <span className="font-black font-mono">₹{money(dailyTariff)}/-</span>
+                      <div className="font-black text-sm font-mono leading-snug break-words">{allRoomsStr}</div>
+                    </div>
+                    <div className="flex justify-between gap-2 border-b border-dotted border-gray-400 pb-0.5">
+                      <span className="font-bold whitespace-nowrap">Tariff / room / night</span>
+                      <span className="font-black font-mono whitespace-nowrap">₹{money(dailyTariff)}/-</span>
                     </div>
                     <div className="flex justify-between border-b border-dotted border-gray-400 pb-0.5">
                       <span className="font-bold">Extra Bed</span>
@@ -741,7 +735,7 @@ function BookingDocCard({
                   );
                 })}
                 {/* Empty space filler */}
-                <tr className="h-16">
+                <tr className="h-16 print:h-1">
                   <td className="border-r border-black"></td><td className="border-r border-black"></td><td className="border-r border-black"></td><td className="border-r border-black"></td><td className="border-r border-black"></td><td className="border-r border-black"></td><td className="border-r border-black"></td><td className="border-r border-black"></td><td className="border-r border-black"></td><td className="border-r border-black"></td><td className="border-r border-black"></td><td></td>
                 </tr>
                 {/* SUB TOTAL ROW */}
@@ -761,89 +755,19 @@ function BookingDocCard({
             </table>
 
             {/* BOTTOM SECTION */}
-            <div className="flex h-32">
-              <div className="w-3/4 border-r border-black p-1 relative flex flex-col justify-between">
-                <div>
-                  <div className="flex font-bold">
-                    <div className="w-20">Advance</div>
-                    <div className="flex-1 font-mono text-[9px]">
-                      {advanceLines.length > 0 ? (
-                        advanceLines.map((a: any, i: number) => (
-                          <span key={i} className="mr-2">| {format(new Date(a.date), "dd.MM")}. Rs.{a.amount} ({a.paymentReference || "ADV"}): {a.paymentMode || "—"} </span>
-                        ))
-                      ) : advanceTotal > 0 ? (
-                        <span>| {format(new Date(b.checkInDate), "dd.MM")}. Rs.{advanceTotal} ({primaryAdvance?.advanceNumber || "ADV"}): {primaryAdvance?.method || primaryAdvance?.paymentMode || "—"} </span>
-                      ) : (
-                        <span>-</span>
-                      )}
-                    </div>
-                  </div>
-                  {Number(b.discountAmount || 0) > 0 && (
-                    <div className="flex font-bold mt-0.5 text-[9px]">
-                      <div className="w-20">Discount</div>
-                      <div className="flex-1 font-mono">Rs.{Number(b.discountAmount).toFixed(2)}{b.discountType === "PERCENT" ? ` (${b.discountValue}%)` : ""} given to the guest, already deducted from the tariff{b.discountReason ? ` — ${b.discountReason}` : ""}</div>
-                    </div>
-                  )}
-                  {checkoutPaymentLines.length > 0 && (
-                    <div className="flex font-bold mt-0.5 text-[9px]">
-                      <div className="w-20 text-gray-700">Settlement</div>
-                      <div className="flex-1 font-mono text-green-800">
-                        {checkoutPaymentLines.map((p: any, i: number) => (
-                          <span key={i} className="mr-2">| {format(new Date(p.date), "dd.MM")}. Rs.{p.amount} ({p.paymentReference || "PAID"}): {p.paymentMode || "—"} </span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  <div className="mt-1.5 text-[9px]">
-                    <span className="font-bold">Mode of Payment: </span>
-                    <span className="font-mono">
-                      {(() => {
-                        // Sum of money received by mode: advances and payments on this bill (from the linked records).
-                        const byMode = new Map<string, number>();
-                        const add = (mode: string | undefined, amt: number) => byMode.set(mode || "Not recorded", (byMode.get(mode || "Not recorded") || 0) + (Number(amt) || 0));
-                        if (advanceLines.length > 0) advanceLines.forEach((l: any) => add(l.paymentMode, l.amount));
-                        else advancesList.forEach((x: any) => add(x.method, x.amount));
-                        checkoutPaymentLines.forEach((l: any) => add(l.paymentMode, l.amount));
-                        return byMode.size === 0
-                          ? "— No payment received yet"
-                          : [...byMode.entries()].map(([m, v]) => `${m} ₹${v.toLocaleString("en-IN")}`).join("  |  ");
-                      })()}
-                    </span>
-                  </div>
-                </div>
+          <InvoiceBottom
+            s={settlement}
+            grandTotal={grandTotal}
+            advancesList={advancesList}
+            checkInDate={b.checkInDate}
+            primaryAdvance={primaryAdvance}
+            discount={{ amount: Number(b.discountAmount || 0), type: b.discountType, value: b.discountValue, reason: b.discountReason }}
+            fnbTotal={totals.fnb}
+            amountInWords={numberToWords(roundedNet)}
+          />
 
-                <div>
-                  <div className="font-bold flex mt-2">
-                    <span className="w-32">Balance Rupees:</span>
-                    <span className="uppercase font-mono text-[9px]">{numberToWords(roundedNet)}</span>
-                  </div>
-                  <div className="mt-0.5">
-                    <span className="font-bold">Service Bills:</span>
-                    <span className="text-[9px] ml-1 font-mono">
-                      {totals.fnb > 0 ? `|${format(new Date(), "dd.MM")}. Rs.${totals.fnb} (#POS) |` : "— None recorded"}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="w-1/4">
-                <div className="flex h-1/3 border-b border-black font-bold items-center">
-                  <div className="w-2/3 p-1 border-r border-black h-full flex items-center">Advance</div>
-                  <div className="w-1/3 p-1 text-right">{advanceTotal.toFixed(2)}</div>
-                </div>
-                <div className="flex h-1/3 border-b border-black font-bold items-center">
-                  <div className="w-2/3 p-1 border-r border-black h-full flex items-center">Round Off</div>
-                  <div className="w-1/3 p-1 text-right">{roundOff.toFixed(2)}</div>
-                </div>
-                <div className="flex h-1/3 font-bold bg-gray-50 items-center">
-                  <div className="w-2/3 p-1 border-r border-black h-full flex items-center font-black">Net</div>
-                  <div className="w-1/3 p-1 text-right font-black text-sm">{roundedNet.toFixed(2)}</div>
-                </div>
-              </div>
-            </div>
-
-            {/* FOOTER */}
-            <div className="border-t border-black p-2 relative h-32">
+          {/* FOOTER */}
+            <div className="border-t border-black p-2 relative h-28 break-inside-avoid">
               <div className="text-[9px] w-1/2">
                 <p>*Regardless of the billing instruction, I agree to be held personally liable for the payment of the total amount of bill for my stay in the hotel.</p>
                 <p>*All disputes subject to BENGALURU Jurisdiction.</p>
