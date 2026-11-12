@@ -8,6 +8,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { Loader2, Lock, Eye, EyeOff, ShieldCheck, ArrowRight } from "lucide-react";
 import BrandLogo from "@/components/hotel/BrandLogo";
 
+import DevCredit from "@/components/DevCredit";
 const resetSchema = z.object({
   password: z.string().min(8, "Password must be at least 8 characters"),
   confirmPassword: z.string()
@@ -117,7 +118,7 @@ export default function ResetPasswordPage() {
         </motion.div>
 
         <div className="relative z-10 text-xs text-slate-500">
-          &copy; {new Date().getFullYear()} YES HOTELS Group.
+          &copy; {new Date().getFullYear()} YES HOTELS Group. <DevCredit />
         </div>
       </div>
 

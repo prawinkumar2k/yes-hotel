@@ -30,6 +30,7 @@ import BrandLogo from "@/components/hotel/BrandLogo";
 import { roleHome } from "@/lib/roleHome";
 
 
+import DevCredit from "@/components/DevCredit";
 const LIGHT_HERO_IMAGE = "/gallery/hotel-60.jpg";
 
 export default function LoginPage() {
@@ -193,6 +194,7 @@ export default function LoginPage() {
         {/* Footer info */}
         <div className="relative z-10 text-xs text-slate-500 flex justify-between items-center border-t border-amber-200/40 pt-6">
           <span>&copy; {new Date().getFullYear()} YES HOTELS Group. All rights reserved.</span>
+          <DevCredit />
           <div className="flex gap-4">
             <Link to="/privacy" className="hover:text-amber-700 transition-colors">Privacy</Link>
             <Link to="/terms" className="hover:text-amber-700 transition-colors">Terms</Link>
@@ -427,7 +429,7 @@ export default function LoginPage() {
 
         {/* Mobile footer */}
         <div className="lg:hidden text-center text-xs text-slate-400 mt-8">
-          &copy; {new Date().getFullYear()} YES HOTELS Group
+          &copy; {new Date().getFullYear()} YES HOTELS Group · <DevCredit />
         </div>
       </div>
     </div>

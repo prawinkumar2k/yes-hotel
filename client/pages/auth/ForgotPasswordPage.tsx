@@ -8,6 +8,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { ArrowLeft, Loader2, Mail, ShieldCheck, Star } from "lucide-react";
 import BrandLogo from "@/components/hotel/BrandLogo";
 
+import DevCredit from "@/components/DevCredit";
 const forgotSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
 });
@@ -91,7 +92,7 @@ export default function ForgotPasswordPage() {
         </motion.div>
 
         <div className="relative z-10 text-xs text-slate-500">
-          &copy; {new Date().getFullYear()} YES HOTELS Group.
+          &copy; {new Date().getFullYear()} YES HOTELS Group. <DevCredit />
         </div>
       </div>
 

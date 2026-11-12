@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import BrandLogo from "@/components/hotel/BrandLogo";
 
+import DevCredit from "@/components/DevCredit";
 const LIGHT_HERO_IMAGE = "/gallery/hotel-59.jpg";
 
 export default function RegisterPage() {
@@ -111,7 +112,7 @@ export default function RegisterPage() {
         </motion.div>
 
         <div className="relative z-10 text-xs text-slate-500">
-          &copy; {new Date().getFullYear()} YES HOTELS Group.
+          &copy; {new Date().getFullYear()} YES HOTELS Group. <DevCredit />
         </div>
       </div>
 

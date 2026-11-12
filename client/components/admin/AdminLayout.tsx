@@ -23,6 +23,7 @@ import QuickActionModal from "./QuickActionModal";
 import { useQuery } from "@tanstack/react-query";
 import { getStoredAuthToken } from "@/lib/authStorage";
 
+import DevCredit from "@/components/DevCredit";
 interface NavItem {
   label: string;
   to: string;
@@ -532,6 +533,9 @@ export default function AdminLayout({ children, title, hidePadding }: { children
         <main ref={mainRef} style={{ overflowAnchor: "none" }} className={`flex-1 overflow-auto print:overflow-visible ${hidePadding ? "" : "p-4 sm:p-6 lg:p-8"} print:p-0`}>
           {children}
         </main>
+        <div className="print:hidden shrink-0 border-t border-gray-200 bg-white/80 px-4 py-1 text-center text-[11px] text-gray-500">
+          <DevCredit />
+        </div>
       </div>
 
       {/* ── Mobile Bottom Navigation Bar (phones & tablets only) ── */}
