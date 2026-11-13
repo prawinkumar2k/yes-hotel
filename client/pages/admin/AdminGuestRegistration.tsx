@@ -84,6 +84,8 @@ export default function AdminGuestRegistration() {
   const [step, setStep] = useState<Step>("SEARCH");
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  // One key per registration form: a double click or retry can never create the booking twice.
+  const submitKeyRef = useRef<string>(crypto.randomUUID());
 
   // STEP 5 IN-PAGE DOCUMENT VIEWER (BOTH, GRC, INVOICE)
 
@@ -470,6 +472,7 @@ export default function AdminGuestRegistration() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "Idempotency-Key": submitKeyRef.current,
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         body: JSON.stringify(payload),
@@ -479,6 +482,7 @@ export default function AdminGuestRegistration() {
         toast({ title: "Registration Successful", description: `${roomsToBook.length} room(s) booked successfully. Ready for Check-in.` });
         setRegisteredBooking(json.data.booking);
         setStep("DONE");
+        submitKeyRef.current = crypto.randomUUID(); // next registration is a new request
       } else {
         toast({ title: "Registration Failed", description: json.message, variant: "destructive" });
       }

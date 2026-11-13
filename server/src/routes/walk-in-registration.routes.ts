@@ -6,6 +6,7 @@
  * All routes require authentication. RECEPTIONIST, MANAGER, and ADMIN
  * roles can perform registrations.
  */
+import { idempotencyKey } from "../middleware/idempotency-key";
 import { Router } from "express";
 import { requirePropertyAccess } from "../middleware/propertyAuth";
 import { requirePermission } from "../middleware/permissionAuth";
@@ -55,7 +56,7 @@ router.post("/calculate-rate", requirePropertyAccess, requirePermission("GUEST_R
  * Creates Guest + Booking + AdvancePayment atomically.
  * Does NOT perform check-in — that is a separate step.
  */
-router.post("/walk-in", requirePropertyAccess, requirePermission("GUEST_REGISTRATION", "CREATE"), walkInArrivalRegistration);
+router.post("/walk-in", idempotencyKey, requirePropertyAccess, requirePermission("GUEST_REGISTRATION", "CREATE"), walkInArrivalRegistration);
 
 /**
  * POST /api/front-desk/registration/:bookingId/check-in
