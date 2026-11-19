@@ -644,6 +644,39 @@ export default function AdminFrontDesk() {
     }
   };
 
+  // Fix the method of a recorded payment (entered as UPI, actually cash). Amount and balance do not change.
+  const handleChangePaymentMethod = async (line: any, method: string) => {
+    if (!folioDrawer.booking || !method || method === line.paymentMode) return;
+    let reference = "";
+    if (method === "UPI" || method === "CARD" || method === "BANK_TRANSFER") {
+      reference = window.prompt(`Enter the ${method === "CARD" ? "card approval code" : "UTR / reference"} for this payment:`)?.trim() || "";
+      if (method !== "BANK_TRANSFER" && !reference) return;
+    }
+    const reason = window.prompt(`Change this ₹${Number(line.amount).toLocaleString("en-IN")} payment from ${line.paymentMode || "?"} to ${method}. Reason:`, "Entered the wrong payment method")?.trim();
+    if (!reason) return;
+    setSubmittingAction(true);
+    try {
+      const token = getStoredAuthToken();
+      const res = await fetch(`/api/reception/folio-lines/${line._id}/payment-method`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify({ method, reference: reference || undefined, reason }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        toast({ title: "Payment method corrected", description: json.message });
+        await openFolioDrawer(folioDrawer.booking, folioDrawer.isGroupFolio, folioDrawer.allGroupBookings);
+        queryClient.invalidateQueries();
+      } else {
+        toast({ title: "Could not change the method", description: json.message, variant: "destructive" });
+      }
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    } finally {
+      setSubmittingAction(false);
+    }
+  };
+
   const handleDeleteLine = async (lineId: string) => {
     if (!folioDrawer.folio) return;
     const reason = window.prompt("Reason for voiding this line (a reversal entry will be posted):")?.trim();
@@ -2726,6 +2759,22 @@ export default function AdminFrontDesk() {
                               <td className="p-3 font-sans font-medium text-gray-900">
                                 <div className="flex items-center gap-1.5">
                                   <span>{item.description}</span>
+                                  {(item.paymentId || item.advancePaymentId) && item.paymentMode !== "RAZORPAY" && (
+                                    <select
+                                      aria-label="Payment method"
+                                      title="Entered the wrong method? Change it here"
+                                      disabled={submittingAction}
+                                      value={["CASH", "CARD", "UPI", "BANK_TRANSFER"].includes(item.paymentMode) ? item.paymentMode : ""}
+                                      onChange={(e) => handleChangePaymentMethod(item, e.target.value)}
+                                      className="text-[10px] font-bold border border-gray-300 rounded px-1 py-0.5 bg-white"
+                                    >
+                                      <option value="" disabled>Method</option>
+                                      <option value="CASH">Cash</option>
+                                      <option value="UPI">UPI</option>
+                                      <option value="CARD">Card</option>
+                                      <option value="BANK_TRANSFER">Bank transfer</option>
+                                    </select>
+                                  )}
                                   {item.lineType === "ROOM_CHARGE" && (
                                     <span className="text-[10px] bg-emerald-50 text-emerald-800 px-1.5 py-0.2 rounded border border-emerald-200">SAC 996311</span>
                                   )}

@@ -398,4 +398,40 @@ router.get("/payments/:id/receipt", requirePermission("PAYMENTS", "VIEW"), async
   }
 });
 
+// ── Correct how a payment was taken (e.g. entered as UPI but the guest paid cash) ─────────────────────
+// Only the method (and its reference) changes: the amount, the bill and the balance stay exactly as they are,
+// and every receipt, invoice and MIS figure follows the corrected method. Allowed until check-out; audited.
+router.put("/folio-lines/:lineId/payment-method", requirePermission("PAYMENTS", "CREATE"), async (req: Request, res: Response) => {
+  try {
+    const { method, reference, reason } = req.body ?? {};
+    const mode = String(method ?? "").toUpperCase();
+    if (!["CASH", "CARD", "UPI", "BANK_TRANSFER"].includes(mode)) return fail(res, 400, "Choose how it was really paid: CASH, CARD, UPI or BANK_TRANSFER");
+    const ref = typeof reference === "string" ? reference.trim() : "";
+    if ((mode === "CARD" || mode === "UPI") && !ref) return fail(res, 400, `A ${mode} reference (approval code / UTR) is required`);
+    if (!mongoose.isValidObjectId(req.params.lineId)) return fail(res, 400, "Invalid line");
+
+    const line: any = await FolioLine.findById(req.params.lineId).lean();
+    if (!line || !(line.paymentId || line.advancePaymentId)) return fail(res, 404, "That line is not a recorded payment");
+    const booking: any = await Booking.findById(line.booking).select("status bookingReference").lean();
+    if (booking && booking.status === BookingStatus.CHECKED_OUT) return fail(res, 409, "The guest has checked out, so this payment can no longer be changed");
+
+    const doc: any = line.paymentId ? await Payment.findById(line.paymentId) : await AdvancePayment.findById(line.advancePaymentId);
+    if (!doc) return fail(res, 404, "The payment record was not found");
+    const before = String(doc.method);
+    if (before === "RAZORPAY" || mode === ("RAZORPAY" as string)) return fail(res, 409, "Online (Razorpay) payments are confirmed by the gateway and cannot be changed");
+    if (before === mode && !ref) return res.json({ success: true, message: `Already recorded as ${mode}` });
+
+    doc.method = mode;
+    if (ref) { if (line.paymentId) doc.reference = ref; else doc.referenceNumber = ref; }
+    await doc.save();
+    await createAuditLog({
+      req, action: "payment.method_corrected", resourceType: line.paymentId ? "Payment" : "AdvancePayment", resourceId: String(doc._id),
+      metadata: { bookingReference: booking?.bookingReference, amount: line.amount, from: before, to: mode, reference: ref || undefined, reason: typeof reason === "string" ? reason : undefined },
+    });
+    return res.json({ success: true, message: `Payment method changed from ${before} to ${mode}`, data: { method: mode } });
+  } catch (error: any) {
+    return fail(res, 500, error.message);
+  }
+});
+
 export default router;
