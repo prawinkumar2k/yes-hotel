@@ -5,7 +5,7 @@ import { requirePermission } from "../middleware/permissionAuth";
 import { protect, optionalProtect } from "../middleware/auth.middleware";
 import {
   checkAvailability, quoteBooking, createBooking, getMyBookings, getMyBookingById, getMyBookingInvoice, checkIn, checkOut,
-  getCheckoutPreview, checkExtensionConflict, extendStay
+  getCheckoutPreview, checkExtensionConflict, extendStay, updateBookingSource
 } from "../controllers/booking.controller";
 import { cancelBooking } from "../controllers/cancellation.controller";
 import { confirmDemoBooking } from "../controllers/payment.controller";
@@ -41,6 +41,9 @@ router.post("/:id/cancel", protect, cancelBooking);
 router.post("/:id/check-in", protect, requirePropertyAccess, requirePermission("BOOKINGS", "CREATE"), checkIn);
 router.get("/:id/checkout-preview", protect, requirePropertyAccess, requirePermission("BOOKINGS", "VIEW"), getCheckoutPreview);
 router.post("/:id/check-out", protect, requirePropertyAccess, requirePermission("BOOKINGS", "CREATE"), checkOut);
+
+// Correct how the booking was entered (Walk-in / Phone / OTA) — any number of times until check-out
+router.put("/:id/source", protect, requirePropertyAccess, requirePermission("BOOKINGS", "EDIT"), updateBookingSource);
 
 // Stay Extension
 router.post("/:id/extension-check", protect, requirePropertyAccess, requirePermission("BOOKINGS", "CREATE"), checkExtensionConflict);

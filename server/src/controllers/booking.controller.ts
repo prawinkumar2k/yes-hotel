@@ -1279,6 +1279,16 @@ function agreedNightlyRate(booking: any): number {
   );
 }
 
+/** Discount on extra nights: PERCENT of the nightly rate, or FLAT ₹ off each night. Never more than the rate. */
+function extensionNightlyRate(base: number, body: any): { nightly: number; perNightOff: number } {
+  const type = String(body?.discountType ?? "").toUpperCase();
+  const v = Number(body?.discountValue);
+  if (!(v > 0) || !["PERCENT", "FLAT"].includes(type)) return { nightly: base, perNightOff: 0 };
+  if (type === "PERCENT" && v > 100) throw new Error("Discount cannot be more than 100%");
+  const off = Math.min(base, Math.round((type === "PERCENT" ? (base * v) / 100 : v) * 100) / 100);
+  return { nightly: Math.round((base - off) * 100) / 100, perNightOff: off };
+}
+
 export const checkExtensionConflict = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
@@ -1307,7 +1317,8 @@ export const checkExtensionConflict = async (req: Request, res: Response) => {
     }).lean();
 
     const additionalNights = countNights(currentCheckOut, targetCheckOut);
-    const basePrice = agreedNightlyRate(booking);
+    const listRate = agreedNightlyRate(booking);
+    const { nightly: basePrice, perNightOff } = extensionNightlyRate(listRate, req.body);
     const additionalTariff = basePrice * additionalNights;
     // Quote exactly what extendStay posts: taxService room GST per added night.
     // The agreed rate; when the booking's prices include GST, the GST is inside it.
@@ -1327,6 +1338,7 @@ export const checkExtensionConflict = async (req: Request, res: Response) => {
         additionalTariff,
         additionalTax,
         additionalTotal,
+        discountPerNight: perNightOff,
         newCheckOutDate: targetCheckOut,
         conflictsCount: conflicts.length,
       },
@@ -1360,7 +1372,8 @@ export const extendStay = async (req: Request, res: Response) => {
     }
 
     const additionalNights = countNights(currentCheckOut, targetCheckOut);
-    const basePrice = agreedNightlyRate(booking);
+    const listRate = agreedNightlyRate(booking);
+    const { nightly: basePrice, perNightOff } = extensionNightlyRate(listRate, req.body);
     const additionalTariff = basePrice * additionalNights;
     // Room GST per added night via taxService (slab by per-night value, rule in force on each night).
     // The agreed rate; when the booking's prices include GST, the GST is inside it.
@@ -1447,7 +1460,7 @@ export const extendStay = async (req: Request, res: Response) => {
           amount: extTax.taxable, // value excluding GST (equals the tariff unless the price includes GST)
           date: new Date(),
           postedBy: actorId?.toString() || "FRONT_DESK",
-          notes: notes || `Extended check-out to ${targetCheckOut.toLocaleDateString()}`,
+          notes: [notes || `Extended check-out to ${targetCheckOut.toLocaleDateString()}`, perNightOff > 0 ? `Discount ₹${perNightOff} per night on the extension (rate ₹${listRate} → ₹${basePrice})` : ""].filter(Boolean).join(" · "),
         },
         { req }
       );
@@ -1516,3 +1529,63 @@ export const extendStay = async (req: Request, res: Response) => {
 };
 
 
+
+/**
+ * PUT /api/bookings/:id/source
+ * Corrects how a booking was entered (e.g. keyed as Walk-in but it is an OTA booking). Allowed any number of times
+ * until check-out, for the whole group. Only the source / OTA terms change: payments and the bill are untouched
+ * (use Edit Bill to correct the amount). Every change is written to the audit trail.
+ * Body: { bookingSource: WALK_IN | PHONE | OTA, otaName, otaConfirmationNumber, otaCommissionType, otaCommissionValue,
+ *         otaCommissionGstPercent, otaPaymentModel, reason }
+ */
+export const updateBookingSource = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    if (!mongoose.isValidObjectId(id)) return res.status(400).json({ success: false, message: "Invalid booking ID" });
+    const b = req.body ?? {};
+    const source = String(b.bookingSource ?? "").toUpperCase();
+    if (!["WALK_IN", "PHONE", "OTA"].includes(source)) return res.status(400).json({ success: false, message: "Choose the booking source: Walk-in, Phone or OTA" });
+
+    const booking: any = await Booking.findById(id);
+    if (!booking) return res.status(404).json({ success: false, message: "Booking not found" });
+    if ([BookingStatus.CHECKED_OUT, BookingStatus.CANCELLED].includes(booking.status)) {
+      return res.status(409).json({ success: false, message: "This booking is already closed, so its source can no longer be changed" });
+    }
+
+    let fields: Record<string, unknown>;
+    if (source === "OTA") {
+      const name = String(b.otaName ?? "").trim();
+      const confirmation = String(b.otaConfirmationNumber ?? "").trim();
+      const flat = String(b.otaCommissionType ?? "").toUpperCase() === "FLAT";
+      const value = Number(b.otaCommissionValue);
+      const model = String(b.otaPaymentModel ?? "");
+      const gst = b.otaCommissionGstPercent === undefined || b.otaCommissionGstPercent === "" ? 0 : Number(b.otaCommissionGstPercent);
+      if (!name) return res.status(400).json({ success: false, message: "Select the OTA (e.g. MakeMyTrip, FabHotels)" });
+      if (!confirmation) return res.status(400).json({ success: false, message: "Enter the OTA booking / confirmation number" });
+      if (!Number.isFinite(value) || value < 0 || (!flat && value > 100)) return res.status(400).json({ success: false, message: flat ? "Enter the OTA commission amount (₹)" : "Enter the OTA commission % (0–100)" });
+      if (!["OTA_PREPAID", "PAY_AT_HOTEL"].includes(model)) return res.status(400).json({ success: false, message: "Choose who collects the money: OTA prepaid or pay at hotel" });
+      if (!Number.isFinite(gst) || gst < 0 || gst > 100) return res.status(400).json({ success: false, message: "Enter the GST on the OTA commission as 0–100%" });
+      fields = flat
+        ? { otaName: name, otaConfirmationNumber: confirmation, otaCommissionType: "FLAT", otaCommissionFlat: value, otaCommissionPercent: undefined, otaCommissionGstPercent: gst, otaPaymentModel: model }
+        : { otaName: name, otaConfirmationNumber: confirmation, otaCommissionType: "PERCENT", otaCommissionPercent: value, otaCommissionFlat: undefined, otaCommissionGstPercent: gst, otaPaymentModel: model };
+    } else {
+      fields = { otaName: undefined, otaConfirmationNumber: undefined, otaCommissionType: undefined, otaCommissionPercent: undefined, otaCommissionFlat: undefined, otaCommissionGstPercent: undefined, otaPaymentModel: undefined, otaCommissionBase: undefined, otaCommissionAmount: undefined, otaCommissionGst: undefined, otaReceivable: 0, otaPayable: 0 };
+    }
+
+    const group = booking.groupId ? await Booking.find({ groupId: booking.groupId, status: { $nin: [BookingStatus.CHECKED_OUT, BookingStatus.CANCELLED] } }) : [booking];
+    const before = { source: booking.source, otaName: booking.otaName, otaPaymentModel: booking.otaPaymentModel };
+    for (const g of group as any[]) {
+      g.source = source;
+      g.set(fields);
+      await g.save(); // the OTA settlement (commission, receivable) is recalculated on save
+    }
+    await createAuditLog({
+      req, action: "BOOKING_SOURCE_CHANGED", resourceType: "Booking", resourceId: String(booking._id),
+      metadata: { before, after: { source, ...fields }, reason: typeof b.reason === "string" ? b.reason : undefined },
+    }).catch(() => undefined);
+
+    return res.json({ success: true, message: source === "OTA" ? "Marked as an OTA booking" : "Source updated", data: { booking: group[0] } });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};

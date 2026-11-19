@@ -988,7 +988,7 @@ export default function AdminGuestRegistration() {
                       <label className="block text-xs font-bold text-gray-500 mb-1">OTA *</label>
                       <select required className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm" value={sourceDetails.otaName} onChange={e => { const v = e.target.value; const d = OTA_DEFAULT_COMMISSION[v]; setSourceDetails({ ...sourceDetails, otaName: v, ...(d && sourceDetails.otaCommissionType === "PERCENT" && !sourceDetails.otaCommissionPercent ? { otaCommissionPercent: String(d) } : {}) }); }}>
                         <option value="">Select OTA</option>
-                        {["MakeMyTrip", "Goibibo", "Booking.com", "Agoda", "Expedia", "Airbnb", "Cleartrip", "Yatra", "EaseMyTrip", "Other"].map(o => <option key={o} value={o}>{o}</option>)}
+                        {["MakeMyTrip", "Goibibo", "Booking.com", "Agoda", "Expedia", "Airbnb", "Cleartrip", "Yatra", "EaseMyTrip", "FabHotels", "Other"].map(o => <option key={o} value={o}>{o}</option>)}
                       </select>
                     </div>
                     <div>

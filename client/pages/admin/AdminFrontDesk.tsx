@@ -99,6 +99,8 @@ export default function AdminFrontDesk() {
   const [newChargeType, setNewChargeType] = useState("ADDON");
   const [showAddCharge, setShowAddCharge] = useState(false);
   const [isEditingBill, setIsEditingBill] = useState(false);
+  // Correct how the booking was entered (Walk-in / Phone / OTA). Allowed any number of times until check-out.
+  const [srcForm, setSrcForm] = useState({ bookingSource: "WALK_IN", otaName: "", otaConfirmationNumber: "", otaCommissionType: "PERCENT", otaCommissionValue: "", otaCommissionGstPercent: "18", otaPaymentModel: "OTA_PREPAID" });
   const [editBillForm, setEditBillForm] = useState({
     ratePerNight: 0,
     extraBedAmount: 0,
@@ -322,6 +324,8 @@ export default function AdminFrontDesk() {
   // Extend by hours: late check-out, or early check-in (charged per hour, with GST).
   type TimeMode = "NIGHTS" | "LATE_CHECK_OUT" | "EARLY_CHECK_IN";
   const [extendMode, setExtendMode] = useState<TimeMode>("NIGHTS");
+  // Discount on the extra nights (percent, or ₹ off each night).
+  const [extDisc, setExtDisc] = useState<{ type: "PERCENT" | "FLAT"; value: string }>({ type: "PERCENT", value: "" });
   const [extendHours, setExtendHours] = useState("2");
   const [hourQuotes, setHourQuotes] = useState<Record<string, { quote?: any; error?: string; amount: string }>>({});
   const [hourForce, setHourForce] = useState(false);
@@ -427,7 +431,7 @@ export default function AdminFrontDesk() {
     applyExtensionSelection(extensionQuotes, next);
   };
 
-  const handleCheckExtension = async (dateVal: string, targetBooking?: any, selectedArg?: string[]) => {
+  const handleCheckExtension = async (dateVal: string, targetBooking?: any, selectedArg?: string[], disc: { type: string; value: string } = extDisc) => {
     setNewCheckOutDate(dateVal);
     const b = targetBooking || extendModal.booking;
     const selected = selectedArg || extendSelected;
@@ -443,7 +447,7 @@ export default function AdminFrontDesk() {
           const res = await fetch(`/api/bookings/${t._id}/extension-check`, {
             method: "POST",
             headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-            body: JSON.stringify({ newCheckOutDate: dateVal }),
+            body: JSON.stringify({ newCheckOutDate: dateVal, discountType: disc.value ? disc.type : undefined, discountValue: disc.value ? Number(disc.value) : undefined }),
           });
           const json = await res.json();
           if (json.success && json.data) return { booking: t, room, cost: Number(json.data.additionalTotal || json.data.additionalAmount || json.data.additionalTariff || 0) };
@@ -468,7 +472,7 @@ export default function AdminFrontDesk() {
         const res = await fetch(`/api/bookings/${q.booking._id}/extend`, {
           method: "POST",
           headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-          body: JSON.stringify({ newCheckOutDate }),
+          body: JSON.stringify({ newCheckOutDate, discountType: extDisc.value ? extDisc.type : undefined, discountValue: extDisc.value ? Number(extDisc.value) : undefined }),
         });
         const json = await res.json().catch(() => ({ success: false, message: `Server error (${res.status})` }));
         if (json.success) done.push(q.room);
@@ -568,6 +572,15 @@ export default function AdminFrontDesk() {
           applyTax: Boolean(booking.taxAmount && booking.taxAmount > 0) || true,
           pricesIncludeTax: booking.pricesIncludeTax === true,
         });
+        setSrcForm({
+          bookingSource: ["WALK_IN", "PHONE", "OTA"].includes(booking.source) ? booking.source : "WALK_IN",
+          otaName: booking.otaName || "",
+          otaConfirmationNumber: booking.otaConfirmationNumber || "",
+          otaCommissionType: booking.otaCommissionType === "FLAT" ? "FLAT" : "PERCENT",
+          otaCommissionValue: String(booking.otaCommissionType === "FLAT" ? booking.otaCommissionFlat ?? "" : booking.otaCommissionPercent ?? ""),
+          otaCommissionGstPercent: String(booking.otaCommissionGstPercent ?? 18),
+          otaPaymentModel: booking.otaPaymentModel || "OTA_PREPAID",
+        });
         setIsEditingBill(false);
         setShowAddCharge(false);
       } else {
@@ -575,6 +588,30 @@ export default function AdminFrontDesk() {
       }
     } catch (err: any) {
       toast({ title: "Error", description: err.message, variant: "destructive" });
+    }
+  };
+
+  const handleSaveSource = async () => {
+    if (!folioDrawer.booking) return;
+    setSubmittingAction(true);
+    try {
+      const token = getStoredAuthToken();
+      const res = await fetch(`/api/bookings/${folioDrawer.booking._id}/source`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify({ ...srcForm, otaCommissionValue: Number(srcForm.otaCommissionValue) }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        toast({ title: "Booking source updated", description: json.message });
+        queryClient.invalidateQueries();
+      } else {
+        toast({ title: "Could not change the source", description: json.message, variant: "destructive" });
+      }
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    } finally {
+      setSubmittingAction(false);
     }
   };
 
@@ -2154,6 +2191,19 @@ export default function AdminFrontDesk() {
               />
             </div>
 
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 mb-1">Discount on the extra nights (optional)</label>
+              <div className="flex gap-2">
+                <select value={extDisc.type} onChange={(e) => { const d = { ...extDisc, type: e.target.value as "PERCENT" | "FLAT" }; setExtDisc(d); if (newCheckOutDate) handleCheckExtension(newCheckOutDate, undefined, undefined, d); }} className="bg-gray-100 border border-gray-200 text-sm rounded-xl p-2.5">
+                  <option value="PERCENT">% off</option>
+                  <option value="FLAT">₹ off per night</option>
+                </select>
+                <input type="number" min="0" value={extDisc.value} placeholder="0"
+                  onChange={(e) => { const d = { ...extDisc, value: e.target.value }; setExtDisc(d); if (newCheckOutDate) handleCheckExtension(newCheckOutDate, undefined, undefined, d); }}
+                  className="flex-1 bg-gray-100 border border-gray-200 text-sm text-gray-800 rounded-xl p-2.5 focus:border-[#c9a227]" />
+              </div>
+            </div>
+
             {extensionConflict && (
               <div className="bg-red-50 border border-red-200 p-3 rounded-xl text-xs text-red-700 font-medium">
                 ⚠️ {extensionConflict}
@@ -2542,6 +2592,38 @@ export default function AdminFrontDesk() {
                       </button>
                     </div>
                   </div>
+                </div>
+              )}
+
+              {/* Booking source: fix a booking entered as Walk-in that is really OTA (any time before check-out) */}
+              {isEditingBill && (
+                <div className="p-4 bg-sky-50/70 border border-sky-200 rounded-2xl space-y-3">
+                  <h4 className="font-bold text-sky-900 text-xs uppercase tracking-wider">Booking source (change until check-out)</h4>
+                  <div className="flex gap-2">
+                    {([["WALK_IN", "Walk-in"], ["PHONE", "Phone"], ["OTA", "OTA"]] as const).map(([v, label]) => (
+                      <button key={v} type="button" onClick={() => setSrcForm({ ...srcForm, bookingSource: v })}
+                        className={`px-4 py-2 rounded-lg text-xs font-bold border ${srcForm.bookingSource === v ? "bg-sky-100 border-sky-400 text-sky-900" : "bg-white border-gray-200 text-gray-600"}`}>{label}</button>
+                    ))}
+                  </div>
+                  {srcForm.bookingSource === "OTA" && (
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
+                      <select value={srcForm.otaName} onChange={(e) => setSrcForm({ ...srcForm, otaName: e.target.value })} className="bg-white border border-gray-300 rounded-xl p-2.5">
+                        <option value="">Select OTA</option>
+                        {["MakeMyTrip", "Goibibo", "Booking.com", "Agoda", "Expedia", "Airbnb", "Cleartrip", "Yatra", "EaseMyTrip", "FabHotels", "Other"].map((o) => <option key={o} value={o}>{o}</option>)}
+                      </select>
+                      <input value={srcForm.otaConfirmationNumber} onChange={(e) => setSrcForm({ ...srcForm, otaConfirmationNumber: e.target.value })} placeholder="OTA confirmation no." className="bg-white border border-gray-300 rounded-xl p-2.5 font-mono" />
+                      <div className="flex gap-1">
+                        <select value={srcForm.otaCommissionType} onChange={(e) => setSrcForm({ ...srcForm, otaCommissionType: e.target.value })} className="bg-white border border-gray-300 rounded-xl p-2.5"><option value="PERCENT">%</option><option value="FLAT">₹</option></select>
+                        <input type="number" min="0" value={srcForm.otaCommissionValue} onChange={(e) => setSrcForm({ ...srcForm, otaCommissionValue: e.target.value })} placeholder="Commission" className="w-full bg-white border border-gray-300 rounded-xl p-2.5" />
+                      </div>
+                      <input type="number" min="0" max="100" value={srcForm.otaCommissionGstPercent} onChange={(e) => setSrcForm({ ...srcForm, otaCommissionGstPercent: e.target.value })} placeholder="GST on commission %" className="bg-white border border-gray-300 rounded-xl p-2.5" />
+                      <select value={srcForm.otaPaymentModel} onChange={(e) => setSrcForm({ ...srcForm, otaPaymentModel: e.target.value })} className="sm:col-span-2 bg-white border border-gray-300 rounded-xl p-2.5">
+                        <option value="OTA_PREPAID">OTA prepaid (OTA pays the hotel later)</option>
+                        <option value="PAY_AT_HOTEL">Pay at hotel (guest pays here)</option>
+                      </select>
+                    </div>
+                  )}
+                  <button type="button" onClick={handleSaveSource} disabled={submittingAction} className="px-4 py-2 rounded-xl bg-sky-700 text-white text-xs font-bold disabled:opacity-50">Save source</button>
                 </div>
               )}
 
