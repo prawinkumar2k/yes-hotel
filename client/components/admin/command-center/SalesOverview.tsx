@@ -28,19 +28,19 @@ export function SalesOverview() {
 
   const diff = data.today.total - data.yesterday.total;
   const collections: any[] = data.collections ?? [];
-  const todayCollected = collections.reduce((t, c) => t + c.today, 0);
+  const todayCollected = data.receivedToday ?? collections.reduce((t, c) => t + c.today, 0);
 
   return (
     <section className="space-y-3">
       <h2 className="font-serif text-lg font-bold text-slate-900">Sales</h2>
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Card label="Today's sales" value={inr(data.today.total)} sub={`${diff >= 0 ? "▲" : "▼"} ${inr(Math.abs(diff))} vs yesterday`} tone={diff >= 0 ? "text-emerald-700" : "text-rose-700"} />
-        <Card label="Room revenue today" value={inr(data.today.room)} sub={`Tax ${inr(data.today.tax)} · Other ${inr(data.today.other)}`} />
+        <Card label="Room revenue today" value={inr(data.today.room)} sub={`Other sales ${inr(data.today.other)} · before GST`} />
         <Card label="Collected today" value={inr(todayCollected)} sub={collections.filter((c) => c.today > 0).map((c) => `${METHOD_LABEL[c.method] ?? c.method} ${inr(c.today)}`).join(" · ") || "No payments yet"} />
-        <Card label="This month" value={inr(data.month.total)} sub={`Room ${inr(data.month.room)} · Tax ${inr(data.month.tax)}`} />
+        <Card label="This month" value={inr(data.month.total)} sub={`Room ${inr(data.month.room)} · Other ${inr(data.month.other)} · received ${inr(data.receivedMonth)}`} />
       </div>
       <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-        <div className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-500">Last 14 days</div>
+        <div className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-500">Last 14 days · sales before GST (same as the MIS sheet)</div>
         <div className="h-64 w-full">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={data.trend} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
@@ -50,8 +50,7 @@ export function SalesOverview() {
               <Tooltip formatter={(v: number) => inr(v)} labelFormatter={(d) => format(new Date(d as string), "dd MMM yyyy")} />
               <Legend />
               <Bar dataKey="room" name="Room" stackId="s" fill="#c9a227" />
-              <Bar dataKey="other" name="Other" stackId="s" fill="#0f172a" />
-              <Bar dataKey="tax" name="Tax" stackId="s" fill="#94a3b8" />
+              <Bar dataKey="other" name="F&B / other" stackId="s" fill="#0f172a" />
             </BarChart>
           </ResponsiveContainer>
         </div>
