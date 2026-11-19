@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { getStoredAuthToken } from "@/lib/authStorage";
+import ReportPrintHeader, { ReportSignOff } from "@/components/admin/ReportPrintHeader";
 import {
   AreaChart,
   Area,
@@ -58,12 +59,10 @@ export default function AdminAnalytics() {
   if (summaryLoading) return <div className="p-12 flex justify-center"><Loader2 className="animate-spin text-hotel-gold" size={32} /></div>;
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500">
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h2 className="text-2xl font-serif text-hotel-black">Property Analytics</h2>
-          <p className="text-hotel-black/60 text-sm">Comprehensive performance metrics and charts</p>
-        </div>
+    <div className="space-y-6 animate-in fade-in duration-500 report-print">
+      <ReportPrintHeader title="Property Analytics" period={`Last ${timeRange} days`} />
+      <div className="flex justify-between items-center mb-6 print:hidden">
+        <div className="hidden" />
         <select 
           value={timeRange} 
           onChange={(e) => setTimeRange(e.target.value)}
@@ -206,6 +205,7 @@ export default function AdminAnalytics() {
           )}
         </div>
       </div>
+      <ReportSignOff />
     </div>
   );
 }

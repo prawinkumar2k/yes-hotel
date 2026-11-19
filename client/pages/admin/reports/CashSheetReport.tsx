@@ -2,7 +2,7 @@ import { useState } from "react";
 import { getStoredAuthToken } from "@/lib/authStorage";
 import { useQuery } from "@tanstack/react-query";
 import { todayBusinessDate } from "@shared/dates";
-import HotelDocAddress from "@/components/admin/HotelDocAddress";
+import ReportPrintHeader, { ReportSignOff } from "@/components/admin/ReportPrintHeader";
 import { usePrintLayout } from "@/lib/usePrintLayout";
 
 export default function CashSheetReport() {
@@ -74,16 +74,7 @@ export default function CashSheetReport() {
         className="print:m-0 p-6 border-2 border-gray-900 text-black text-sm bg-white print:border-2 print:border-black" 
         style={{ fontFamily: "Inter, 'Segoe UI', Arial, sans-serif" }}
       >
-        <div className="flex items-start justify-between gap-4 mb-5 border-b-2 border-gray-900 pb-3">
-          <div className="flex items-center gap-3">
-            <img src="/brand/yes-hotels-logo-sm.png" alt="" className="h-14 w-auto" />
-            <div className="text-[10px] leading-snug"><HotelDocAddress withEmailAndWeb={false} /></div>
-          </div>
-          <div className="text-right">
-            <div className="text-lg font-bold uppercase tracking-wide">Cash Sheet</div>
-            <div className="text-xs">{new Date(date).toLocaleDateString('en-GB', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })}</div>
-          </div>
-        </div>
+        <ReportPrintHeader title="Cash Sheet" period={new Date(date).toLocaleDateString('en-GB', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })} />
 
         {isLoading ? (
           <div className="h-64 flex items-center justify-center tabular-nums">Loading Data...</div>
@@ -146,15 +137,7 @@ export default function CashSheetReport() {
               </div>
             </div>
 
-            <div className="flex justify-between items-end pt-8 border-t-2 border-gray-900">
-              <div>
-                <div className="border-b border-black w-48 mb-2"></div>
-                <div className="text-center font-bold">Night Auditor</div>
-              </div>
-              <div className="text-right text-xs">
-                Page 2 of 2
-              </div>
-            </div>
+            <ReportSignOff />
           </div>
         )}
       </div>
