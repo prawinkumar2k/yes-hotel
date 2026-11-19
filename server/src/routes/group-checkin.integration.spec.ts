@@ -36,7 +36,7 @@ beforeAll(async () => {
   base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
   if (mongoose.connection.readyState !== 1) await mongoose.connection.asPromise();
   const P = (await db().collection("properties").findOne({ code: "TEST-PROPERTY" }))!._id;
-  if (!(await db().collection("hotelsettings").findOne({}))) await db().collection("hotelsettings").insertOne({ hotelName: "Test", phone: "1", address: "x", checkInTime: "12:00", checkOutTime: "11:00" });
+  if (!(await db().collection("hotelsettings").findOne({}))) await db().collection("hotelsettings").insertOne({ hotelName: "Test", phone: "+91 87698 28787", address: "x", checkInTime: "12:00", checkOutTime: "11:00" });
   await db().collection("users").insertOne({ _id: reception, role: "RECEPTIONIST", firstName: "Gr", lastName: "Rcp", email: `grp-${tag}@test.local`, passwordHash: "x", isActive: true, propertyId: P, propertyIds: [P] });
   await db().collection("roomcategories").insertOne({ _id: ids.cat, slug: `grp-${tag}`, name: `Group ${tag}`, description: "t", basePrice: 2000, singleOccupancyPrice: 1800, isActive: true, capacity: { adults: 3, children: 0 } });
   for (const [rid, no] of [[ids.r1, `GA${tag}`], [ids.r2, `GB${tag}`]] as const) {

@@ -50,7 +50,7 @@ beforeAll(async () => {
   if (mongoose.connection.readyState !== 1) await mongoose.connection.asPromise();
   const P = (await db().collection("properties").findOne({ code: "TEST-PROPERTY" }))!._id;
   settingsBefore = await db().collection("hotelsettings").findOne({});
-  if (!settingsBefore) await db().collection("hotelsettings").insertOne({ hotelName: "Test", phone: "1", address: "x", checkInTime: "12:00", checkOutTime: "11:00" });
+  if (!settingsBefore) await db().collection("hotelsettings").insertOne({ hotelName: "Test", phone: "+91 87698 28787", address: "x", checkInTime: "12:00", checkOutTime: "11:00" });
   await db().collection("users").insertOne({ _id: reception, role: "RECEPTIONIST", firstName: "Bill", lastName: "Rcp", email: `bill-rcp-${tag}@test.local`, passwordHash: "x", isActive: true, propertyId: P, propertyIds: [P] });
   await db().collection("roomcategories").insertOne({ _id: ids.category, slug: `bill-${tag}`, name: `Bill ${tag}`, description: "test", basePrice: 1510, isActive: true, capacity: { adults: 2, children: 0 } });
   for (const [rid, no] of [[ids.roomA, `BA${tag}`], [ids.roomB, `BB${tag}`]] as const) {

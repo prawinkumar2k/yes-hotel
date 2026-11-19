@@ -47,7 +47,7 @@ beforeAll(async () => {
   if (mongoose.connection.readyState !== 1) await mongoose.connection.asPromise();
   const P = (await db().collection("properties").findOne({ code: "TEST-PROPERTY" }))!._id;
   settingsBefore = await db().collection("hotelsettings").findOne({});
-  if (!settingsBefore) await db().collection("hotelsettings").insertOne({ hotelName: "Test", phone: "1", address: "x", checkInTime: "12:00", checkOutTime: "11:00" });
+  if (!settingsBefore) await db().collection("hotelsettings").insertOne({ hotelName: "Test", phone: "+91 87698 28787", address: "x", checkInTime: "12:00", checkOutTime: "11:00" });
   await db().collection("hotelsettings").updateMany({}, { $set: { taxInclusiveRates: true, checkInTime: "12:00", checkOutTime: "11:00" } });
   await db().collection("users").insertOne({ _id: reception, role: "RECEPTIONIST", firstName: "Hr", lastName: "Rcp", email: `hours-rcp-${tag}@test.local`, passwordHash: "x", isActive: true, propertyId: P, propertyIds: [P] });
   await db().collection("roomcategories").insertOne({ _id: category, slug: `hours-${tag}`, name: `Hours ${tag}`, description: "test", basePrice: 1510, hourlyPrice: 300, isActive: true, capacity: { adults: 2, children: 0 } });
