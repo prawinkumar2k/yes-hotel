@@ -51,11 +51,11 @@ export default function InvoiceBottom({ s, grandTotal, advancesList, checkInDate
 
   return (
     <div className="flex break-inside-avoid">
-      <div className="w-3/4 border-r border-black p-1 flex flex-col justify-between min-h-[8rem]">
+      <div className="w-3/4 min-w-0 overflow-hidden border-r border-black p-1 flex flex-col justify-between min-h-[8rem]">
         <div className="space-y-0.5 text-[9px]">
           <div className="flex font-bold">
             <div className="w-24 shrink-0 text-[10px]">Advance</div>
-            <div className="flex-1 font-mono">
+            <div className="flex-1 min-w-0 break-words font-mono">
               {advanceRows.length > 0
                 ? advanceRows.map((a, i) => <span key={i} className="mr-2 whitespace-nowrap">| {dm(a.date)}. Rs.{inr(a.total)} ({a.mode}){a.count > 1 ? ` ×${a.count}` : ""}</span>)
                 : s.advanceTotal > 0
@@ -66,13 +66,13 @@ export default function InvoiceBottom({ s, grandTotal, advancesList, checkInDate
           {discount && discount.amount > 0 && (
             <div className="flex font-bold">
               <div className="w-24 shrink-0 text-[10px]">Discount</div>
-              <div className="flex-1 font-mono">Rs.{discount.amount.toFixed(2)}{discount.type === "PERCENT" ? ` (${discount.value}%)` : ""} already deducted from the tariff{discount.reason ? ` — ${discount.reason}` : ""}</div>
+              <div className="flex-1 min-w-0 break-words font-mono">Rs.{discount.amount.toFixed(2)}{discount.type === "PERCENT" ? ` (${discount.value}%)` : ""} already deducted from the tariff{discount.reason ? ` — ${discount.reason}` : ""}</div>
             </div>
           )}
           {settleRows.length > 0 && (
             <div className="flex font-bold">
               <div className="w-24 shrink-0 text-[10px] text-gray-700">Paid at checkout</div>
-              <div className="flex-1 font-mono text-green-800">
+              <div className="flex-1 min-w-0 break-words font-mono text-green-800">
                 {settleRows.map((p, i) => <span key={i} className="mr-2 whitespace-nowrap">| {dm(p.date)}. Rs.{inr(p.total)} ({p.mode}){p.count > 1 ? ` ×${p.count}` : ""}</span>)}
               </div>
             </div>
@@ -80,7 +80,7 @@ export default function InvoiceBottom({ s, grandTotal, advancesList, checkInDate
           {refundRows.length > 0 && (
             <div className="flex font-bold">
               <div className="w-24 shrink-0 text-[10px] text-red-700">Refunded to guest</div>
-              <div className="flex-1 font-mono text-red-700">
+              <div className="flex-1 min-w-0 break-words font-mono text-red-700">
                 {refundRows.map((p, i) => <span key={i} className="mr-2 whitespace-nowrap">| {dm(p.date)}. Rs.{inr(p.total)} returned</span>)}
                 <span className="font-sans font-normal">(not a charge: it is deducted from the amount received)</span>
               </div>
@@ -106,7 +106,7 @@ export default function InvoiceBottom({ s, grandTotal, advancesList, checkInDate
         </div>
       </div>
 
-      <div className="w-1/4 flex flex-col">
+      <div className="w-1/4 shrink-0 flex flex-col">
         {rows.map(([label, value]) => (
           <div key={label} className="flex flex-1 border-b border-black font-bold items-center">
             <div className="w-3/5 px-1 py-0.5 border-r border-black h-full flex items-center">{label}</div>

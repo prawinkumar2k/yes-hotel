@@ -5,6 +5,9 @@ export interface ICreditEntry extends Document {
   propertyId: mongoose.Types.ObjectId;
   booking: mongoose.Types.ObjectId;
   folio?: mongoose.Types.ObjectId;
+  /** GUEST = a guest pays later; OTA = the guest prepaid the OTA, which owes the hotel (net of commission). */
+  kind?: "GUEST" | "OTA";
+  otaName?: string;
   guestName: string;
   phone?: string;
   roomNumber?: string;
@@ -23,6 +26,8 @@ const CreditEntrySchema = new Schema<ICreditEntry>(
     propertyId: { type: Schema.Types.ObjectId, ref: "Property", required: true },
     booking: { type: Schema.Types.ObjectId, ref: "Booking", required: true },
     folio: { type: Schema.Types.ObjectId, ref: "Folio" },
+    kind: { type: String, enum: ["GUEST", "OTA"], default: "GUEST" },
+    otaName: { type: String, trim: true },
     guestName: { type: String, required: true, trim: true },
     phone: { type: String, trim: true },
     roomNumber: { type: String, trim: true },

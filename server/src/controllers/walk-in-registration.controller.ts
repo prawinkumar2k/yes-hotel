@@ -785,9 +785,12 @@ export const walkInArrivalRegistration = async (req: Request, res: Response) => 
       booking = createdBookings[0];
       // "Credit (pay later)": nothing is paid now; the amount is left on credit and collected later.
       const onCredit = String(advanceMethod ?? "").toUpperCase() === "CREDIT";
+      // OTA prepaid: the guest paid the OTA, not the hotel. The whole bill goes on credit against the OTA
+      // (collected later, less commission), and no cash/UPI payment is recorded from the guest.
+      const otaCredit = sourceCode === "OTA" && String(otaFields.otaPaymentModel) === "OTA_PREPAID";
 
       // If advance payment provided, record it on the primary booking (or folio)
-      if (advanceAmount && Number(advanceAmount) > 0 && !onCredit) {
+      if (advanceAmount && Number(advanceAmount) > 0 && !onCredit && !otaCredit) {
         const resolvedMethod = (advanceMethod as AdvancePaymentMethod) || AdvancePaymentMethod.CASH;
         const channel = await PaymentChannel.findOne({ code: advanceMethod, isActive: true }).session(session);
 
@@ -826,12 +829,12 @@ export const walkInArrivalRegistration = async (req: Request, res: Response) => 
       }
 
       const walkInTotalDue = createdBookings.reduce((t, b) => t + (Number(b.totalAmount) || 0), 0);
-      if ((Number(advanceAmount) || 0) > walkInTotalDue + 0.01) {
+      if (!otaCredit && (Number(advanceAmount) || 0) > walkInTotalDue + 0.01) {
         throw new Error(`Payment ₹${Number(advanceAmount).toLocaleString("en-IN")} is more than the total ₹${walkInTotalDue.toLocaleString("en-IN")}`);
       }
 
       // One payment, shared across the rooms' bills in proportion to what each room costs (see advance-split.ts).
-      const paidAtRegistration = onCredit ? 0 : Number(advanceAmount) || 0;
+      const paidAtRegistration = onCredit || otaCredit ? 0 : Number(advanceAmount) || 0;
       const perRoomPaid = new Map<string, number>();
       if (paidAtRegistration > 0) {
         const shares = splitAdvanceAcrossRooms(paidAtRegistration, createdBookings.map((b) => Number(b.totalAmount) || 0));
@@ -867,7 +870,12 @@ export const walkInArrivalRegistration = async (req: Request, res: Response) => 
             otherChargesDesc: otherChargesDesc || undefined,
           });
 
-          if (onCredit && cb._id.toString() === booking._id.toString() && advanceAmount && Number(advanceAmount) > 0) {
+          if (otaCredit) {
+            // Each room's bill is cleared against the OTA; the receivable is what the OTA will pay for that room.
+            const { recordCredit } = await import("../services/credit.service");
+            const receivable = Number((cb as any).otaReceivable) || 0;
+            await recordCredit({ folioId: f._id.toString(), bookingId: cb._id.toString(), amount: receivable > 0 ? receivable : Number(cb.totalAmount) || 0, note: `OTA ref ${String(otaFields.otaConfirmationNumber || "")}`.trim(), by: String((req as any).user?.id || (req as any).user?._id || ""), ota: { name: String(otaFields.otaName), billAmount: Number(cb.totalAmount) || 0 } }, { req, session });
+          } else if (onCredit && cb._id.toString() === booking._id.toString() && advanceAmount && Number(advanceAmount) > 0) {
             const { recordCredit } = await import("../services/credit.service");
             await recordCredit({ folioId: f._id.toString(), bookingId: cb._id.toString(), amount: Number(advanceAmount), note: advanceReference || undefined, by: String((req as any).user?.id || (req as any).user?._id || "") }, { req, session });
           } else if ((perRoomPaid.get(cb._id.toString()) ?? 0) > 0) {
@@ -893,7 +901,7 @@ export const walkInArrivalRegistration = async (req: Request, res: Response) => 
       }
 
       // Payment taken at registration: full (PAID) or part (PARTIAL), recorded on the bookings.
-      const paidNow = onCredit ? 0 : Number(advanceAmount) || 0;
+      const paidNow = onCredit || otaCredit ? 0 : Number(advanceAmount) || 0;
       if (paidNow > 0) {
         for (const cb of createdBookings) {
           cb.paymentStatus = (perRoomPaid.get(cb._id.toString()) ?? 0) >= Number(cb.totalAmount || 0) - 0.01 ? PaymentStatus.PAID : PaymentStatus.PARTIAL;

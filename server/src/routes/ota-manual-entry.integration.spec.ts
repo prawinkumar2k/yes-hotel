@@ -67,6 +67,7 @@ beforeAll(async () => {
 afterAll(async () => {
   const bookings = await db().collection("bookings").find({ assignedRoom: ids.room }).project({ _id: 1, guest: 1 }).toArray();
   const bIds = bookings.map((b) => b._id);
+  await db().collection("creditentries").deleteMany({ booking: { $in: bIds } });
   await db().collection("folios").deleteMany({ booking: { $in: bIds } });
   await db().collection("foliolines").deleteMany({ booking: { $in: bIds } });
   await db().collection("roomnights").deleteMany({ booking: { $in: bIds } });
@@ -98,6 +99,15 @@ describe("OTA bookings entered by hand", () => {
 
     const list = await call("GET", `/api/admin/bookings?source=OTA&search=NH${tag}`);
     expect((list.json.data?.bookings ?? []).some((x: any) => x.otaConfirmationNumber === `NH${tag}`)).toBe(true);
+  });
+
+  it("puts an OTA-prepaid booking on credit against the OTA, with no guest payment", async () => {
+    const b = await db().collection("bookings").findOne({ assignedRoom: ids.room, otaConfirmationNumber: `NH${tag}` });
+    expect(b!.paidAmount ?? 0).toBe(0);
+    const entry = await db().collection("creditentries").findOne({ booking: b!._id });
+    expect(entry).toMatchObject({ kind: "OTA", otaName: "MakeMyTrip", status: "OPEN" });
+    expect(entry!.amount).toBeCloseTo(b!.otaReceivable, 2);
+    expect(await db().collection("advancepayments").countDocuments({ booking: b!._id })).toBe(0);
   });
 
   it("refuses online OTA sync", async () => {

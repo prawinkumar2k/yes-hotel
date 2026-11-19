@@ -17,7 +17,7 @@ export class CreditError extends Error {
 }
 
 export async function recordCredit(
-  p: { folioId: string; bookingId: string; amount: number; note?: string; by?: string },
+  p: { folioId: string; bookingId: string; amount: number; note?: string; by?: string; ota?: { name: string; billAmount: number } },
   opts: { req?: Request; session?: mongoose.ClientSession },
 ) {
   const amount = r2(Number(p.amount));
@@ -27,15 +27,19 @@ export async function recordCredit(
   if (!booking) throw new CreditError("Booking not found", 404);
   const guestName = [booking.guestDetails?.firstName, booking.guestDetails?.lastName].filter(Boolean).join(" ").trim() || "Guest";
   const phone = booking.guestDetails?.phone;
-  if (!phone) throw new CreditError("Credit needs the guest's phone number on the booking, so the dues can be followed up");
+  if (!p.ota && !phone) throw new CreditError("Credit needs the guest's phone number on the booking, so the dues can be followed up");
 
+  // OTA: the guest's whole bill is settled by the OTA, so the folio is cleared for the full bill,
+  // while what the OTA actually owes the hotel (bill less commission) is the receivable `amount`.
+  const folioAmount = p.ota ? r2(Number(p.ota.billAmount)) : amount;
   await postCharge(
-    { folioId: p.folioId, bookingId: p.bookingId, lineType: FolioLineType.PAYMENT, description: "Credit: balance to be paid later", amount, date: new Date(), postedBy: "CREDIT", notes: p.note || undefined },
+    { folioId: p.folioId, bookingId: p.bookingId, lineType: FolioLineType.PAYMENT, description: p.ota ? `Billed to OTA (${p.ota.name}): guest prepaid the OTA` : "Credit: balance to be paid later", amount: folioAmount, date: new Date(), postedBy: "CREDIT", notes: p.note || undefined },
     { req: opts.req, session: opts.session },
   );
   const [entry] = await CreditEntry.create(
     [{
-      propertyId: booking.propertyId, booking: booking._id, folio: p.folioId, guestName, phone, roomNumber: booking.assignedRoom?.roomNumber,
+      propertyId: booking.propertyId, booking: booking._id, folio: p.folioId, guestName: p.ota ? `${p.ota.name} (OTA)` : guestName, phone: p.ota ? undefined : phone,
+      kind: p.ota ? "OTA" : "GUEST", otaName: p.ota?.name, roomNumber: booking.assignedRoom?.roomNumber,
       amount, note: p.note || undefined, createdBy: p.by && mongoose.isValidObjectId(p.by) ? p.by : undefined,
     }],
     { session: opts.session },
@@ -45,10 +49,10 @@ export async function recordCredit(
 
 export async function collectCredit(id: string, p: { amount: number; method: string; reference?: string; by?: string; propertyId?: unknown }) {
   const method = String(p.method ?? "").toUpperCase();
-  if (!["CASH", "CARD", "UPI"].includes(method)) throw new CreditError("Choose how it was paid: CASH, CARD or UPI");
+  if (!["CASH", "CARD", "UPI", "BANK_TRANSFER"].includes(method)) throw new CreditError("Choose how it was paid: CASH, CARD, UPI or BANK_TRANSFER");
   const amount = r2(Number(p.amount));
   if (!(amount > 0)) throw new CreditError("Enter an amount greater than zero");
-  if ((method === "CARD" || method === "UPI") && !String(p.reference ?? "").trim()) throw new CreditError(`A ${method} reference (approval code / UTR) is required`);
+  if ((method === "CARD" || method === "UPI" || method === "BANK_TRANSFER") && !String(p.reference ?? "").trim()) throw new CreditError(`A ${method} reference (approval code / UTR) is required`);
   const entry = await CreditEntry.findById(id);
   if (!entry || (p.propertyId && String(entry.propertyId) !== String(p.propertyId))) throw new CreditError("Credit not found", 404);
   const due = r2(entry.amount - entry.collectedTotal);

@@ -66,7 +66,7 @@ export default function AdminCredits() {
               {data.entries.map((e: any) => (
                 <tr key={e._id} className="border-t border-gray-100">
                   <td className="p-2 whitespace-nowrap">{format(new Date(e.createdAt), "dd-MM-yyyy")}</td>
-                  <td className="p-2"><div className="font-semibold">{e.guestName}</div><div className="text-xs text-gray-500">{e.phone}</div></td>
+                  <td className="p-2"><div className="font-semibold">{e.guestName}</div><div className="text-xs text-gray-500">{e.kind === "OTA" ? "Owed by the OTA (after commission)" : e.phone}</div></td>
                   <td className="p-2">{e.roomNumber || "–"}</td>
                   <td className="p-2 font-mono text-xs">{e.booking?.bookingReference || "–"}</td>
                   <td className="p-2 text-right tabular-nums">{inr(e.amount)}</td>
@@ -94,7 +94,7 @@ export default function AdminCredits() {
             </label>
             <label className="block text-xs font-bold text-gray-600">Method
               <select value={form.method} onChange={(e) => setForm({ ...form, method: e.target.value })} className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white">
-                <option value="CASH">Cash</option><option value="CARD">Card</option><option value="UPI">UPI</option>
+                <option value="CASH">Cash</option><option value="CARD">Card</option><option value="UPI">UPI</option><option value="BANK_TRANSFER">Bank transfer (NEFT/IMPS)</option>
               </select>
             </label>
             {form.method !== "CASH" && (

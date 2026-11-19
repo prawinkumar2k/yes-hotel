@@ -5,6 +5,7 @@ export enum PaymentMethod {
   CARD = "CARD",
   CASH = "CASH",
   UPI = "UPI",
+  BANK_TRANSFER = "BANK_TRANSFER", // an OTA settling what it owes the hotel
 }
 
 export enum PaymentTxStatus {

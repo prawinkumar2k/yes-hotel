@@ -1029,6 +1029,12 @@ export default function AdminGuestRegistration() {
               </div>
               <div className="p-6 grid grid-cols-1 md:grid-cols-3 gap-5">
                 <div><label className="block text-xs font-bold text-gray-500 mb-1">Billing Instruction</label><select className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm" value={billingDetails.billingInstruction} onChange={e => setBillingDetails({...billingDetails, billingInstruction: e.target.value})}><option value="CASH">Direct Settlement (Guest)</option><option value="COMPANY">Bill to Company (BTC)</option><option value="OTA">OTA Prepaid (VCC)</option></select></div>
+                {sourceDetails.bookingSource === "OTA" && sourceDetails.otaPaymentModel === "OTA_PREPAID" ? (
+                  <div className="md:col-span-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
+                    <b>Paid to the OTA, not to the hotel.</b> No payment is taken from the guest. The whole bill is kept as credit
+                    against {sourceDetails.otaName || "the OTA"}; the hotel receives it later (less commission) and records it on the Credits page.
+                  </div>
+                ) : (
                 <div className="md:col-span-2">
                   <label className="block text-xs font-bold text-gray-500 mb-1">Payment now</label>
                   <div className="grid grid-cols-3 gap-2">
@@ -1044,13 +1050,14 @@ export default function AdminGuestRegistration() {
                     {billingDetails.paymentOption === "FULL" ? "The exact total (GST included) is filled in after Calculate Rates." : billingDetails.paymentOption === "LATER" ? "Nothing is collected now; the bill is settled at checkout." : "Type the amount received now; the rest is collected at checkout."}
                   </p>
                 </div>
-                {billingDetails.paymentOption === "ADVANCE" && (
+                )}
+                {!(sourceDetails.bookingSource === "OTA" && sourceDetails.otaPaymentModel === "OTA_PREPAID") && billingDetails.paymentOption === "ADVANCE" && (
                   <div>
                     <label className="block text-xs font-bold text-gray-500 mb-1">Amount received now (₹)</label>
                     <input type="number" min="0" className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm font-bold text-[#c9a227]" placeholder="0" value={billingDetails.advanceAmount} onChange={e => setBillingDetails({...billingDetails, advanceAmount: e.target.value})} />
                   </div>
                 )}
-                {billingDetails.paymentOption !== "LATER" && (
+                {!(sourceDetails.bookingSource === "OTA" && sourceDetails.otaPaymentModel === "OTA_PREPAID") && billingDetails.paymentOption !== "LATER" && (
                   <>
                     <div>
                       <label className="block text-xs font-bold text-gray-500 mb-1">Payment Method</label>
