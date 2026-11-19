@@ -18,6 +18,9 @@ const auth = () => {
   return { "Content-Type": "application/json", ...(t ? { Authorization: `Bearer ${t}` } : {}) };
 };
 
+/** One room type in the booking: several can be mixed (e.g. 3 Deluxe + 2 Executive), each with its own guests, plan, extras and rate. */
+const newLine = (categoryId = "") => ({ categoryId, rooms: 1, adults: 2, children: 0, mealPlan: "EP", rate: "", xPersonNoBed: 0, xPersonBed: 0, xChildNoBed: 0, xChildBed: 0 });
+
 type Props = { open: boolean; onClose: () => void; onSaved?: () => void; initial?: { name?: string; phone?: string; email?: string } };
 
 /** Reserve rooms for a later stay and take the advance now. Rooms are held by type; room numbers are given at check-in. */
@@ -32,6 +35,9 @@ export default function AdvanceBookingDialog({ open, onClose, onSaved, initial }
   const [done, setDone] = useState<any>(null);
   const requestId = useRef(uuid());
   const set = (k: string, v: any) => setF((p: any) => ({ ...p, [k]: v }));
+  const setLine = (i: number, k: string, v: any) => setF((p: any) => ({ ...p, lines: p.lines.map((l: any, j: number) => (j === i ? { ...l, [k]: v } : l)) }));
+  const addLine = () => setF((p: any) => ({ ...p, lines: [...p.lines, newLine(categories.find((c) => !p.lines.some((l: any) => l.categoryId === c._id))?._id ?? categories[0]?._id ?? "")] }));
+  const removeLine = (i: number) => setF((p: any) => ({ ...p, lines: p.lines.length > 1 ? p.lines.filter((_: any, j: number) => j !== i) : p.lines }));
 
   useEffect(() => {
     if (!open) return;
@@ -40,7 +46,7 @@ export default function AdvanceBookingDialog({ open, onClose, onSaved, initial }
     setQuote(null);
     setQuoteErr("");
     const t = today();
-    setF({ name: initial?.name ?? "", phone: initial?.phone ?? "", email: initial?.email ?? "", address: "", gstin: "", categoryId: "", rooms: 1, adults: 2, children: 0, checkIn: t, checkOut: addDays(t, 1), arrivalTime: "", departureTime: "", mealPlan: "EP", rate: "", amount: "", channelId: "", reference: "", notes: "" });
+    setF({ name: initial?.name ?? "", phone: initial?.phone ?? "", email: initial?.email ?? "", address: "", gstin: "", lines: [newLine()], checkIn: t, checkOut: addDays(t, 1), arrivalTime: "", departureTime: "", amount: "", channelId: "", reference: "", notes: "" });
     (async () => {
       try {
         const [c, p] = await Promise.all([
@@ -51,7 +57,7 @@ export default function AdvanceBookingDialog({ open, onClose, onSaved, initial }
         const chs = (p.data || []).filter((x: any) => x.isActive);
         setCategories(cats);
         setChannels(chs);
-        setF((x: any) => ({ ...x, categoryId: cats[0]?._id ?? "", channelId: chs[0]?._id ?? "" }));
+        setF((x: any) => ({ ...x, lines: (x.lines?.length ? x.lines : [newLine()]).map((l: any) => ({ ...l, categoryId: l.categoryId || cats[0]?._id || "" })), channelId: chs[0]?._id ?? "" }));
       } catch {
         toast({ title: "Could not load room types", variant: "destructive" });
       }
@@ -60,30 +66,32 @@ export default function AdvanceBookingDialog({ open, onClose, onSaved, initial }
 
   const body = useMemo(() => ({
     guest: { name: f.name, phone: f.phone, email: f.email, address: f.address, gstin: f.gstin },
-    roomCategoryId: f.categoryId,
-    rooms: Number(f.rooms),
-    adults: Number(f.adults),
-    children: Number(f.children || 0),
+    lines: (f.lines ?? []).map((l: any) => ({
+      roomCategoryId: l.categoryId,
+      rooms: Number(l.rooms),
+      adults: Number(l.adults),
+      children: Number(l.children || 0),
+      mealPlan: l.mealPlan,
+      extraPersonsNoBed: Number(l.xPersonNoBed || 0),
+      extraPersonsWithBed: Number(l.xPersonBed || 0),
+      extraChildrenNoBed: Number(l.xChildNoBed || 0),
+      extraChildrenWithBed: Number(l.xChildBed || 0),
+      ratePerNight: l.rate === "" || l.rate == null ? undefined : Number(l.rate),
+    })),
     checkIn: f.checkIn,
     checkOut: f.checkOut,
     arrivalTime: f.arrivalTime || undefined,
     departureTime: f.departureTime || undefined,
-    mealPlan: f.mealPlan,
-    extraPersonsNoBed: Number(f.xPersonNoBed || 0),
-    extraPersonsWithBed: Number(f.xPersonBed || 0),
-    extraChildrenNoBed: Number(f.xChildNoBed || 0),
-    extraChildrenWithBed: Number(f.xChildBed || 0),
-    ratePerNight: f.rate === "" || f.rate == null ? undefined : Number(f.rate),
     advance: { amount: Number(f.amount || 0), paymentChannelId: f.channelId, reference: f.reference },
     notes: f.notes,
   }), [f]);
 
   // Live price and availability. Guest name/phone are placeholders until typed so the server's validation lets the quote through.
   useEffect(() => {
-    if (!open || !f.categoryId) return;
+    if (!open || !f.lines?.[0]?.categoryId) return;
     const h = setTimeout(async () => {
       try {
-        const q = { ...body, guest: { ...body.guest, name: f.name || "Guest", phone: f.phone || "0000000" }, advance: { amount: 0 } };
+        const q = { ...body, guest: { ...body.guest, name: f.name || "Guest", phone: f.phone || "0000000" }, advance: { amount: Number(f.amount || 0) } };
         const r = await fetch("/api/advances/bookings/quote", { method: "POST", headers: auth(), body: JSON.stringify(q) });
         const j = await r.json();
         if (j.success) {
@@ -98,7 +106,7 @@ export default function AdvanceBookingDialog({ open, onClose, onSaved, initial }
       }
     }, 350);
     return () => clearTimeout(h);
-  }, [open, body.roomCategoryId, body.rooms, body.adults, body.children, body.checkIn, body.checkOut, body.mealPlan, body.extraPersonsNoBed, body.extraPersonsWithBed, body.extraChildrenNoBed, body.extraChildrenWithBed, body.ratePerNight, f.gstin, f.email]);
+  }, [open, JSON.stringify(body.lines), body.checkIn, body.checkOut, f.amount, f.gstin, f.email]);
 
   if (!open) return null;
   const adv = Number(f.amount || 0);
@@ -141,7 +149,7 @@ export default function AdvanceBookingDialog({ open, onClose, onSaved, initial }
           <div className="space-y-4">
             <div className="rounded-xl bg-emerald-50 border border-emerald-200 p-4 text-sm">
               <p className="font-bold text-emerald-800">Booking {done.bookingNumber} confirmed</p>
-              <p className="text-emerald-900">{done.rooms} × {done.categoryName}, {done.checkIn} → {done.checkOut}. Advance {inr(done.advance?.amount ?? 0)} received{done.advance ? ` (${done.advance.number})` : ""}. Balance {inr(done.balance)}.</p>
+              <p className="text-emerald-900">{done.lines?.length > 1 ? done.lines.map((l: any) => `${l.rooms} × ${l.category}`).join(" + ") : `${done.rooms} × ${done.categoryName}`}, {done.checkIn} → {done.checkOut}. Advance {inr(done.advance?.amount ?? 0)} received{done.advance ? ` (${done.advance.number})` : ""}. Balance {inr(done.balance)}.</p>
               <p className="text-xs text-emerald-800 mt-1">Room numbers are given at arrival, in Front Desk → Arrivals. The advance is applied to the bill automatically.</p>
             </div>
             <div className="flex gap-2 justify-end">
@@ -159,29 +167,44 @@ export default function AdvanceBookingDialog({ open, onClose, onSaved, initial }
               <div className="sm:col-span-2"><label className={lbl}>Address</label><input className={inp} value={f.address ?? ""} onChange={(e) => set("address", e.target.value)} /></div>
             </section>
 
-            <section className="grid sm:grid-cols-4 gap-3">
-              <div className="sm:col-span-2"><label className={lbl}>Room type *</label>
-                <select className={inp} value={f.categoryId ?? ""} onChange={(e) => set("categoryId", e.target.value)} required>
-                  {categories.map((c) => <option key={c._id} value={c._id}>{c.name}</option>)}
-                </select></div>
-              <div><label className={lbl}>Rooms *</label><input className={inp} type="number" min={1} value={f.rooms ?? 1} onChange={(e) => set("rooms", e.target.value)} /></div>
-              <div><label className={lbl}>Meal plan</label>
-                <select className={inp} value={f.mealPlan ?? "EP"} onChange={(e) => set("mealPlan", e.target.value)}>{MEALS.map((m) => <option key={m.v} value={m.v}>{m.l}</option>)}</select></div>
-              <div><label className={lbl}>Adults *</label><input className={inp} type="number" min={1} value={f.adults ?? 1} onChange={(e) => set("adults", e.target.value)} /></div>
-              <div><label className={lbl}>Children</label><input className={inp} type="number" min={0} value={f.children ?? 0} onChange={(e) => set("children", e.target.value)} /></div>
-              <div><label className={lbl}>Check-in *</label><input className={inp} type="date" min={today()} value={f.checkIn ?? ""} onChange={(e) => { set("checkIn", e.target.value); if (f.checkOut <= e.target.value) set("checkOut", addDays(e.target.value, 1)); }} /></div>
-              <div><label className={lbl}>Check-out *</label><input className={inp} type="date" min={f.checkIn ? addDays(f.checkIn, 1) : undefined} value={f.checkOut ?? ""} onChange={(e) => set("checkOut", e.target.value)} /></div>
-              <div><label className={lbl}>Arrival time</label><input className={inp} type="time" value={f.arrivalTime || quote?.arrivalTime || ""} onChange={(e) => set("arrivalTime", e.target.value)} /></div>
-              <div><label className={lbl}>Departure time</label><input className={inp} type="time" value={f.departureTime || quote?.departureTime || ""} onChange={(e) => set("departureTime", e.target.value)} /></div>
-              <div className="sm:col-span-4 grid grid-cols-2 sm:grid-cols-4 gap-3">
-                <div><label className={lbl}>Extra person (no bed){quote ? ` ${inr(quote.extras?.rates?.extraPersonRate)}` : ""}</label><input className={inp} type="number" min={0} max={20} value={f.xPersonNoBed ?? 0} onChange={(e) => set("xPersonNoBed", e.target.value)} /></div>
-                <div><label className={lbl}>Extra bed{quote ? ` ${inr(quote.extras?.rates?.extraBedRate)}` : ""}</label><input className={inp} type="number" min={0} max={20} value={f.xPersonBed ?? 0} onChange={(e) => set("xPersonBed", e.target.value)} /></div>
-                <div><label className={lbl}>Child 3-12 (no bed){quote ? ` ${inr(quote.extras?.rates?.childRateNoBed)}` : ""}</label><input className={inp} type="number" min={0} max={20} value={f.xChildNoBed ?? 0} onChange={(e) => set("xChildNoBed", e.target.value)} /></div>
-                <div><label className={lbl}>Child 3-12 (with bed){quote ? ` ${inr(quote.extras?.rates?.childRateWithBed)}` : ""}</label><input className={inp} type="number" min={0} max={20} value={f.xChildBed ?? 0} onChange={(e) => set("xChildBed", e.target.value)} /></div>
-                <p className="col-span-2 sm:col-span-4 text-[10px] text-gray-500">Extra beds, persons and children are charged per night at the hotel's extra rates (shown above, before GST) and added to the first room, as in a walk-in booking.</p>
+            <section className="space-y-3">
+              {(f.lines ?? []).map((l: any, i: number) => {
+                const ql = quote?.lines?.[i];
+                return (
+                  <div key={i} className="rounded-xl border border-gray-200 p-3 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold uppercase tracking-wide text-gray-600">Room line {i + 1}</span>
+                      {f.lines.length > 1 && <button type="button" onClick={() => removeLine(i)} className="text-xs text-red-600 underline">Remove</button>}
+                    </div>
+                    <div className="grid sm:grid-cols-4 gap-3">
+                      <div className="sm:col-span-2"><label className={lbl}>Room type *</label>
+                        <select className={inp} value={l.categoryId ?? ""} onChange={(e) => setLine(i, "categoryId", e.target.value)} required>
+                          {categories.map((c) => <option key={c._id} value={c._id}>{c.name}</option>)}
+                        </select></div>
+                      <div><label className={lbl}>Rooms *</label><input className={inp} type="number" min={1} value={l.rooms} onChange={(e) => setLine(i, "rooms", e.target.value)} /></div>
+                      <div><label className={lbl}>Meal plan</label>
+                        <select className={inp} value={l.mealPlan} onChange={(e) => setLine(i, "mealPlan", e.target.value)}>{MEALS.map((m) => <option key={m.v} value={m.v}>{m.l}</option>)}</select></div>
+                      <div><label className={lbl}>Adults *</label><input className={inp} type="number" min={1} value={l.adults} onChange={(e) => setLine(i, "adults", e.target.value)} /></div>
+                      <div><label className={lbl}>Children</label><input className={inp} type="number" min={0} value={l.children} onChange={(e) => setLine(i, "children", e.target.value)} /></div>
+                      <div className="sm:col-span-2"><label className={lbl}>Rate per room per night (type the amount) {quote ? `(${quote.pricesIncludeTax ? "GST included" : "+ GST"})` : ""}</label>
+                        <input className={inp} type="number" min={0} placeholder={ql ? String(ql.defaultRate) : ""} value={l.rate} onChange={(e) => setLine(i, "rate", e.target.value)} /></div>
+                      <div><label className={lbl}>Extra person (no bed){ql ? ` ${inr(ql.extras?.rates?.extraPersonRate)}` : ""}</label><input className={inp} type="number" min={0} max={20} value={l.xPersonNoBed} onChange={(e) => setLine(i, "xPersonNoBed", e.target.value)} /></div>
+                      <div><label className={lbl}>Extra bed{ql ? ` ${inr(ql.extras?.rates?.extraBedRate)}` : ""}</label><input className={inp} type="number" min={0} max={20} value={l.xPersonBed} onChange={(e) => setLine(i, "xPersonBed", e.target.value)} /></div>
+                      <div><label className={lbl}>Child 3-12 (no bed){ql ? ` ${inr(ql.extras?.rates?.childRateNoBed)}` : ""}</label><input className={inp} type="number" min={0} max={20} value={l.xChildNoBed} onChange={(e) => setLine(i, "xChildNoBed", e.target.value)} /></div>
+                      <div><label className={lbl}>Child 3-12 (with bed){ql ? ` ${inr(ql.extras?.rates?.childRateWithBed)}` : ""}</label><input className={inp} type="number" min={0} max={20} value={l.xChildBed} onChange={(e) => setLine(i, "xChildBed", e.target.value)} /></div>
+                    </div>
+                    {ql && <p className={`text-xs ${ql.canBook ? "text-emerald-700" : "text-red-700 font-bold"}`}>{ql.canBook ? `${ql.availableRooms} ${ql.categoryName} room(s) free for these dates` : `Only ${ql.availableRooms} ${ql.categoryName} room(s) free (this booking asks ${ql.wantedOfType})`} · line total {inr(ql.total)}</p>}
+                  </div>
+                );
+              })}
+              <button type="button" onClick={addLine} className="px-3 py-2 border border-dashed border-gray-400 rounded-xl text-xs font-bold text-gray-700 hover:bg-gray-50">+ Add another room type</button>
+              <p className="text-[10px] text-gray-500">Extra beds, persons and children are charged per night at the hotel's extra rates and added to that line's first room. The rate is what you type, per room per night.</p>
+              <div className="grid sm:grid-cols-4 gap-3">
+                <div><label className={lbl}>Check-in *</label><input className={inp} type="date" min={today()} value={f.checkIn ?? ""} onChange={(e) => { set("checkIn", e.target.value); if (f.checkOut <= e.target.value) set("checkOut", addDays(e.target.value, 1)); }} /></div>
+                <div><label className={lbl}>Check-out *</label><input className={inp} type="date" min={f.checkIn ? addDays(f.checkIn, 1) : undefined} value={f.checkOut ?? ""} onChange={(e) => set("checkOut", e.target.value)} /></div>
+                <div><label className={lbl}>Arrival time</label><input className={inp} type="time" value={f.arrivalTime || quote?.arrivalTime || ""} onChange={(e) => set("arrivalTime", e.target.value)} /></div>
+                <div><label className={lbl}>Departure time</label><input className={inp} type="time" value={f.departureTime || quote?.departureTime || ""} onChange={(e) => set("departureTime", e.target.value)} /></div>
               </div>
-              <div className="sm:col-span-2"><label className={lbl}>Rate per room per night {quote ? `(${quote.pricesIncludeTax ? "GST included" : "+ GST"})` : ""}</label>
-                <input className={inp} type="number" min={0} placeholder={quote ? String(quote.defaultRate) : ""} value={f.rate ?? ""} onChange={(e) => set("rate", e.target.value)} /></div>
             </section>
 
             <section className={`rounded-xl border p-3 text-sm ${quote && !quote.canBook ? "bg-red-50 border-red-200" : "bg-gray-50 border-gray-200"}`}>
@@ -189,7 +212,7 @@ export default function AdvanceBookingDialog({ open, onClose, onSaved, initial }
               {quote && (
                 <div className="space-y-1">
                   <p className={quote.canBook ? "text-emerald-700 font-semibold" : "text-red-700 font-bold"}>
-                    {quote.canBook ? `${quote.availableRooms} ${quote.categoryName} room(s) free for these dates` : `Only ${quote.availableRooms} ${quote.categoryName} room(s) free — reduce the rooms or change dates`}
+                    {quote.canBook ? `All ${quote.rooms} room(s) are free for these dates` : "Some room types do not have enough rooms free — reduce the rooms or change the dates"}
                   </p>
                   {quote.belowDefault && <p className="text-amber-700">Rate is below the standard {inr(quote.defaultRate)} — a manager will be asked to verify.</p>}
                   {quote.capacityWarning && <p className="text-amber-700">{quote.capacityWarning}</p>}
@@ -199,6 +222,16 @@ export default function AdvanceBookingDialog({ open, onClose, onSaved, initial }
                     <div>{quote.nights} night(s) × {quote.rooms} room(s)<br />Total <b>{inr(quote.roundedTotal)}</b></div>
                     <div>Balance after advance<br /><b>{inr(balance)}</b></div>
                   </div>
+                  {adv > 0 && quote.perRoom?.length > 1 && (
+                    <div className="pt-2 text-xs">
+                      <div className="font-semibold text-gray-700">Advance split across the rooms (by what each costs)</div>
+                      <div className="mt-1 grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-0.5">
+                        {quote.perRoom.map((r: any, i: number) => (
+                          <div key={i} className="flex justify-between"><span>{quote.lines?.[r.lineIndex]?.categoryName} #{i + 1}</span><b>{inr(r.advanceShare)}</b></div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </section>

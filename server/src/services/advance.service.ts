@@ -348,7 +348,16 @@ export async function applyAdvancesToFolio(
   // An advance taken for a group (several rooms booked together) sits on the group's first room but
   // belongs to the whole group: every room's bill can draw from it.
   const { Booking } = await import("../models/Booking");
-  const own: any = await Booking.findById(params.bookingId).select("groupId").session(opts.session ?? null).lean();
+  const own: any = await Booking.findById(params.bookingId).select("groupId advanceShare").session(opts.session ?? null).lean();
+  // A reservation's advance is split across its rooms: this room can draw only its own share (less what it already drew).
+  if (typeof own?.advanceShare === "number") {
+    const { FolioLine, FolioLineType } = await import("../models/FolioLine");
+    const drawn: any[] = await FolioLine.find({ booking: params.bookingId, lineType: FolioLineType.ADVANCE_ADJUSTMENT }).select("amount").session(opts.session ?? null).lean();
+    const undone = new Set((await FolioLine.find({ lineType: FolioLineType.REVERSAL, reversedLineId: { $in: drawn.map((l) => l._id) } }).select("reversedLineId").session(opts.session ?? null).lean()).map((x: any) => String(x.reversedLineId)));
+    const used = drawn.filter((l) => !undone.has(String(l._id))).reduce((t, l) => t + (Number(l.amount) || 0), 0);
+    left = Math.round(Math.min(left, Math.max(0, own.advanceShare - used)) * 100) / 100;
+    if (left <= 0) return 0;
+  }
   const bookingIds = own?.groupId
     ? (await Booking.find({ groupId: own.groupId }).select("_id").session(opts.session ?? null).lean()).map((b: any) => b._id)
     : [params.bookingId];

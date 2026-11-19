@@ -107,6 +107,34 @@ describe("quote", () => {
     expect(plain.extras.total).toBe(0);
   });
 
+  it("several room lines in one booking; the advance is split across all the rooms by what each costs", async () => {
+    const lines = [
+      { roomCategoryId: String(category), rooms: 3, adults: 6, children: 0, mealPlan: "EP", ratePerNight: 1000 },
+      { roomCategoryId: String(category), rooms: 2, adults: 4, children: 0, mealPlan: "CP", ratePerNight: 2000 },
+    ];
+    const q = await call("POST", "/api/advances/bookings/quote", form({ lines, advance: { amount: 3000, paymentChannelId: String(cashChannel) } }));
+    expect(q.status, JSON.stringify(q.json)).toBe(200);
+    const d = q.json.data;
+    expect(d.rooms).toBe(5);
+    expect(d.lines).toHaveLength(2);
+    expect(d.lines.map((l: any) => l.ratePerNight)).toEqual([1000, 2000]);
+    expect(d.perRoom).toHaveLength(5);
+    const shares = d.perRoom.map((r: any) => r.advanceShare);
+    expect(shares.reduce((t: number, x: number) => t + x, 0)).toBeCloseTo(3000, 2); // the split adds up to the advance exactly
+    expect(d.perRoom.every((r: any) => r.advanceShare <= r.total)).toBe(true);
+    expect(shares[3]).toBeGreaterThan(shares[0]); // a dearer room takes a bigger share
+    expect(d.canBook).toBe(true);
+  });
+
+  it("refuses a booking line without enough adults for its rooms, naming the line", async () => {
+    const r = await call("POST", "/api/advances/bookings/quote", form({ lines: [
+      { roomCategoryId: String(category), rooms: 2, adults: 4, ratePerNight: 1000 },
+      { roomCategoryId: String(category), rooms: 3, adults: 1, ratePerNight: 1000 },
+    ] }));
+    expect(r.status).toBe(400);
+    expect(r.json.message).toMatch(/Room line 2/);
+  });
+
   it("refuses a silly extras count", async () => {
     const r = await call("POST", "/api/advances/bookings/quote", form({ extraPersonsWithBed: 99 }));
     expect(r.status).toBe(400);

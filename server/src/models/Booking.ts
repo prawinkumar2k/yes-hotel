@@ -156,6 +156,7 @@ export interface IBooking extends Document {
   mealPlan?: MealPlan;          // EP / CP / MAP / AP
   /** ₹ per person per night agreed at registration for each extra type (defaults from settings). */
   extraRates?: { extraPersonRate: number; extraBedRate: number; childRateNoBed: number; childRateWithBed: number };
+  advanceShare?: number;        // this room's share of a group advance (the most its bill draws from it)
   extraPersonsNoBed: number;    // number of extra persons without bed
   extraPersonsWithBed: number;  // number of extra persons with bed
   extraChildrenNoBed: number;   // number of extra children (3-12) without bed
@@ -342,6 +343,7 @@ const BookingSchema = new Schema<IBooking>(
       ),
       default: undefined,
     },
+    advanceShare: { type: Number, min: 0 },
     extraPersonsNoBed: { type: Number, default: 0 },
     extraPersonsWithBed: { type: Number, default: 0 },
     extraChildrenNoBed: { type: Number, default: 0 },

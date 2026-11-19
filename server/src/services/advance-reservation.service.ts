@@ -10,6 +10,7 @@
  * submits are recognised, and everything is priced by the server (GST per the hotel's rules).
  */
 import { stayExtraRates } from "./tariff.service";
+import { splitAdvanceAcrossRooms } from "./advance-split";
 import crypto from "node:crypto";
 import mongoose from "mongoose";
 import type { Request } from "express";
@@ -46,7 +47,23 @@ const ACTIVE = [BookingStatus.PENDING, BookingStatus.CONFIRMED, BookingStatus.CH
 const MAX_ROOMS = 100;
 const MAX_NIGHTS = 90;
 
+export type LineInput = {
+  roomCategoryId?: string;
+  rooms?: number;
+  adults?: number;
+  children?: number;
+  mealPlan?: string;
+  extraPersonsNoBed?: number;
+  extraPersonsWithBed?: number;
+  extraChildrenNoBed?: number;
+  extraChildrenWithBed?: number;
+  /** Per room per night, typed by the desk (GST inside when "prices include GST" is on). */
+  ratePerNight?: number;
+};
+
 export type ReservationInput = {
+  /** Several room types in one booking. When absent, the single room type given below is used. */
+  lines?: LineInput[];
   guest: { name?: string; phone?: string; email?: string; address?: string; gstin?: string };
   roomCategoryId?: string;
   rooms?: number;
@@ -69,22 +86,65 @@ export type ReservationInput = {
   clientRequestId?: string;
 };
 
-type Clean = {
-  guest: { name: string; phone: string; email: string; address: string; gstin: string };
+type CleanLine = {
   roomCategoryId: string;
   rooms: number;
   adults: number;
   children: number;
+  mealPlan: string;
+  ratePerNight?: number;
+  extras: { personsNoBed: number; personsWithBed: number; childrenNoBed: number; childrenWithBed: number };
+};
+
+type Clean = {
+  guest: { name: string; phone: string; email: string; address: string; gstin: string };
+  /** One entry per room type asked for (a booking may mix, e.g. 3 Deluxe + 2 Executive). */
+  lines: CleanLine[];
+  // Totals over all lines, and the first line's values (kept for single-room-type callers).
+  rooms: number;
+  adults: number;
+  children: number;
+  roomCategoryId: string;
+  mealPlan: string;
+  ratePerNight?: number;
+  extras: CleanLine["extras"];
   checkIn: string;
   checkOut: string;
   arrivalTime?: string;
   departureTime?: string;
-  mealPlan: string;
-  extras: { personsNoBed: number; personsWithBed: number; childrenNoBed: number; childrenWithBed: number };
-  ratePerNight?: number;
   advance: { amount: number; paymentChannelId?: string; method?: string; reference?: string };
   notes?: string;
 };
+
+function cleanLine(raw: LineInput, label: string): CleanLine {
+  if (!raw.roomCategoryId || !mongoose.isValidObjectId(raw.roomCategoryId)) throw new ReservationError(`${label}Choose the room type`);
+  const rooms = Number(raw.rooms);
+  if (!Number.isInteger(rooms) || rooms < 1 || rooms > MAX_ROOMS) throw new ReservationError(`${label}Rooms must be between 1 and ${MAX_ROOMS}`);
+  const adults = Number(raw.adults);
+  const children = Number(raw.children ?? 0);
+  if (!Number.isInteger(adults) || adults < 1) throw new ReservationError(`${label}Enter the number of adults`);
+  if (!Number.isInteger(children) || children < 0) throw new ReservationError(`${label}Children must be 0 or more`);
+  if (adults < rooms) throw new ReservationError(`${label}Every room needs at least one adult — reduce the rooms or add adults`);
+  const mealPlan = String(raw.mealPlan || "EP").toUpperCase();
+  if (!Object.values(MealPlan).includes(mealPlan as MealPlan)) throw new ReservationError(`${label}Choose a valid meal plan`);
+  const extraCount = (name: string, v: unknown) => {
+    const n = Number(v ?? 0);
+    if (!Number.isInteger(n) || n < 0 || n > 20) throw new ReservationError(`${label}${name} must be a whole number from 0 to 20`);
+    return n;
+  };
+  const extras = {
+    personsNoBed: extraCount("Extra persons (no bed)", raw.extraPersonsNoBed),
+    personsWithBed: extraCount("Extra beds", raw.extraPersonsWithBed),
+    childrenNoBed: extraCount("Children (no bed)", raw.extraChildrenNoBed),
+    childrenWithBed: extraCount("Children (with bed)", raw.extraChildrenWithBed),
+  };
+  let ratePerNight: number | undefined;
+  if (raw.ratePerNight !== undefined && raw.ratePerNight !== null && String(raw.ratePerNight) !== "") {
+    ratePerNight = r2(Number(raw.ratePerNight));
+    if (!(ratePerNight > 0)) throw new ReservationError(`${label}Enter a rate per night greater than zero`);
+  }
+  return { roomCategoryId: String(raw.roomCategoryId), rooms, adults, children, mealPlan, ratePerNight, extras };
+}
 
 function clean(input: ReservationInput): Clean {
   const g = input.guest ?? {};
@@ -97,14 +157,12 @@ function clean(input: ReservationInput): Clean {
   const gstin = String(g.gstin ?? "").trim().toUpperCase();
   if (gstin && !/^\d{2}[A-Z]{5}\d{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/.test(gstin)) throw new ReservationError("The customer's GSTIN must be 15 characters, e.g. 29ABCDE1234F1Z5 (or leave it empty)");
 
-  if (!input.roomCategoryId || !mongoose.isValidObjectId(input.roomCategoryId)) throw new ReservationError("Choose the room type");
-  const rooms = Number(input.rooms);
-  if (!Number.isInteger(rooms) || rooms < 1 || rooms > MAX_ROOMS) throw new ReservationError(`Rooms must be between 1 and ${MAX_ROOMS}`);
-  const adults = Number(input.adults);
-  const children = Number(input.children ?? 0);
-  if (!Number.isInteger(adults) || adults < 1) throw new ReservationError("Enter the number of adults");
-  if (!Number.isInteger(children) || children < 0) throw new ReservationError("Children must be 0 or more");
-  if (adults < rooms) throw new ReservationError("Every room needs at least one adult — reduce the rooms or add adults");
+  // Room lines: several room types in one booking, or (older callers) the single type given at the top level.
+  const rawLines: LineInput[] = Array.isArray(input.lines) && input.lines.length ? input.lines : [input];
+  if (rawLines.length > 20) throw new ReservationError("A booking can have at most 20 room lines");
+  const lines = rawLines.map((l, i) => cleanLine(l, rawLines.length > 1 ? `Room line ${i + 1}: ` : ""));
+  const rooms = lines.reduce((t, l) => t + l.rooms, 0);
+  if (rooms > MAX_ROOMS) throw new ReservationError(`A booking can have at most ${MAX_ROOMS} rooms`);
 
   const checkIn = String(input.checkIn ?? "");
   const checkOut = String(input.checkOut ?? "");
@@ -115,38 +173,23 @@ function clean(input: ReservationInput): Clean {
   for (const [label, t] of [["Check-in time", input.arrivalTime], ["Check-out time", input.departureTime]] as const) {
     if (t && !HHMM.test(String(t))) throw new ReservationError(`${label} must look like 14:00`);
   }
-  const mealPlan = String(input.mealPlan || "EP").toUpperCase();
-  if (!Object.values(MealPlan).includes(mealPlan as MealPlan)) throw new ReservationError("Choose a valid meal plan");
-
-  const extraCount = (label: string, v: unknown) => {
-    const n = Number(v ?? 0);
-    if (!Number.isInteger(n) || n < 0 || n > 20) throw new ReservationError(`${label} must be a whole number from 0 to 20`);
-    return n;
-  };
-  const extras = {
-    personsNoBed: extraCount("Extra persons (no bed)", input.extraPersonsNoBed),
-    personsWithBed: extraCount("Extra beds", input.extraPersonsWithBed),
-    childrenNoBed: extraCount("Children (no bed)", input.extraChildrenNoBed),
-    childrenWithBed: extraCount("Children (with bed)", input.extraChildrenWithBed),
-  };
-
-  let ratePerNight: number | undefined;
-  if (input.ratePerNight !== undefined && input.ratePerNight !== null && String(input.ratePerNight) !== "") {
-    ratePerNight = r2(Number(input.ratePerNight));
-    if (!(ratePerNight > 0)) throw new ReservationError("Enter a rate per night greater than zero");
-  }
   const amount = r2(Number(input.advance?.amount ?? 0));
   if (!(amount >= 0)) throw new ReservationError("Enter a valid advance amount");
 
   return {
     guest: { name, phone, email, address: String(g.address ?? "").trim(), gstin },
-    roomCategoryId: String(input.roomCategoryId),
-    rooms, adults, children, checkIn, checkOut,
+    lines,
+    rooms,
+    adults: lines.reduce((t, l) => t + l.adults, 0),
+    children: lines.reduce((t, l) => t + l.children, 0),
+    roomCategoryId: lines[0].roomCategoryId,
+    mealPlan: lines[0].mealPlan,
+    ratePerNight: lines[0].ratePerNight,
+    extras: lines[0].extras,
+    checkIn,
+    checkOut,
     arrivalTime: input.arrivalTime ? String(input.arrivalTime) : undefined,
     departureTime: input.departureTime ? String(input.departureTime) : undefined,
-    mealPlan,
-    extras,
-    ratePerNight,
     advance: { amount, paymentChannelId: input.advance?.paymentChannelId ? String(input.advance.paymentChannelId) : undefined, method: input.advance?.method ? String(input.advance.method).toUpperCase() : undefined, reference: input.advance?.reference ? String(input.advance.reference).trim() : undefined },
     notes: input.notes ? String(input.notes).trim().slice(0, 500) : undefined,
   };
@@ -171,45 +214,77 @@ export async function freeRooms(roomCategoryId: string, checkIn: Date, checkOut:
 
 export type ReservationPricing = Awaited<ReturnType<typeof price>>;
 
-async function price(c: Clean, category: any) {
+async function price(c: Clean, categories: Map<string, any>) {
   const settings: any = (await HotelSettings.findOne().sort({ updatedAt: -1 }).select("mealPlanRates checkInTime checkOutTime taxInclusiveRates extraPersonRate extraBedRate childRateNoBed childRateWithBed").lean()) ?? {};
   const { rules, inclusive } = await loadRoomPricing();
   const ci = new Date(c.checkIn);
   const co = new Date(c.checkOut);
   const nights = countNights(ci, co);
-  const defaultRate = Number(category.basePrice) || 0;
-  const rate = c.ratePerNight ?? defaultRate;
-  if (!(rate > 0)) throw new ReservationError("This room type has no rate set — enter the rate per night");
-  const mealRate = Number(settings.mealPlanRates?.[c.mealPlan] ?? DEFAULT_MEAL_RATES[c.mealPlan] ?? 0);
-  // Only the plan is recorded; meal charges are added by hand, so nothing is charged for it here.
-  const mealPlanTotal = 0;
 
-  // Extra beds / persons / children (same rates and rule as a walk-in), charged per night and put on the first room.
-  const x = stayExtraRates(settings, undefined, category);
-  const extrasPerNight = c.extras.personsNoBed * x.extraPersonRate + c.extras.personsWithBed * x.extraBedRate + c.extras.childrenNoBed * x.childRateNoBed + c.extras.childrenWithBed * x.childRateWithBed;
-  const extrasTotal = r2(extrasPerNight * nights);
+  type PerRoom = { lineIndex: number; categoryId: string; subtotal: number; taxable: number; cgst: number; sgst: number; tax: number; total: number; advanceShare: number };
+  const perRoom: PerRoom[] = [];
+  const lines = c.lines.map((ln, lineIndex) => {
+    const category = categories.get(ln.roomCategoryId);
+    const defaultRate = Number(category.basePrice) || 0;
+    const rate = ln.ratePerNight ?? defaultRate;
+    if (!(rate > 0)) throw new ReservationError(`${category.name} has no rate set — enter the rate per night`);
+    // The meal plan (EP/CP/MAP/AP) is only recorded; meal charges are added by hand, so nothing is charged for it here.
+    const mealRate = Number(settings.mealPlanRates?.[ln.mealPlan] ?? DEFAULT_MEAL_RATES[ln.mealPlan] ?? 0);
+    // Extra beds / persons / children (same rates and rule as a walk-in), charged per night and put on this line's first room.
+    const x = stayExtraRates(settings, undefined, category);
+    const extrasPerNight = ln.extras.personsNoBed * x.extraPersonRate + ln.extras.personsWithBed * x.extraBedRate + ln.extras.childrenNoBed * x.childRateNoBed + ln.extras.childrenWithBed * x.childRateWithBed;
+    const extrasTotal = r2(extrasPerNight * nights);
 
-  const perRoom = Array.from({ length: c.rooms }, (_, i) => {
-    const subtotal = r2(rate * nights + (i === 0 ? mealPlanTotal + extrasTotal : 0));
-    const t = computeRoomTax(rules, { checkIn: ci, checkOut: co, nightlyValue: subtotal / nights, inclusive });
-    return { subtotal, taxable: r2(t.taxable), cgst: r2(t.cgst), sgst: r2(t.sgst), tax: r2(t.tax), total: r2(t.total) };
+    let lineTotal = 0;
+    for (let i = 0; i < ln.rooms; i++) {
+      const subtotal = r2(rate * nights + (i === 0 ? extrasTotal : 0));
+      const t = computeRoomTax(rules, { checkIn: ci, checkOut: co, nightlyValue: subtotal / nights, inclusive });
+      const row = { lineIndex, categoryId: ln.roomCategoryId, subtotal, taxable: r2(t.taxable), cgst: r2(t.cgst), sgst: r2(t.sgst), tax: r2(t.tax), total: r2(t.total), advanceShare: 0 };
+      perRoom.push(row);
+      lineTotal += row.total;
+    }
+    const capacityPerRoom = Number(category.capacity?.adults) || 0;
+    const extraPersons = capacityPerRoom > 0 ? Math.max(0, ln.adults - capacityPerRoom * ln.rooms) : 0;
+    return {
+      index: lineIndex,
+      categoryId: ln.roomCategoryId,
+      categoryName: category.name as string,
+      rooms: ln.rooms,
+      adults: ln.adults,
+      children: ln.children,
+      mealPlan: ln.mealPlan,
+      mealPlanRate: mealRate,
+      ratePerNight: rate,
+      defaultRate,
+      belowDefault: rate < defaultRate,
+      extras: { ...ln.extras, rates: x, perNight: r2(extrasPerNight), total: extrasTotal },
+      total: r2(lineTotal),
+      capacityWarning: extraPersons > 0 ? `${category.name}: ${ln.adults} adults is more than ${capacityPerRoom} per room for ${ln.rooms} room(s): ${extraPersons} extra person(s) — extra-person charges are added at check-in.` : undefined,
+    };
   });
+
   const sum = (k: "taxable" | "cgst" | "sgst" | "tax" | "total") => r2(perRoom.reduce((a, r) => a + r[k], 0));
   const total = sum("total");
   const roundedTotal = Math.round(total);
-  const capacityPerRoom = Number(category.capacity?.adults) || 0;
-  const extraPersons = capacityPerRoom > 0 ? Math.max(0, c.adults - capacityPerRoom * c.rooms) : 0;
+
+  // The advance is shared across the rooms in proportion to what each room costs (exact to the paisa, never above a room's total).
+  const shares = splitAdvanceAcrossRooms(Math.min(c.advance.amount, roundedTotal), perRoom.map((r) => r.total));
+  perRoom.forEach((r, i) => { r.advanceShare = shares[i] ?? 0; });
+
+  const first = lines[0];
+  const firstRoom = perRoom[0];
   return {
     nights,
-    rooms: c.rooms,
-    ratePerNight: rate,
-    defaultRate,
-    belowDefault: rate < defaultRate,
+    rooms: perRoom.length,
+    lines,
+    ratePerNight: first.ratePerNight,
+    defaultRate: first.defaultRate,
+    belowDefault: lines.some((l) => l.belowDefault),
     pricesIncludeTax: inclusive,
-    mealPlan: c.mealPlan,
-    mealPlanRate: mealRate,
-    mealPlanTotal,
-    extras: { ...c.extras, rates: x, perNight: r2(extrasPerNight), total: extrasTotal },
+    mealPlan: first.mealPlan,
+    mealPlanRate: first.mealPlanRate,
+    mealPlanTotal: 0,
+    extras: { ...first.extras, perNight: r2(lines.reduce((t, l) => t + l.extras.perNight, 0)), total: r2(lines.reduce((t, l) => t + l.extras.total, 0)) },
     perRoom,
     taxable: sum("taxable"),
     cgst: sum("cgst"),
@@ -218,21 +293,53 @@ async function price(c: Clean, category: any) {
     total,
     roundedTotal,
     roundOff: r2(roundedTotal - total),
-    gstRate: perRoom[0] ? (perRoom[0].taxable > 0 ? Math.round(((perRoom[0].cgst + perRoom[0].sgst) / perRoom[0].taxable) * 1000) / 10 : 0) : 0,
+    gstRate: firstRoom ? (firstRoom.taxable > 0 ? Math.round(((firstRoom.cgst + firstRoom.sgst) / firstRoom.taxable) * 1000) / 10 : 0) : 0,
     arrivalTime: c.arrivalTime ?? settings.checkInTime ?? "12:00",
     departureTime: c.departureTime ?? settings.checkOutTime ?? "11:00",
-    capacityWarning: extraPersons > 0 ? `${c.adults} adults is more than ${capacityPerRoom} per room for ${c.rooms} room(s): ${extraPersons} extra person(s) — extra-person charges are added at check-in.` : undefined,
+    capacityWarning: lines.map((l) => l.capacityWarning).filter(Boolean).join(" ") || undefined,
   };
 }
 
-/** Live quote for the form: server-side price, GST and how many rooms are free. Changes nothing. */
+/** Loads every room type used by the lines (each must exist and be active). */
+async function loadCategories(c: Clean): Promise<Map<string, any>> {
+  const ids = [...new Set(c.lines.map((l) => l.roomCategoryId))];
+  const docs: any[] = await RoomCategory.find({ _id: { $in: ids } }).lean();
+  const map = new Map<string, any>(docs.map((d) => [String(d._id), d]));
+  for (const id of ids) {
+    const cat = map.get(id);
+    if (!cat || cat.isActive === false) throw new ReservationError("That room type is not available", 404);
+  }
+  return map;
+}
+
+/** Rooms wanted per room type, adding up lines that use the same type. */
+function roomsPerCategory(c: Clean): Map<string, number> {
+  const m = new Map<string, number>();
+  for (const l of c.lines) m.set(l.roomCategoryId, (m.get(l.roomCategoryId) ?? 0) + l.rooms);
+  return m;
+}
+
+/** Live quote for the form: server-side price, GST, the advance share per room and how many rooms are free. Changes nothing. */
 export async function quoteReservation(input: ReservationInput) {
   const c = clean({ ...input, advance: { ...input.advance, amount: input.advance?.amount ?? 0 } });
-  const category: any = await RoomCategory.findById(c.roomCategoryId).lean();
-  if (!category || category.isActive === false) throw new ReservationError("That room type is not available", 404);
-  const pricing = await price(c, category);
-  const stock = await freeRooms(c.roomCategoryId, new Date(c.checkIn), new Date(c.checkOut));
-  return { ...pricing, categoryName: category.name, capacity: stock.capacity, availableRooms: stock.available, canBook: stock.available >= c.rooms };
+  const categories = await loadCategories(c);
+  const pricing = await price(c, categories);
+  const wanted = roomsPerCategory(c);
+  const stock = new Map<string, { capacity: number; available: number }>();
+  for (const id of wanted.keys()) stock.set(id, await freeRooms(id, new Date(c.checkIn), new Date(c.checkOut)));
+  const lines = pricing.lines.map((l) => {
+    const s = stock.get(l.categoryId)!;
+    return { ...l, capacity: s.capacity, availableRooms: s.available, wantedOfType: wanted.get(l.categoryId)!, canBook: s.available >= wanted.get(l.categoryId)! };
+  });
+  const firstStock = stock.get(c.lines[0].roomCategoryId)!;
+  return {
+    ...pricing,
+    lines,
+    categoryName: [...new Set(lines.map((l) => l.categoryName))].join(", "),
+    capacity: firstStock.capacity,
+    availableRooms: lines.length === 1 ? firstStock.available : Math.min(...lines.map((l) => l.availableRooms)),
+    canBook: lines.every((l) => l.canBook),
+  };
 }
 
 function splitName(name: string) {
@@ -259,9 +366,10 @@ export async function createAdvanceReservation(input: ReservationInput, ctx: { r
     await BookingIdempotency.deleteOne({ key }); // failed or stale: allow a clean retry
   }
 
-  const category: any = await RoomCategory.findById(c.roomCategoryId).lean();
-  if (!category || category.isActive === false) throw new ReservationError("That room type is not available", 404);
-  const pricing = await price(c, category);
+  const categories = await loadCategories(c);
+  const category: any = categories.get(c.roomCategoryId);
+  const categoryNames = [...new Set(c.lines.map((l) => categories.get(l.roomCategoryId).name as string))].join(", ");
+  const pricing = await price(c, categories);
   if (c.advance.amount > pricing.roundedTotal + 0.01) {
     throw new ReservationError(`The advance ₹${c.advance.amount.toLocaleString("en-IN")} is more than the booking total ₹${pricing.roundedTotal.toLocaleString("en-IN")}`);
   }
@@ -275,9 +383,12 @@ export async function createAdvanceReservation(input: ReservationInput, ctx: { r
   }
   const ci = new Date(c.checkIn);
   const co = new Date(c.checkOut);
-  const stock = await freeRooms(c.roomCategoryId, ci, co);
-  if (stock.available < c.rooms) {
-    throw new ReservationError(`Only ${stock.available} ${category.name} room${stock.available === 1 ? " is" : "s are"} free for those dates (you asked for ${c.rooms}). Choose other dates or another room type.`, 409);
+  for (const [catId, wantedRooms] of roomsPerCategory(c)) {
+    const stock = await freeRooms(catId, ci, co);
+    if (stock.available < wantedRooms) {
+      const nm = categories.get(catId).name;
+      throw new ReservationError(`Only ${stock.available} ${nm} room${stock.available === 1 ? " is" : "s are"} free for those dates (you asked for ${wantedRooms}). Choose other dates or another room type.`, 409);
+    }
   }
 
   try {
@@ -296,18 +407,24 @@ export async function createAdvanceReservation(input: ReservationInput, ctx: { r
   const { firstName, lastName } = splitName(c.guest.name);
   const email = c.guest.email ? c.guest.email.toLowerCase() : "";
 
-  // Guests per room: adults and children spread evenly, the remainder on the first rooms.
-  const spread = (total: number, i: number) => Math.floor(total / c.rooms) + (i < total % c.rooms ? 1 : 0);
+  // One slot per room, in line order: which room type line it belongs to and its place within that line.
+  const slots = c.lines.flatMap((ln, li) => Array.from({ length: ln.rooms }, (_, k) => ({ ln, li, k })));
+  // Guests per room within a line: adults and children spread evenly, the remainder on the line's first rooms.
+  const spread = (total: number, k: number, rooms: number) => Math.floor(total / rooms) + (k < total % rooms ? 1 : 0);
 
   let result: any;
   const session = await mongoose.startSession();
   try {
-    const capacity = await prepareInventoryDays(c.roomCategoryId, ci, co); // creates the day records (outside the transaction)
+    const wanted = roomsPerCategory(c);
+    const capacities = new Map<string, number>();
+    for (const catId of wanted.keys()) capacities.set(catId, await prepareInventoryDays(catId, ci, co)); // creates the day records (outside the transaction)
     await session.withTransaction(async () => {
-      await claimInventoryDays({ roomCategoryId: c.roomCategoryId, checkInDate: ci, checkOutDate: co, capacity, count: c.rooms, session });
+      for (const [catId, count] of wanted) await claimInventoryDays({ roomCategoryId: catId, checkInDate: ci, checkOutDate: co, capacity: capacities.get(catId)!, count, session });
 
       const created: any[] = [];
-      for (let i = 0; i < c.rooms; i++) {
+      for (let i = 0; i < slots.length; i++) {
+        const { ln, li, k } = slots[i];
+        const lp = pricing.lines[li];
         const bookingReference = await generateBookingReference("RES", session);
         const pr = pricing.perRoom[i];
         const [b] = await Booking.create(
@@ -320,17 +437,17 @@ export async function createAdvanceReservation(input: ReservationInput, ctx: { r
               address: c.guest.address || undefined,
               gstin: c.guest.gstin || undefined,
             },
-            roomCategory: category._id,
+            roomCategory: new mongoose.Types.ObjectId(ln.roomCategoryId),
             checkInDate: ci,
             checkOutDate: co,
             stayType: "NIGHTLY",
             arrivalTime: pricing.arrivalTime,
             departureTime: pricing.departureTime,
-            mealPlan: c.mealPlan as MealPlan,
-            ...(i === 0 ? { extraPersonsNoBed: c.extras.personsNoBed, extraPersonsWithBed: c.extras.personsWithBed, extraChildrenNoBed: c.extras.childrenNoBed, extraChildrenWithBed: c.extras.childrenWithBed } : {}),
-            ratePerNight: pricing.ratePerNight,
-            adults: spread(c.adults, i),
-            children: spread(c.children, i),
+            mealPlan: ln.mealPlan as MealPlan,
+            ...(k === 0 ? { extraPersonsNoBed: ln.extras.personsNoBed, extraPersonsWithBed: ln.extras.personsWithBed, extraChildrenNoBed: ln.extras.childrenNoBed, extraChildrenWithBed: ln.extras.childrenWithBed } : {}),
+            ratePerNight: lp.ratePerNight,
+            adults: spread(ln.adults, k, ln.rooms),
+            children: spread(ln.children, k, ln.rooms),
             status: BookingStatus.CONFIRMED,
             totalAmount: pr.total,
             taxAmount: pr.tax,
@@ -340,6 +457,8 @@ export async function createAdvanceReservation(input: ReservationInput, ctx: { r
             pricesIncludeTax: pricing.pricesIncludeTax,
             paymentStatus: PaymentStatus.UNPAID,
             paidAmount: 0,
+            // This room's share of the advance (the advance is split across the rooms by what each costs).
+            advanceShare: c.advance.amount > 0 ? pr.advanceShare : undefined,
             billingInstruction: channelCode || undefined,
             specialRequests: i === 0 ? c.notes : undefined,
             source: BookingSource.ADMIN,
@@ -381,7 +500,10 @@ export async function createAdvanceReservation(input: ReservationInput, ctx: { r
         bookingNumber: created[0].bookingReference,
         bookings: created.map((b) => ({ id: String(b._id), reference: b.bookingReference })),
         rooms: c.rooms,
-        categoryName: category.name,
+        categoryName: categoryNames,
+        lines: pricing.lines.map((l) => ({ category: l.categoryName, rooms: l.rooms, ratePerNight: l.ratePerNight, total: l.total })),
+        // The advance shared across the rooms (each room's bill draws at most its own share).
+        advanceSplit: created.map((b, i) => ({ reference: b.bookingReference, category: pricing.lines[slots[i].li].categoryName, roomTotal: pricing.perRoom[i].total, share: pricing.perRoom[i].advanceShare })),
         checkIn: c.checkIn,
         checkOut: c.checkOut,
         total: pricing.total,
@@ -406,22 +528,22 @@ export async function createAdvanceReservation(input: ReservationInput, ctx: { r
     action: "advance_booking.created",
     resourceType: "Booking",
     resourceId: result.primaryBookingId,
-    metadata: { bookingNumber: result.bookingNumber, rooms: c.rooms, category: category.name, checkIn: c.checkIn, checkOut: c.checkOut, total: pricing.total, advance: c.advance.amount, guestMatch: result.guest },
+    metadata: { bookingNumber: result.bookingNumber, rooms: c.rooms, category: categoryNames, checkIn: c.checkIn, checkOut: c.checkOut, total: pricing.total, advance: c.advance.amount, guestMatch: result.guest },
   }).catch(() => undefined);
   if (result.advance) {
     await createAuditLog({ req: ctx.req, action: "advance.received", resourceType: "AdvancePayment", resourceId: result.advance.id, metadata: { advanceNumber: result.advance.number, bookingId: result.primaryBookingId, amount: result.advance.amount, method } }).catch(() => undefined);
   }
-  if (pricing.belowDefault) {
+  for (const lp of pricing.lines.filter((l) => l.belowDefault)) {
     try {
       const { queueForVerification } = await import("./reception-verification");
       await queueForVerification({
         type: VerificationType.TARIFF_BELOW_DEFAULT,
-        subjectKey: `advanceBooking:${result.primaryBookingId}:tariff`,
+        subjectKey: `advanceBooking:${result.primaryBookingId}:tariff:${lp.index}`,
         returnQueue: "FRONT_DESK",
-        summary: `Advance booking tariff below default: ${category.name} ₹${pricing.ratePerNight} (default ₹${pricing.defaultRate}) × ${c.rooms} room(s)`,
-        amount: r2((pricing.defaultRate - pricing.ratePerNight) * c.rooms * pricing.nights),
+        summary: `Advance booking tariff below default: ${lp.categoryName} ₹${lp.ratePerNight} (default ₹${lp.defaultRate}) × ${lp.rooms} room(s)`,
+        amount: r2((lp.defaultRate - lp.ratePerNight) * lp.rooms * pricing.nights),
         bookingId: result.primaryBookingId,
-        details: { rate: pricing.ratePerNight, defaultRate: pricing.defaultRate, rooms: c.rooms, nights: pricing.nights },
+        details: { rate: lp.ratePerNight, defaultRate: lp.defaultRate, rooms: lp.rooms, nights: pricing.nights },
         req: ctx.req,
       });
     } catch { /* verification must never undo a saved reservation */ }
@@ -440,7 +562,17 @@ export async function getReservationConfirmation(bookingId: string) {
   const live = all.filter((b) => b.status !== BookingStatus.CANCELLED);
   const rows = live.length ? live : all;
   const primary = rows[0];
-  const category: any = await RoomCategory.findById(primary.roomCategory).select("name").lean();
+  const cats: any[] = await RoomCategory.find({ _id: { $in: [...new Set(rows.map((b) => String(b.roomCategory)))] } }).select("name").lean();
+  const catName = new Map<string, string>(cats.map((x) => [String(x._id), x.name]));
+  // Rooms per room type, e.g. "Deluxe Room × 3, Executive Room × 2".
+  const perType = new Map<string, { name: string; rooms: number; rate: number }>();
+  for (const b of rows) {
+    const id = String(b.roomCategory);
+    const cur = perType.get(id) ?? { name: catName.get(id) ?? "Room", rooms: 0, rate: Number(b.ratePerNight) || 0 };
+    cur.rooms += 1;
+    perType.set(id, cur);
+  }
+  const category: any = { name: [...perType.values()].map((t) => (perType.size > 1 ? `${t.name} × ${t.rooms}` : t.name)).join(", ") };
   const settings: any = (await HotelSettings.findOne().sort({ updatedAt: -1 }).lean()) ?? {};
 
   const sum = (k: string) => r2(rows.reduce((a, b) => a + (Number(b[k]) || 0), 0));
@@ -496,6 +628,7 @@ export async function getReservationConfirmation(bookingId: string) {
       sac: "996311",
       unitPrice: r2(taxable / Math.max(1, rows.length * nights)),
     },
+    items: [...perType.values()].map((t) => ({ description: t.name, rooms: t.rooms, ratePerNight: t.rate })),
     amounts: { taxable, cgst, sgst, totalGst, total, roundedTotal, roundOff: r2(roundedTotal - total), gstRate: taxable > 0 ? Math.round(((cgst + sgst) / taxable) * 1000) / 10 : 0 },
     advance: {
       paid: advancePaid,
