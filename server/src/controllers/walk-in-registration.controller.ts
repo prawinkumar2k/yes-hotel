@@ -33,7 +33,7 @@ import { HotelSettings } from "../models/HotelSettings";
 import { Property } from "../models/Property";
 import { User, UserRole } from "../models/User";
 import { createFolio, postCharge } from "../services/folio.service";
-import { categoryNightlyRate, dayUseRate, mealPlanCharge, splitAcrossRooms, TariffError } from "../services/tariff.service";
+import { categoryNightlyRate, dayUseRate, splitAcrossRooms, TariffError } from "../services/tariff.service";
 
 const CATEGORY_PRICING_FIELDS = "name basePrice singleOccupancyPrice hourlyPrice dayUseAllowed dayUseSinglePrice dayUseDoublePrice dayUseMaxHours extraPersonRate extraBedRate childRateNoBed childRateWithBed";
 import { claimRoomNights, RoomUnavailableError } from "../services/room-nights.service";
@@ -300,11 +300,7 @@ export const calculateRegistrationRate = async (req: Request, res: Response) => 
 
     const mealPlanRatePP = mealPlanRates[mealPlan as keyof typeof mealPlanRates] || 0;
     const totalGuestsForMealPlan = Number(adults) + Number(children) + Number(extraPersonsNoBed) + Number(extraPersonsWithBed) + Number(extraChildrenNoBed) + Number(extraChildrenWithBed);
-    const mealPlanTotal = mealPlanCharge({
-        plan: String(mealPlan), adults: Number(adults), children: Number(children),
-        extraGuests: Number(extraPersonsNoBed) + Number(extraPersonsWithBed) + Number(extraChildrenNoBed) + Number(extraChildrenWithBed),
-        roomCount: rooms.length, nights, settings, perPersonRates: mealPlanRates as unknown as Record<string, number>,
-      });
+    const mealPlanTotal = 0; // The meal plan (EP/CP/MAP/AP) is only recorded on the stay. Reception adds any meal charge by hand (Add Charge).
 
     // Calculate room charges across all selected rooms
     let totalRoomCharges = 0;
@@ -637,11 +633,7 @@ export const walkInArrivalRegistration = async (req: Request, res: Response) => 
       const mealPlanRates = settings?.mealPlanRates || { EP: 0, CP: 500, MAP: 1000, AP: 1500, RO: 0, BB: 500 };
       const mealPlanRatePP = mealPlanRates[mealPlan as keyof typeof mealPlanRates] || 0;
       const totalGuestsForMealPlan = Number(adults) + Number(children) + Number(extraPersonsNoBed) + Number(extraPersonsWithBed) + Number(extraChildrenNoBed) + Number(extraChildrenWithBed);
-      const mealPlanTotal = mealPlanCharge({
-        plan: String(mealPlan), adults: Number(adults), children: Number(children),
-        extraGuests: Number(extraPersonsNoBed) + Number(extraPersonsWithBed) + Number(extraChildrenNoBed) + Number(extraChildrenWithBed),
-        roomCount: rooms.length, nights, settings, perPersonRates: mealPlanRates as unknown as Record<string, number>,
-      });
+      const mealPlanTotal = 0; // The meal plan (EP/CP/MAP/AP) is only recorded on the stay. Reception adds any meal charge by hand (Add Charge).
 
       // Group ID for linking multiple rooms
       const groupId = rooms.length > 1 ? new mongoose.Types.ObjectId() : undefined;

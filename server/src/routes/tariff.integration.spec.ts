@@ -111,10 +111,10 @@ describe("walk-in rate preview with the real tariff", () => {
   });
 
   it("CP: single +₹200, double +₹300, extra person breakfast +₹200", async () => {
-    expect((await calc([ids.rDelux], { adults: 1, mealPlan: "CP" })).json.data.mealPlanTotal).toBe(200);
-    expect((await calc([ids.rDelux], { adults: 2, mealPlan: "CP" })).json.data.mealPlanTotal).toBe(300);
-    expect((await calc([ids.rDelux], { adults: 2, mealPlan: "CP", extraPersonsNoBed: 1 })).json.data.mealPlanTotal).toBe(500);
-    expect((await calc([ids.rExec], { adults: 1, mealPlan: "CP" })).json.data.mealPlanTotal).toBe(200);
+    expect((await calc([ids.rDelux], { adults: 1, mealPlan: "CP" })).json.data.mealPlanTotal).toBe(0);
+    expect((await calc([ids.rDelux], { adults: 2, mealPlan: "CP" })).json.data.mealPlanTotal).toBe(0);
+    expect((await calc([ids.rDelux], { adults: 2, mealPlan: "CP", extraPersonsNoBed: 1 })).json.data.mealPlanTotal).toBe(0);
+    expect((await calc([ids.rExec], { adults: 1, mealPlan: "CP" })).json.data.mealPlanTotal).toBe(0);
   });
 
   it("day use: Delux flat ₹1,200 single / ₹1,600 double up to 12 hours; Executive has none", async () => {

@@ -161,7 +161,8 @@ async function price(c: Clean, category: any) {
   const rate = c.ratePerNight ?? defaultRate;
   if (!(rate > 0)) throw new ReservationError("This room type has no rate set — enter the rate per night");
   const mealRate = Number(settings.mealPlanRates?.[c.mealPlan] ?? DEFAULT_MEAL_RATES[c.mealPlan] ?? 0);
-  const mealPlanTotal = r2(mealRate * (c.adults + c.children) * nights);
+  // Only the plan is recorded; meal charges are added by hand, so nothing is charged for it here.
+  const mealPlanTotal = 0;
 
   const perRoom = Array.from({ length: c.rooms }, (_, i) => {
     const subtotal = r2(rate * nights + (i === 0 ? mealPlanTotal : 0));

@@ -66,7 +66,7 @@ export async function computeMis(month: string, scope: Record<string, unknown> =
   // Refunds and advance adjustments have no property of their own: they belong to the property of their booking.
   const byBooking: Record<string, unknown> = Object.keys(scope).length ? { booking: { $in: await Booking.find(scope as any).distinct("_id") } } : {};
   const [checkedIn, checkedOut, stays, cancelled, noShows, payments, advances, adjustments, shifts, refunds, credits] = await Promise.all([
-    Booking.find({ ...scope, checkedInAt: inRange } as any).select("source otaName otaPaymentModel otaReceivable checkedInAt").lean(),
+    Booking.find({ ...scope, checkedInAt: inRange } as any).select("source otaName otaPaymentModel otaReceivable checkedInAt _id").lean(),
     Booking.find({ ...scope, status: BookingStatus.CHECKED_OUT, checkedOutAt: inRange } as any).select("checkedOutAt").lean(),
     Booking.find({ ...scope, status: { $in: CHECKED_STAYS }, checkInDate: { $lt: end }, checkOutDate: { $gt: start } } as any).select("checkInDate checkOutDate adults children stayType").lean(),
     Booking.find({ ...scope, status: BookingStatus.CANCELLED, updatedAt: inRange } as any).select("updatedAt").lean(),
@@ -79,6 +79,12 @@ export async function computeMis(month: string, scope: Record<string, unknown> =
     CreditEntry.find({ ...scope, $or: [{ createdAt: inRange }, { "collections.at": inRange }] } as any).select("amount createdAt collections").lean(),
   ]);
 
+  // OTA-prepaid bookings now go on credit against the OTA (money counted when the OTA pays). Only older
+  // OTA bookings, which have no such credit entry, are still shown as "OTA Payment" received at check-in.
+  const otaOnCredit = new Set(
+    (await CreditEntry.find({ kind: "OTA", booking: { $in: (checkedIn as any[]).map((b) => b._id) } } as any).select("booking").lean()).map((e: any) => String(e.booking)),
+  );
+
   // Rooms
   for (const b of checkedIn as any[]) {
     const r = row(b.checkedInAt); if (!r) continue;
@@ -87,7 +93,7 @@ export async function computeMis(month: string, scope: Record<string, unknown> =
       r.ota += 1;
       const n = String(b.otaName ?? "");
       if (/make\s*my\s*trip|mmt/i.test(n)) r.otaMmt += 1; else if (/agoda/i.test(n)) r.otaAgoda += 1; else if (/booking/i.test(n)) r.otaBooking += 1; else if (/goibibo|ibibo/i.test(n)) r.otaGoibibo += 1;
-      if (b.otaPaymentModel === "OTA_PREPAID") r.otaPayment += Number(b.otaReceivable || 0);
+      if (b.otaPaymentModel === "OTA_PREPAID" && !otaOnCredit.has(String(b._id))) r.otaPayment += Number(b.otaReceivable || 0);
     } else if (b.source === "WALK_IN") r.walkin += 1;
     else if (["CORPORATE", "TRAVEL_AGENT", "GROUP", "GOVERNMENT"].includes(b.source)) r.travel += 1;
     else r.reserved += 1;

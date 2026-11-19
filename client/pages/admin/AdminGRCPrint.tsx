@@ -1,3 +1,4 @@
+import { docImageSrc } from "@/lib/docImage";
 import { usePrintLayout } from "@/lib/usePrintLayout";
 import { advanceInfo, settlementKind } from "@/lib/advanceInfo";
 import { useEffect, useState } from "react";
@@ -556,11 +557,12 @@ export default function AdminGRCPrint() {
                 <X size={18} />
               </button>
             </div>
-            {openDoc.src.startsWith("data:image") || openDoc.src.startsWith("http") ? (
-              <img src={openDoc.src} alt={openDoc.label} className="max-h-[85vh] max-w-full object-contain rounded bg-white" />
-            ) : (
-              <div className="bg-white rounded p-8 text-sm text-gray-600">This document has no viewable image.</div>
-            )}
+            {(() => {
+              const d = docImageSrc(openDoc.src);
+              if (d.kind === "image") return <img src={d.src} alt={openDoc.label} className="max-h-[85vh] max-w-full object-contain rounded bg-white" onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} />;
+              if (d.kind === "pdf") return <iframe src={d.src} title={openDoc.label} className="w-[80vw] max-w-4xl h-[85vh] rounded bg-white" />;
+              return <div className="bg-white rounded p-8 text-sm text-gray-600">This document has no viewable image. Re-upload it from the check-in screen.</div>;
+            })()}
           </div>
         </div>
       )}

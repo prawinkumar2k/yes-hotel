@@ -8,6 +8,8 @@ import {
   getTodayDepartures,
 } from "../controllers/front-desk.controller";
 
+import { getSalesSummary } from "../controllers/front-desk-sales.controller";
+
 const router = Router();
 
 router.use(protect);
@@ -15,6 +17,9 @@ router.use(protect);
 // GET /api/front-desk/summary — the full daily operational snapshot
 router.get("/summary", requirePropertyAccess, requirePermission("FRONT_DESK", "VIEW"), getFrontDeskSummary
 );
+
+// GET /api/front-desk/sales-summary — sales cards and chart for the reception dashboard
+router.get("/sales-summary", requirePropertyAccess, requirePermission("FRONT_DESK", "VIEW"), getSalesSummary);
 
 // GET /api/front-desk/arrivals — today's arrivals with search
 router.get("/arrivals", requirePropertyAccess, requirePermission("FRONT_DESK", "VIEW"), getTodayArrivals

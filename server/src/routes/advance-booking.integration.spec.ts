@@ -98,7 +98,7 @@ describe("quote", () => {
   it("warns when there are more adults than the rooms hold; meal plan is charged per person per night", async () => {
     const q = await call("POST", "/api/advances/bookings/quote", form({ adults: 24, mealPlan: "CP" }));
     expect(q.json.data.capacityWarning).toMatch(/extra person/);
-    expect(q.json.data.mealPlanTotal).toBeGreaterThan(0);
+    expect(q.json.data.mealPlanTotal).toBe(0); // the plan is recorded, not charged
   });
 });
 

@@ -1,3 +1,4 @@
+import { docImageSrc } from "@/lib/docImage";
 import { advanceInfo, settlementKind } from "@/lib/advanceInfo";
 import { usePrintLayout } from "@/lib/usePrintLayout";
 import { useState, useMemo, useEffect } from "react";
@@ -549,9 +550,9 @@ function BookingDocCard({
                 <div className="flex gap-4 overflow-x-auto py-1">
                   {guest.idProofImages.map((img: string, idx: number) => (
                     <div key={idx} className="border border-black bg-white p-1 rounded shadow-sm text-center">
-                      {img.startsWith("data:image") || img.startsWith("http") ? (
+                      {docImageSrc(img).kind === "image" ? (
                         <img
-                          src={img}
+                          src={docImageSrc(img).src}
                           alt={`Customer Document ${idx + 1}`}
                           className="h-28 w-44 object-contain rounded border border-gray-200"
                         />

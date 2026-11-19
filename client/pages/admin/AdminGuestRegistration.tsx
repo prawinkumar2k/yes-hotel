@@ -1,3 +1,4 @@
+import { docImageSrc } from "@/lib/docImage";
 import AdvanceBookingDialog from "@/components/admin/AdvanceBookingDialog";
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
@@ -1289,9 +1290,9 @@ export default function AdminGuestRegistration() {
                               className="group relative bg-white rounded-xl border-2 border-gray-200 hover:border-[#c9a227] p-1.5 shadow-sm hover:shadow-md transition-all cursor-pointer overflow-hidden flex flex-col"
                             >
                               <div className="relative aspect-video sm:aspect-square w-full bg-gray-100 rounded-lg overflow-hidden flex items-center justify-center">
-                                {src.startsWith("data:image") || src.startsWith("http") ? (
+                                {docImageSrc(src).kind === "image" ? (
                                   <img
-                                    src={src}
+                                    src={docImageSrc(src).src}
                                     alt={`ID Document ${idx + 1}`}
                                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                                   />
