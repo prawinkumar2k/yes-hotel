@@ -168,7 +168,7 @@ export const getSalesReport = async (req: Request, res: Response) => {
         if (line.lineType === FolioLineType.TAX_CGST) totalCgst += amt;
         else if (line.lineType === FolioLineType.TAX_SGST) totalSgst += amt;
         else if (line.lineType === FolioLineType.TAX_IGST) totalIgst += amt;
-        else totalGrossRevenue += amt;
+        else if (line.lineType !== FolioLineType.REFUND) totalGrossRevenue += amt; // a refund is money handed back, not revenue
       } else {
         if (line.lineType === FolioLineType.DISCOUNT) totalDiscounts += amt;
         else if (line.lineType === FolioLineType.PAYMENT) totalPaymentsCollected += amt;
@@ -319,7 +319,7 @@ export const getRevenueTrend = async (req: Request, res: Response) => {
     const since = dayBounds(addDays(todayYmd, -(days - 1))).start;
 
     const pipeline: any[] = [
-      { $match: { direction: FolioLineDirection.DEBIT, createdAt: { $gte: since } } },
+      { $match: { direction: FolioLineDirection.DEBIT, lineType: { $ne: FolioLineType.REFUND }, createdAt: { $gte: since } } },
       {
         $group: {
           _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt", timezone: PROPERTY_TIMEZONE } },
@@ -356,7 +356,7 @@ export const getRevenueTrend = async (req: Request, res: Response) => {
 export const getDepartmentPL = async (req: Request, res: Response) => {
   try {
     const { startDate, endDate } = req.query;
-    const query: any = { direction: FolioLineDirection.DEBIT };
+    const query: any = { direction: FolioLineDirection.DEBIT, lineType: { $ne: FolioLineType.REFUND } };
     if (startDate || endDate) {
       query.createdAt = {};
       if (startDate) query.createdAt.$gte = new Date(startDate as string);
