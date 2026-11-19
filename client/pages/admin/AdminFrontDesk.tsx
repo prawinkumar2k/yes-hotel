@@ -2444,8 +2444,14 @@ export default function AdminFrontDesk() {
               </div>
             </div>
 
+            {folioDrawer.folio?.provisional && (
+              <div className="px-5 py-2.5 bg-amber-50 border-b border-amber-200 text-xs text-amber-900">
+                <b>Provisional bill.</b> This reservation has not checked in yet, so this is what the booking will cost, with the advance received. It cannot be edited here; the real bill opens at check-in. Add payments from the booking row.
+              </div>
+            )}
+
             {/* 4. ACTIONS COMMAND STRIP */}
-            <div className="px-5 py-3 bg-gray-50 border-b border-gray-200 flex flex-wrap items-center justify-between gap-2 text-xs">
+            <div className={cn("px-5 py-3 bg-gray-50 border-b border-gray-200 flex flex-wrap items-center justify-between gap-2 text-xs", folioDrawer.folio?.provisional && "hidden")}>
               <div className="flex items-center gap-2">
                 <button
                   type="button"
@@ -2803,8 +2809,8 @@ export default function AdminFrontDesk() {
                               <td className="p-3 text-center">
                                 <button
                                   type="button"
-                                  disabled={submittingAction}
-                                  onClick={() => handleDeleteLine(item._id)}
+                                  disabled={submittingAction || item.provisional}
+                                  onClick={() => !item.provisional && handleDeleteLine(item._id)}
                                   className="text-red-400 hover:text-red-700 p-1 rounded hover:bg-red-50 transition"
                                   title="Delete line item"
                                 >

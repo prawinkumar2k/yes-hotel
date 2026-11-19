@@ -1,3 +1,4 @@
+import { AdvancePayment as AdvancePaymentModel } from "../models/AdvancePayment";
 import { queueForVerification } from "../services/reception-verification";
 import { VerificationType } from "../models/VerificationRequest";
 import { Request, Response } from "express";
@@ -89,6 +90,53 @@ export const getFolioByBooking = async (req: Request, res: Response) => {
     // 1. Read-only: a folio is opened by check-in (or another explicit action), never by a read.
     const targetFolio: any = await findFolioForBooking(booking._id);
     if (!targetFolio) {
+      // A reservation that has not checked in yet has no bill to open. Show a provisional one, built from the booking
+      // itself (room charges, GST, advance received), so staff can see what is due. It is read-only and replaced by the
+      // real bill when the guest checks in.
+      if (["CONFIRMED", "PENDING"].includes(String(booking.status))) {
+        const BookingModel = mongoose.model("Booking");
+        const all: any[] = booking.groupId
+          ? await BookingModel.find({ groupId: booking.groupId }).populate("assignedRoom", "roomNumber floor").populate("roomCategory", "name slug").sort({ bookingReference: 1 })
+          : [booking];
+        const live = all.filter((b) => String(b.status) !== "CANCELLED");
+        const rows = live.length ? live : all;
+        const r2 = (n: number) => Math.round((Number(n) + Number.EPSILON) * 100) / 100;
+        const nights = Math.max(1, Math.round((new Date(rows[0].checkOutDate).getTime() - new Date(rows[0].checkInDate).getTime()) / 86400000));
+        const lines: any[] = [];
+        let tax = 0, cgst = 0, sgst = 0, charges = 0;
+        for (const b of rows) {
+          const net = r2((b.totalAmount || 0) - (b.taxAmount || 0));
+          const cat = (b.roomCategory as any)?.name || "Room";
+          const extras = (b.extraPersonsNoBed || 0) + (b.extraPersonsWithBed || 0) + (b.extraChildrenNoBed || 0) + (b.extraChildrenWithBed || 0);
+          const base = { folio: `provisional-${booking._id}`, booking: b._id, direction: "DEBIT", date: b.checkInDate, createdAt: b.createdAt, provisional: true, postedBy: "RESERVATION" };
+          lines.push({ ...base, _id: `prov-${b._id}-room`, lineType: "ROOM_CHARGE", amount: net, description: `${cat} — ${nights} night${nights > 1 ? "s" : ""} @ ₹${Number(b.ratePerNight || 0).toLocaleString("en-IN")}${extras ? " + extra bed / persons" : ""} (${b.bookingReference})` });
+          if (b.cgstAmount > 0) lines.push({ ...base, _id: `prov-${b._id}-cgst`, lineType: "TAX_CGST", amount: b.cgstAmount, description: `CGST on ${b.bookingReference}` });
+          if (b.sgstAmount > 0) lines.push({ ...base, _id: `prov-${b._id}-sgst`, lineType: "TAX_SGST", amount: b.sgstAmount, description: `SGST on ${b.bookingReference}` });
+          charges += net; tax += b.taxAmount || 0; cgst += b.cgstAmount || 0; sgst += b.sgstAmount || 0;
+        }
+        const advances: any[] = await AdvancePaymentModel.find({ booking: { $in: rows.map((b) => b._id) } }).sort({ receivedAt: 1 }).lean();
+        let advanceTotal = 0;
+        for (const a of advances) {
+          const net = r2((a.amount || 0) - (a.totalRefunded || 0));
+          if (net <= 0) continue;
+          advanceTotal += net;
+          lines.push({ _id: `prov-adv-${a._id}`, folio: `provisional-${booking._id}`, booking: a.booking, direction: "CREDIT", lineType: "ADVANCE_ADJUSTMENT", amount: net, date: a.receivedAt, createdAt: a.receivedAt, provisional: true, postedBy: "RESERVATION", paymentMode: a.method, paymentReference: a.advanceNumber, description: `Advance ${a.advanceNumber} received — applied to the bill at check-in` });
+        }
+        const total = r2(charges + tax);
+        const folio = { _id: `provisional-${booking._id}`, provisional: true, status: "PROVISIONAL", totalCharges: r2(charges), totalTax: r2(tax), cgst: r2(cgst), sgst: r2(sgst), totalDiscounts: 0, totalPaid: 0, totalAdvanceAdjusted: r2(advanceTotal), balance: r2(total - advanceTotal) };
+        return res.json({
+          success: true,
+          data: {
+            folio,
+            lines,
+            groupFolios: [],
+            groupBookings: rows.map((b: any) => ({ _id: b._id, bookingReference: b.bookingReference, billNumber: b.billNumber, roomNumber: b.assignedRoom?.roomNumber, categoryName: b.roomCategory?.name, ratePerNight: b.ratePerNight, totalAmount: b.totalAmount })),
+            isGroup: rows.length > 1,
+            roomsSummary: "",
+            provisional: true,
+          },
+        });
+      }
       return res.status(404).json({ success: false, message: "No folio yet for this booking: a folio is opened at check-in" });
     }
 

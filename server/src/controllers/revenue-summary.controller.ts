@@ -16,12 +16,13 @@ const blank = (key: string, label: string): Row => ({ key, label, amount: 0, dis
 function rowKey(lineType: string, description: string): string | null {
   switch (lineType) {
     case FolioLineType.ROOM_CHARGE:
-    case FolioLineType.EXTRA_PERSON:
-    case FolioLineType.EARLY_CHECK_IN:
-    case FolioLineType.LATE_CHECK_OUT:
       return "roomSales";
+    case FolioLineType.EXTRA_PERSON:
     case FolioLineType.EXTRA_BED:
       return "extraBed";
+    case FolioLineType.EARLY_CHECK_IN:
+    case FolioLineType.LATE_CHECK_OUT:
+      return "earlyLate";
     case FolioLineType.LAUNDRY:
       return "laundry";
     // The hotel has no restaurant, minibar, spa or transport. Should an old bill still carry such a charge, it is
@@ -69,7 +70,7 @@ export const getRevenueSummary = async (req: Request, res: Response) => {
     const inPeriod = new Set(nights);
 
     const dept: Dept[] = [
-      { name: "Reception", rows: [blank("roomSales", "Room Sales"), blank("extraBed", "Extra-Bed"), blank("planCharges", "Plan Charges"), blank("otaCommission", "OTA Commission")] },
+      { name: "Reception", rows: [blank("roomSales", "Room Sales"), blank("extraBed", "Extra Bed / Extra Person"), blank("earlyLate", "Early Check-in / Late Check-out"), blank("planCharges", "Plan Charges"), blank("otaCommission", "OTA Commission")] },
       { name: "House Keeping", rows: [blank("laundry", "Laundry")] },
       { name: "Others", rows: [blank("counterSales", "Counter Sales (water, tea / coffee, etc.)"), blank("otherCharges", "Other Charges")] },
     ];
@@ -89,6 +90,7 @@ export const getRevenueSummary = async (req: Request, res: Response) => {
 
     let cgst = 0, sgst = 0, igst = 0;
     for (const l of lines) {
+      if (l.postedBy === "COUNTER_SALE" && l.lineType !== FolioLineType.ROOM_CHARGE) continue; // counted once, from the cashier shifts
       const isReversal = l.lineType === FolioLineType.REVERSAL;
       const sign = isReversal ? -1 : 1;
       const origin = isReversal ? originals.get(String(l.reversedLineId)) : l;
@@ -145,10 +147,18 @@ export const getRevenueSummary = async (req: Request, res: Response) => {
     const days = nights.length;
     const monthDays = new Date(Number(to.slice(0, 4)), Number(to.slice(5, 7)), 0).getDate(); // days in the month of the end date
 
+    // The MIS Daily Sheet's own sales for the same period (before GST): the two must agree.
+    const { computeMis } = await import("../services/mis.service");
+    const months = [...new Set(nights.map((n) => n.slice(0, 7)))];
+    let misSales = 0;
+    for (const m of months) for (const d of await computeMis(m, (req as any).propertyId ? { propertyId: (req as any).propertyId } : {})) if (inPeriod.has(d.date)) misSales += d.salesTotal;
+    const thisSales = r2(grand.amount);
+    const reconciliation = { misSales: r2(misSales), reportSales: thisSales, difference: r2(thisSales - misSales) };
+
     res.json({
       success: true,
       data: {
-        from, to, days,
+        from, to, days, reconciliation,
         departments,
         grand,
         totalCollection: grand.total,
