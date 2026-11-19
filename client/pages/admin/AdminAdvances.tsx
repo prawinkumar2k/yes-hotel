@@ -503,7 +503,7 @@ export default function AdminAdvances() {
                   required
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
-                  placeholder="10000"
+                  placeholder="Type the amount"
                   className="w-full bg-gray-100 border border-gray-200 text-sm text-gray-800 font-mono font-bold rounded-xl p-2.5 focus:border-[#c9a227]"
                 />
               </div>
