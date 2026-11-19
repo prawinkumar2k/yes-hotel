@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { getStoredAuthToken } from "@/lib/authStorage";
 import { format } from "date-fns";
+import { SalesOverview } from "@/components/admin/command-center/SalesOverview";
 import {
   Building2,
   LogIn,
@@ -210,6 +211,9 @@ export default function FrontDeskDashboard({ commandData: initialCommandData }: 
               </div>
             </div>
           </section>
+
+          {/* Sales: cards and 14-day chart */}
+          <div className="mb-8"><SalesOverview /></div>
 
           {/* ── SECTION B: GUEST MOVEMENT ────────────────────────────── */}
           <section className="mb-8">
