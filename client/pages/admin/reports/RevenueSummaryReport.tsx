@@ -4,7 +4,7 @@ import { format } from "date-fns";
 import { Download, Loader2, Printer } from "lucide-react";
 import { api } from "@/lib/api";
 import { addDays, todayBusinessDate } from "@shared/dates";
-import ReportPrintHeader from "@/components/admin/ReportPrintHeader";
+import ReportPrintHeader, { ReportSignOff } from "@/components/admin/ReportPrintHeader";
 import { usePrintLayout } from "@/lib/usePrintLayout";
 
 type Row = { key: string; label: string; amount: number; discount: number; taxVal: number; cgst: number; sgst: number; vat: number; roff: number; total: number };
@@ -52,10 +52,7 @@ export default function RevenueSummaryReport() {
   return (
     <div className="space-y-4 report-print mx-auto w-full max-w-[210mm]">
       <div className="flex flex-wrap items-end justify-between gap-3 print:hidden">
-        <div>
-          <h2 className="text-xl font-serif font-bold text-gray-900">Revenue Summary</h2>
-          <p className="text-xs text-gray-500">Revenue by department for the period, with discount, GST and totals</p>
-        </div>
+        <div className="hidden" />
         <div className="flex flex-wrap items-end gap-2">
           <label className="text-xs font-semibold text-gray-600">From
             <input type="date" value={from} max={to} onChange={(e) => setFrom(e.target.value)} className="block mt-1 px-1.5 py-1.5 border border-gray-300 rounded-lg text-sm bg-white" />
@@ -110,6 +107,7 @@ export default function RevenueSummaryReport() {
           </p>
         </>
       )}
+      <ReportSignOff />
     </div>
   );
 }

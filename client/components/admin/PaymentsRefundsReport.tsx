@@ -7,7 +7,7 @@ import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import ReportPrintHeader from "@/components/admin/ReportPrintHeader";
+import ReportPrintHeader, { ReportSignOff } from "@/components/admin/ReportPrintHeader";
 import RefundDialog from "@/components/admin/RefundDialog";
 import { usePrintLayout } from "@/lib/usePrintLayout";
 import { usePermissions } from "@/context/PermissionContext";
@@ -138,6 +138,7 @@ export default function PaymentsRefundsReport() {
       )}
 
       <RefundDialog open={refundFor !== null} onOpenChange={(o) => !o && setRefundFor(null)} bookingRef={refundFor ?? ""} onDone={() => setRefundFor(null)} />
+      <ReportSignOff />
     </div>
   );
 }

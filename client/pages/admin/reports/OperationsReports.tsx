@@ -4,7 +4,7 @@ import { format } from "date-fns";
 import { Loader2, Printer, Download } from "lucide-react";
 import { api } from "@/lib/api";
 import { todayBusinessDate, addDays } from "@shared/dates";
-import ReportPrintHeader from "@/components/admin/ReportPrintHeader";
+import ReportPrintHeader, { ReportSignOff } from "@/components/admin/ReportPrintHeader";
 import { usePrintLayout } from "@/lib/usePrintLayout";
 
 // ─── Shared building blocks ──────────────────────────────────────────────────
@@ -68,7 +68,7 @@ function ReportShell(props: {
   return (
     <div className={`space-y-4 report-print mx-auto w-full ${range.fixed ? "max-w-[210mm]" : "max-w-[297mm]"}`}>
       <div className={`flex flex-wrap items-end justify-between gap-3 ${range.fixed ? "" : "print:hidden"}`}>
-        <div>
+        <div className={range.fixed ? "" : "hidden"}>
           <h2 className="text-xl font-serif font-bold text-gray-900">{props.title}</h2>
           <p className="text-xs text-gray-500">{props.subtitle}</p>
         </div>
@@ -97,6 +97,7 @@ function ReportShell(props: {
       ) : (
         props.children
       )}
+      {!range.fixed && <ReportSignOff />}
     </div>
   );
 }

@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { format, parseISO } from "date-fns";
 import { Download, Loader2, Printer } from "lucide-react";
 import { api } from "@/lib/api";
-import ReportPrintHeader from "@/components/admin/ReportPrintHeader";
+import ReportPrintHeader, { ReportSignOff } from "@/components/admin/ReportPrintHeader";
 import { usePrintLayout } from "@/lib/usePrintLayout";
 
 type Col = { key: string; label: string; money?: boolean };
@@ -111,6 +111,7 @@ export default function MisSheetReport() {
         Money received = payments, advances and counter sales by the day they were received. OTA Payment = amounts the OTA collected for OTA-prepaid check-ins of the day. KKM = Kovai Kongu Mess counter sales.
         Room Sales are spread over the nights each room charge covers. Credit is what guests left unpaid on that day.
       </p>
+      <ReportSignOff />
     </div>
   );
 }

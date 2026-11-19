@@ -4,7 +4,7 @@ import { api } from "@/lib/api";
 import { format, parseISO } from "date-fns";
 import { Loader2, Printer, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import ReportPrintHeader from "@/components/admin/ReportPrintHeader";
+import ReportPrintHeader, { ReportSignOff } from "@/components/admin/ReportPrintHeader";
 import { usePrintLayout } from "@/lib/usePrintLayout";
 import { AgGridReact } from "ag-grid-react";
 import { ModuleRegistry, AllCommunityModule } from "ag-grid-community";
@@ -182,6 +182,7 @@ export default function AdminMonthlyMIS() {
           </tfoot>
         </table>
       )}
+      <ReportSignOff />
     </div>
   );
 }

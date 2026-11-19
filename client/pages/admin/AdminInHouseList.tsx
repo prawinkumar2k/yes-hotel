@@ -1,4 +1,5 @@
 import { usePrintLayout } from "@/lib/usePrintLayout";
+import ReportPrintHeader, { ReportSignOff } from "@/components/admin/ReportPrintHeader";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
@@ -42,6 +43,7 @@ export default function AdminInHouseList() {
 
   return (
     <div className="space-y-4 p-2 sm:p-4 bg-gray-50 min-h-screen text-black">
+      <ReportPrintHeader title="Guest In-House & Arrival Register" period={format(displayDateObj, "dd-MMM-yyyy")} />
       {/* =========================================================================
           TOP TOOLBAR & CONTROLS (Hidden on print)
           ========================================================================= */}
@@ -281,6 +283,7 @@ export default function AdminInHouseList() {
           td.truncate, td[title] { overflow: hidden; text-overflow: ellipsis; max-width: 90px; }
         }
       `}</style>
+      <ReportSignOff />
     </div>
   );
 }
