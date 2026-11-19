@@ -73,7 +73,7 @@ afterAll(async () => {
 describe("Early departure", () => {
   it("credits the unused nights and their GST when sent to billing", async () => {
     expect(await balance()).toBe(6300);
-    const r = await call("POST", `/api/reception/bookings/${ids.booking}/checkout/initiate`, {});
+    const r = await call("POST", `/api/reception/bookings/${ids.booking}/checkout/initiate`, { creditUnusedNights: true });
     expect(r.status).toBe(200);
     expect(r.json.earlyDeparture.nightsCredited).toEqual([today, addDays(today, 1)]);
     expect(r.json.earlyDeparture.roomCredit).toBe(4000);

@@ -25,6 +25,12 @@ function nightsBetween(from: string, to: string): string[] {
   return out;
 }
 
+/**
+ * Hotel policy: leaving before the booked date earns NO refund, so the booked nights stay charged.
+ * Unused nights are credited back only when staff explicitly choose it (`creditUnusedNights: true` on the request).
+ */
+export const wantsUnusedNightsCredited = (req?: { body?: any }) => req?.body?.creditUnusedNights === true;
+
 export async function applyEarlyDeparture(bookingId: string, opts: { req?: any; today?: string } = {}) {
   const booking: any = await Booking.findById(bookingId);
   if (!booking || booking.status !== BookingStatus.CHECKED_IN) return null;

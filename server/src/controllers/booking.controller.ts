@@ -906,7 +906,7 @@ export const getCheckoutPreview = async (req: Request, res: Response) => {
     const totalAdvanceAvailable = advances.reduce((s, a) => s + a.remainingBalance, 0);
     const balance = folio ? folio.balance : 0;
 
-    // Leaving before the booked date: the unused nights are credited at checkout (early-departure.service).
+    // Leaving before the booked date: no refund by default (the booked nights stay charged); staff may choose to credit them.
     let earlyDeparture: { bookedCheckOut: string; newCheckOut: string; unusedNights: string[] } | null = null;
     if (booking.status === BookingStatus.CHECKED_IN) {
       const stayIn = toBusinessDate(booking.checkInDate);
@@ -986,10 +986,10 @@ export const checkOut = async (req: Request, res: Response) => {
   // (stay charges + recorded payments) opened here, in its own transaction.
   await openFolioForBooking(booking, actorId?.toString() || "CHECKOUT", { req });
 
-  // Leaving before the booked date: credit the unused nights (and their GST) before settling.
+  // Leaving before the booked date earns no refund by default: the booked nights stay charged (credited only if chosen).
   {
-    const { applyEarlyDeparture } = await import("../services/early-departure.service");
-    const early = await applyEarlyDeparture(String(booking._id), { req });
+    const { applyEarlyDeparture, wantsUnusedNightsCredited } = await import("../services/early-departure.service");
+    const early = wantsUnusedNightsCredited(req) ? await applyEarlyDeparture(String(booking._id), { req }) : null; // no refund unless chosen
     if (early) Object.assign(booking, (await Booking.findById(booking._id).select("checkOutDate totalAmount taxAmount cgstAmount sgstAmount").lean()) ?? {});
   }
 

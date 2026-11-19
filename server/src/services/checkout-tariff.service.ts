@@ -116,8 +116,8 @@ export async function applyCheckoutTariff(p: { bookingId: string; ratePerNight: 
   }
 
   // 2. Early check-out: credit the unused nights (at the new rate) and their GST.
-  const { applyEarlyDeparture } = await import("./early-departure.service");
-  const early = await applyEarlyDeparture(String(booking._id), { req: p.req });
+  const { applyEarlyDeparture, wantsUnusedNightsCredited } = await import("./early-departure.service");
+  const early = wantsUnusedNightsCredited(p.req) ? await applyEarlyDeparture(String(booking._id), { req: p.req }) : null;
 
   const defaultRate = Number(booking.roomCategory?.basePrice ?? 0);
   if (defaultRate > 0 && rate < defaultRate) {

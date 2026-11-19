@@ -121,8 +121,9 @@ router.post("/bookings/:id/checkout/initiate", requirePermission("CHECK_OUT", "C
       return res.json({ success: true, message: "Already waiting in Cashier & Billing", data: booking.checkoutClearance });
     }
     // Leaving before the booked date: credit the unused nights (and their GST) so the bill is right.
-    const { applyEarlyDeparture } = await import("../services/early-departure.service");
-    const early = await applyEarlyDeparture(String(booking._id), { req });
+    // Policy: no refund for leaving early. The unused nights are credited only when staff choose it.
+    const { applyEarlyDeparture, wantsUnusedNightsCredited } = await import("../services/early-departure.service");
+    const early = wantsUnusedNightsCredited(req) ? await applyEarlyDeparture(String(booking._id), { req }) : null;
     if (early) Object.assign(booking, (await Booking.findById(booking._id).select("checkOutDate totalAmount taxAmount cgstAmount sgstAmount").lean()) ?? {});
     booking.checkoutClearance = { status: "PENDING", initiatedBy: actorId(req) as any, initiatedAt: new Date(), note: req.body?.note };
     await booking.save();

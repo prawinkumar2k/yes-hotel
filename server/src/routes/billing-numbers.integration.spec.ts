@@ -100,7 +100,7 @@ describe("Bills follow the stay; numbers only at checkout", () => {
   it("issues the bill number and the invoice number at checkout", async () => {
     // The guest leaves today instead of after the extended night: sending the stay to billing
     // credits the unused night (early departure), so checkout settles 1 night (₹2,625).
-    expect((await call("POST", `/api/reception/bookings/${ids.booking}/checkout/initiate`, {})).status).toBe(200);
+    expect((await call("POST", `/api/reception/bookings/${ids.booking}/checkout/initiate`, { creditUnusedNights: true })).status).toBe(200);
     const due = (await call("GET", "/api/reception/billing-queue?all=true")).json.data.find((x: any) => x.bookingId === String(ids.booking)).balance;
     expect(due).toBe(2625);
     expect((await call("POST", `/api/reception/folios/${ids.folio}/payments`, { amount: due, method: "CASH", clientRequestId: `bn-${tag}` })).status).toBe(201);

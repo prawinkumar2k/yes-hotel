@@ -98,6 +98,8 @@ export default function AdminFrontDesk() {
   const [newChargeAmount, setNewChargeAmount] = useState("");
   const [newChargeType, setNewChargeType] = useState("ADDON");
   const [showAddCharge, setShowAddCharge] = useState(false);
+  // Early check-out earns no refund by default; a manager can choose to credit the unused nights.
+  const [creditUnused, setCreditUnused] = useState(false);
   const [isEditingBill, setIsEditingBill] = useState(false);
   // Correct how the booking was entered (Walk-in / Phone / OTA). Allowed any number of times until check-out.
   const [srcForm, setSrcForm] = useState({ bookingSource: "WALK_IN", otaName: "", otaConfirmationNumber: "", otaCommissionType: "PERCENT", otaCommissionValue: "", otaCommissionGstPercent: "18", otaPaymentModel: "OTA_PREPAID" });
@@ -203,7 +205,7 @@ export default function AdminFrontDesk() {
         setIsManualOverride(false);
         setCheckoutNotes("Front Desk Express Checkout");
         setCheckoutRate(String(json.data?.booking?.ratePerNight ?? booking.ratePerNight ?? ""));
-        setCheckOutModal({ open: true, booking, preview: json.data });
+        setCreditUnused(false); setCheckOutModal({ open: true, booking, preview: json.data });
       } else {
         toast({ title: "Failed to generate checkout preview", description: json.message, variant: "destructive" });
       }
@@ -224,7 +226,7 @@ export default function AdminFrontDesk() {
       const res = await fetch(`/api/reception/bookings/${checkOutModal.booking._id}/checkout/initiate`, {
         method: "POST",
         headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-        body: JSON.stringify({ note: checkoutNotes || undefined }),
+        body: JSON.stringify({ note: checkoutNotes || undefined, creditUnusedNights: creditUnused || undefined }),
       });
       const json = await res.json();
       if (json.success) {
@@ -1844,15 +1846,19 @@ export default function AdminFrontDesk() {
                 </button>
               </div>
               <p className="text-[11px] text-gray-500">
-                Charged for the nights actually stayed{checkOutModal.preview?.earlyDeparture ? " (early check-out: unused nights are credited first)" : ""}, with CGST + SGST. A rate below the room type's rate goes to Reception for verification.
+                Charged for the nights actually stayed{checkOutModal.preview?.earlyDeparture ? " (early check-out: the booked nights stay charged, no refund)" : ""}, with CGST + SGST. A rate below the room type's rate goes to Reception for verification.
               </p>
             </div>
 
             {checkOutModal.preview?.earlyDeparture && (
               <div className="bg-amber-50 border border-amber-300 p-3 rounded-xl text-xs text-amber-900">
                 <b>Early check-out:</b> booked until {checkOutModal.preview.earlyDeparture.bookedCheckOut}, leaving {checkOutModal.preview.earlyDeparture.newCheckOut}.{" "}
-                {checkOutModal.preview.earlyDeparture.unusedNights.length} unused night{checkOutModal.preview.earlyDeparture.unusedNights.length === 1 ? "" : "s"} ({checkOutModal.preview.earlyDeparture.unusedNights.join(", ")}) and their GST
-                will be credited to the bill automatically when you send it to billing, and the nights become free to sell.
+                {checkOutModal.preview.earlyDeparture.unusedNights.length} unused night{checkOutModal.preview.earlyDeparture.unusedNights.length === 1 ? "" : "s"} ({checkOutModal.preview.earlyDeparture.unusedNights.join(", ")}).{" "}
+                <b>No refund:</b> the full booked stay stays on the bill.
+                <label className="mt-2 flex items-center gap-2 font-semibold">
+                  <input type="checkbox" checked={creditUnused} onChange={(e) => setCreditUnused(e.target.checked)} className="h-4 w-4 accent-amber-600" />
+                  Manager approved: credit the unused nights and their GST instead
+                </label>
               </div>
             )}
 
