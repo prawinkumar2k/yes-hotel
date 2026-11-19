@@ -119,11 +119,11 @@ function Table<T>({ cols, rows, empty, totals, keepOnPrint }: { cols: Col<T>[]; 
   const hide = (k: string) => (keepOnPrint && !keepOnPrint.includes(k) ? " print:hidden" : "");
   return (
     <div className="bg-white border border-gray-300 overflow-hidden print:border-black">
-      <table className="w-full text-[11px] leading-snug">
+      <table className="w-full text-[11px] leading-snug print:text-[8.5px] print:leading-tight">
         <thead className="bg-gray-50 print:bg-gray-100">
           <tr>
             {cols.map((c) => (
-              <th key={c.key} className={`px-1.5 py-1.5 font-bold text-gray-700 uppercase tracking-wide border border-gray-300 print:border-black align-bottom ${c.align === "right" || c.money ? "text-right" : "text-left"}${hide(c.key)}`}>{c.label}</th>
+              <th key={c.key} className={`px-1.5 py-1.5 print:px-1 print:py-0.5 font-bold text-gray-700 uppercase tracking-wide border border-gray-300 print:border-black align-bottom ${c.align === "right" || c.money ? "text-right" : "text-left"}${hide(c.key)}`}>{c.label}</th>
             ))}
           </tr>
         </thead>
@@ -134,7 +134,7 @@ function Table<T>({ cols, rows, empty, totals, keepOnPrint }: { cols: Col<T>[]; 
             rows.map((r, i) => (
               <tr key={i} className="">
                 {cols.map((c) => (
-                  <td key={c.key} className={`px-1.5 py-1 border border-gray-300 print:border-black break-words align-top ${c.align === "right" || c.money ? "text-right tabular-nums" : ""}${hide(c.key)}`}>{cell(c, r)}</td>
+                  <td key={c.key} className={`px-1.5 py-1 print:px-1 print:py-0.5 border border-gray-300 print:border-black break-words align-top ${c.align === "right" || c.money ? "text-right tabular-nums" : ""}${hide(c.key)}`}>{cell(c, r)}</td>
                 ))}
               </tr>
             ))
