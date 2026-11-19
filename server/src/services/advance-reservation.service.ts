@@ -538,7 +538,7 @@ export async function createAdvanceReservation(input: ReservationInput, ctx: { r
       const { queueForVerification } = await import("./reception-verification");
       await queueForVerification({
         type: VerificationType.TARIFF_BELOW_DEFAULT,
-        subjectKey: `advanceBooking:${result.primaryBookingId}:tariff:${lp.index}`,
+        subjectKey: lp.index === 0 ? `advanceBooking:${result.primaryBookingId}:tariff` : `advanceBooking:${result.primaryBookingId}:tariff:${lp.index}`,
         returnQueue: "FRONT_DESK",
         summary: `Advance booking tariff below default: ${lp.categoryName} ₹${lp.ratePerNight} (default ₹${lp.defaultRate}) × ${lp.rooms} room(s)`,
         amount: r2((lp.defaultRate - lp.ratePerNight) * lp.rooms * pricing.nights),

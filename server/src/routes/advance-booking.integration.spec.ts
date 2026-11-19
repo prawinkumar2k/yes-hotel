@@ -241,7 +241,7 @@ describe("reserve rooms with an advance", () => {
     expect((await call("GET", `/api/advances/bookings/${rooms[3]._id}/confirmation`)).json.data.booking.number).toBe(d.booking.number);
   });
 
-  it("every room's bill can draw from the group's advance (not just the first room)", async () => {
+  it("every room's bill draws from the group's advance, up to its own share (not just the first room)", async () => {
     const rooms = await bookingsOf(groupId);
     const second = rooms[1];
     const { createFolio, postCharge } = await import("../services/folio.service");
@@ -249,9 +249,14 @@ describe("reserve rooms with an advance", () => {
     await postCharge({ folioId: String(folio._id), bookingId: String(second._id), lineType: "ROOM_CHARGE" as any, description: "Room", amount: 1500, date: new Date(), postedBy: "test" }, {});
     const { applyAdvancesToFolio } = await import("../services/advance.service");
     const applied = await applyAdvancesToFolio({ bookingId: String(second._id), folioId: String(folio._id), maxAmount: Number.MAX_SAFE_INTEGER, performedBy: String(reception) }, {});
-    expect(applied).toBe(1500);
+    // The ₹4,000 advance was split across 10 rooms (₹400 each): a room's bill draws only its own share, not the whole group advance.
+    expect(applied).toBe(400);
     const adv: any = await db().collection("advancepayments").findOne({ booking: new mongoose.Types.ObjectId(primaryId) });
-    expect(adv.remainingBalance).toBe(2500);
+    expect(adv.remainingBalance).toBe(3600);
+    expect(rooms[1].advanceShare).toBe(400);
+    // asking again draws nothing more: the share is used up
+    const again = await applyAdvancesToFolio({ bookingId: String(second._id), folioId: String(folio._id), maxAmount: Number.MAX_SAFE_INTEGER, performedBy: String(reception) }, {});
+    expect(again).toBe(0);
   });
 });
 
