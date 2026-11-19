@@ -4,7 +4,8 @@
  * the bill and the police register show them.
  */
 const clean = (v: unknown, max = 200) => (typeof v === "string" ? v.trim().slice(0, max) : undefined);
-const MAX_IMAGES = 6;
+/** No fixed number of documents: only the total size kept on one booking is limited (about 9 MB of photos; the database caps a document at 16 MB). */
+export const MAX_TOTAL_DOCUMENT_CHARS = 12_000_000;
 const MAX_IMAGE_CHARS = 4_000_000; // about 3 MB of photo (the screen scales phone photos down first)
 
 export class CheckInDetailsError extends Error {}
@@ -53,7 +54,7 @@ export function applyCheckInDetails(booking: any, body: Record<string, any>) {
   if (bad.length) throw new CheckInDetailsError("An ID document is not a supported image (JPEG, PNG, WebP) or is too large");
   if (incoming.length) {
     const merged = [...new Set([...(g.idProofImages ?? []), ...incoming])];
-    if (merged.length > MAX_IMAGES) throw new CheckInDetailsError(`At most ${MAX_IMAGES} ID documents can be kept on one booking`);
+    if (merged.reduce((t, x) => t + String(x).length, 0) > MAX_TOTAL_DOCUMENT_CHARS) throw new CheckInDetailsError("This booking already holds as many ID documents as it can store. Remove some, or add smaller photos.");
     g.idProofImages = merged;
   }
 

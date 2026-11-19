@@ -8,6 +8,7 @@ import {
   getCheckoutPreview, checkExtensionConflict, extendStay, updateBookingSource
 } from "../controllers/booking.controller";
 import { cancelBooking } from "../controllers/cancellation.controller";
+import { addIdDocuments, removeIdDocument } from "../controllers/id-documents.controller";
 import { confirmDemoBooking } from "../controllers/payment.controller";
 
 const router = Router();
@@ -44,6 +45,10 @@ router.post("/:id/check-out", protect, requirePropertyAccess, requirePermission(
 
 // Correct how the booking was entered (Walk-in / Phone / OTA) — any number of times until check-out
 router.put("/:id/source", protect, requirePropertyAccess, requirePermission("BOOKINGS", "EDIT"), updateBookingSource);
+
+// ID documents: add (any number) or remove, at any time
+router.post("/:id/id-documents", protect, requirePropertyAccess, requirePermission("BOOKINGS", "EDIT"), addIdDocuments);
+router.delete("/:id/id-documents/:index", protect, requirePropertyAccess, requirePermission("BOOKINGS", "EDIT"), removeIdDocument);
 
 // Stay Extension
 router.post("/:id/extension-check", protect, requirePropertyAccess, requirePermission("BOOKINGS", "CREATE"), checkExtensionConflict);

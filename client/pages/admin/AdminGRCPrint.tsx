@@ -1,3 +1,4 @@
+import IdDocumentsPanel from "@/components/admin/IdDocumentsPanel";
 import { docImageSrc } from "@/lib/docImage";
 import { usePrintLayout } from "@/lib/usePrintLayout";
 import { advanceInfo, settlementKind } from "@/lib/advanceInfo";
@@ -5,7 +6,7 @@ import { useEffect, useState } from "react";
 import { hotelContactFrom, useHotelSettings } from "@/hooks/usePublicData";
 import StayExtensionNote from "@/components/admin/StayExtensionNote";
 import { useParams, Link } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { format } from "date-fns";
 import { nights as countNights } from "@shared/dates";
@@ -21,6 +22,7 @@ export default function AdminGRCPrint() {
   const { id } = useParams();
   const [openDoc, setOpenDoc] = useState<{ src: string; label: string } | null>(null);
 
+  const queryClient = useQueryClient();
   const { data: bookingData, isLoading: isBookingLoading } = useQuery({
     queryKey: ["adminBooking", id],
     queryFn: async () => {
@@ -496,6 +498,9 @@ export default function AdminGRCPrint() {
             </div>
           </div>
         )}
+        <div className="border-b border-black p-2 print:hidden">
+          <IdDocumentsPanel addOnly bookingId={String(booking._id)} images={guest.idProofImages ?? []} onChanged={() => queryClient.invalidateQueries({ queryKey: ["adminBooking", id] })} />
+        </div>
 
         {/* =========================================================================
             HOTEL RULES AND REGULATIONS & CONSENT FORM

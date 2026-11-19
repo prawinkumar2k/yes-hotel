@@ -1,3 +1,4 @@
+import IdDocumentsPanel from "@/components/admin/IdDocumentsPanel";
 import { docImageSrc } from "@/lib/docImage";
 import { useState } from "react";
 import { useParams, Link } from "react-router-dom";
@@ -187,22 +188,11 @@ export default function AdminBookingDetails() {
                  </div>
                )}
 
-               {booking.guestDetails.idProofImages && booking.guestDetails.idProofImages.length > 0 && (
-                 <div>
-                   <p className="text-[10px] uppercase text-gray-500 font-bold mb-2 flex items-center gap-1"><FileImage size={12}/> ID Proof Documents</p>
-                   <div className="flex gap-3 overflow-x-auto pb-2">
-                     {booking.guestDetails.idProofImages.map((img: string, idx: number) => (
-                       <a key={idx} href={docImageSrc(img).src || img} target="_blank" rel="noopener noreferrer" className="block w-24 h-24 rounded border border-gray-200 overflow-hidden hover:border-indigo-500 transition shadow-sm">
-                         {docImageSrc(img).kind === "image" ? (
-                           <img src={docImageSrc(img).src} alt="ID Proof" className="w-full h-full object-cover" />
-                         ) : (
-                           <div className="w-full h-full bg-gray-100 flex items-center justify-center text-xs text-gray-400">Doc</div>
-                         )}
-                       </a>
-                     ))}
-                   </div>
-                 </div>
-               )}
+               <IdDocumentsPanel
+                 bookingId={String(booking._id)}
+                 images={booking.guestDetails.idProofImages ?? []}
+                 onChanged={() => queryClient.invalidateQueries({ queryKey: ["adminBooking", id] })}
+               />
             </div>
           </div>
 

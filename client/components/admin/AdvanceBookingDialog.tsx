@@ -35,8 +35,20 @@ export default function AdvanceBookingDialog({ open, onClose, onSaved, initial }
   const [done, setDone] = useState<any>(null);
   const requestId = useRef(uuid());
   const set = (k: string, v: any) => setF((p: any) => ({ ...p, [k]: v }));
-  const setLine = (i: number, k: string, v: any) => setF((p: any) => ({ ...p, lines: p.lines.map((l: any, j: number) => (j === i ? { ...l, [k]: v } : l)) }));
-  const addLine = () => setF((p: any) => ({ ...p, lines: [...p.lines, newLine(categories.find((c) => !p.lines.some((l: any) => l.categoryId === c._id))?._id ?? categories[0]?._id ?? "")] }));
+  // The rate starts at the room type's standard rate as a real value (not a hint), so it can be typed over.
+  const baseRate = (catId: string) => String(categories.find((c) => c._id === catId)?.basePrice ?? "");
+  const setLine = (i: number, k: string, v: any) => setF((p: any) => ({
+    ...p,
+    lines: p.lines.map((l: any, j: number) => {
+      if (j !== i) return l;
+      if (k === "categoryId") {
+        const untouched = l.rate === "" || String(l.rate) === baseRate(l.categoryId); // follow the new room type unless the desk typed their own rate
+        return { ...l, categoryId: v, rate: untouched ? baseRate(v) : l.rate };
+      }
+      return { ...l, [k]: v };
+    }),
+  }));
+  const addLine = () => setF((p: any) => ({ ...p, lines: [...p.lines, (() => { const id = categories.find((c) => !p.lines.some((l: any) => l.categoryId === c._id))?._id ?? categories[0]?._id ?? ""; return { ...newLine(id), rate: baseRate(id) }; })()] }));
   const removeLine = (i: number) => setF((p: any) => ({ ...p, lines: p.lines.length > 1 ? p.lines.filter((_: any, j: number) => j !== i) : p.lines }));
 
   useEffect(() => {
@@ -57,7 +69,7 @@ export default function AdvanceBookingDialog({ open, onClose, onSaved, initial }
         const chs = (p.data || []).filter((x: any) => x.isActive);
         setCategories(cats);
         setChannels(chs);
-        setF((x: any) => ({ ...x, lines: (x.lines?.length ? x.lines : [newLine()]).map((l: any) => ({ ...l, categoryId: l.categoryId || cats[0]?._id || "" })), channelId: chs[0]?._id ?? "" }));
+        setF((x: any) => ({ ...x, lines: (x.lines?.length ? x.lines : [newLine()]).map((l: any) => { const cid = l.categoryId || cats[0]?._id || ""; return { ...l, categoryId: cid, rate: l.rate || String(cats.find((c: any) => c._id === cid)?.basePrice ?? "") }; }), channelId: chs[0]?._id ?? "" }));
       } catch {
         toast({ title: "Could not load room types", variant: "destructive" });
       }
@@ -187,7 +199,7 @@ export default function AdvanceBookingDialog({ open, onClose, onSaved, initial }
                       <div><label className={lbl}>Adults *</label><input className={inp} type="number" min={1} value={l.adults} onChange={(e) => setLine(i, "adults", e.target.value)} /></div>
                       <div><label className={lbl}>Children</label><input className={inp} type="number" min={0} value={l.children} onChange={(e) => setLine(i, "children", e.target.value)} /></div>
                       <div className="sm:col-span-2"><label className={lbl}>Rate per room per night (type the amount) {quote ? `(${quote.pricesIncludeTax ? "GST included" : "+ GST"})` : ""}</label>
-                        <input className={inp} type="number" min={0} placeholder={ql ? String(ql.defaultRate) : ""} value={l.rate} onChange={(e) => setLine(i, "rate", e.target.value)} /></div>
+                        <input className={inp} type="number" min={0} step="any" placeholder="Type the rate" value={l.rate} onChange={(e) => setLine(i, "rate", e.target.value)} /></div>
                       <div><label className={lbl}>Extra person (no bed){ql ? ` ${inr(ql.extras?.rates?.extraPersonRate)}` : ""}</label><input className={inp} type="number" min={0} max={20} value={l.xPersonNoBed} onChange={(e) => setLine(i, "xPersonNoBed", e.target.value)} /></div>
                       <div><label className={lbl}>Extra bed{ql ? ` ${inr(ql.extras?.rates?.extraBedRate)}` : ""}</label><input className={inp} type="number" min={0} max={20} value={l.xPersonBed} onChange={(e) => setLine(i, "xPersonBed", e.target.value)} /></div>
                       <div><label className={lbl}>Child 3-12 (no bed){ql ? ` ${inr(ql.extras?.rates?.childRateNoBed)}` : ""}</label><input className={inp} type="number" min={0} max={20} value={l.xChildNoBed} onChange={(e) => setLine(i, "xChildNoBed", e.target.value)} /></div>

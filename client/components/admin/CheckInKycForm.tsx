@@ -63,8 +63,8 @@ export default function CheckInKycForm({ value, onChange, existingDocuments = 0 
   const set = (patch: Partial<CheckInKyc>) => onChange({ ...value, ...patch });
   const add = async (files: FileList | null) => {
     if (!files?.length) return;
-    const imgs = await Promise.all(Array.from(files).slice(0, 4).map((f) => imageFileToDataUrl(f, 1600).catch(() => "")));
-    set({ idProofImages: [...value.idProofImages, ...imgs.filter(Boolean)].slice(0, 6) });
+    const imgs = await Promise.all(Array.from(files).map((f) => imageFileToDataUrl(f, 1400, 0.75).catch(() => "")));
+    set({ idProofImages: [...value.idProofImages, ...imgs.filter(Boolean)] });
     if (file.current) file.current.value = "";
   };
   const t = (k: keyof CheckInKyc, label: string, extra: Record<string, unknown> = {}) => (

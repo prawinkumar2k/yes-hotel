@@ -7,7 +7,8 @@ import { LoyaltyTransaction } from "../models/LoyaltyTransaction";
 import { z } from "zod";
 import { isStoredDocument } from "../services/checkin-details.service";
 
-const MAX_DOCUMENTS = 12;
+const MAX_DOCUMENTS = 50; // per request; the real limit is the total size kept on one guest (below)
+const MAX_GUEST_DOCUMENT_CHARS = 12_000_000;
 const documentSchema = z.object({
   kind: z.enum(["ID_FRONT", "ID_BACK", "PHOTO", "OTHER"]).default("OTHER"),
   label: z.string().max(80).optional(),
@@ -226,7 +227,8 @@ export const updateGuest = async (req: Request, res: Response) => {
     }
     if (removeDocumentIds?.length) guest.documents = (guest.documents ?? []).filter((d: any) => !removeDocumentIds.includes(String(d._id)));
     if (addDocuments?.length) {
-      if ((guest.documents?.length ?? 0) + addDocuments.length > MAX_DOCUMENTS) return res.status(400).json({ success: false, message: `At most ${MAX_DOCUMENTS} documents can be kept on one guest` });
+      const size = [...(guest.documents ?? []), ...addDocuments].reduce((t: number, d: any) => t + String(d.image ?? "").length, 0);
+      if (size > MAX_GUEST_DOCUMENT_CHARS) return res.status(400).json({ success: false, message: "This guest already holds as many documents as can be stored. Remove some, or add smaller photos." });
       guest.documents.push(...addDocuments.map((d) => ({ ...d, at: new Date(), by: (req as any).user?.id })));
     }
     await guest.save();
