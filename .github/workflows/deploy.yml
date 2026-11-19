@@ -6,8 +6,36 @@ on:
       - main
       - hardening/phase-1
 
+permissions:
+  contents: read
+  actions: read
+
 jobs:
+  # Deploy only what CI has passed. If CI fails (or never finishes) for this exact commit, nothing is deployed
+  # and the site keeps running the last good version.
+  wait-for-ci:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Wait for CI on this commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHA: ${{ github.sha }}
+          REPO: ${{ github.repository }}
+        run: |
+          for i in $(seq 1 90); do
+            row=$(gh run list --repo "$REPO" --workflow ci.yml --commit "$SHA" --limit 1 --json status,conclusion --jq '.[0] | "\(.status) \(.conclusion)"' 2>/dev/null || true)
+            echo "CI for $SHA: ${row:-not started yet}"
+            case "$row" in
+              "completed success") echo "CI passed - deploying"; exit 0 ;;
+              completed*) echo "CI did not pass - NOT deploying"; exit 1 ;;
+            esac
+            sleep 15
+          done
+          echo "CI did not finish in time - NOT deploying"; exit 1
+
   deploy:
+    needs: wait-for-ci
     runs-on: ubuntu-latest
     steps:
       - name: Trigger Remote Deployment via SSH
