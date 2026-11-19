@@ -32,11 +32,13 @@ export function advanceInfo(input: { advances?: any[]; lines?: any[]; booking?: 
 }
 
 /** Which settlement box to tick on the card, from the billing instruction (a payment-channel code) or the advance mode. */
-export function settlementKind(instruction?: string, advanceMode?: string, paid?: boolean): "CASH" | "CARD" | "UPI" | "NET" | "" {
+export function settlementKind(instruction?: string, advanceMode?: string, paid?: boolean): "CASH" | "CARD" | "UPI" | "NET" | "CREDIT" | "" {
   const v = `${instruction ?? ""} ${advanceMode ?? ""}`.toUpperCase();
+  // Left on credit (pay later), or an OTA-prepaid booking (the OTA pays the hotel later): shown as Credit.
+  if (/CREDIT|OTA|PREPAID|VCC/.test(v)) return "CREDIT";
   if (/CASH/.test(v)) return "CASH";
   if (/CARD|DD|POS/.test(v)) return "CARD";
   if (/UPI|GPAY|PHONEPE|PAYTM/.test(v)) return "UPI";
-  if (/NET|BANK|OTA|PREPAID|VCC|RAZORPAY|ONLINE/.test(v) || paid) return "NET";
+  if (/NET|BANK|RAZORPAY|ONLINE/.test(v) || paid) return "NET";
   return "";
 }

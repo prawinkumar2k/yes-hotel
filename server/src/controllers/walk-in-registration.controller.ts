@@ -1271,7 +1271,8 @@ export const printRegistrationCard = async (req: Request, res: Response) => {
             <span>[${advanceMethod === "CASH" ? "✓" : " "}] Cash</span>
             <span>[${advanceMethod === "CARD" ? "✓" : " "}] Card / DD</span>
             <span>[${advanceMethod === "UPI" ? "✓" : " "}] UPI</span>
-            <span>[${booking.paymentStatus === "PAID" ? "✓" : " "}] Net Pay</span>
+            <span>[${(booking as any).source === "OTA" && (booking as any).otaPaymentModel === "OTA_PREPAID" ? " " : booking.paymentStatus === "PAID" ? "✓" : " "}] Net Pay</span>
+            <span>[${(booking as any).source === "OTA" && (booking as any).otaPaymentModel === "OTA_PREPAID" ? "✓" : " "}] Credit</span>
           </div>
         </div>
         <div style="margin-top:4px;border-top:1px dotted #aaa;padding-top:2px">

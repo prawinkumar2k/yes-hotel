@@ -21,7 +21,9 @@ describe("advanceInfo", () => {
 describe("settlementKind", () => {
   it("ticks the box for the billing instruction, not the advance mode", () => {
     expect(settlementKind("CASH", "UPI")).toBe("CASH");
-    expect(settlementKind("OTA Prepaid (VCC)", "")).toBe("NET");
+    expect(settlementKind("OTA Prepaid (VCC)", "")).toBe("CREDIT"); // the OTA pays the hotel later
+    expect(settlementKind("", "CREDIT")).toBe("CREDIT");
+    expect(settlementKind("BANK_TRANSFER", "")).toBe("NET");
     expect(settlementKind("", "UPI")).toBe("UPI");
     expect(settlementKind("", "", true)).toBe("NET");
     expect(settlementKind("", "")).toBe("");

@@ -364,6 +364,9 @@ function BookingDocCard({
                         <span className="flex items-center gap-1">
                           <input type="checkbox" checked={settle === "NET"} readOnly className="accent-black w-3 h-3" /> Net Pay
                         </span>
+                        <span className="flex items-center gap-1">
+                          <input type="checkbox" checked={settle === "CREDIT"} readOnly className="accent-black w-3 h-3" /> Credit
+                        </span>
                       </div>
                     </div>
 
