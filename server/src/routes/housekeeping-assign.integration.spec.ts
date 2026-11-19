@@ -115,7 +115,7 @@ describe("tariff typed at express checkout", () => {
     const b0: any = await db().collection("bookings").findOne({ _id: new mongoose.Types.ObjectId(id) });
     expect(b0.guestDetails.email).toBe("");
 
-    const t = await call("POST", `/api/front-desk/bookings/${id}/checkout-tariff`, { ratePerNight: 1200 });
+    const t = await call("POST", `/api/front-desk/bookings/${id}/checkout-tariff`, { ratePerNight: 1200, creditUnusedNights: true }); // refund only when a manager chooses it
     expect(t.status, JSON.stringify(t.json)).toBe(200);
     const folio: any = await db().collection("folios").findOne({ booking: new mongoose.Types.ObjectId(id) });
     const { computeFolioTotals } = await import("../services/folio-ledger");
