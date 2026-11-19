@@ -115,11 +115,19 @@ export async function computeMis(month: string, scope: Record<string, unknown> =
     const m = String(method ?? "").toUpperCase();
     if (m === "CASH") r.cash += amount; else if (m === "CARD") r.card += amount; else if (m === "UPI") r.upi += amount; else r.other += amount;
   };
+  // A payment taken during the checkout is "Final"; any other payment on the bill is "Partial". The Payment record has no
+  // purpose of its own, so this is read from the bill line it was posted as ("Checkout Payment (...)").
+  const payLines: any[] = (payments as any[]).length
+    ? await FolioLine.find({ paymentId: { $in: (payments as any[]).map((p) => p._id) } } as any).select("paymentId description").lean()
+    : [];
+  const checkoutPaymentIds = new Set(payLines.filter((l) => /^checkout payment/i.test(String(l.description ?? ""))).map((l) => String(l.paymentId)));
   for (const p of payments as any[]) {
     const r = row(p.createdAt); if (!r) continue;
     const amount = Number(p.amount) || 0;
     mode(r, p.method, amount);
-    if (p.purpose === "ADVANCE") r.recAdvance += amount; else if (p.purpose === "SETTLEMENT") r.recFinal += amount; else r.recPartial += amount;
+    if (p.purpose === "ADVANCE") r.recAdvance += amount;
+    else if (p.purpose === "SETTLEMENT" || checkoutPaymentIds.has(String(p._id))) r.recFinal += amount;
+    else r.recPartial += amount;
   }
   for (const a of advances as any[]) {
     const r = row(a.receivedAt); if (!r) continue;
@@ -152,7 +160,15 @@ export async function computeMis(month: string, scope: Record<string, unknown> =
   }
 
   // Sales from the bills: room charges spread over the nights they cover; other charges on their date.
-  const lines: any[] = await FolioLine.find({ date: inRange, direction: FolioLineDirection.DEBIT, lineType: { $nin: TAX_TYPES } } as any).select("lineType amount date coversNights postedBy notes").lean();
+  // Refunds are money handed back, never a sale. A room charge posted in another month still counts for the nights it covers here.
+  const monthDates = [...rows.keys()];
+  const lines: any[] = (await FolioLine.find({
+    direction: FolioLineDirection.DEBIT,
+    lineType: { $nin: [...TAX_TYPES, FolioLineType.REFUND] },
+    $or: [{ date: inRange }, { lineType: FolioLineType.ROOM_CHARGE, coversNights: { $in: monthDates } }],
+  } as any).select("lineType amount date coversNights postedBy notes").lean()).filter(
+    (l: any) => l.lineType === FolioLineType.ROOM_CHARGE || (l.date >= start && l.date < end),
+  );
   const reversed = new Set(
     (await FolioLine.find({ lineType: FolioLineType.REVERSAL, reversedLineId: { $in: lines.map((l) => l._id) } } as any).select("reversedLineId").lean()).map((x: any) => String(x.reversedLineId)),
   );
@@ -164,7 +180,7 @@ export async function computeMis(month: string, scope: Record<string, unknown> =
       if (nightsList.length) {
         const share = amount / (l.coversNights.length || 1);
         for (const n of nightsList) rows.get(n)!.roomSales += share;
-      } else { const r = row(l.date); if (r) r.roomSales += amount; }
+      } else if (!(l.coversNights ?? []).length) { const r = row(l.date); if (r) r.roomSales += amount; } // no nights recorded: on its own date
     } else if (l.lineType === FolioLineType.RESTAURANT) { const r = row(l.date); if (r) r.fbSales += amount; }
     else if (l.postedBy !== "COUNTER_SALE") {
       const r = row(l.date); if (!r) continue; // counter sales posted by the cashier are counted from the shifts
