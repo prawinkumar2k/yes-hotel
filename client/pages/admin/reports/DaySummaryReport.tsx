@@ -245,10 +245,6 @@ export default function DaySummaryReport() {
                     <td className="py-1 text-right tabular-nums border-b border-gray-300">{formatAmount(data?.roomSales)}</td>
                   </tr>
                   <tr>
-                    <td className="py-1 pl-4 text-left">F&amp;B</td>
-                    <td className="py-1 text-right tabular-nums border-b border-gray-300">{formatAmount(data?.fbSales)}</td>
-                  </tr>
-                  <tr>
                     <td className="py-1 pl-4 text-left">Misc.</td>
                     <td className="py-1 text-right tabular-nums border-b border-gray-300">{formatAmount(data?.miscSales)}</td>
                   </tr>

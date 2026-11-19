@@ -66,7 +66,7 @@ function ReportShell(props: {
   const { range } = props;
   usePrintLayout(range.fixed ? "portrait" : "landscape");
   return (
-    <div className="space-y-4 report-print">
+    <div className={`space-y-4 report-print mx-auto w-full ${range.fixed ? "max-w-[210mm]" : "max-w-[297mm]"}`}>
       <div className={`flex flex-wrap items-end justify-between gap-3 ${range.fixed ? "" : "print:hidden"}`}>
         <div>
           <h2 className="text-xl font-serif font-bold text-gray-900">{props.title}</h2>
@@ -118,12 +118,12 @@ function Table<T>({ cols, rows, empty, totals, keepOnPrint }: { cols: Col<T>[]; 
   // Under another report (Daily Summary) the page is narrow: print only the key columns there.
   const hide = (k: string) => (keepOnPrint && !keepOnPrint.includes(k) ? " print:hidden" : "");
   return (
-    <div className="bg-white border border-gray-200 rounded-xl overflow-x-auto print:border-black print:rounded-none">
-      <table className="w-full text-xs">
+    <div className="bg-white border border-gray-300 overflow-hidden print:border-black">
+      <table className="w-full text-[11px] leading-snug">
         <thead className="bg-gray-50 print:bg-gray-100">
           <tr>
             {cols.map((c) => (
-              <th key={c.key} className={`px-3 py-2 font-bold text-gray-600 uppercase tracking-wide whitespace-nowrap border-b border-gray-200 ${c.align === "right" || c.money ? "text-right" : "text-left"}${hide(c.key)}`}>{c.label}</th>
+              <th key={c.key} className={`px-1.5 py-1.5 font-bold text-gray-700 uppercase tracking-wide border border-gray-300 print:border-black align-bottom ${c.align === "right" || c.money ? "text-right" : "text-left"}${hide(c.key)}`}>{c.label}</th>
             ))}
           </tr>
         </thead>
@@ -132,9 +132,9 @@ function Table<T>({ cols, rows, empty, totals, keepOnPrint }: { cols: Col<T>[]; 
             <tr><td colSpan={cols.length} className="px-3 py-8 text-center text-gray-400">{empty}</td></tr>
           ) : (
             rows.map((r, i) => (
-              <tr key={i} className="border-b border-gray-100 last:border-0">
+              <tr key={i} className="">
                 {cols.map((c) => (
-                  <td key={c.key} className={`px-3 py-2 whitespace-nowrap ${c.align === "right" || c.money ? "text-right tabular-nums" : ""}${hide(c.key)}`}>{cell(c, r)}</td>
+                  <td key={c.key} className={`px-1.5 py-1 border border-gray-300 print:border-black break-words align-top ${c.align === "right" || c.money ? "text-right tabular-nums" : ""}${hide(c.key)}`}>{cell(c, r)}</td>
                 ))}
               </tr>
             ))
@@ -144,7 +144,7 @@ function Table<T>({ cols, rows, empty, totals, keepOnPrint }: { cols: Col<T>[]; 
           <tfoot className="bg-gray-50 font-bold">
             <tr>
               {cols.map((c, i) => (
-                <td key={c.key} className={`px-3 py-2 whitespace-nowrap border-t border-gray-300 ${c.align === "right" || c.money ? "text-right tabular-nums" : ""}${hide(c.key)}`}>
+                <td key={c.key} className={`px-1.5 py-1.5 border border-gray-300 print:border-black break-words ${c.align === "right" || c.money ? "text-right tabular-nums" : ""}${hide(c.key)}`}>
                   {i === 0 ? "TOTAL" : totals[c.key] !== undefined ? (c.money ? inr(totals[c.key]) : totals[c.key]) : ""}
                 </td>
               ))}

@@ -73,7 +73,7 @@ export async function computeMis(month: string, scope: Record<string, unknown> =
     Booking.find({ ...scope, status: BookingStatus.NO_SHOW, updatedAt: inRange } as any).select("updatedAt").lean(),
     Payment.find({ ...scope, status: "COMPLETED", createdAt: inRange } as any).select("amount method purpose createdAt").lean(),
     AdvancePayment.find({ ...scope, receivedAt: inRange } as any).select("amount method receivedAt").lean(),
-    AdvanceAdjustment.find({ ...byBooking, type: "ADJUSTMENT", status: "COMPLETED", performedAt: inRange } as any).select("amount performedAt").lean(),
+    AdvanceAdjustment.find({ ...byBooking, type: "ADJUSTMENT", status: "COMPLETED", performedAt: inRange } as any).select("amount performedAt advancePayment").lean(),
     CashierShift.find({ ...scope, $or: [{ counterSales: { $elemMatch: { createdAt: inRange } } }, { paidOuts: { $elemMatch: { createdAt: inRange } } }] } as any).select("counterSales paidOuts").lean(),
     Refund.find({ ...byBooking, status: "COMPLETED", updatedAt: inRange } as any).select("amount updatedAt").lean(),
     CreditEntry.find({ ...scope, $or: [{ createdAt: inRange }, { "collections.at": inRange }] } as any).select("amount createdAt collections").lean(),
@@ -135,7 +135,16 @@ export async function computeMis(month: string, scope: Record<string, unknown> =
     mode(r, a.method, amount);
     r.recAdvance += amount;
   }
-  for (const a of adjustments as any[]) { const r = row(a.performedAt); if (r) r.advancesAdj += Number(a.amount) || 0; }
+  // Advance adjusted = advance money applied to a bill. The bill's own lines are the record (an advance taken at registration is
+  // applied the same minute), so they are counted; the older adjustment documents are counted too unless the same advance appears
+  // on a bill line. A line that was voided is left out.
+  const adjLines: any[] = await FolioLine.find({ lineType: FolioLineType.ADVANCE_ADJUSTMENT, date: inRange } as any).select("amount date advancePaymentId").lean();
+  const voided = new Set(
+    (await FolioLine.find({ lineType: FolioLineType.REVERSAL, reversedLineId: { $in: adjLines.map((l) => l._id) } } as any).select("reversedLineId").lean()).map((x: any) => String(x.reversedLineId)),
+  );
+  for (const l of adjLines) { if (voided.has(String(l._id))) continue; const r = row(l.date); if (r) r.advancesAdj += Number(l.amount) || 0; }
+  const onBill = new Set(adjLines.map((l) => String(l.advancePaymentId ?? "")).filter(Boolean));
+  for (const a of adjustments as any[]) { if (a.advancePayment && onBill.has(String(a.advancePayment))) continue; const r = row(a.performedAt); if (r) r.advancesAdj += Number(a.amount) || 0; }
   // Credit (pay later): given on the day it was left unpaid, collected on the day it was paid (that money is also in the modes above)
   for (const cr of credits as any[]) {
     const g = row(cr.createdAt); if (g) g.credit += Number(cr.amount) || 0;

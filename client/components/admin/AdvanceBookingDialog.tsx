@@ -69,6 +69,10 @@ export default function AdvanceBookingDialog({ open, onClose, onSaved, initial }
     arrivalTime: f.arrivalTime || undefined,
     departureTime: f.departureTime || undefined,
     mealPlan: f.mealPlan,
+    extraPersonsNoBed: Number(f.xPersonNoBed || 0),
+    extraPersonsWithBed: Number(f.xPersonBed || 0),
+    extraChildrenNoBed: Number(f.xChildNoBed || 0),
+    extraChildrenWithBed: Number(f.xChildBed || 0),
     ratePerNight: f.rate === "" || f.rate == null ? undefined : Number(f.rate),
     advance: { amount: Number(f.amount || 0), paymentChannelId: f.channelId, reference: f.reference },
     notes: f.notes,
@@ -94,7 +98,7 @@ export default function AdvanceBookingDialog({ open, onClose, onSaved, initial }
       }
     }, 350);
     return () => clearTimeout(h);
-  }, [open, body.roomCategoryId, body.rooms, body.adults, body.children, body.checkIn, body.checkOut, body.mealPlan, body.ratePerNight, f.gstin, f.email]);
+  }, [open, body.roomCategoryId, body.rooms, body.adults, body.children, body.checkIn, body.checkOut, body.mealPlan, body.extraPersonsNoBed, body.extraPersonsWithBed, body.extraChildrenNoBed, body.extraChildrenWithBed, body.ratePerNight, f.gstin, f.email]);
 
   if (!open) return null;
   const adv = Number(f.amount || 0);
@@ -169,6 +173,13 @@ export default function AdvanceBookingDialog({ open, onClose, onSaved, initial }
               <div><label className={lbl}>Check-out *</label><input className={inp} type="date" min={f.checkIn ? addDays(f.checkIn, 1) : undefined} value={f.checkOut ?? ""} onChange={(e) => set("checkOut", e.target.value)} /></div>
               <div><label className={lbl}>Arrival time</label><input className={inp} type="time" value={f.arrivalTime || quote?.arrivalTime || ""} onChange={(e) => set("arrivalTime", e.target.value)} /></div>
               <div><label className={lbl}>Departure time</label><input className={inp} type="time" value={f.departureTime || quote?.departureTime || ""} onChange={(e) => set("departureTime", e.target.value)} /></div>
+              <div className="sm:col-span-4 grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div><label className={lbl}>Extra person (no bed){quote ? ` ${inr(quote.extras?.rates?.extraPersonRate)}` : ""}</label><input className={inp} type="number" min={0} max={20} value={f.xPersonNoBed ?? 0} onChange={(e) => set("xPersonNoBed", e.target.value)} /></div>
+                <div><label className={lbl}>Extra bed{quote ? ` ${inr(quote.extras?.rates?.extraBedRate)}` : ""}</label><input className={inp} type="number" min={0} max={20} value={f.xPersonBed ?? 0} onChange={(e) => set("xPersonBed", e.target.value)} /></div>
+                <div><label className={lbl}>Child 3-12 (no bed){quote ? ` ${inr(quote.extras?.rates?.childRateNoBed)}` : ""}</label><input className={inp} type="number" min={0} max={20} value={f.xChildNoBed ?? 0} onChange={(e) => set("xChildNoBed", e.target.value)} /></div>
+                <div><label className={lbl}>Child 3-12 (with bed){quote ? ` ${inr(quote.extras?.rates?.childRateWithBed)}` : ""}</label><input className={inp} type="number" min={0} max={20} value={f.xChildBed ?? 0} onChange={(e) => set("xChildBed", e.target.value)} /></div>
+                <p className="col-span-2 sm:col-span-4 text-[10px] text-gray-500">Extra beds, persons and children are charged per night at the hotel's extra rates (shown above, before GST) and added to the first room, as in a walk-in booking.</p>
+              </div>
               <div className="sm:col-span-2"><label className={lbl}>Rate per room per night {quote ? `(${quote.pricesIncludeTax ? "GST included" : "+ GST"})` : ""}</label>
                 <input className={inp} type="number" min={0} placeholder={quote ? String(quote.defaultRate) : ""} value={f.rate ?? ""} onChange={(e) => set("rate", e.target.value)} /></div>
             </section>
@@ -183,7 +194,7 @@ export default function AdvanceBookingDialog({ open, onClose, onSaved, initial }
                   {quote.belowDefault && <p className="text-amber-700">Rate is below the standard {inr(quote.defaultRate)} — a manager will be asked to verify.</p>}
                   {quote.capacityWarning && <p className="text-amber-700">{quote.capacityWarning}</p>}
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1 text-xs">
-                    <div>Taxable<br /><b>{inr(quote.taxable)}</b></div>
+                    <div>Taxable{quote.extras?.total > 0 && <span className="block text-[11px] text-gray-500">incl. extras {inr(quote.extras.total)}</span>}<b>{inr(quote.taxable)}</b></div>
                     <div>GST ({quote.gstRate}%)<br /><b>{inr(quote.totalGst)}</b></div>
                     <div>{quote.nights} night(s) × {quote.rooms} room(s)<br />Total <b>{inr(quote.roundedTotal)}</b></div>
                     <div>Balance after advance<br /><b>{inr(balance)}</b></div>

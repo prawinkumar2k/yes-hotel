@@ -9,6 +9,7 @@
  * can draw from it. Rooms, bookings and the advance are saved together or not at all, repeated
  * submits are recognised, and everything is priced by the server (GST per the hotel's rules).
  */
+import { stayExtraRates } from "./tariff.service";
 import crypto from "node:crypto";
 import mongoose from "mongoose";
 import type { Request } from "express";
@@ -56,6 +57,11 @@ export type ReservationInput = {
   arrivalTime?: string; // HH:MM
   departureTime?: string;
   mealPlan?: string;
+  /** Extra beds / persons / children, as in a walk-in: charged per night at the hotel's extra rates, on the first room. */
+  extraPersonsNoBed?: number;
+  extraPersonsWithBed?: number;
+  extraChildrenNoBed?: number;
+  extraChildrenWithBed?: number;
   /** Per room per night, as the hotel prices (GST inside when "prices include GST" is on). */
   ratePerNight?: number;
   advance?: { amount?: number; paymentChannelId?: string; method?: string; reference?: string };
@@ -74,6 +80,7 @@ type Clean = {
   arrivalTime?: string;
   departureTime?: string;
   mealPlan: string;
+  extras: { personsNoBed: number; personsWithBed: number; childrenNoBed: number; childrenWithBed: number };
   ratePerNight?: number;
   advance: { amount: number; paymentChannelId?: string; method?: string; reference?: string };
   notes?: string;
@@ -111,6 +118,18 @@ function clean(input: ReservationInput): Clean {
   const mealPlan = String(input.mealPlan || "EP").toUpperCase();
   if (!Object.values(MealPlan).includes(mealPlan as MealPlan)) throw new ReservationError("Choose a valid meal plan");
 
+  const extraCount = (label: string, v: unknown) => {
+    const n = Number(v ?? 0);
+    if (!Number.isInteger(n) || n < 0 || n > 20) throw new ReservationError(`${label} must be a whole number from 0 to 20`);
+    return n;
+  };
+  const extras = {
+    personsNoBed: extraCount("Extra persons (no bed)", input.extraPersonsNoBed),
+    personsWithBed: extraCount("Extra beds", input.extraPersonsWithBed),
+    childrenNoBed: extraCount("Children (no bed)", input.extraChildrenNoBed),
+    childrenWithBed: extraCount("Children (with bed)", input.extraChildrenWithBed),
+  };
+
   let ratePerNight: number | undefined;
   if (input.ratePerNight !== undefined && input.ratePerNight !== null && String(input.ratePerNight) !== "") {
     ratePerNight = r2(Number(input.ratePerNight));
@@ -126,6 +145,7 @@ function clean(input: ReservationInput): Clean {
     arrivalTime: input.arrivalTime ? String(input.arrivalTime) : undefined,
     departureTime: input.departureTime ? String(input.departureTime) : undefined,
     mealPlan,
+    extras,
     ratePerNight,
     advance: { amount, paymentChannelId: input.advance?.paymentChannelId ? String(input.advance.paymentChannelId) : undefined, method: input.advance?.method ? String(input.advance.method).toUpperCase() : undefined, reference: input.advance?.reference ? String(input.advance.reference).trim() : undefined },
     notes: input.notes ? String(input.notes).trim().slice(0, 500) : undefined,
@@ -152,7 +172,7 @@ export async function freeRooms(roomCategoryId: string, checkIn: Date, checkOut:
 export type ReservationPricing = Awaited<ReturnType<typeof price>>;
 
 async function price(c: Clean, category: any) {
-  const settings: any = (await HotelSettings.findOne().sort({ updatedAt: -1 }).select("mealPlanRates checkInTime checkOutTime taxInclusiveRates").lean()) ?? {};
+  const settings: any = (await HotelSettings.findOne().sort({ updatedAt: -1 }).select("mealPlanRates checkInTime checkOutTime taxInclusiveRates extraPersonRate extraBedRate childRateNoBed childRateWithBed").lean()) ?? {};
   const { rules, inclusive } = await loadRoomPricing();
   const ci = new Date(c.checkIn);
   const co = new Date(c.checkOut);
@@ -164,8 +184,13 @@ async function price(c: Clean, category: any) {
   // Only the plan is recorded; meal charges are added by hand, so nothing is charged for it here.
   const mealPlanTotal = 0;
 
+  // Extra beds / persons / children (same rates and rule as a walk-in), charged per night and put on the first room.
+  const x = stayExtraRates(settings, undefined, category);
+  const extrasPerNight = c.extras.personsNoBed * x.extraPersonRate + c.extras.personsWithBed * x.extraBedRate + c.extras.childrenNoBed * x.childRateNoBed + c.extras.childrenWithBed * x.childRateWithBed;
+  const extrasTotal = r2(extrasPerNight * nights);
+
   const perRoom = Array.from({ length: c.rooms }, (_, i) => {
-    const subtotal = r2(rate * nights + (i === 0 ? mealPlanTotal : 0));
+    const subtotal = r2(rate * nights + (i === 0 ? mealPlanTotal + extrasTotal : 0));
     const t = computeRoomTax(rules, { checkIn: ci, checkOut: co, nightlyValue: subtotal / nights, inclusive });
     return { subtotal, taxable: r2(t.taxable), cgst: r2(t.cgst), sgst: r2(t.sgst), tax: r2(t.tax), total: r2(t.total) };
   });
@@ -184,6 +209,7 @@ async function price(c: Clean, category: any) {
     mealPlan: c.mealPlan,
     mealPlanRate: mealRate,
     mealPlanTotal,
+    extras: { ...c.extras, rates: x, perNight: r2(extrasPerNight), total: extrasTotal },
     perRoom,
     taxable: sum("taxable"),
     cgst: sum("cgst"),
@@ -301,6 +327,7 @@ export async function createAdvanceReservation(input: ReservationInput, ctx: { r
             arrivalTime: pricing.arrivalTime,
             departureTime: pricing.departureTime,
             mealPlan: c.mealPlan as MealPlan,
+            ...(i === 0 ? { extraPersonsNoBed: c.extras.personsNoBed, extraPersonsWithBed: c.extras.personsWithBed, extraChildrenNoBed: c.extras.childrenNoBed, extraChildrenWithBed: c.extras.childrenWithBed } : {}),
             ratePerNight: pricing.ratePerNight,
             adults: spread(c.adults, i),
             children: spread(c.children, i),

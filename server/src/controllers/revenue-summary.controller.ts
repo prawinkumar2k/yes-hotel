@@ -22,16 +22,15 @@ function rowKey(lineType: string, description: string): string | null {
       return "roomSales";
     case FolioLineType.EXTRA_BED:
       return "extraBed";
-    case FolioLineType.RESTAURANT:
-      return "restaurant";
-    case FolioLineType.MINIBAR:
-      return "minibar";
     case FolioLineType.LAUNDRY:
       return "laundry";
+    // The hotel has no restaurant, minibar, spa or transport. Should an old bill still carry such a charge, it is
+    // kept under Other Charges so the totals stay right.
+    case FolioLineType.RESTAURANT:
+    case FolioLineType.MINIBAR:
     case FolioLineType.SPA:
-      return "spa";
     case FolioLineType.TRANSPORT:
-      return "transport";
+      return "otherCharges";
     case FolioLineType.ADDON:
       return /^meal plan/i.test(description) ? "planCharges" : "otherCharges";
     default:
@@ -71,9 +70,8 @@ export const getRevenueSummary = async (req: Request, res: Response) => {
 
     const dept: Dept[] = [
       { name: "Reception", rows: [blank("roomSales", "Room Sales"), blank("extraBed", "Extra-Bed"), blank("planCharges", "Plan Charges"), blank("otaCommission", "OTA Commission")] },
-      { name: "F&B", rows: [blank("restaurant", "Restaurant"), blank("minibar", "Minibar")] },
       { name: "House Keeping", rows: [blank("laundry", "Laundry")] },
-      { name: "Others", rows: [blank("spa", "Spa"), blank("transport", "Transport"), blank("counterSales", "Counter Sales"), blank("otherCharges", "Other Charges")] },
+      { name: "Others", rows: [blank("counterSales", "Counter Sales (water, tea / coffee, etc.)"), blank("otherCharges", "Other Charges")] },
     ];
     const byKey = new Map<string, Row>(dept.flatMap((d) => d.rows).map((r) => [r.key, r]));
 

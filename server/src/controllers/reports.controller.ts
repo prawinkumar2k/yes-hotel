@@ -791,6 +791,7 @@ export const getDaySummary = async (req: Request, res: Response) => {
         totalPax = mis.occupancyPax;
         partial = mis.recPartial;
         final = mis.recFinal;
+        advAdjd = mis.advancesAdj;
         paymentModes.CASH = mis.cash;
         paymentModes.UPI = mis.upi;
         paymentModes.CARD = mis.card + 0;

@@ -57,7 +57,8 @@ describe("Revenue Summary", () => {
     const d = r.json.data;
     const row = (k: string) => d.departments.flatMap((x: any) => x.rows).find((x: any) => x.key === k);
     expect(row("roomSales")).toMatchObject({ amount: 1000, taxVal: 1000, cgst: 25, sgst: 25, total: 1050 });
-    expect(row("restaurant").amount).toBe(300);
+    expect(row("otherCharges").amount).toBe(300); // the hotel has no restaurant: an old charge of that type stays under Other Charges
+    expect(row("restaurant")).toBeUndefined();
     expect(row("laundry").amount).toBe(100);
     expect(d.grand.total).toBe(1450); // 1000 + 25 + 25 + 300 + 100; the 500 refund and the payment are not revenue
     expect(d.taxCollection).toBe(50);

@@ -95,6 +95,23 @@ describe("quote", () => {
     expect(d.capacityWarning).toBeUndefined(); // 20 adults in 10 rooms of 2
   });
 
+  it("extra beds, persons and children are charged per night on top of the rooms, with GST", async () => {
+    const plain = (await call("POST", "/api/advances/bookings/quote", form({}))).json.data;
+    const withExtras = await call("POST", "/api/advances/bookings/quote", form({ extraPersonsWithBed: 2, extraChildrenNoBed: 1 }));
+    expect(withExtras.status, JSON.stringify(withExtras.json)).toBe(200);
+    const d = withExtras.json.data;
+    const r = d.extras.rates;
+    expect(d.extras.perNight).toBeCloseTo(2 * r.extraBedRate + 1 * r.childRateNoBed, 2);
+    expect(d.extras.total).toBeCloseTo(d.extras.perNight * d.nights, 2);
+    expect(d.total).toBeGreaterThan(plain.total);
+    expect(plain.extras.total).toBe(0);
+  });
+
+  it("refuses a silly extras count", async () => {
+    const r = await call("POST", "/api/advances/bookings/quote", form({ extraPersonsWithBed: 99 }));
+    expect(r.status).toBe(400);
+  });
+
   it("warns when there are more adults than the rooms hold; meal plan is charged per person per night", async () => {
     const q = await call("POST", "/api/advances/bookings/quote", form({ adults: 24, mealPlan: "CP" }));
     expect(q.json.data.capacityWarning).toMatch(/extra person/);

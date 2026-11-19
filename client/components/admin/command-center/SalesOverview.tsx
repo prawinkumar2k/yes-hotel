@@ -50,7 +50,7 @@ export function SalesOverview() {
               <Tooltip formatter={(v: number) => inr(v)} labelFormatter={(d) => format(new Date(d as string), "dd MMM yyyy")} />
               <Legend />
               <Bar dataKey="room" name="Room" stackId="s" fill="#c9a227" />
-              <Bar dataKey="other" name="F&B / other" stackId="s" fill="#0f172a" />
+              <Bar dataKey="other" name="Other sales" stackId="s" fill="#0f172a" />
             </BarChart>
           </ResponsiveContainer>
         </div>

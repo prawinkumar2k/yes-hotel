@@ -50,7 +50,7 @@ export default function RevenueSummaryReport() {
   };
 
   return (
-    <div className="space-y-4 report-print">
+    <div className="space-y-4 report-print mx-auto w-full max-w-[210mm]">
       <div className="flex flex-wrap items-end justify-between gap-3 print:hidden">
         <div>
           <h2 className="text-xl font-serif font-bold text-gray-900">Revenue Summary</h2>
@@ -58,10 +58,10 @@ export default function RevenueSummaryReport() {
         </div>
         <div className="flex flex-wrap items-end gap-2">
           <label className="text-xs font-semibold text-gray-600">From
-            <input type="date" value={from} max={to} onChange={(e) => setFrom(e.target.value)} className="block mt-1 px-2 py-1.5 border border-gray-300 rounded-lg text-sm bg-white" />
+            <input type="date" value={from} max={to} onChange={(e) => setFrom(e.target.value)} className="block mt-1 px-1.5 py-1.5 border border-gray-300 rounded-lg text-sm bg-white" />
           </label>
           <label className="text-xs font-semibold text-gray-600">To
-            <input type="date" value={to} min={from} max={addDays(today, 0)} onChange={(e) => setTo(e.target.value)} className="block mt-1 px-2 py-1.5 border border-gray-300 rounded-lg text-sm bg-white" />
+            <input type="date" value={to} min={from} max={addDays(today, 0)} onChange={(e) => setTo(e.target.value)} className="block mt-1 px-1.5 py-1.5 border border-gray-300 rounded-lg text-sm bg-white" />
           </label>
           <button type="button" onClick={download} disabled={!data} className="px-3 py-2 bg-white border border-gray-300 rounded-lg text-xs font-bold flex items-center gap-1.5 disabled:opacity-40"><Download size={14} /> Export CSV</button>
           <button type="button" onClick={() => window.print()} className="px-3 py-2 bg-black text-[#e5c76b] rounded-lg text-xs font-bold flex items-center gap-1.5"><Printer size={14} /> Print</button>
@@ -76,11 +76,11 @@ export default function RevenueSummaryReport() {
       ) : (
         <>
           <div className="bg-white border border-gray-300 overflow-x-auto print:border-black">
-            <table className="w-full text-xs border-collapse">
+            <table className="w-full text-[11px] border-collapse">
               <thead>
                 <tr className="bg-gray-50 print:bg-gray-100">
-                  <th className="border border-gray-300 print:border-black px-2 py-1.5 text-left">Department</th>
-                  {COLS.map(([k, l]) => <th key={k} className="border border-gray-300 print:border-black px-2 py-1.5 text-right">{l}</th>)}
+                  <th className="border border-gray-300 print:border-black px-1.5 py-1.5 text-left">Department</th>
+                  {COLS.map(([k, l]) => <th key={k} className="border border-gray-300 print:border-black px-1.5 py-1.5 text-right">{l}</th>)}
                 </tr>
               </thead>
               <tbody>
@@ -88,8 +88,8 @@ export default function RevenueSummaryReport() {
                   <DeptBlock key={dep.name} n={i + 1} dep={dep} />
                 ))}
                 <tr className="font-bold bg-gray-50 print:bg-gray-100">
-                  <td className="border border-gray-300 print:border-black px-2 py-1.5">Grand total</td>
-                  {COLS.map(([k]) => <td key={k} className="border border-gray-300 print:border-black px-2 py-1.5 text-right tabular-nums">{num(data.grand[k] as number)}</td>)}
+                  <td className="border border-gray-300 print:border-black px-1.5 py-1.5">Grand total</td>
+                  {COLS.map(([k]) => <td key={k} className="border border-gray-300 print:border-black px-1.5 py-1.5 text-right tabular-nums">{num(data.grand[k] as number)}</td>)}
                 </tr>
               </tbody>
             </table>
