@@ -10,6 +10,7 @@ import CashSheetReport from "./reports/CashSheetReport";
 import AdminAnalytics from "./reports/AdminAnalytics";
 import AdminInHouseList from "./AdminInHouseList";
 import AdminBulkDocViewer from "./AdminBulkDocViewer";
+import RevenueSummaryReport from "./reports/RevenueSummaryReport";
 import { CheckInReport, CheckOutReport, DayUseSalesReport, AdvanceReport } from "./reports/OperationsReports";
 
 const CATEGORIES = [
@@ -23,6 +24,7 @@ const CATEGORIES = [
   { id: "bulk-docs", name: "GRC & GST Invoices (Bulk)", path: "/admin/reports/bulk-docs" },
   { id: "monthly-mis", name: "Monthly MIS Report", path: "/admin/reports/monthly-mis" },
   { id: "mis-sheet", name: "MIS Daily Sheet", path: "/admin/reports/mis-sheet" },
+  { id: "revenue-summary", name: "Revenue Summary", path: "/admin/reports/revenue-summary" },
 ];
 
 export default function AdminReportsLayout() {
@@ -65,6 +67,7 @@ export default function AdminReportsLayout() {
           <Route path="bulk-docs" element={<AdminBulkDocViewer />} />
           <Route path="monthly-mis" element={<AdminMonthlyMIS />} />
           <Route path="mis-sheet" element={<MisSheetReport />} />
+          <Route path="revenue-summary" element={<RevenueSummaryReport />} />
           <Route path="daily-summary" element={<DaySummaryReport />} />
           <Route path="cash-sheet" element={<CashSheetReport />} />
           <Route path="check-in-report" element={<CheckInReport />} />

@@ -1,3 +1,4 @@
+import { getRevenueSummary } from "../controllers/revenue-summary.controller";
 import { Router } from "express";
 import { requirePropertyAccess } from "../middleware/propertyAuth";
 import { requirePermission } from "../middleware/permissionAuth";
@@ -25,6 +26,7 @@ const MANAGER_ROLES = ["ADMIN", "MANAGER", "FINANCE"];
 // The /:reportId route below now handles sales, room-stay, gst, advances, etc.
 
 // Phase 24 – Advanced Analytics
+router.get("/revenue-summary", protect, requirePropertyAccess, requirePermission("REPORTS_LAYOUT", "VIEW"), getRevenueSummary);
 router.get("/revenue-trend", protect, requirePropertyAccess, requirePermission("REPORTS_LAYOUT", "VIEW"), getRevenueTrend);
 router.get("/department-pl", protect, requirePropertyAccess, requirePermission("REPORTS_LAYOUT", "VIEW"), getDepartmentPL);
 router.get("/occupancy-heatmap", protect, requirePropertyAccess, requirePermission("REPORTS_LAYOUT", "VIEW"), getOccupancyHeatmap);
