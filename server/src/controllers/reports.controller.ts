@@ -681,8 +681,8 @@ export const getDaySummary = async (req: Request, res: Response) => {
       Room.countDocuments(propertyMatch),
     ]);
 
-    const totalPax = activeBookings.reduce((sum, b) => sum + (b.adults || 1) + (b.children || 0), 0);
-    const occupiedOnTarget =
+    let totalPax = activeBookings.reduce((sum, b) => sum + (b.adults || 1) + (b.children || 0), 0);
+    let occupiedOnTarget =
       targetYmd === todayBusinessDate()
         ? (await (await import("../services/room-status.service")).getSnapshot(targetYmd)).summary.occupied
         : await Booking.countDocuments({
@@ -777,7 +777,33 @@ export const getDaySummary = async (req: Request, res: Response) => {
       };
     });
 
-    const roomSalesTotal = paymentModes.CASH + paymentModes.UPI + paymentModes.CARD + paymentModes.PAYTM;
+    // The MIS sheet is the one calculation for the hotel's day. Rooms occupied that night, guests, final / partial payments,
+    // money by mode and sales all come from it, so this summary and the MIS Daily Sheet always agree.
+    let roomSalesTotal = paymentModes.CASH + paymentModes.UPI + paymentModes.CARD + paymentModes.PAYTM;
+    let fbSalesToday = 0;
+    let creditGivenToday: number | undefined;
+    let receivedToday: number | undefined;
+    {
+      const { computeMis } = await import("../services/mis.service");
+      const mis = (await computeMis(targetYmd.slice(0, 7), propertyMatch)).find((x) => x.date === targetYmd);
+      if (mis) {
+        occupiedOnTarget = mis.occupancyRooms;
+        totalPax = mis.occupancyPax;
+        partial = mis.recPartial;
+        final = mis.recFinal;
+        paymentModes.CASH = mis.cash;
+        paymentModes.UPI = mis.upi;
+        paymentModes.CARD = mis.card + 0;
+        paymentModes.PAYTM = 0;
+        paymentModes.HDFC = mis.other + mis.kkm;
+        paymentModes.OTA_CREDIT = mis.otaPayment;
+        roomSalesTotal = mis.roomSales;
+        miscSalesToday = mis.misc;
+        fbSalesToday = mis.fbSales;
+        creditGivenToday = mis.credit; // left unpaid today (pay later / OTA), not money received
+        receivedToday = mis.modeTotal;
+      }
+    }
 
     return res.json({
       success: true,
@@ -806,6 +832,7 @@ export const getDaySummary = async (req: Request, res: Response) => {
         paymentModes,
         salesRoom: roomSalesTotal,
         misc: miscSalesToday,
+        fbSales: fbSalesToday,
         // -- Aliases used by DaySummaryReport.tsx --
         checkIn: checkIns.length,
         checkOut: checkOuts.length,
@@ -819,13 +846,15 @@ export const getDaySummary = async (req: Request, res: Response) => {
         auto: 0,
         cash: paymentModes.CASH,
         paytm: paymentModes.PAYTM,
-        hdfcUpi: paymentModes.UPI + paymentModes.HDFC,
+        hdfcUpi: paymentModes.UPI,
+        bankOther: paymentModes.HDFC,
         otaCredit: paymentModes.OTA_CREDIT,
         otaAgoda,
         otaMmt,
         otaBooking,
         otaGoibibo,
-        credits: resrvAdv + roomAdv + partial + final,
+        credits: creditGivenToday ?? resrvAdv + roomAdv + partial + final,
+        totalReceived: receivedToday ?? paymentModes.CASH + paymentModes.UPI + paymentModes.CARD,
         advAdjdTotal: advAdjd,
         roomSales: roomSalesTotal,
         miscSales: miscSalesToday,

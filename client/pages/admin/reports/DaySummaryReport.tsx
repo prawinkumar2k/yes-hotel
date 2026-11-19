@@ -211,16 +211,24 @@ export default function DaySummaryReport() {
                     <td className="py-1 text-right tabular-nums border-b border-gray-300">{formatAmount(data?.cash)}</td>
                   </tr>
                   <tr>
-                    <td className="py-1 pl-4 text-left">Paytm Card</td>
-                    <td className="py-1 text-right tabular-nums border-b border-gray-300">{formatAmount(data?.paytm)}</td>
+                    <td className="py-1 pl-4 text-left">Card</td>
+                    <td className="py-1 text-right tabular-nums border-b border-gray-300">{formatAmount(data?.paymentModes?.CARD)}</td>
                   </tr>
                   <tr>
-                    <td className="py-1 pl-4 text-left">HDFC UPI</td>
+                    <td className="py-1 pl-4 text-left">UPI</td>
                     <td className="py-1 text-right tabular-nums border-b border-gray-300">{formatAmount(data?.hdfcUpi)}</td>
                   </tr>
                   <tr>
-                    <td className="py-1 pl-4 text-left">OTA Credit</td>
+                    <td className="py-1 pl-4 text-left">Bank / Other</td>
+                    <td className="py-1 text-right tabular-nums border-b border-gray-300">{formatAmount(data?.bankOther)}</td>
+                  </tr>
+                  <tr>
+                    <td className="py-1 pl-4 text-left">OTA Payment</td>
                     <td className="py-1 text-right tabular-nums border-b border-gray-300">{formatAmount(data?.otaCredit)}</td>
+                  </tr>
+                  <tr className="font-bold bg-gray-50">
+                    <td className="py-1 pl-4 text-left">Total Received</td>
+                    <td className="py-1 text-right tabular-nums border-b border-gray-300">{formatAmount(data?.totalReceived)}</td>
                   </tr>
                 </tbody>
               </table>
@@ -237,6 +245,10 @@ export default function DaySummaryReport() {
                     <td className="py-1 text-right tabular-nums border-b border-gray-300">{formatAmount(data?.roomSales)}</td>
                   </tr>
                   <tr>
+                    <td className="py-1 pl-4 text-left">F&amp;B</td>
+                    <td className="py-1 text-right tabular-nums border-b border-gray-300">{formatAmount(data?.fbSales)}</td>
+                  </tr>
+                  <tr>
                     <td className="py-1 pl-4 text-left">Misc.</td>
                     <td className="py-1 text-right tabular-nums border-b border-gray-300">{formatAmount(data?.miscSales)}</td>
                   </tr>
@@ -247,7 +259,7 @@ export default function DaySummaryReport() {
               <table className="w-full table-fixed border-collapse">
                 <tbody>
                   <tr className="border-b-2 border-gray-800 bg-gray-100">
-                    <td className="font-bold py-1.5 px-2 w-7/12 text-left uppercase tracking-wide text-[11px]">Credits</td>
+                    <td className="font-bold py-1.5 px-2 w-7/12 text-left uppercase tracking-wide text-[11px]">Credit given (unpaid)</td>
                     <td className="py-1 text-right tabular-nums border-b border-gray-300">{formatAmount(data?.credits)}</td>
                   </tr>
                 </tbody>
