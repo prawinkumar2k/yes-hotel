@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { Fragment, useRef, useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { format } from "date-fns";
@@ -11,6 +11,7 @@ const inr = (n?: number) => `₹${Number(n || 0).toLocaleString("en-IN", { minim
 const newKey = () => (typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `k-${Date.now()}-${Math.random().toString(36).slice(2)}`);
 
 type Row = {
+  groupId?: string; groupSize?: number; advanceShare?: number;
   bookingId: string; bookingReference: string; billNumber?: string; guest: string; phone?: string; room?: string; category?: string;
   checkInDate: string; checkOutDate: string; overdue: boolean; checkoutInitiated: boolean; folioId?: string;
   charges: number; paid: number; advancesApplied: number; refunded: number; balance: number; advanceAvailable: number; readyToCheckOut: boolean;
@@ -22,6 +23,8 @@ export default function AdminCashierBilling() {
   const [payFor, setPayFor] = useState<Row | null>(null);
   const [pay, setPay] = useState({ amount: "", method: "CASH", reference: "", key: "" });
   const [doc, setDoc] = useState<{ title: string; src: string } | null>(null);
+  // One payment for every room of a group (a group stay: several rooms booked together).
+  const [groupPay, setGroupPay] = useState<{ rows: Row[]; amount: string; method: string; reference: string; key: string } | null>(null);
   const frameRef = useRef<HTMLIFrameElement>(null);
 
   const { data, isLoading, error } = useQuery({
@@ -78,6 +81,48 @@ export default function AdminCashierBilling() {
     onError,
   });
 
+  // ── Group stays: settle and check out all the rooms together (each room can still be done on its own) ──
+  const applyGroupAdvance = useMutation({
+    mutationFn: async (rows: Row[]) => {
+      let applied = 0;
+      for (const r of rows.filter((x) => x.folioId && x.advanceAvailable > 0 && x.balance > 0)) {
+        const res = (await api.post(`/reception/folios/${r.folioId}/apply-advances`, {})).data;
+        applied += Number(res?.data?.applied ?? res?.applied ?? 0);
+      }
+      return applied;
+    },
+    onSuccess: () => { toast({ title: "Advance applied", description: "Each room drew its own share of the advance." }); refresh(); },
+    onError,
+  });
+  const payGroup = useMutation({
+    mutationFn: async () => {
+      const g = groupPay!;
+      return (await api.post("/reception/bookings/payments", {
+        bookingIds: g.rows.map((r) => r.bookingId), amount: Number(g.amount), method: g.method,
+        reference: g.reference || undefined, clientRequestId: g.key,
+      })).data;
+    },
+    onSuccess: (res) => { toast({ title: res.duplicate ? "Already recorded" : "Payment received", description: res.message }); setGroupPay(null); refresh(); },
+    onError,
+  });
+  const checkoutGroup = useMutation({
+    mutationFn: async (rows: Row[]) => {
+      for (const r of rows) await api.post(`/bookings/${r.bookingId}/check-out`, { notes: "Group checkout from Cashier & Billing" });
+      return rows;
+    },
+    onSuccess: (rows) => {
+      toast({ title: "Checked out", description: `${rows.length} rooms checked out together.` });
+      refresh();
+      setDoc({ title: "GST Invoice (all rooms)", src: `/admin/bookings/${rows[0].bookingId}/folio-print` });
+    },
+    onError,
+  });
+
+  const openGroupPay = (rows: Row[]) => {
+    const due = rows.filter((r) => r.balance > 0);
+    setGroupPay({ rows: due, amount: String(Math.round(due.reduce((t, r) => t + r.balance, 0) * 100) / 100), method: "CASH", reference: "", key: newKey() });
+  };
+
   const openPay = (r: Row) => {
     setPayFor(r);
     setPay({ amount: String(Math.max(0, r.balance)), method: "CASH", reference: "", key: newKey() });
@@ -91,7 +136,19 @@ export default function AdminCashierBilling() {
     refundCredit.mutate({ r, amount, reason, method: "CASH" });
   };
 
-  const rows = data ?? [];
+  const rawRows = data ?? [];
+  // A group's rooms sit together, in room order; single rooms keep their place.
+  const seen = new Set<string>();
+  const rows: Row[] = [];
+  for (const r of rawRows) {
+    if (r.groupId && rawRows.filter((x) => x.groupId === r.groupId).length > 1) {
+      if (seen.has(r.groupId)) continue;
+      seen.add(r.groupId);
+      rows.push(...rawRows.filter((x) => x.groupId === r.groupId).sort((a, b) => String(a.room).localeCompare(String(b.room), undefined, { numeric: true })));
+    } else rows.push(r);
+  }
+  const groupRows = (gid?: string) => (gid ? rows.filter((x) => x.groupId === gid) : []);
+  const isGroupHead = (r: Row, i: number) => !!r.groupId && groupRows(r.groupId).length > 1 && rows.findIndex((x) => x.groupId === r.groupId) === i;
   const returnedToCashier = counts?.returned?.CASHIER ?? 0;
 
   return (
@@ -132,8 +189,41 @@ export default function AdminCashierBilling() {
               </tr>
             </thead>
             <tbody>
-              {rows.map((r) => (
-                <tr key={r.bookingId} className="border-t border-slate-100 align-top">
+              {rows.map((r, idx) => (
+                <Fragment key={r.bookingId}>
+                {isGroupHead(r, idx) && (() => {
+                  const g = groupRows(r.groupId);
+                  const due = Math.round(g.reduce((t, x) => t + Math.max(0, x.balance), 0) * 100) / 100;
+                  const adv = Math.round(g.reduce((t, x) => t + (x.balance > 0 ? x.advanceAvailable : 0), 0) * 100) / 100;
+                  const allClear = g.every((x) => x.folioId && x.balance === 0);
+                  return (
+                    <tr className="bg-amber-50 border-t-2 border-amber-300">
+                      <td colSpan={9} className="px-3 py-2">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <div className="text-xs">
+                            <b>Group stay · {g.length} rooms</b> · {g[0].guest} · still due <b className="text-red-700">{inr(due)}</b>
+                            {adv > 0 && <> · advance share to apply <b>{inr(adv)}</b></>}
+                          </div>
+                          <div className="flex flex-wrap gap-1.5 text-xs font-bold">
+                            {adv > 0 && due > 0 && (
+                              <button disabled={applyGroupAdvance.isPending} onClick={() => applyGroupAdvance.mutate(g)} className="px-2.5 py-1 rounded border border-slate-400 bg-white hover:bg-slate-50 disabled:opacity-50">Apply advance to all rooms</button>
+                            )}
+                            {due > 0 && (
+                              <button onClick={() => openGroupPay(g)} className="px-2.5 py-1 rounded bg-black text-[#e5c76b]">Receive one payment for all rooms</button>
+                            )}
+                            <button
+                              disabled={!allClear || checkoutGroup.isPending}
+                              title={allClear ? "Check out every room of this group together" : "Settle every room's bill first"}
+                              onClick={() => window.confirm(`Check out all ${g.length} rooms of ${g[0].guest} together?`) && checkoutGroup.mutate(g)}
+                              className="px-2.5 py-1 rounded bg-emerald-600 text-white disabled:opacity-40"
+                            >Check out all rooms</button>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })()}
+                <tr className="border-t border-slate-100 align-top">
                   <td className="px-3 py-2 font-bold">{r.room ?? "—"}<div className="font-normal text-slate-500">{r.category}</div></td>
                   <td className="px-3 py-2">
                     <div className="font-semibold text-slate-900">{r.guest}</div>
@@ -173,9 +263,38 @@ export default function AdminCashierBilling() {
                     )}
                   </td>
                 </tr>
+                </Fragment>
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {groupPay && (
+        <div role="dialog" aria-modal="true" aria-label="Payment for all rooms" className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4" onClick={() => !payGroup.isPending && setGroupPay(null)}>
+          <form className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-5 space-y-4" onClick={(e) => e.stopPropagation()} onSubmit={(e) => { e.preventDefault(); payGroup.mutate(); }}>
+            <div className="flex items-center justify-between">
+              <h3 className="font-serif font-bold text-lg flex items-center gap-2"><Receipt size={18} /> One payment for all rooms</h3>
+              <button type="button" onClick={() => setGroupPay(null)} className="text-slate-400 hover:text-slate-700"><X size={18} /></button>
+            </div>
+            <p className="text-sm text-slate-600">{groupPay.rows[0]?.guest} · {groupPay.rows.length} room(s) with a balance: {groupPay.rows.map((r) => `${r.room} (${inr(r.balance)})`).join(", ")}</p>
+            <label className="block text-xs font-bold text-slate-600">Amount (₹) — shared across the rooms by what each owes
+              <input type="number" min="0.01" step="0.01" required value={groupPay.amount} onChange={(e) => setGroupPay({ ...groupPay, amount: e.target.value })} className="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg text-sm font-mono font-bold" />
+            </label>
+            <label className="block text-xs font-bold text-slate-600">Method
+              <select value={groupPay.method} onChange={(e) => setGroupPay({ ...groupPay, method: e.target.value })} className="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white">
+                <option value="CASH">Cash</option><option value="CARD">Card</option><option value="UPI">UPI</option>
+              </select>
+            </label>
+            {groupPay.method !== "CASH" && (
+              <label className="block text-xs font-bold text-slate-600">{groupPay.method === "CARD" ? "Approval code" : "UTR / reference"} *
+                <input required value={groupPay.reference} onChange={(e) => setGroupPay({ ...groupPay, reference: e.target.value })} className="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" />
+              </label>
+            )}
+            <button type="submit" disabled={payGroup.isPending} className="w-full py-2.5 rounded-xl bg-black text-[#e5c76b] font-bold text-sm disabled:opacity-50">
+              {payGroup.isPending ? "Recording…" : `Receive ${inr(Number(groupPay.amount) || 0)} for ${groupPay.rows.length} room(s)`}
+            </button>
+          </form>
         </div>
       )}
 

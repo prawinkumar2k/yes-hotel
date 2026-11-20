@@ -334,6 +334,45 @@ export async function refundAdvance(
 }
 
 /**
+ * How much of a group's advance one room can draw. The group's advance (money taken for all rooms booked together) is shared
+ * across the rooms in proportion to each room's total (or the share saved on the booking at reservation time).
+ *   share = this room's part of the advance;  used = what it has already drawn;  cap = share - used, never more than is left.
+ */
+export async function advanceCapForBooking(bookingId: string, opts: { session?: mongoose.ClientSession } = {}) {
+  const { Booking, BookingStatus } = await import("../models/Booking");
+  const { FolioLine } = await import("../models/FolioLine");
+  const { splitAdvanceAcrossRooms } = await import("./advance-split");
+  const r2 = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
+  const sess = opts.session ?? null;
+  const own: any = await Booking.findById(bookingId).select("groupId advanceShare totalAmount").session(sess).lean();
+  if (!own) return { share: 0, used: 0, cap: 0, groupRemaining: 0, groupSize: 1 };
+  const group: any[] = own.groupId
+    ? await Booking.find({ groupId: own.groupId, status: { $ne: BookingStatus.CANCELLED } }).select("_id totalAmount advanceShare bookingReference").sort({ bookingReference: 1 }).session(sess).lean()
+    : [own];
+  const ids = group.map((b) => b._id);
+  const advances: any[] = await AdvancePayment.find({ booking: { $in: ids }, status: { $in: DRAWABLE } }).select("amount totalRefunded remainingBalance").session(sess).lean();
+  const net = r2(advances.reduce((t, a) => t + (Number(a.amount) || 0) - (Number(a.totalRefunded) || 0), 0));
+  // Applied advances are not DRAWABLE any more once fully used: count every advance of the group for the split.
+  const everyAdvance: any[] = await AdvancePayment.find({ booking: { $in: ids } }).select("amount totalRefunded").session(sess).lean();
+  const gross = r2(everyAdvance.reduce((t, a) => t + (Number(a.amount) || 0) - (Number(a.totalRefunded) || 0), 0));
+  const groupRemaining = r2(advances.reduce((t, a) => t + (Number(a.remainingBalance) || 0), 0));
+  void net;
+
+  let share: number;
+  if (typeof own.advanceShare === "number") share = own.advanceShare;
+  else if (group.length > 1) {
+    const shares = splitAdvanceAcrossRooms(gross, group.map((b) => Number(b.totalAmount) || 0));
+    const at = group.findIndex((b) => String(b._id) === String(bookingId));
+    share = shares[at] ?? 0;
+  } else share = gross;
+
+  const drawn: any[] = await FolioLine.find({ booking: bookingId, lineType: FolioLineType.ADVANCE_ADJUSTMENT }).select("amount").session(sess).lean();
+  const undone = new Set((await FolioLine.find({ lineType: FolioLineType.REVERSAL, reversedLineId: { $in: drawn.map((l) => l._id) } }).select("reversedLineId").session(sess).lean()).map((x: any) => String(x.reversedLineId)));
+  const used = r2(drawn.filter((l) => !undone.has(String(l._id))).reduce((t, l) => t + (Number(l.amount) || 0), 0));
+  return { share: r2(share), used, cap: r2(Math.max(0, Math.min(share - used, groupRemaining))), groupRemaining, groupSize: group.length };
+}
+
+/**
  * Applies a booking's available advances to its folio, oldest first, up to `maxAmount`
  * (never more than the folio's outstanding balance). Returns the amount applied.
  */
@@ -348,15 +387,15 @@ export async function applyAdvancesToFolio(
   // An advance taken for a group (several rooms booked together) sits on the group's first room but
   // belongs to the whole group: every room's bill can draw from it.
   const { Booking } = await import("../models/Booking");
-  const own: any = await Booking.findById(params.bookingId).select("groupId advanceShare").session(opts.session ?? null).lean();
-  // A reservation's advance is split across its rooms: this room can draw only its own share (less what it already drew).
-  if (typeof own?.advanceShare === "number") {
-    const { FolioLine, FolioLineType } = await import("../models/FolioLine");
-    const drawn: any[] = await FolioLine.find({ booking: params.bookingId, lineType: FolioLineType.ADVANCE_ADJUSTMENT }).select("amount").session(opts.session ?? null).lean();
-    const undone = new Set((await FolioLine.find({ lineType: FolioLineType.REVERSAL, reversedLineId: { $in: drawn.map((l) => l._id) } }).select("reversedLineId").session(opts.session ?? null).lean()).map((x: any) => String(x.reversedLineId)));
-    const used = drawn.filter((l) => !undone.has(String(l._id))).reduce((t, l) => t + (Number(l.amount) || 0), 0);
-    left = Math.round(Math.min(left, Math.max(0, own.advanceShare - used)) * 100) / 100;
-    if (left <= 0) return 0;
+  const own: any = await Booking.findById(params.bookingId).select("groupId").session(opts.session ?? null).lean();
+  // An advance taken for a group (several rooms booked together) is SPLIT across its rooms in proportion to what each room
+  // costs: this room can draw only its own share (less what it already drew), however the rooms are settled or checked out.
+  if (own?.groupId) {
+    const cap = await advanceCapForBooking(params.bookingId, { session: opts.session });
+    if (cap.groupSize > 1) {
+      left = Math.round(Math.min(left, cap.cap) * 100) / 100;
+      if (left <= 0) return 0;
+    }
   }
   const bookingIds = own?.groupId
     ? (await Booking.find({ groupId: own.groupId }).select("_id").session(opts.session ?? null).lean()).map((b: any) => b._id)

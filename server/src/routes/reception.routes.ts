@@ -22,7 +22,7 @@ import { FolioLine, FolioLineType } from "../models/FolioLine";
 import { AdvancePayment, AdvancePaymentStatus } from "../models/AdvancePayment";
 import { Payment } from "../models/Payment";
 import { recordFolioPayment, recomputeFolioBalance, postCharge } from "../services/folio.service";
-import { applyAdvancesToFolio } from "../services/advance.service";
+import { applyAdvancesToFolio, advanceCapForBooking } from "../services/advance.service";
 import { submitForVerification } from "../services/verification.service";
 import { VerificationType } from "../models/VerificationRequest";
 import { createAuditLog } from "../services/audit.service";
@@ -80,7 +80,13 @@ router.get("/billing-queue", requirePermission("CASHIER_DESK", "VIEW"), async (r
         const f: any = folioOf.get(String(b._id));
         const totals = f ? await recomputeFolioBalance(String(f._id)) : null;
         const adv = await availableAdvances(b);
+        // A room of a group sees only its own share of the group's advance (the advance is split across the rooms).
+        const groupCap = b.groupId ? await advanceCapForBooking(String(b._id)) : null;
+        const shared = groupCap && groupCap.groupSize > 1 ? groupCap : null;
         return {
+          groupId: b.groupId ? String(b.groupId) : undefined,
+          groupSize: shared?.groupSize ?? 1,
+          advanceShare: shared ? shared.share : undefined,
           bookingId: b._id,
           bookingReference: b.bookingReference,
           billNumber: b.billNumber,
@@ -100,7 +106,7 @@ router.get("/billing-queue", requirePermission("CASHIER_DESK", "VIEW"), async (r
           advancesApplied: totals ? r2(totals.totalAdvanceAdjusted) : 0,
           refunded: totals ? r2((totals as any).totalRefunded ?? 0) : 0,
           balance: totals ? totals.balance : 0,
-          advanceAvailable: adv.total,
+          advanceAvailable: shared ? shared.cap : adv.total,
           readyToCheckOut: !!f && totals?.balance === 0,
         };
       }),
